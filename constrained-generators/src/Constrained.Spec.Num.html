@@ -1,0 +1,529 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | All the HasSpec instances for a few types with Num instances</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Spec.Num</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Num.html#%2B."><span class="hs-operator">(+.)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Num.html#negate_"><span class="hs-identifier">negate_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.TheKnot.html#%3E%3D."><span class="hs-operator">(&gt;=.)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.TheKnot.html#%3E."><span class="hs-operator">(&gt;.)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Num.html#-."><span class="hs-operator">(-.)</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Base.html"><span class="hs-identifier">Constrained.Base</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html"><span class="hs-identifier">Constrained.NumSpec</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.TheKnot.html"><span class="hs-identifier">Constrained.TheKnot</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Int</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Natural</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- =================================================</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">infix</span><span> </span><span class="hs-number">4</span><span> </span><span class="annot"><a href="Constrained.Spec.Num.html#%2B."><span class="hs-operator hs-type">+.</span></a></span><span>
+</span><span id="line-19"></span><span id="local-6989586621679915812"><span class="annot"><a href="Constrained.Spec.Num.html#%2B."><span class="hs-operator hs-type">(+.)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumLike"><span class="hs-identifier hs-type">NumLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915812"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915812"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915812"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915812"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-20"></span><span id="%2B."><span class="annot"><span class="annottext">+. :: forall a. NumLike a =&gt; Term a -&gt; Term a -&gt; Term a
+</span><a href="Constrained.Spec.Num.html#%2B."><span class="hs-operator hs-var hs-var">(+.)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. NumLike a =&gt; Term a -&gt; Term a -&gt; Term a
+</span><a href="Constrained.NumSpec.html#addFn"><span class="hs-identifier hs-var">addFn</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span id="local-6989586621679915808"><span class="annot"><a href="Constrained.Spec.Num.html#negate_"><span class="hs-identifier hs-type">negate_</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumLike"><span class="hs-identifier hs-type">NumLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915808"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-23"></span><span id="negate_"><span class="annot"><span class="annottext">negate_ :: forall a. NumLike a =&gt; Term a -&gt; Term a
+</span><a href="Constrained.Spec.Num.html#negate_"><span class="hs-identifier hs-var hs-var">negate_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. NumLike a =&gt; Term a -&gt; Term a
+</span><a href="Constrained.NumSpec.html#negateFn"><span class="hs-identifier hs-var">negateFn</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">infix</span><span> </span><span class="hs-number">4</span><span> </span><span class="annot"><a href="Constrained.Spec.Num.html#-."><span class="hs-operator hs-type">-.</span></a></span><span>
+</span><span id="line-26"></span><span id="local-6989586621679915806"><span class="annot"><a href="Constrained.Spec.Num.html#-."><span class="hs-operator hs-type">(-.)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#Numeric"><span class="hs-identifier hs-type">Numeric</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915806"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915806"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915806"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679915806"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-27"></span><span id="-."><span class="annot"><span class="annottext">-. :: forall n. Numeric n =&gt; Term n -&gt; Term n -&gt; Term n
+</span><a href="Constrained.Spec.Num.html#-."><span class="hs-operator hs-var hs-var">(-.)</span></a></span></span><span> </span><span id="local-6989586621679915619"><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679915619"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679915618"><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679915618"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. NumLike a =&gt; Term a -&gt; Term a -&gt; Term a
+</span><a href="Constrained.NumSpec.html#addFn"><span class="hs-identifier hs-var">addFn</span></a></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679915619"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. NumLike a =&gt; Term a -&gt; Term a
+</span><a href="Constrained.NumSpec.html#negateFn"><span class="hs-identifier hs-var">negateFn</span></a></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679915618"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915584"><span id="local-6989586621679915587"><span id="local-6989586621679915589"><span id="local-6989586621679915591"><span id="local-6989586621679915593"><span id="local-6989586621679915595"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679915576"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Int
+</span><a href="Constrained.Base.html#emptySpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679915569"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Int -&gt; TypeSpec Int -&gt; Specification Int
+</span><a href="Constrained.Base.html#combineSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679915555"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Int -&gt; GenT m Int
+</span><a href="Constrained.Base.html#genFromTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679915550"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Int -&gt; Int -&gt; [Int]
+</span><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679915545"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Int -&gt; TypeSpec Int -&gt; Bool
+</span><a href="Constrained.Base.html#conformsTo"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679915534"><span class="annot"><span class="annottext">toPreds :: Term Int -&gt; TypeSpec Int -&gt; Pred
+</span><a href="Constrained.Base.html#toPreds"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679915528"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Int -&gt; Specification Integer
+</span><a href="Constrained.Base.html#cardinalTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679915521"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Int -&gt; Specification Int
+</span><a href="Constrained.Base.html#guardTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915481"><span id="local-6989586621679915484"><span id="local-6989586621679915486"><span id="local-6989586621679915488"><span id="local-6989586621679915490"><span id="local-6989586621679915492"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679915468"><span class="annot"><span class="annottext">emptySpec :: TypeSpec (Ratio Integer)
+</span><a href="#local-6989586621679915468"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679915462"><span class="annot"><span class="annottext">combineSpec :: TypeSpec (Ratio Integer)
+-&gt; TypeSpec (Ratio Integer) -&gt; Specification (Ratio Integer)
+</span><a href="#local-6989586621679915462"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679915448"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec (Ratio Integer) -&gt; GenT m (Ratio Integer)
+</span><a href="#local-6989586621679915448"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679915444"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec (Ratio Integer) -&gt; Ratio Integer -&gt; [Ratio Integer]
+</span><a href="#local-6989586621679915444"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679915440"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Ratio Integer -&gt; TypeSpec (Ratio Integer) -&gt; Bool
+</span><a href="#local-6989586621679915440"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679915431"><span class="annot"><span class="annottext">toPreds :: Term (Ratio Integer) -&gt; TypeSpec (Ratio Integer) -&gt; Pred
+</span><a href="#local-6989586621679915431"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679915430"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec (Ratio Integer) -&gt; Specification Integer
+</span><a href="#local-6989586621679915430"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (Ratio Integer)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Specification a
+</span><a href="Constrained.Base.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679915423"><span class="annot"><span class="annottext">guardTypeSpec :: [String]
+-&gt; TypeSpec (Ratio Integer) -&gt; Specification (Ratio Integer)
+</span><a href="#local-6989586621679915423"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915389"><span id="local-6989586621679915392"><span id="local-6989586621679915394"><span id="local-6989586621679915396"><span id="local-6989586621679915398"><span id="local-6989586621679915400"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679915383"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Natural
+</span><a href="#local-6989586621679915383"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679915378"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Natural -&gt; TypeSpec Natural -&gt; Specification Natural
+</span><a href="#local-6989586621679915378"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679915366"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Natural -&gt; GenT m Natural
+</span><a href="#local-6989586621679915366"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679915363"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Natural -&gt; Natural -&gt; [Natural]
+</span><a href="#local-6989586621679915363"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679915360"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Natural -&gt; TypeSpec Natural -&gt; Bool
+</span><a href="#local-6989586621679915360"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679915352"><span class="annot"><span class="annottext">toPreds :: Term Natural -&gt; TypeSpec Natural -&gt; Pred
+</span><a href="#local-6989586621679915352"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679915334"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Natural -&gt; Specification Integer
+</span><a href="#local-6989586621679915334"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.NumSpec.html#NumSpecInterval"><span class="hs-identifier hs-type">NumSpecInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679915332"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915332"><span class="hs-identifier hs-var">lo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679915331"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915331"><span class="hs-identifier hs-var">hi</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915331"><span class="hs-identifier hs-var">hi</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915332"><span class="hs-identifier hs-var">lo</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">forall a. NonEmpty a -&gt; Specification a
+</span><a href="Constrained.Base.html#MemberSpec"><span class="hs-identifier hs-var">MemberSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915331"><span class="hs-identifier hs-var">hi</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915332"><span class="hs-identifier hs-var">lo</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">forall a. NonEmpty a -&gt; Specification a
+</span><a href="Constrained.Base.html#MemberSpec"><span class="hs-identifier hs-var">MemberSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#cardinalTypeSpec"><span class="hs-identifier hs-var">cardinalTypeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.NumSpec.html#NumSpecInterval"><span class="hs-identifier hs-type">NumSpecInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Natural
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679915328"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915328"><span class="hs-identifier hs-var">hi</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">forall a. NonEmpty a -&gt; Specification a
+</span><a href="Constrained.Base.html#MemberSpec"><span class="hs-identifier hs-var">MemberSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679915328"><span class="hs-identifier hs-var">hi</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#cardinalTypeSpec"><span class="hs-identifier hs-var">cardinalTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec Natural
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Specification a
+</span><a href="Constrained.Base.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679915323"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Natural -&gt; Specification Natural
+</span><a href="#local-6989586621679915323"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915290"><span id="local-6989586621679915294"><span id="local-6989586621679915296"><span id="local-6989586621679915298"><span id="local-6989586621679915300"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679915284"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Word8
+</span><a href="#local-6989586621679915284"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679915279"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Word8 -&gt; TypeSpec Word8 -&gt; Specification Word8
+</span><a href="#local-6989586621679915279"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679915267"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Word8 -&gt; GenT m Word8
+</span><a href="#local-6989586621679915267"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679915264"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Word8 -&gt; Word8 -&gt; [Word8]
+</span><a href="#local-6989586621679915264"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679915261"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Word8 -&gt; TypeSpec Word8 -&gt; Bool
+</span><a href="#local-6989586621679915261"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679915253"><span class="annot"><span class="annottext">toPreds :: Term Word8 -&gt; TypeSpec Word8 -&gt; Pred
+</span><a href="#local-6989586621679915253"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679915249"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Word8 -&gt; Specification Integer
+</span><a href="#local-6989586621679915249"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679915242"><span class="annot"><span class="annottext">typeSpecOpt :: TypeSpec Word8 -&gt; [Word8] -&gt; Specification Word8
+</span><a href="Constrained.Base.html#typeSpecOpt"><span class="hs-identifier hs-var hs-var hs-var hs-var">typeSpecOpt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, TypeSpec n ~ NumSpec n, Bounded n, Integral n) =&gt;
+NumSpec n -&gt; [n] -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#notInNumSpec"><span class="hs-identifier hs-var">notInNumSpec</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679915235"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Word8 -&gt; Specification Word8
+</span><a href="#local-6989586621679915235"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915201"><span id="local-6989586621679915204"><span id="local-6989586621679915206"><span id="local-6989586621679915208"><span id="local-6989586621679915210"><span id="local-6989586621679915212"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679915195"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Word16
+</span><a href="#local-6989586621679915195"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679915190"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Word16 -&gt; TypeSpec Word16 -&gt; Specification Word16
+</span><a href="#local-6989586621679915190"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679915178"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Word16 -&gt; GenT m Word16
+</span><a href="#local-6989586621679915178"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679915175"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Word16 -&gt; Word16 -&gt; [Word16]
+</span><a href="#local-6989586621679915175"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679915172"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Word16 -&gt; TypeSpec Word16 -&gt; Bool
+</span><a href="#local-6989586621679915172"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679915164"><span class="annot"><span class="annottext">toPreds :: Term Word16 -&gt; TypeSpec Word16 -&gt; Pred
+</span><a href="#local-6989586621679915164"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679915160"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Word16 -&gt; Specification Integer
+</span><a href="#local-6989586621679915160"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679915155"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Word16 -&gt; Specification Word16
+</span><a href="#local-6989586621679915155"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915121"><span id="local-6989586621679915124"><span id="local-6989586621679915126"><span id="local-6989586621679915128"><span id="local-6989586621679915130"><span id="local-6989586621679915132"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679915115"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Word32
+</span><a href="#local-6989586621679915115"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679915110"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Word32 -&gt; TypeSpec Word32 -&gt; Specification Word32
+</span><a href="#local-6989586621679915110"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679915098"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Word32 -&gt; GenT m Word32
+</span><a href="#local-6989586621679915098"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679915095"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Word32 -&gt; Word32 -&gt; [Word32]
+</span><a href="#local-6989586621679915095"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679915092"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Word32 -&gt; TypeSpec Word32 -&gt; Bool
+</span><a href="#local-6989586621679915092"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679915084"><span class="annot"><span class="annottext">toPreds :: Term Word32 -&gt; TypeSpec Word32 -&gt; Pred
+</span><a href="#local-6989586621679915084"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679915080"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Word32 -&gt; Specification Integer
+</span><a href="#local-6989586621679915080"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679915075"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Word32 -&gt; Specification Word32
+</span><a href="#local-6989586621679915075"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679915041"><span id="local-6989586621679915044"><span id="local-6989586621679915046"><span id="local-6989586621679915048"><span id="local-6989586621679915050"><span id="local-6989586621679915052"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679915035"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Word64
+</span><a href="#local-6989586621679915035"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679915030"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Word64 -&gt; TypeSpec Word64 -&gt; Specification Word64
+</span><a href="#local-6989586621679915030"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679915018"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Word64 -&gt; GenT m Word64
+</span><a href="#local-6989586621679915018"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679915015"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Word64 -&gt; Word64 -&gt; [Word64]
+</span><a href="#local-6989586621679915015"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679915012"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Word64 -&gt; TypeSpec Word64 -&gt; Bool
+</span><a href="#local-6989586621679915012"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621679915004"><span class="annot"><span class="annottext">toPreds :: Term Word64 -&gt; TypeSpec Word64 -&gt; Pred
+</span><a href="#local-6989586621679915004"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679915000"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Word64 -&gt; Specification Integer
+</span><a href="#local-6989586621679915000"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679914995"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Word64 -&gt; Specification Word64
+</span><a href="#local-6989586621679914995"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679914961"><span id="local-6989586621679914964"><span id="local-6989586621679914966"><span id="local-6989586621679914968"><span id="local-6989586621679914970"><span id="local-6989586621679914972"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int8</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int8</span></span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679914955"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Int8
+</span><a href="#local-6989586621679914955"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679914950"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Int8 -&gt; TypeSpec Int8 -&gt; Specification Int8
+</span><a href="#local-6989586621679914950"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621679914938"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Int8 -&gt; GenT m Int8
+</span><a href="#local-6989586621679914938"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621679914935"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Int8 -&gt; Int8 -&gt; [Int8]
+</span><a href="#local-6989586621679914935"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621679914932"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Int8 -&gt; TypeSpec Int8 -&gt; Bool
+</span><a href="#local-6989586621679914932"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span id="local-6989586621679914924"><span class="annot"><span class="annottext">toPreds :: Term Int8 -&gt; TypeSpec Int8 -&gt; Pred
+</span><a href="#local-6989586621679914924"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621679914920"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Int8 -&gt; Specification Integer
+</span><a href="#local-6989586621679914920"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679914915"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Int8 -&gt; Specification Int8
+</span><a href="#local-6989586621679914915"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679914881"><span id="local-6989586621679914884"><span id="local-6989586621679914886"><span id="local-6989586621679914888"><span id="local-6989586621679914890"><span id="local-6989586621679914892"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int16</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int16</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int16</span></span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679914875"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Int16
+</span><a href="#local-6989586621679914875"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679914870"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Int16 -&gt; TypeSpec Int16 -&gt; Specification Int16
+</span><a href="#local-6989586621679914870"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679914858"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Int16 -&gt; GenT m Int16
+</span><a href="#local-6989586621679914858"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679914855"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Int16 -&gt; Int16 -&gt; [Int16]
+</span><a href="#local-6989586621679914855"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679914852"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Int16 -&gt; TypeSpec Int16 -&gt; Bool
+</span><a href="#local-6989586621679914852"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679914844"><span class="annot"><span class="annottext">toPreds :: Term Int16 -&gt; TypeSpec Int16 -&gt; Pred
+</span><a href="#local-6989586621679914844"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679914840"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Int16 -&gt; Specification Integer
+</span><a href="#local-6989586621679914840"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679914835"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Int16 -&gt; Specification Int16
+</span><a href="#local-6989586621679914835"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679914801"><span id="local-6989586621679914804"><span id="local-6989586621679914806"><span id="local-6989586621679914808"><span id="local-6989586621679914810"><span id="local-6989586621679914812"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int32</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int32</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int32</span></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679914795"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Int32
+</span><a href="#local-6989586621679914795"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679914790"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Int32 -&gt; TypeSpec Int32 -&gt; Specification Int32
+</span><a href="#local-6989586621679914790"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679914778"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Int32 -&gt; GenT m Int32
+</span><a href="#local-6989586621679914778"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621679914775"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Int32 -&gt; Int32 -&gt; [Int32]
+</span><a href="#local-6989586621679914775"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621679914772"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Int32 -&gt; TypeSpec Int32 -&gt; Bool
+</span><a href="#local-6989586621679914772"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621679914764"><span class="annot"><span class="annottext">toPreds :: Term Int32 -&gt; TypeSpec Int32 -&gt; Pred
+</span><a href="#local-6989586621679914764"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621679914760"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Int32 -&gt; Specification Integer
+</span><a href="#local-6989586621679914760"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679914755"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Int32 -&gt; Specification Int32
+</span><a href="#local-6989586621679914755"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679914721"><span id="local-6989586621679914724"><span id="local-6989586621679914726"><span id="local-6989586621679914728"><span id="local-6989586621679914730"><span id="local-6989586621679914732"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679914715"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Int64
+</span><a href="#local-6989586621679914715"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621679914710"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Int64 -&gt; TypeSpec Int64 -&gt; Specification Int64
+</span><a href="#local-6989586621679914710"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679914698"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Int64 -&gt; GenT m Int64
+</span><a href="#local-6989586621679914698"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621679914695"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Int64 -&gt; Int64 -&gt; [Int64]
+</span><a href="#local-6989586621679914695"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621679914692"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Int64 -&gt; TypeSpec Int64 -&gt; Bool
+</span><a href="#local-6989586621679914692"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621679914684"><span class="annot"><span class="annottext">toPreds :: Term Int64 -&gt; TypeSpec Int64 -&gt; Pred
+</span><a href="#local-6989586621679914684"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span id="local-6989586621679914680"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Int64 -&gt; Specification Integer
+</span><a href="#local-6989586621679914680"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Integral n, MaybeBounded n) =&gt;
+NumSpec n -&gt; Specification Integer
+</span><a href="Constrained.NumSpec.html#cardinalNumSpec"><span class="hs-identifier hs-var">cardinalNumSpec</span></a></span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679914675"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Int64 -&gt; Specification Int64
+</span><a href="#local-6989586621679914675"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679914641"><span id="local-6989586621679914644"><span id="local-6989586621679914646"><span id="local-6989586621679914648"><span id="local-6989586621679914650"><span id="local-6989586621679914652"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679914635"><span class="annot"><span class="annottext">emptySpec :: TypeSpec Float
+</span><a href="#local-6989586621679914635"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; NumSpec a
+</span><a href="Constrained.NumSpec.html#emptyNumSpec"><span class="hs-identifier hs-var">emptyNumSpec</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621679914630"><span class="annot"><span class="annottext">combineSpec :: TypeSpec Float -&gt; TypeSpec Float -&gt; Specification Float
+</span><a href="#local-6989586621679914630"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =&gt;
+NumSpec n -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#combineNumSpec"><span class="hs-identifier hs-var">combineNumSpec</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621679914618"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec Float -&gt; GenT m Float
+</span><a href="#local-6989586621679914618"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) n.
+(MonadGenError m, Show n, Random n, Ord n, Num n,
+ MaybeBounded n) =&gt;
+NumSpec n -&gt; GenT m n
+</span><a href="Constrained.NumSpec.html#genFromNumSpec"><span class="hs-identifier hs-var">genFromNumSpec</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span id="local-6989586621679914615"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec Float -&gt; Float -&gt; [Float]
+</span><a href="#local-6989586621679914615"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Arbitrary n =&gt; NumSpec n -&gt; n -&gt; [n]
+</span><a href="Constrained.NumSpec.html#shrinkWithNumSpec"><span class="hs-identifier hs-var">shrinkWithNumSpec</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621679914612"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Float -&gt; TypeSpec Float -&gt; Bool
+</span><a href="#local-6989586621679914612"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Ord n =&gt; n -&gt; NumSpec n -&gt; Bool
+</span><a href="Constrained.NumSpec.html#conformsToNumSpec"><span class="hs-identifier hs-var">conformsToNumSpec</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span id="local-6989586621679914604"><span class="annot"><span class="annottext">toPreds :: Term Float -&gt; TypeSpec Float -&gt; Pred
+</span><a href="#local-6989586621679914604"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. OrdLike n =&gt; Term n -&gt; NumSpec n -&gt; Pred
+</span><a href="Constrained.TheKnot.html#toPredsNumSpec"><span class="hs-identifier hs-var">toPredsNumSpec</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621679914603"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec Float -&gt; Specification Integer
+</span><a href="#local-6989586621679914603"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec Float
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Specification a
+</span><a href="Constrained.Base.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621679914598"><span class="annot"><span class="annottext">guardTypeSpec :: [String] -&gt; TypeSpec Float -&gt; Specification Float
+</span><a href="#local-6989586621679914598"><span class="hs-identifier hs-var hs-var hs-var hs-var">guardTypeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n.
+(Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =&gt;
+[String] -&gt; NumSpec n -&gt; Specification n
+</span><a href="Constrained.NumSpec.html#guardNumSpec"><span class="hs-identifier hs-var">guardNumSpec</span></a></span><span>
+</span><span id="line-167"></span></pre></body></html>
