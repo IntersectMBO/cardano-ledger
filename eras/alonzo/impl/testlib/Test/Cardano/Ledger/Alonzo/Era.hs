@@ -23,8 +23,7 @@ class
   ( MaryEraTest era
   , EraPlutusContext era
   , AlonzoEraTx era
-  , AlonzoEraTxWits era
-  , AlonzoEraScript era
+  , AlonzoEraTxAuxData era
   , AlonzoEraUTxO era
   , ToExpr (PlutusScript era)
   , Script era ~ AlonzoScript era
@@ -34,6 +33,8 @@ class
 instance EraTest AlonzoEra
 
 instance ShelleyEraTest AlonzoEra
+
+instance AllegraEraTest AlonzoEra
 
 instance MaryEraTest AlonzoEra
 
