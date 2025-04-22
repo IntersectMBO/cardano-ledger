@@ -24,8 +24,6 @@ module Cardano.Ledger.Shelley.TxOut (
   valueEitherShelleyTxOutL,
 ) where
 
-import qualified Cardano.Crypto.Hash as HS
-import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -48,11 +46,8 @@ import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import qualified Data.ByteString.Short as SBS (ShortByteString, pack)
 import Data.Maybe (fromMaybe)
 import Data.MemPack
-import Data.Proxy (Proxy (..))
-import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -120,11 +115,6 @@ valueEitherShelleyTxOutL =
         Right cValue -> txOut {txOutCompactValue = cValue}
     )
 {-# INLINE valueEitherShelleyTxOutL #-}
-
--- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
-instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (ShelleyTxOut era) where
-  heapWords (TxOutCompact _ vl) =
-    3 + heapWords packedADDRHASH + heapWords vl
 
 instance (Era era, Val (Value era)) => Show (ShelleyTxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
@@ -196,12 +186,3 @@ toTxOutPair (ShelleyTxOut !addr !amount) =
   [ "address" .= addr
   , "amount" .= amount
   ]
-
--- a ShortByteString of the same length as the ADDRHASH
--- used to calculate heapWords
-packedADDRHASH :: SBS.ShortByteString
-packedADDRHASH =
-  SBS.pack $
-    replicate
-      (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy ADDRHASH)))
-      (1 :: Word8)

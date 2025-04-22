@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Remove `HeapWords` instances for: #5001
+  - `ShelleyTxOut`
 * Move `Annotator` instances, `txSeqDecoder` and `mapTraverseableDecoderA` to `testlib`
 * Deprecate `witsFromTxWitnesses`
 * Expose access to `ShelleyTxRaw`, `ShelleyTxAuxDataRaw`, `ShelleyTxBodyRaw`, `ShelleyTxWitsRaw`, `MkMultiSig`
