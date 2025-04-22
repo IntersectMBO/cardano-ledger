@@ -186,7 +186,9 @@ instance ToJSON DRepState where
           object $
             [ "expiry" .= toJSON drepExpiry
             , "deposit" .= toJSON drepDeposit
-            , "delegators" .= toJSON drepDelegs
+            -- Since the corresponding `FromJSON` instance ignores this field, we omit it from
+            -- the `ToJSON` instance as well. Round-tripping is therefore as expected.
+            -- , "delegators" .= toJSON drepDelegs
             ]
               ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
 
@@ -196,7 +198,7 @@ instance FromJSON DRepState where
       <$> o .: "expiry"
       <*> o .:? "anchor" .!= SNothing
       <*> o .: "deposit"
-      -- Construction of DRep state with deleagations is intentionally prohibited, since
+      -- Construction of DRep state with delegations is intentionally prohibited, since
       -- there is a requirement to retain the invariant of delegations in the UMap
       <*> pure mempty
 
