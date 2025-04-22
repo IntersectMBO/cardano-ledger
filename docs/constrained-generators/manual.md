@@ -207,7 +207,7 @@ name. Some examples follow.
 
 ## Predefined HasSpec instances and their function symbols.
 
-In order to write specification for a particular type, that type must have a `HasSpec` instance. 
+In order to write specifications for a particular type, that type must have a `HasSpec` instance. 
 A type with a `HasSpec` instance might have a number of Function Symbols that operate on that type.
 There are a number of types that have predefined `HasSpec` instances. As a reference, we list them 
 here along with the type of their function symbols.
@@ -371,7 +371,7 @@ For example, given the following constraints on integers `x` and `y`
   y <. x
 ```
 
-we see that `x <. 10` and `3 <= x.` are defining constraints for `x` and there
+we see that `x <. 10` and `3 <=. x.` are defining constraints for `x` and there
 are no defining constraints for `y`. We compute a `Specification` for `x` for each
 constraint, in this case `x <. 10` turns into something like `(-∞,10)` and
 `3 <=. x` turns into `[3, ∞)`. We combine the specs to form `[3, 10)` from which we
@@ -469,7 +469,7 @@ and finally constructs `p = (x, y)`.
 
 Note that (1) we introduced more variables than were initially in the
 constraints - these need to be bound somewhere - and (2) the order of
-`fst p = x` is important, `p` depends on `x`,  and not the other way
+`fst_ p = x` is important, `p` depends on `x`,  and not the other way
 around.
 
 To do both of these things at the same time we use the `match`  construct
@@ -623,7 +623,7 @@ The library function `debugSpec` prints 3 things
 
 If the specification fails to find a solution, it prints out an explanation of why it failed.
 Most of the time this means the spec was overconstrained, and the explanation attempts to identify
-the part of the specifcation that cause this ambiguity.
+the part of the specification that cause this ambiguity.
 
 ## Reification
 1.  `reifies :: (HasSpec a, HasSpec b) => Term b -> Term a -> (a -> b) -> Pred`
@@ -699,9 +699,16 @@ Here is an example of its use.
 ex9 :: Specification Int
 ex9 = constrained $ \x ->
   [ assert $ x <=. 10
-  , assertReified x (<= 10)
+  , assertReified x (<= 3) -- Note that (<= 3) is a Bool function on values, not Terms.
   ]
 ```
+
+The reification library functions allow one to use regular Haskell functions on values to write 
+constraints, but they come at the cost of forcing the solution order of the variables. The `Term`s
+being reified, must be solved before the `Term`s mentioned in the Haskell lambda expression 
+with the `Pred` based range. I.e. in `reify xs1 reverse $ \ t -> xs2 ==. t` the term `xs` must
+be solved before the terms `t` and `xs2` in the lambda expression `\ t -> xs2 ==. t)` can be solved.
+This is because the value assigned to `xs` must be passed to the Haskell function `reverse`.
 
 ## Disjunction, choosing between multiple things with the same type
 
@@ -737,7 +744,7 @@ instance HasSimpleRep Three
 instance HasSpec Three
 ```
 
-Here is an example using the unweighted mechanism.
+Here is an example using the mechanism with no weights (`branch`), where every branch is equilikely.
 
 ```
 ex10 :: Specification Three
@@ -751,8 +758,7 @@ ex10 = constrained $ \ three ->
 Note the trailing Haskell comments, they remind us which constructor we are dealing with. The system
 expects the branches to be in the same order the constructors are introduced in the `data` defintions for `Three`
 
-Here is another example using the weighted mechanism. A sample solution of this spec can be found in the
-section about `monitor` in a later section.
+Here is another example using the weighted mechanism (`branchW`).
 
 ```
 ex11 :: Specification Three
@@ -762,6 +768,10 @@ ex11 = constrained $ \ three ->
           (branchW 2 $ \ b -> assert b)      -- Two, weight 2
           (branchW 3 $ \ j -> j >. 0)        -- Three, weight 3
 ```
+
+ Another sample solution of this
+spec can be found in the section about `monitor` in a [later section](#weights), where we can 
+observe that nsome branches are more likely than others.
 
 The second way to specify disjunctions is to choose `chooseSpec`, where the two choices use the same
 type, but are distinguished logically by the two input specifications. The type of
@@ -870,7 +880,7 @@ ex16 = constrained $ \ three ->
           (branchW 3 $ \ j -> j ==. 3)           -- Three, weight 3
 ```
 
-We can express the same constraints using the `OnCon` library function. To use `OnCon` one must
+We can express the same constraints using the `onCon` library function. To use `onCon` one must
 define the `HasSpec` instance for the type using the `GHC.Generics` instance mechanism (see the example of the type `Three` in the *Disjunction* section). This makes sure the
 system knows about the constructors and selectors of the type. To use `onCon` one must 
 type apply it to a String that names one of the constructors. Like this `(onCon @"One" ...)` . 
@@ -926,7 +936,8 @@ depth :: Dimensions -> Int
 
 If we use the `GHC.Generics` path to derive the `HasSimpleRep` and the `HasSpec`
 instances, the we can use the `sel` library function to create lifted versions of
-the Haskell selector functions like this.
+the Haskell selector functions like this. Nothe that the lifted `width` uses the trailing
+under score convention: `width_` because it manipulates `Term`s not values.
 
 ```
 width_ :: Term Dimensions -> Term Int
@@ -987,7 +998,7 @@ ex22a = constrained $ \ pair ->
 	      [ left ==. right, left ==. right + lit 1]
 ```
 
-When attempt to solve this specitication for `pair` we get the following error message
+When we attempt to solve this specification for `pair` we get the following error message
 
 ```
 debugSpec ex22a
@@ -1035,8 +1046,8 @@ Original spec ErrorSpec
 
 
 Sometimes we want to constrain a variable, in terms of another internal or hidden variable.
-A classic example is constraining a number to be odd.  A number `x` is odd, if there exists another internal number
-`y`, such that, `x` is equal to `(y + y + 1)`
+A classic example is constraining a number to be odd.  A number `x` is odd, if there exists 
+another internal number `y`, such that, `x` is equal to `y + y + 1`
 
 
 Here is an example.
@@ -1048,12 +1059,13 @@ ex22 = constrained $ \ [var|oddx|] ->
          (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
 ```
 
-Why do we call the library function `unsafeExists` ? It is unsafe because function `conformsToSpec`
-will fail to return `True` when called on a generated result. Why?  Because the system does not know how
-to find the internal, hidden variable. To solve this the safe function `exists` takes two Haskell
-lambda expressions.  The first is a function that tells how to compute the hidden variable from the
-values returned by solving the constraints. The second is the normal use of a Haskell 
-lambda expression to introduce a Term variable naming the hidden variable. Here is an example.
+Why do we call the library function `unsafeExists`? It is unsafe because the library function 
+`conformsToSpec` will fail to return `True` when called on a generated result. Why? 
+Because the system does not know how to find the internal, hidden variable. To solve this 
+the safe function `exists` takes two Haskell lambda expressions.  The first is a function 
+that tells how to compute the hidden variable from the values returned by solving the constraints.
+The second is the normal use of a Haskell lambda expression to introduce a Term variable 
+naming the hidden variable. Here is an example.
 
 ```
 ex23 :: Specification Int
@@ -1125,8 +1137,8 @@ The library function `ifElse` allows two separate sets of constraints, one when 
 ex27 :: Specification Rectangle
 ex27 = constrained' $ \ wid len square -> 
   ifElse square
-         (assert $ wid ==. len)
-         [ assert $ wid >=. lit 0
+         (assert $ wid ==. len)    -- This is the True branch
+         [ assert $ wid >=. lit 0  -- This compound `Pred` is the False branch
          , assert $ len >=. lit 0 ]
 ```
 
@@ -1222,7 +1234,7 @@ leqSpec :: OrdLike a => a -> Specification a
 ltSpec :: OrdLike a => a -> Specification a
 geqSpec :: OrdLike a => a -> Specification a
 gtSpec :: OrdLike a => a -> Specification a
-cardinality :: (.Number Integer, HasSpec a) => Specification a -> Specification Integer
+cardinality :: (Number Integer, HasSpec a) => Specification a -> Specification Integer
 ```
 
 Here is an example of the use of `satisfies` in conjunction with `notMemberSpec`
@@ -1315,7 +1327,7 @@ The `monitor` library function use the same programming device as  `reify`,  it 
 (with an functional argument, usually called  `eval`,  that turns a `(Term a)` into a value `a`. 
 Thus each successfull generation of the `Specification`  lifts  one or more  `Specification` 
 variables  ( `x` and `y` in the example) to a value that is then 
-passed to the QuicCheck modifier  (`classify` in the example).  Then `forAllSpec` turns the modifier on.
+passed to the `QuickCheck` modifier  (`classify` in the example).  Then `forAllSpec` turns the modifier on.
 Here are two examples.  The first just runs the specification using `debugSpec`, since this is not inside a call to
 `forAllSpec`,  no  modification is created.
 
@@ -1348,6 +1360,8 @@ ghci> QuickCheck.quickCheck $ prop31
 
 Where the `classify` statistics are reported.
 
+<a id="weights"></a>
+### Classify with weights example.
 As a final example we redo the weighted branch example `ex11` from the discussion of `caseOn` above.
 We modify it by adding a `monitor` predicate. The purpose of this example is two fold.
 
@@ -1417,8 +1431,8 @@ It is important that we derive `Show`, `Eq` and `Generic`,  as these are needed 
 `HasSimpleRep` and `HasSpec` instances.  Now we write a `skeleton` specification. The process is to
 introduce a  `Term` variable for each nested component.  We use the library functions
 `constrained`, `match`, `caseOn` and  `forAll`,  each of which takes a Haskell lambda expression,
-introducing a Haskell variable that is bound to a `Term` varaible for each component.  The goal in
-this stage  is to just introduce a varaible for each subcomponent. So we use `TruePred` which places 
+introducing a Haskell variable that is bound to a `Term` variable for each component.  The goal in
+this stage  is to just introduce a variable for each subcomponent. So we use `TruePred` which places 
 no constraints on each of these subcomponents. We use named variables, and use a comment to label each `branch` 
 with the name of the construtor.
 
@@ -1470,9 +1484,9 @@ types that have many properties not captured by the simple structural properties
 constructor functions.  Most of these properties are captured by relationships between the different
 function symbols supported by that type. This is the most difficult pathway, but it can capture complicated
 relationships on the type not possible using the other strategies. This requires a deep understanding of 
-the type `T`, its function symbols and their relationships, and internals of the system. This is a comlex task, 
-but it gives the system much of its power, as it makes the system extendible, to additional complex
-types, simply by adding a new `HasSpec` instance.
+the type `T`, its function symbols and their relationships, and internals of the system. This is a 
+complex task, but it gives the system much of its power, as it makes the system extendable, 
+to additional complex types, simply by adding a new `HasSpec` instance.
 
 ## Strategy 1 using GHC.Generics
 
@@ -1506,8 +1520,10 @@ A lot of complicated stuff is not fully describe here, but the example gives an 
 ```
 -- NOTE: this is a representation of the `ShelleyTxOut` type. You can't
 -- simply use the generics to derive the `SimpleRep` for `ShelleyTxOut`
--- because the type is memoized. So instead we say that the representation
--- is the same as what you would get from using the `ShelleyTxOut` pattern.
+-- because the type is memoized (i.e. it stores a hidden copy of the actual bytes that
+-- were deserialized when the TxOut was transmitted over the network). So instead,
+-- we say that the representation is the same as what you would get from 
+-- using the `ShelleyTxOut` pattern.
 type ShelleyTxOutTypes era =
   '[ Addr
    , Value era
@@ -1523,6 +1539,9 @@ instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
 
 instance (EraTxOut era, HasSpec (Value era)) => HasSpec (ShelleyTxOut era)
 ```
+
+TODO add more explanation about the types. Much of the example of depends on properties of TxOut
+that is not explained.
 
 ## Strategy 3 defining the SimpleRep instance in terms of another type with a SimpleRep instance
 
@@ -1553,6 +1572,8 @@ type `Word64` to constraint it.
 ex34 :: Specification Coin
 ex34 = constrained $ \ coin ->
        match coin $ \ w64 -> [w64 >=. lit 100, w64 <=. lit 200]
+       -- Note that the match brings into scope the variable w64
+	   -- which has type Word64, because the SimpleRep of Coin is Word64, 
 ```	
 
 Here we use `debugSpec` to get a sample solution
