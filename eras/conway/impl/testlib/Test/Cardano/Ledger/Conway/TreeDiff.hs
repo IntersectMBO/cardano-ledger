@@ -281,8 +281,6 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (RatifySignal era)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (EnactSignal era)
 
-instance ToExpr (ConwayNewEpochPredFailure era)
-
 instance
   ( ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)

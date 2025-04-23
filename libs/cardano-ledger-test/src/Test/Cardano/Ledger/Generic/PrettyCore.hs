@@ -134,7 +134,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertPredFailure (..),
   ConwayGovPredFailure (..),
   ConwayLedgerPredFailure (..),
-  ConwayNewEpochPredFailure,
   ConwayUtxosPredFailure,
   EnactSignal (..),
   GovEnv (..),
@@ -1265,7 +1264,7 @@ ppNEWEPOCH Allegra x = ppShelleyNewEpochPredicateFailure x
 ppNEWEPOCH Mary x = ppShelleyNewEpochPredicateFailure x
 ppNEWEPOCH Alonzo x = ppShelleyNewEpochPredicateFailure x
 ppNEWEPOCH Babbage x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH Conway x = ppConwayNewEpochPredFailure x
+ppNEWEPOCH Conway x = absurd x
 
 ppEPOCH :: Proof era -> PredicateFailure (EraRule "EPOCH" era) -> PDoc
 ppEPOCH Shelley x = ppShelleyEpochPredFailure x
@@ -1709,13 +1708,6 @@ ppShelleyNewEpochPredicateFailure (MirFailure _) =
 
 instance Reflect era => PrettyA (ShelleyNewEpochPredFailure era) where
   prettyA = ppShelleyNewEpochPredicateFailure
-
-ppConwayNewEpochPredFailure :: ConwayNewEpochPredFailure era -> PDoc
-ppConwayNewEpochPredFailure (ConwayRules.CorruptRewardUpdate x) =
-  ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
-
-instance PrettyA (ConwayNewEpochPredFailure era) where
-  prettyA = ppConwayNewEpochPredFailure
 
 -- ===============
 
