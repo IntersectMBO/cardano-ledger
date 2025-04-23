@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -22,7 +21,7 @@
 
 module Cardano.Ledger.Conway.TxBody (
   ConwayEraTxBody (..),
-  ConwayTxBody (
+  TxBody (
     MkConwayTxBody,
     ConwayTxBody,
     ctbSpendInputs,
@@ -53,7 +52,7 @@ module Cardano.Ledger.Conway.TxBody (
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
-  BabbageTxBody (..),
+  TxBody (..),
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
@@ -115,8 +114,8 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
 
-instance Memoized (ConwayTxBody era) where
-  type RawType (ConwayTxBody era) = ConwayTxBodyRaw era
+instance Memoized (TxBody ConwayEra) where
+  type RawType (TxBody ConwayEra) = ConwayTxBodyRaw ConwayEra
 
 data ConwayTxBodyRaw era = ConwayTxBodyRaw
   { ctbrSpendInputs :: !(Set TxIn)
@@ -250,39 +249,23 @@ instance
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
-newtype ConwayTxBody era = MkConwayTxBody (MemoBytes (ConwayTxBodyRaw era))
-  deriving (Generic, SafeToHash, ToCBOR)
+deriving newtype instance DecCBOR (TxBody ConwayEra)
 
-deriving newtype instance
-  ( EraPParams era
-  , EraTxCert era
-  , DecCBOR (TxOut era)
-  ) =>
-  DecCBOR (ConwayTxBody era)
+deriving instance NoThunks (TxBody ConwayEra)
 
-deriving instance
-  (EraPParams era, NoThunks (TxOut era), NoThunks (TxCert era)) =>
-  NoThunks (ConwayTxBody era)
+deriving instance Eq (TxBody ConwayEra)
 
-deriving instance
-  (EraPParams era, Eq (TxOut era), Eq (TxCert era)) =>
-  Eq (ConwayTxBody era)
+deriving newtype instance NFData (TxBody ConwayEra)
 
-deriving newtype instance
-  (EraPParams era, NFData (TxOut era), NFData (TxCert era)) =>
-  NFData (ConwayTxBody era)
-
-deriving instance
-  (EraPParams era, Show (TxOut era), Show (TxCert era)) =>
-  Show (ConwayTxBody era)
+deriving instance Show (TxBody ConwayEra)
 
 type instance MemoHashIndex (ConwayTxBodyRaw era) = EraIndependentTxBody
 
-instance HashAnnotated (ConwayTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody ConwayEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
-mkConwayTxBody :: forall era. ConwayEraTxBody era => ConwayTxBody era
-mkConwayTxBody = mkMemoizedEra @era basicConwayTxBodyRaw
+mkConwayTxBody :: TxBody ConwayEra
+mkConwayTxBody = mkMemoizedEra @ConwayEra basicConwayTxBodyRaw
 
 basicConwayTxBodyRaw :: ConwayTxBodyRaw era
 basicConwayTxBodyRaw =
@@ -317,7 +300,8 @@ data ConwayTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTxBody ConwayEra where
-  type TxBody ConwayEra = ConwayTxBody ConwayEra
+  newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes (ConwayTxBodyRaw ConwayEra))
+    deriving (Generic, SafeToHash, ToCBOR)
   type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
   mkBasicTxBody = mkConwayTxBody
@@ -407,10 +391,9 @@ instance EraTxBody ConwayEra where
 -- This is the contribution of a TxBody towards the total
 -- `Cardano.Ledger.CertState.Obligations`
 conwayTotalDepositsTxBody ::
-  ConwayEraTxBody era =>
-  PParams era ->
+  PParams ConwayEra ->
   (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  TxBody ConwayEra ->
   Coin
 conwayTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
@@ -510,20 +493,16 @@ instance ConwayEraTxBody ConwayEra where
       \txb x -> txb {ctbrTreasuryDonation = x}
   {-# INLINE treasuryDonationTxBodyL #-}
 
-instance
-  (EraPParams era, Eq (TxOut era), Eq (TxCert era)) =>
-  EqRaw (ConwayTxBody era)
+instance EqRaw (TxBody ConwayEra)
 
 pattern ConwayTxBody ::
-  forall era.
-  ConwayEraTxBody era =>
   Set TxIn ->
   Set TxIn ->
   Set TxIn ->
-  StrictSeq (Sized (TxOut era)) ->
-  StrictMaybe (Sized (TxOut era)) ->
+  StrictSeq (Sized (TxOut ConwayEra)) ->
+  StrictMaybe (Sized (TxOut ConwayEra)) ->
   StrictMaybe Coin ->
-  OSet.OSet (TxCert era) ->
+  OSet.OSet (TxCert ConwayEra) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->
@@ -532,11 +511,11 @@ pattern ConwayTxBody ::
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
-  VotingProcedures era ->
-  OSet.OSet (ProposalProcedure era) ->
+  VotingProcedures ConwayEra ->
+  OSet.OSet (ProposalProcedure ConwayEra) ->
   StrictMaybe Coin ->
   Coin ->
-  ConwayTxBody era
+  TxBody ConwayEra
 pattern ConwayTxBody
   { ctbSpendInputs
   , ctbCollateralInputs
@@ -602,7 +581,7 @@ pattern ConwayTxBody
       proposalProcedures
       currentTreasuryValue
       treasuryDonation =
-        mkMemoizedEra @era $
+        mkMemoizedEra @ConwayEra $
           ConwayTxBodyRaw
             inputsX
             collateralX
@@ -665,7 +644,7 @@ instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (ConwayTxBody era)
+instance EncCBOR (TxBody ConwayEra)
 
 class
   (BabbageEraTxBody era, ConwayEraTxCert era, ConwayEraPParams era, ConwayEraScript era) =>

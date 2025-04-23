@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -11,7 +12,7 @@ module Cardano.Ledger.Alonzo (
   AlonzoEra,
   AlonzoTxOut,
   MaryValue,
-  AlonzoTxBody,
+  pattern AlonzoTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
 )
@@ -27,7 +28,7 @@ import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut, TxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)

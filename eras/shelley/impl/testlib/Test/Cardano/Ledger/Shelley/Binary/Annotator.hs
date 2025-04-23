@@ -20,6 +20,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Tx.Internal (
@@ -71,9 +72,9 @@ instance
   decCBOR = pure <$> decCBOR
 
 deriving via
-  Mem (ShelleyTxBodyRaw era)
+  Mem (ShelleyTxBodyRaw ShelleyEra)
   instance
-    EraTxBody era => DecCBOR (Annotator (ShelleyTxBody era))
+    DecCBOR (Annotator (TxBody ShelleyEra))
 
 instance Era era => DecCBOR (Annotator (ShelleyTxAuxDataRaw era)) where
   decCBOR = pure <$> decCBOR

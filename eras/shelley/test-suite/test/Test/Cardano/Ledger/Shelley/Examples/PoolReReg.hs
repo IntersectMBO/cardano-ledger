@@ -26,11 +26,10 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -91,7 +90,7 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -161,7 +160,7 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 newPoolParams :: PoolParams
 newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
 
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])

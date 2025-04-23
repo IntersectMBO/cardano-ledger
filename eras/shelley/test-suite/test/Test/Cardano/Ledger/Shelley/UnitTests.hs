@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
@@ -357,7 +357,7 @@ testSpendNonexistentInput =
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
   let txbody =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ ShelleyTxOut aliceAddr (Coin 6404)
@@ -381,7 +381,7 @@ testWitnessNotIncluded =
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
   let txbody =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 232))
           Empty
@@ -402,7 +402,7 @@ testSpendNotOwnedUTxO =
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
   let txbody =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
@@ -412,7 +412,7 @@ testWitnessWrongUTxO =
           SNothing
           SNothing
       tx2body =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
@@ -494,7 +494,7 @@ testExpiredTx =
 testInvalidWintess :: Assertion
 testInvalidWintess =
   let txb =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ ShelleyTxOut aliceAddr (Coin 6000)
@@ -521,7 +521,7 @@ testInvalidWintess =
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let txb =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ ShelleyTxOut aliceAddr (Coin 6000)
@@ -547,7 +547,7 @@ testWithdrawalNoWit =
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
   let txb =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ ShelleyTxOut aliceAddr (Coin 6000)
@@ -645,7 +645,7 @@ testProducedOverMaxWord64 :: Assertion
 testProducedOverMaxWord64 =
   let biggestCoin = fromIntegral (maxBound :: Word64)
       txbody =
-        ShelleyTxBody @C
+        ShelleyTxBody
           (Set.fromList [TxIn genesisId minBound])
           (StrictSeq.fromList [ShelleyTxOut bobAddr (Coin biggestCoin)])
           Empty

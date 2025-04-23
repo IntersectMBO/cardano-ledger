@@ -28,7 +28,6 @@ import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraTx,
   EraTxAuxData (..),
-  EraTxBody (..),
   EraTxWits (..),
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)

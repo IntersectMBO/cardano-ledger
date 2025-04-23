@@ -29,7 +29,6 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
@@ -39,7 +38,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyGenesis (..),
   ShelleyGenesisStaking (ShelleyGenesisStaking),
   ShelleyTx (ShelleyTx),
-  ShelleyTxBody (ShelleyTxBody),
+  TxBody (ShelleyTxBody),
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -488,16 +487,7 @@ instance Arbitrary StakeProportion where
 newtype StakeProportion = StakeProportion Rational
   deriving (Show)
 
-instance
-  ( EraTxOut era
-  , ShelleyEraScript era
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxCert era)
-  , EncCBOR (TxCert era)
-  ) =>
-  Arbitrary (ShelleyTxBody era)
-  where
+instance Arbitrary (TxBody ShelleyEra) where
   arbitrary =
     ShelleyTxBody
       <$> arbitrary

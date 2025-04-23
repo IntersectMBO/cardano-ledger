@@ -22,7 +22,7 @@ import Cardano.Crypto.Hash.Class (castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary (MaryEra, TxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -34,7 +34,6 @@ import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe (fromMaybe)
-import Data.Maybe.Strict (StrictMaybe)
 import Data.String (IsString (fromString))
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
@@ -49,16 +48,7 @@ instance Arbitrary AssetName where
         , (7, genShortByteString =<< choose (1, 32))
         ]
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Era era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (MaryTxBody era)
-  where
+instance Arbitrary (TxBody MaryEra) where
   arbitrary =
     MaryTxBody
       <$> arbitrary

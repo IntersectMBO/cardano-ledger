@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Allegra.Binary.Annotator (
   module Test.Cardano.Ledger.Shelley.Binary.Annotator,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
@@ -76,6 +77,6 @@ instance
   decCBOR = pure <$> decCBOR
 
 deriving via
-  Mem (AllegraTxBodyRaw () era)
+  Mem (AllegraTxBodyRaw () AllegraEra)
   instance
-    AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBody era))
+    DecCBOR (Annotator (TxBody AllegraEra))

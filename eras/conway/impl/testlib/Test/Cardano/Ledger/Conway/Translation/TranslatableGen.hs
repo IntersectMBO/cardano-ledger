@@ -13,7 +13,7 @@ import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (TxBody (ConwayTxBody))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), SLanguage (..))
@@ -42,7 +42,7 @@ instance TranslatableGen ConwayEra where
   mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
   mkTxInfoLanguage PlutusV3 = TxInfoLanguage SPlutusV3
 
-genTxBody :: Language -> Gen (ConwayTxBody ConwayEra)
+genTxBody :: Language -> Gen (TxBody ConwayEra)
 genTxBody l = do
   let genTxOuts =
         fromList

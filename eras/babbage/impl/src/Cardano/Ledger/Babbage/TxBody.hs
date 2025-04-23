@@ -26,9 +26,7 @@ module Cardano.Ledger.Babbage.TxBody (
     TxOutCompactDatum,
     TxOutCompactRefScript
   ),
-  allSizedOutputsBabbageTxBodyF,
-  babbageMinUTxOValue,
-  BabbageTxBody (
+  TxBody (
     MkBabbageTxBody,
     BabbageTxBody,
     btbInputs,
@@ -48,6 +46,8 @@ module Cardano.Ledger.Babbage.TxBody (
     btbAuxDataHash,
     btbTxNetworkId
   ),
+  allSizedOutputsBabbageTxBodyF,
+  babbageMinUTxOValue,
   BabbageTxBodyRaw (..),
   BabbageTxBodyUpgradeError (..),
   babbageAllInputsTxBodyF,
@@ -220,23 +220,12 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBodyRaw era)
 
-newtype BabbageTxBody era = MkBabbageTxBody (MemoBytes (BabbageTxBodyRaw era))
-  deriving newtype (Generic, SafeToHash, ToCBOR)
+deriving newtype instance DecCBOR (TxBody BabbageEra)
 
-deriving newtype instance
-  ( Era era
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  , DecCBOR (PParamsUpdate era)
-  ) =>
-  DecCBOR (BabbageTxBody era)
+instance Memoized (TxBody BabbageEra) where
+  type RawType (TxBody BabbageEra) = BabbageTxBodyRaw BabbageEra
 
-instance Memoized (BabbageTxBody era) where
-  type RawType (BabbageTxBody era) = BabbageTxBodyRaw era
-
-deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (BabbageTxBody era)
+deriving newtype instance NFData (TxBody BabbageEra)
 
 babbageSpendableInputsTxBodyF ::
   BabbageEraTxBody era => SimpleGetter (TxBody era) (Set TxIn)
@@ -276,7 +265,8 @@ data BabbageTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTxBody BabbageEra where
-  type TxBody BabbageEra = BabbageTxBody BabbageEra
+  newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes (BabbageTxBodyRaw BabbageEra))
+    deriving newtype (Generic, SafeToHash, ToCBOR)
   type TxBodyUpgradeError BabbageEra = BabbageTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoizedEra @BabbageEra basicBabbageTxBodyRaw
@@ -443,44 +433,33 @@ instance BabbageEraTxBody BabbageEra where
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
 
-instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
-  EqRaw (BabbageTxBody era)
-  where
+instance EqRaw (TxBody BabbageEra) where
   eqRaw = zipMemoRawType eqRaw
 
-deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (BabbageTxBody era)
+deriving newtype instance Eq (TxBody BabbageEra)
 
-deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (BabbageTxBody era)
+deriving instance NoThunks (TxBody BabbageEra)
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (BabbageTxBody era)
+deriving instance Show (TxBody BabbageEra)
 
 pattern BabbageTxBody ::
-  forall era.
-  BabbageEraTxBody era =>
   Set TxIn ->
   Set TxIn ->
   Set TxIn ->
-  StrictSeq (Sized (TxOut era)) ->
-  StrictMaybe (Sized (TxOut era)) ->
+  StrictSeq (Sized (TxOut BabbageEra)) ->
+  StrictMaybe (Sized (TxOut BabbageEra)) ->
   StrictMaybe Coin ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxCert BabbageEra) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update BabbageEra) ->
   Set (KeyHash 'Witness) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
-  BabbageTxBody era
+  TxBody BabbageEra
 pattern BabbageTxBody
   { btbInputs
   , btbCollateral
@@ -537,7 +516,7 @@ pattern BabbageTxBody
       scriptIntegrityHash
       auxDataHash
       txNetworkId =
-        mkMemoizedEra @era $
+        mkMemoizedEra @BabbageEra $
           BabbageTxBodyRaw
             { btbrInputs = inputs
             , btbrCollateralInputs = collateral
@@ -559,7 +538,7 @@ pattern BabbageTxBody
 
 {-# COMPLETE BabbageTxBody #-}
 
-instance HashAnnotated (BabbageTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody BabbageEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================
@@ -568,22 +547,22 @@ instance HashAnnotated (BabbageTxBody era) EraIndependentTxBody where
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-spendInputs' :: BabbageTxBody era -> Set TxIn
-collateralInputs' :: BabbageTxBody era -> Set TxIn
-referenceInputs' :: BabbageTxBody era -> Set TxIn
-outputs' :: BabbageTxBody era -> StrictSeq (TxOut era)
-collateralReturn' :: BabbageTxBody era -> StrictMaybe (TxOut era)
-totalCollateral' :: BabbageTxBody era -> StrictMaybe Coin
-certs' :: BabbageTxBody era -> StrictSeq (TxCert era)
-txfee' :: BabbageTxBody era -> Coin
-withdrawals' :: BabbageTxBody era -> Withdrawals
-vldt' :: BabbageTxBody era -> ValidityInterval
-update' :: BabbageTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness)
-adHash' :: BabbageTxBody era -> StrictMaybe TxAuxDataHash
-mint' :: BabbageTxBody era -> MultiAsset
-scriptIntegrityHash' :: BabbageTxBody era -> StrictMaybe ScriptIntegrityHash
-txnetworkid' :: BabbageTxBody era -> StrictMaybe Network
+spendInputs' :: TxBody BabbageEra -> Set TxIn
+collateralInputs' :: TxBody BabbageEra -> Set TxIn
+referenceInputs' :: TxBody BabbageEra -> Set TxIn
+outputs' :: TxBody BabbageEra -> StrictSeq (TxOut BabbageEra)
+collateralReturn' :: TxBody BabbageEra -> StrictMaybe (TxOut BabbageEra)
+totalCollateral' :: TxBody BabbageEra -> StrictMaybe Coin
+certs' :: TxBody BabbageEra -> StrictSeq (TxCert BabbageEra)
+txfee' :: TxBody BabbageEra -> Coin
+withdrawals' :: TxBody BabbageEra -> Withdrawals
+vldt' :: TxBody BabbageEra -> ValidityInterval
+update' :: TxBody BabbageEra -> StrictMaybe (Update BabbageEra)
+reqSignerHashes' :: TxBody BabbageEra -> Set (KeyHash 'Witness)
+adHash' :: TxBody BabbageEra -> StrictMaybe TxAuxDataHash
+mint' :: TxBody BabbageEra -> MultiAsset
+scriptIntegrityHash' :: TxBody BabbageEra -> StrictMaybe ScriptIntegrityHash
+txnetworkid' :: TxBody BabbageEra -> StrictMaybe Network
 spendInputs' = btbrInputs . getMemoRawType
 {-# DEPRECATED spendInputs' "In favor of `inputsTxBodyL`" #-}
 
@@ -637,7 +616,7 @@ txnetworkid' = btbrNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (BabbageTxBody era)
+instance EncCBOR (TxBody BabbageEra)
 
 instance
   (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>

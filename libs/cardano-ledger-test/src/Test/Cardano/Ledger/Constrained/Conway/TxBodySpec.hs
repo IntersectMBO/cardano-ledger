@@ -16,14 +16,9 @@
 module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
-import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
 import Constrained.API
 import Constrained.Base (IsPred (..))
@@ -131,125 +126,11 @@ reifyX t f body =
     , Explain (pure ("reifies " ++ show reifyvar)) $ toPred $ body reifyvar
     ]
 
--- =======================================================================
-
--- | This is the first step to generating balanced TxBodies. It illustrates several techniques
---   1) Generate a tuple of related types. Previously we relied on generating one type and then
---      passing the actual generated value as the input of the next generator. This is an alternative to that.
---      But note we still rely partly on the old technique because we take CertsEnv and CertState values as input.
---   2) Carefully using dependsOn, to make explicit the order the code writer thinks the the variables
---      should be solved in. This makes failures less mysterious. Because variable ordering failures
---      are mysterious and hard to solve
---   3) The use of nested reify (here reifyX which just makes error messages better). This supports
---      using complicated Haskell functions to extract one random value, from a previous solved variable
---      using a pure function. Examples of this are 'getDepositRefund' and 'adjustTxOutCoin'
---   4) How complicated balancing constraints can be solved declaratively, rather than algorithmically
---      i.e.  toDelta_ (sumTxOut_ @era outputs) ==. inputS + with + refund - deposit - f
-bodyspec ::
-  forall era.
-  ( EraSpecTxOut era
-  , EraSpecCert era
-  , EraSpecTxCert era
-  , ConwayEraCertState era
-  ) =>
-  WitUniv era ->
-  CertsEnv era ->
-  CertState era ->
-  Specification
-    ( ShelleyTxBody era
-    , Map TxIn (TxOut era)
-    , TxIn
-    )
-bodyspec univ certsenv certstate =
-  constrained' $ \ [var|shelleyBody|] [var|utxo|] [var|feeInput|] ->
-    match shelleyBody $
-      \ [var|inputs|] [var|outputs|] [var|certs|] [var|withdrawals|] [var|fee|] _ [var|update|] _ ->
-        exists (\eval -> pure $ Map.restrictKeys (eval utxo) (eval inputs)) $ \ [var|utxosubset|] ->
-          exists (\eval -> pure $ Map.adjust (adjustTxOutCoin (DeltaCoin 0)) (eval feeInput) (eval utxo)) $ \ [var|tempUtxo|] ->
-            [ assert $ update ==. lit Nothing
-            , satisfies utxosubset (hasSize (rangeSize 3 4))
-            , forAll' utxosubset $ \_ [var|out|] -> assert $ txOutCoin_ @era out >. lit (Coin 0)
-            , dependsOn feeInput utxosubset
-            , assert $ member_ feeInput (dom_ utxosubset)
-            , dependsOn fee feeInput
-            , onJust (lookup_ feeInput utxosubset) (\ [var|feeTxout|] -> fee ==. txOutCoin_ @era feeTxout)
-            , dependsOn inputs utxosubset
-            , assert $ inputs ==. dom_ utxosubset
-            , assert $ member_ feeInput inputs
-            , dependsOn tempUtxo utxosubset
-            , satisfies (dom_ tempUtxo) (hasSize (rangeSize 8 10))
-            , subMapSuperDependsOnSub utxosubset tempUtxo
-            , forAll' tempUtxo $ \_ [var|out|] -> assert $ txOutCoin_ @era out >. lit (Coin 0)
-            , -- Certs has no dependencies
-              forAll certs $ \ [var|oneCert|] -> satisfies oneCert (witTxCert univ)
-            , assert $ sizeOf_ certs ==. 4
-            , -- withdrawals hs no dependencies
-              assert $ sizeOf_ withdrawals ==. lit 2
-            , forAll' withdrawals $ \ [var|acct|] [var|val|] ->
-                [ assert $ val <=. lit (Coin 10)
-                , assert $ val >. lit (Coin 0)
-                , match acct $ \ [var|network|] _ -> assert $ network ==. lit Testnet
-                ]
-            , dependsOn outputs certs
-            , dependsOn outputs fee
-            , dependsOn outputs withdrawals
-            , dependsOn outputs utxosubset
-            , assert $ sizeOf_ outputs ==. 4
-            , forAll outputs $ \ [var|oneoutput|] -> txOutCoin_ @era oneoutput >=. lit (Coin 0)
-            , reifyX (toDelta_ fee) id $ \ [var|f|] ->
-                reifyX (toDelta_ (sumTxOut_ @era (rng_ utxosubset))) id $ \ [var|inputS|] ->
-                  reifyX (toDelta_ (sumCoin_ (rng_ withdrawals))) id $ \ [var|with|] ->
-                    reify' certs (getDepositRefund @era (certsPParams certsenv) certstate) $
-                      \ [var|deposit|] [var|refund|] ->
-                        toDelta_ (sumTxOut_ @era outputs) ==. inputS + with + refund - deposit - f
-            , dependsOn utxo tempUtxo
-            , reifyX
-                (pair_ tempUtxo feeInput)
-                (\(m, i) -> Map.adjust (adjustTxOutCoin (DeltaCoin 0)) i m) -- mimics how we will adjust fee
-                (\ [var|u|] -> utxo ==. u)
-            ]
-
 -- ==============================================================================
 -- Some code to visualize what is happening, this code will disappear eventually
 
 putPretty :: ToExpr t => [Char] -> t -> IO ()
 putPretty nm x = putStrLn (nm ++ "\n" ++ show (prettyE x))
-
-go2 ::
-  forall era.
-  ( ToExpr (TxOut era)
-  , EraSpecTxOut era
-  , EraSpecCert era
-  , EraSpecTxCert era
-  , HasSpec (Tx era)
-  , HasSpec (CertState era)
-  , ConwayEraCertState era
-  ) =>
-  IO ()
-go2 = do
-  univ <- generate $ genWitUniv 25
-  wdrls <- generate $ genFromSpec (constrained $ \x -> witness univ x)
-  delegatees <- generate $ genFromSpec (delegateeSpec univ)
-  certState <-
-    generate $
-      genFromSpec @(CertState era)
-        (certStateSpec @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
-        -- error "STOP"
-  certsEnv <- generate $ genFromSpec @(CertsEnv era) certsEnvSpec
-
-  (body, utxomap, feeinput) <-
-    generate $ genFromSpec (bodyspec @era univ certsEnv certState)
-  let utxo = UTxO utxomap
-      txbody = fromShelleyBody body
-
-  putStrLn
-    ("Input UTxO, total " ++ show (coinBalance @era utxo) ++ ", size = " ++ show (Map.size utxomap))
-  putPretty "UTxO" utxo
-  putPretty "\nfeeInput" feeinput
-  -- TODO add code to show the inputs, as the TxOuts they UTxO resolves to so that one can inspect
-  -- that the TxBody balances. Tghis used to be done with pcTxBodyWithUTxO, which no longer exists.
-  print (consumedTxBody txbody (certsPParams certsEnv) certState utxo)
-  print (producedTxBody txbody (certsPParams certsEnv) certState)
 
 testBody :: IO ()
 testBody = do

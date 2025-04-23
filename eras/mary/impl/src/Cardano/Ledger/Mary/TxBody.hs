@@ -17,10 +17,11 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Mary.TxBody (
   MaryEraTxBody (..),
-  MaryTxBody (
+  TxBody (
     MkMaryTxBody,
     MaryTxBody,
     mtbAuxDataHash,
@@ -80,58 +81,44 @@ class AllegraEraTxBody era => MaryEraTxBody era where
 
 type MaryTxBodyRaw era = AllegraTxBodyRaw MultiAsset era
 
-newtype MaryTxBody era = MkMaryTxBody (MemoBytes (MaryTxBodyRaw era))
-  deriving newtype (SafeToHash, ToCBOR)
-
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (MaryTxBody era)
+instance EncCBOR (TxBody MaryEra)
 
-instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
-  EqRaw (MaryTxBody era)
+instance EqRaw (TxBody MaryEra)
 
-instance Memoized (MaryTxBody era) where
-  type RawType (MaryTxBody era) = MaryTxBodyRaw era
+instance Memoized (TxBody MaryEra) where
+  type RawType (TxBody MaryEra) = MaryTxBodyRaw MaryEra
 
-deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (MaryTxBody era)
+deriving newtype instance Eq (TxBody MaryEra)
 
-deriving newtype instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (MaryTxBody era)
+deriving newtype instance Show (TxBody MaryEra)
 
-deriving instance Generic (MaryTxBody era)
+deriving instance Generic (TxBody MaryEra)
 
-deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (MaryTxBody era)
+deriving newtype instance NoThunks (TxBody MaryEra)
 
-deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (MaryTxBody era)
+deriving newtype instance NFData (TxBody MaryEra)
 
-deriving newtype instance MaryEraTxBody era => DecCBOR (MaryTxBody era)
+deriving newtype instance DecCBOR (TxBody MaryEra)
 
 type instance MemoHashIndex (MaryTxBodyRaw era) = EraIndependentTxBody
 
-instance Era era => HashAnnotated (MaryTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody MaryEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
-  forall era.
-  (EraTxOut era, EraTxCert era) =>
+  (EraTxOut MaryEra, EraTxCert MaryEra) =>
   Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut MaryEra) ->
+  StrictSeq (TxCert MaryEra) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update MaryEra) ->
   StrictMaybe TxAuxDataHash ->
   MultiAsset ->
-  MaryTxBody era
+  TxBody MaryEra
 pattern MaryTxBody
   { mtbInputs
   , mtbOutputs
@@ -167,7 +154,7 @@ pattern MaryTxBody
       update
       auxDataHash
       mint =
-        mkMemoizedEra @era $
+        mkMemoizedEra @MaryEra $
           AllegraTxBodyRaw
             { atbrInputs = inputs
             , atbrOutputs = outputs
@@ -183,7 +170,8 @@ pattern MaryTxBody
 {-# COMPLETE MaryTxBody #-}
 
 instance EraTxBody MaryEra where
-  type TxBody MaryEra = MaryTxBody MaryEra
+  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes (MaryTxBodyRaw MaryEra))
+    deriving newtype (SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw
 

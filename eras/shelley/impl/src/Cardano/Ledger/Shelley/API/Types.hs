@@ -120,7 +120,7 @@ import Cardano.Ledger.Shelley.TxAuxData as X (
   Metadatum (..),
   ShelleyTxAuxData (..),
  )
-import Cardano.Ledger.Shelley.TxBody as X (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody as X (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxCert as X (
   GenesisDelegCert (..),
   MIRCert (..),
