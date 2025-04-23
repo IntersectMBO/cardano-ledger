@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+- Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
 * Bump `ProtVerHigh ConwayEra` to `11`
 * Remove `ConwayTxBody`
 * Removed `era` parameter from `ConwayTxBodyRaw`
