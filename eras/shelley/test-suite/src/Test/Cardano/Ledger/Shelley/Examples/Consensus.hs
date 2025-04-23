@@ -420,7 +420,7 @@ mkWitnessesPreAlonzo _ txBody keyPairWits =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: ShelleyTxBody ShelleyEra
+exampleTxBodyShelley :: TxBody ShelleyEra
 exampleTxBodyShelley =
   ShelleyTxBody
     exampleTxIns

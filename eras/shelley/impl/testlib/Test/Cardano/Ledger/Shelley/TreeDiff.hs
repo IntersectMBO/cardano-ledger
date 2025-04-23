@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
@@ -88,12 +89,7 @@ instance
   ) =>
   ToExpr (ShelleyTxBodyRaw era)
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBody era)
+instance ToExpr (TxBody ShelleyEra)
 
 -- PoolRank
 instance ToExpr Likelihood

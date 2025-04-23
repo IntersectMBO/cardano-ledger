@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.PoolRank (
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
   RewardAccount (..),
-  ShelleyTxBody (..),
+  TxBody (..),
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -173,7 +173,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -279,7 +279,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound]
@@ -429,7 +429,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
-txbodyEx4 :: ShelleyTxBody ShelleyEra
+txbodyEx4 :: TxBody ShelleyEra
 txbodyEx4 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
@@ -823,7 +823,7 @@ bobAda10 =
     <+> Coin 7
     <-> feeTx10
 
-txbodyEx10 :: ShelleyTxBody ShelleyEra
+txbodyEx10 :: TxBody ShelleyEra
 txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -889,7 +889,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: ShelleyTxBody ShelleyEra
+txbodyEx11 :: TxBody ShelleyEra
 txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])

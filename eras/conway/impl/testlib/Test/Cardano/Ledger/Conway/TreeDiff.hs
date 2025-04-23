@@ -170,9 +170,7 @@ instance
   (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era), ToExpr (TxCert era)) =>
   ToExpr (ConwayTxBodyRaw era)
 
-instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era), ToExpr (TxCert era)) =>
-  ToExpr (ConwayTxBody era)
+instance ToExpr (TxBody ConwayEra)
 
 -- Rules/Cert
 instance

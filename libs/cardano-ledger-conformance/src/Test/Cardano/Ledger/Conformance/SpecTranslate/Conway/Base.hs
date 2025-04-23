@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecShareCBOR (..), Interns, Sized (..))
+import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
 import Cardano.Ledger.Conway.Core
@@ -62,8 +62,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.Tx (refScriptCostMultiplier, refScriptCostStride)
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody)
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.HKD (HKD)
@@ -633,49 +631,6 @@ instance SpecTranslate ctx TxAuxDataHash where
   type SpecRep TxAuxDataHash = Agda.DataHash
 
   toSpecRep (TxAuxDataHash x) = toSpecRep x
-
-instance
-  ( ConwayEraTxBody era
-  , TxBody era ~ ConwayTxBody era
-  , SpecRep (TxOut era) ~ Agda.TxOut
-  , SpecRep (ConwayTxCert era) ~ Agda.DCert
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  , TxCert era ~ ConwayTxCert era
-  , Share (TxOut era) ~ Interns (Credential 'Staking)
-  , Inject ctx Integer
-  , Inject ctx TxId
-  , SpecTranslate ctx (TxOut era)
-  , SpecTranslate ctx (ConwayTxCert era)
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  ) =>
-  SpecTranslate ctx (ConwayTxBody era)
-  where
-  type SpecRep (ConwayTxBody era) = Agda.TxBody
-
-  toSpecRep txb = do
-    sizeTx <- askCtx
-    txId <- askCtx @TxId
-    Agda.MkTxBody
-      <$> toSpecRep (txb ^. inputsTxBodyL)
-      <*> toSpecRep (txb ^. referenceInputsTxBodyL)
-      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
-      <*> toSpecRep (txb ^. feeTxBodyL)
-      <*> pure 0
-      <*> toSpecRep (txb ^. vldtTxBodyL)
-      <*> toSpecRep (txb ^. certsTxBodyL)
-      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
-      <*> toSpecRep (txb ^. votingProceduresTxBodyL)
-      <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
-      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
-      <*> pure Nothing -- TODO implement this properly
-      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
-      <*> toSpecRep (txb ^. networkIdTxBodyL)
-      <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
-      <*> pure sizeTx
-      <*> toSpecRep txId
-      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
-      <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
-      <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
 
 data ConwayTxBodyTransContext = ConwayTxBodyTransContext
   { ctbtcSizeTx :: !Integer

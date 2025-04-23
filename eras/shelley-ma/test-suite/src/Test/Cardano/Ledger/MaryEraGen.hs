@@ -23,7 +23,7 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (MaryTxBody))
+import Cardano.Ledger.Mary.TxBody (TxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -275,26 +275,20 @@ addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
 -- | This function is only good in the Mary Era
 genTxBody ::
-  forall era.
-  ( EraGen era
-  , AllegraEraScript era
-  , Value era ~ MaryValue
-  , TxOut era ~ ShelleyTxOut era
-  ) =>
-  PParams era ->
+  PParams MaryEra ->
   SlotNo ->
   Set.Set TxIn ->
-  StrictSeq (ShelleyTxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (ShelleyTxOut MaryEra) ->
+  StrictSeq (TxCert MaryEra) ->
   Withdrawals ->
   Coin ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update MaryEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (MaryTxBody era, [NativeScript era])
+  Gen (TxBody MaryEra, [NativeScript MaryEra])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
-  let (mint', outs') = case addTokens (Proxy @era) StrictSeq.Empty pparams mint outs of
+  let (mint', outs') = case addTokens (Proxy @MaryEra) StrictSeq.Empty pparams mint outs of
         Nothing -> (mempty, outs)
         Just os -> (mint, os)
       ps =

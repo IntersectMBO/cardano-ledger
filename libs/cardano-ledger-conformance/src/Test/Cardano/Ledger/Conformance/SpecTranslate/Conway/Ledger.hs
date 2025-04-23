@@ -13,16 +13,29 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 
 import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule, ScriptHash)
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (
+  AllegraEraTxBody (..),
+  AlonzoEraTxBody (..),
+  BabbageEraTxBody (..),
+  ConwayEraTxBody (..),
+  EraPParams (..),
+  EraRule,
+  EraTxBody (..),
+  ScriptHash,
+ )
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
+import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
+import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), askCtx, showOpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
 instance
@@ -56,3 +69,36 @@ instance
   type SpecRep (ConwayLedgerPredFailure era) = OpaqueErrorString
 
   toSpecRep = pure . showOpaqueErrorString
+
+instance
+  ( Inject ctx Integer
+  , Inject ctx TxId
+  ) =>
+  SpecTranslate ctx (TxBody ConwayEra)
+  where
+  type SpecRep (TxBody ConwayEra) = Agda.TxBody
+
+  toSpecRep txb = do
+    sizeTx <- askCtx
+    txId <- askCtx @TxId
+    Agda.MkTxBody
+      <$> toSpecRep (txb ^. inputsTxBodyL)
+      <*> toSpecRep (txb ^. referenceInputsTxBodyL)
+      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
+      <*> toSpecRep (txb ^. feeTxBodyL)
+      <*> pure 0
+      <*> toSpecRep (txb ^. vldtTxBodyL)
+      <*> toSpecRep (txb ^. certsTxBodyL)
+      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
+      <*> toSpecRep (txb ^. votingProceduresTxBodyL)
+      <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
+      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
+      <*> pure Nothing -- TODO implement this properly
+      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
+      <*> toSpecRep (txb ^. networkIdTxBodyL)
+      <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
+      <*> pure sizeTx
+      <*> toSpecRep txId
+      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
+      <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
+      <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)

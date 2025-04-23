@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -30,14 +31,7 @@ instance Twiddle a => Twiddle (Sized a)
 instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
   twiddle v = twiddle v . toTerm v
 
-instance
-  ( Era era
-  , Twiddle (TxOut era)
-  , Twiddle (TxCert era)
-  , BabbageEraTxBody era
-  ) =>
-  Twiddle (BabbageTxBody era)
-  where
+instance Twiddle (TxBody BabbageEra) where
   twiddle v txBody = do
     inputs' <- twiddle v $ btbInputs txBody
     outputs' <- twiddle v $ btbOutputs txBody

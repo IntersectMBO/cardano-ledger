@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
@@ -92,7 +92,7 @@ ledgerExamplesAlonzo =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 
-exampleTxBodyAlonzo :: AlonzoTxBody AlonzoEra
+exampleTxBodyAlonzo :: TxBody AlonzoEra
 exampleTxBodyAlonzo =
   AlonzoTxBody
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- inputs

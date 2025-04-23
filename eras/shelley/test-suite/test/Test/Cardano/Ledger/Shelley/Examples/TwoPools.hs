@@ -72,7 +72,7 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
-import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,

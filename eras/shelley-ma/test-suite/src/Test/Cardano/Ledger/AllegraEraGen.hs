@@ -28,7 +28,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Allegra.TxBody (TxBody (AllegraTxBody))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
@@ -98,16 +98,15 @@ instance EraGen AllegraEra where
   constructTx = ShelleyTx
 
 genTxBody ::
-  AllegraEraTxBody era =>
   SlotNo ->
   Set.Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut AllegraEra) ->
+  StrictSeq (TxCert AllegraEra) ->
   Withdrawals ->
   Coin ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update AllegraEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (AllegraTxBody era, [Timelock era])
+  Gen (TxBody AllegraEra, [Timelock AllegraEra])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   pure

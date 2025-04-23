@@ -13,8 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Coin (Coin)
@@ -69,7 +68,7 @@ instance Twiddle TxIn where
 instance Twiddle Coin where
   twiddle v = twiddle v . toTerm v
 
-instance Twiddle (AlonzoTxBody AlonzoEra) where
+instance Twiddle (TxBody AlonzoEra) where
   twiddle v txBody = do
     inputs' <- twiddle v $ atbInputs txBody
     outputs' <- twiddle v $ atbOutputs txBody

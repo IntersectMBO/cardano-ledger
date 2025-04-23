@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -33,6 +34,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
@@ -60,7 +62,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
+import Cardano.Ledger.Alonzo.TxBody (TxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (AlonzoTxWits),
@@ -158,15 +160,7 @@ instance
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (AlonzoTxBody era)
-  where
+instance Arbitrary (TxBody AlonzoEra) where
   arbitrary =
     AlonzoTxBody
       <$> arbitrary

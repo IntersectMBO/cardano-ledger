@@ -52,9 +52,7 @@ instance
   (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
   ToExpr (BabbageTxBodyRaw era)
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBody era)
+instance ToExpr (TxBody BabbageEra)
 
 -- Rules/Utxo
 instance

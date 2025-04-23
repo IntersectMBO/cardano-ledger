@@ -45,8 +45,8 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoTxBody (..),
   AlonzoTxOut (..),
+  TxBody (..),
   utxoEntrySize,
  )
 import Cardano.Ledger.Alonzo.TxWits (

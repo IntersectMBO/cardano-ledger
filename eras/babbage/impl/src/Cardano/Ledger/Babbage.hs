@@ -9,7 +9,7 @@ module Cardano.Ledger.Babbage (
   Babbage,
   BabbageEra,
   BabbageTxOut,
-  BabbageTxBody,
+  TxBody (BabbageTxBody),
   AlonzoScript,
   AlonzoTxAuxData,
 )
@@ -22,7 +22,7 @@ import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody, BabbageTxOut)
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Shelley.API

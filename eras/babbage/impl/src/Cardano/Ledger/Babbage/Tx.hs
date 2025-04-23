@@ -4,7 +4,7 @@
 
 module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
-  BabbageTxBody (..),
+  TxBody (..),
   module X,
 )
 where
@@ -18,8 +18,8 @@ import Cardano.Ledger.Alonzo.TxSeq (
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
-  BabbageTxBody (..),
   BabbageTxBodyUpgradeError,
+  TxBody (..),
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core

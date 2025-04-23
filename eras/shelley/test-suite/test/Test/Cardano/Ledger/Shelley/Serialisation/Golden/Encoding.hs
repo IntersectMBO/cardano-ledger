@@ -86,7 +86,7 @@ import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -199,7 +199,7 @@ testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 testVRFKH :: VRFVerKeyHash r
 testVRFKH = hashVerKeyVRF @MockCrypto $ vrfVerKey testVRF
 
-testTxb :: (EraTxOut era, EraTxCert era) => ShelleyTxBody era
+testTxb :: TxBody ShelleyEra
 testTxb =
   ShelleyTxBody
     Set.empty
@@ -212,10 +212,8 @@ testTxb =
     SNothing
 
 testTxbHash ::
-  forall era.
-  (EraTxOut era, EraTxCert era) =>
   SafeHash EraIndependentTxBody
-testTxbHash = hashAnnotated $ testTxb @era
+testTxbHash = hashAnnotated testTxb
 
 testKey1 :: KeyPair 'Payment
 testKey1 = KeyPair vk sk
@@ -248,17 +246,13 @@ testBlockIssuerKeyTokens = e
     VKey vk = vKey testBlockIssuerKey
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeVerKeyDSIGN vk)
 
-testKey1SigToken ::
-  forall era.
-  (EraTxOut era, EraTxCert era) =>
-  Tokens ->
-  Tokens
+testKey1SigToken :: Tokens -> Tokens
 testKey1SigToken = e
   where
     s =
       signedDSIGN
         (sKey testKey1)
-        (extractHash (testTxbHash @era)) ::
+        (extractHash testTxbHash) ::
         SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
@@ -446,7 +440,7 @@ tests =
                 <> S a
                 <> S (Coin 2)
             )
-    , case mkWitnessVKey (testTxbHash @C) testKey1 of
+    , case mkWitnessVKey testTxbHash testKey1 of
         w@(WitVKey vk _sig) ->
           checkEncodingCBORAnnotated
             shelleyProtVer
@@ -454,7 +448,7 @@ tests =
             w -- Transaction _witnessVKeySet element
             ( T (TkListLen 2)
                 <> S vk -- vkey
-                <> T (testKey1SigToken @C) -- signature
+                <> T testKey1SigToken -- signature
             )
     , checkEncoding
         shelleyProtVer
@@ -716,7 +710,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody"
-            ( ShelleyTxBody @C -- minimal transaction body
+            ( ShelleyTxBody -- minimal transaction body
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -752,7 +746,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody_partial"
-            ( ShelleyTxBody @C -- transaction body with some optional components
+            ( ShelleyTxBody -- transaction body with some optional components
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
@@ -794,7 +788,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "txbody_full"
-            ( ShelleyTxBody @C -- transaction body with all components
+            ( ShelleyTxBody -- transaction body with all components
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
@@ -827,7 +821,7 @@ tests =
             )
     , -- checkEncodingCBOR "minimal_txn"
       let txb =
-            ShelleyTxBody @C
+            ShelleyTxBody
               (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
               (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -856,7 +850,7 @@ tests =
             )
     , -- checkEncodingCBOR "full_txn"
       let txb =
-            ShelleyTxBody @C
+            ShelleyTxBody
               (Set.fromList [genesisTxIn1])
               (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
@@ -996,9 +990,9 @@ tests =
           sig = unsoundPureSignedKES () 0 (testBHB @C) (kesSignKey testKESKeys)
           bh = BHeader (testBHB @C) sig
           tout = StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2)
-          txb :: Word64 -> ShelleyTxBody C
+          txb :: Word64 -> TxBody ShelleyEra
           txb s =
-            ShelleyTxBody @C
+            ShelleyTxBody
               (Set.fromList [genesisTxIn1])
               tout
               StrictSeq.empty
@@ -1007,7 +1001,7 @@ tests =
               (SlotNo s)
               SNothing
               SNothing
-          txb1, txb2, txb3, txb4, txb5 :: ShelleyTxBody C
+          txb1, txb2, txb3, txb4, txb5 :: TxBody ShelleyEra
           txb1 = txb 500
           txb2 = txb 501
           txb3 = txb 502

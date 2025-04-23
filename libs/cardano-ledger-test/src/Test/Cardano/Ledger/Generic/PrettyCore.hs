@@ -33,7 +33,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
@@ -62,7 +61,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   atadrMetadata,
   getAlonzoTxAuxDataScripts,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits,
   AlonzoTxWitsRaw (..),
@@ -175,7 +174,6 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -248,7 +246,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBodyRaw (..))
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
   ShelleyDelegCert (..),
@@ -343,10 +341,14 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  AlonzoEra,
   CertStateWit (..),
   GovStateWit (..),
+  MaryEra,
   Proof (..),
   Reflect (..),
+  ShelleyEra,
   unReflect,
   whichCertState,
   whichGovState,
@@ -929,10 +931,7 @@ instance
   prettyA = ppAlonzoTx
 
 ppShelleyTxBody ::
-  ( Reflect era
-  , PrettyA (PParamsUpdate era)
-  ) =>
-  ShelleyTxBody era ->
+  TxBody ShelleyEra ->
   PDoc
 ppShelleyTxBody txBody =
   let ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh = getMemoRawType txBody
@@ -948,42 +947,35 @@ ppShelleyTxBody txBody =
         , ("metadatahash", ppStrictMaybe ppTxAuxDataHash mdh)
         ]
 
-instance
-  ( EraTxOut era
-  , PrettyA (PParamsUpdate era)
-  , Reflect era
-  ) =>
-  PrettyA (ShelleyTxBody era)
-  where
+instance PrettyA (TxBody ShelleyEra) where
   prettyA = ppShelleyTxBody
 
 ppAllegraTxBody ::
-  forall era. (TxBody era ~ AllegraTxBody era, Reflect era) => AllegraTxBody era -> PDoc
-ppAllegraTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
+  TxBody AllegraEra -> PDoc
+ppAllegraTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @AllegraEra))) pairs
   where
     fields = abstractTxBody reify txbody
     pairs = concatMap (pcTxBodyField reify) fields
 
-instance (TxBody era ~ AllegraTxBody era, Reflect era) => PrettyA (AllegraTxBody era) where
+instance PrettyA (TxBody AllegraEra) where
   prettyA = ppAllegraTxBody
 
-ppAlonzoTxBody ::
-  forall era. (TxBody era ~ AlonzoTxBody era, Reflect era) => AlonzoTxBody era -> PDoc
-ppAlonzoTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
+ppAlonzoTxBody :: TxBody AlonzoEra -> PDoc
+ppAlonzoTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @AllegraEra))) pairs
   where
     fields = abstractTxBody reify txbody
     pairs = concatMap (pcTxBodyField reify) fields
 
-instance (TxBody era ~ AlonzoTxBody era, Reflect era) => PrettyA (AlonzoTxBody era) where
+instance PrettyA (TxBody AlonzoEra) where
   prettyA = ppAlonzoTxBody
 
-ppMaryTxBody :: forall era. (TxBody era ~ MaryTxBody era, Reflect era) => MaryTxBody era -> PDoc
-ppMaryTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
+ppMaryTxBody :: TxBody MaryEra -> PDoc
+ppMaryTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @MaryEra))) pairs
   where
     fields = abstractTxBody reify txbody
     pairs = concatMap (pcTxBodyField reify) fields
 
-instance (TxBody era ~ MaryTxBody era, Reflect era) => PrettyA (MaryTxBody era) where
+instance PrettyA (TxBody MaryEra) where
   prettyA = ppMaryTxBody
 
 -- =============================================================

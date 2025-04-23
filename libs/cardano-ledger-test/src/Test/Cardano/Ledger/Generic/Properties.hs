@@ -12,8 +12,7 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley as S (ShelleyEra)
@@ -367,8 +366,8 @@ twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
   testGroup
     "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(AlonzoTxBody AlonzoEra) "Alonzo"
-    , twiddleInvariantHolds @(BabbageTxBody BabbageEra) "Babbage"
+    [ twiddleInvariantHolds @(TxBody AlonzoEra) "Alonzo"
+    , twiddleInvariantHolds @(TxBody BabbageEra) "Babbage"
     ]
 
 -- ==============================================================

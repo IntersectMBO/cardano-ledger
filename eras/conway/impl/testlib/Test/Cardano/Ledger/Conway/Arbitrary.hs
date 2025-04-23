@@ -37,7 +37,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (Sized)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -541,17 +541,7 @@ instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
   shrink = shrinkBoundedEnum
 
-instance
-  ( ConwayEraTxBody era
-  , Arbitrary (Sized (TxOut era))
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (ConwayTxBody era)
-  where
+instance Arbitrary (TxBody ConwayEra) where
   arbitrary =
     ConwayTxBody
       <$> arbitrary

@@ -16,19 +16,19 @@
 --   equality failed.
 module Test.Cardano.Ledger.Generic.Same where
 
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
+import Cardano.Ledger.Babbage.TxBody (TxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.State (VState (..))
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Conway.TxBody (TxBody (..))
+import Cardano.Ledger.Mary (TxBody (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -45,7 +45,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.State (EraCertState (..), UTxO (..))
 import Data.Foldable (toList)
@@ -393,7 +392,7 @@ sameAlonzoTxWits
     , ("RedeemerWits", eqVia (ppMap ppPlutusPurposeAsIx (pcPair pcData pcExUnits)) r1 r2)
     ]
 
-sameTxWits :: Reflect era => Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]
+sameTxWits :: Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]
 sameTxWits proof@Shelley x y = sameShelleyTxWits proof x y
 sameTxWits proof@Allegra x y = sameShelleyTxWits proof x y
 sameTxWits proof@Mary x y = sameShelleyTxWits proof x y
@@ -405,10 +404,9 @@ sameTxWits proof@Conway x y = sameAlonzoTxWits proof x y
 -- Comparing TxBody for Sameness
 
 sameShelleyTxBody ::
-  Reflect era =>
-  Proof era ->
-  ShelleyTxBody era ->
-  ShelleyTxBody era ->
+  Proof ShelleyEra ->
+  TxBody ShelleyEra ->
+  TxBody ShelleyEra ->
   [(String, Maybe PDoc)]
 sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Withdrawals w2) f2 s2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
@@ -422,10 +420,9 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (
   ]
 
 sameAllegraTxBody ::
-  Reflect era =>
-  Proof era ->
-  AllegraTxBody era ->
-  AllegraTxBody era ->
+  Proof AllegraEra ->
+  TxBody AllegraEra ->
+  TxBody AllegraEra ->
   [(String, Maybe PDoc)]
 sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
@@ -439,10 +436,9 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (
   ]
 
 sameMaryTxBody ::
-  Reflect era =>
-  Proof era ->
-  MaryTxBody era ->
-  MaryTxBody era ->
+  Proof MaryEra ->
+  TxBody MaryEra ->
+  TxBody MaryEra ->
   [(String, Maybe PDoc)]
 sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2 m2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
@@ -457,10 +453,9 @@ sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (Mar
   ]
 
 sameAlonzoTxBody ::
-  Reflect era =>
-  Proof era ->
-  AlonzoTxBody era ->
-  AlonzoTxBody era ->
+  Proof AlonzoEra ->
+  TxBody AlonzoEra ->
+  TxBody AlonzoEra ->
   [(String, Maybe PDoc)]
 sameAlonzoTxBody
   proof
@@ -482,12 +477,9 @@ sameAlonzoTxBody
     ]
 
 sameBabbageTxBody ::
-  ( Reflect era
-  , BabbageEraTxBody era
-  ) =>
-  Proof era ->
-  BabbageTxBody era ->
-  BabbageTxBody era ->
+  Proof BabbageEra ->
+  TxBody BabbageEra ->
+  TxBody BabbageEra ->
   [(String, Maybe PDoc)]
 sameBabbageTxBody
   proof
@@ -512,12 +504,9 @@ sameBabbageTxBody
     ]
 
 sameConwayTxBody ::
-  ( ConwayEraTxBody era
-  , Reflect era
-  ) =>
-  Proof era ->
-  ConwayTxBody era ->
-  ConwayTxBody era ->
+  Proof ConwayEra ->
+  TxBody ConwayEra ->
+  TxBody ConwayEra ->
   [(String, Maybe PDoc)]
 sameConwayTxBody
   proof
@@ -550,7 +539,7 @@ sameConwayTxBody
     , ("TreasuryDonation", eqVia pcCoin td1 td2)
     ]
 
-sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
+sameTxBody :: Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
 sameTxBody proof@Shelley x y = sameShelleyTxBody proof x y
 sameTxBody proof@Allegra x y = sameAllegraTxBody proof x y
 sameTxBody proof@Mary x y = sameMaryTxBody proof x y
@@ -590,7 +579,7 @@ sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
        ]
 {-# NOINLINE sameAlonzoTx #-}
 
-sameTx :: Reflect era => Proof era -> Tx era -> Tx era -> [(String, Maybe PDoc)]
+sameTx :: Proof era -> Tx era -> Tx era -> [(String, Maybe PDoc)]
 sameTx proof@Shelley x y = sameShelleyTx proof x y
 sameTx proof@Allegra x y = sameShelleyTx proof x y
 sameTx proof@Mary x y = sameShelleyTx proof x y
@@ -620,8 +609,7 @@ sameShelleyTxSeq proof (ShelleyTxSeq ss1) (ShelleyTxSeq ss2) =
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
 sameAlonzoTxSeq ::
-  ( Reflect era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , SafeToHash (TxWits era)
   ) =>
   Proof era ->
@@ -633,7 +621,7 @@ sameAlonzoTxSeq proof (AlonzoTxSeq ss1) (AlonzoTxSeq ss2) =
   where
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
-sameTxSeq :: Reflect era => Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
+sameTxSeq :: Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
 sameTxSeq proof@Shelley x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@Allegra x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@Mary x y = sameShelleyTxSeq proof x y

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -8,6 +9,7 @@ module Test.Cardano.Ledger.Allegra.TreeDiff (
   module Test.Cardano.Ledger.Shelley.TreeDiff,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
@@ -38,12 +40,7 @@ instance
   ) =>
   ToExpr (AllegraTxBodyRaw ma era)
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (AllegraTxBody era)
+instance ToExpr (TxBody AllegraEra)
 
 -- Rules/Utxo
 instance
