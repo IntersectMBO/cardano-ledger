@@ -2,11 +2,11 @@
 
 
 The markdown source of this file can be obtained
-[here](https://github.com/IntersectMBO/cardano-ledger/blob/ts-constrained-manual/docs/constrained-generators/manual.md)
+[here](https://github.com/IntersectMBO/cardano-ledger/blob/master/docs/constrained-generators/manual.md)
 
 
 All the examples in this file can be obtained 
-[here](https://github.com/IntersectMBO/cardano-ledger/blob/ts-constrained-manual/docs/constrained-generators/ManualExamples.hs)
+[here](https://github.com/IntersectMBO/cardano-ledger/blob/master/docs/constrained-generators/ManualExamples.hs)
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
@@ -65,10 +65,10 @@ A First-order typed logic has 4 components
    - Constants: `5`, `"abc"`, `True` . 
    - Applications: `elem_ "abc" xs`.  Applications apply a function symbol (i.e. `elem_`) to a list of Terms
 2. **Predicates**   (Assert (x ==. 5)). Predicates are the assertions of boolean typed terms.
-3. **Connectives**  (And, Or, Not, =>, ...).  Connectives make complicated Predicates out of simpler ones.
+3. **Connectives**  (And, Or, Not, =>, ...).  Connectives make more complex Predicates out of simpler ones.
 4. **Quantifiers**  (Forall, Exists)
 
-The **Constrained generators** system allows programmers to write Haskell programs with type `(Specification T)` that denotes a set of random values for the type `T`, that are subject to a set of constraints. This supports property based testing where a completely random set of values may not be useful.
+The **Constrained generators** system allows programmers to write Haskell programs with type `(Specification T)` that denotes a set of random values for the type `T`, that are subject to a set of constraints expressed as Predicates. This supports property based testing where a completely random set of values may not be useful.
 
 
 ## Design Goals of the Library
@@ -234,7 +234,7 @@ The function symbols of `Bool` are:
  
 ###  Function symbols for List
 
-`HaSpec a => HasSpec [a]`
+`HasSpec a => HasSpec [a]`
 
 The function symbols of `[a]` are:
 
@@ -261,7 +261,7 @@ The function symbols of `(Set a)` are:
 
 The function symbols of `(Map k v)` are:
 
-1.  `dom_ :: Ord k => Term(Map k v) -> Term (Set k)`
+1.  `dom_ :: Ord k => Term (Map k v) -> Term (Set k)`
 2.  `rng_ :: Ord k => Term (Map k v) -> Term [v]`
 3.  `lookup_ :: Ord k => Term k -> Term (Map k v) -> Term (Maybe v)`
 
@@ -283,7 +283,7 @@ genFromSpec:: (HasCallStack, HasSpec a) => Specification a -> QuickCheck.Gen a
 This function is very useful when writing QuickCheck properties. With it we can write 
 `Gen` instances that are not completely random, but instead meet a set of constraints.
 
-Consider a system of 4 variables (w,x,y,z) where we want to test the QuickCheck *implication*  property
+Consider a system of 4 variables _w,x,y,z_ where we want to test the QuickCheck *implication*  property
 `(w < x && x < y && y < z) ==> property (w < z)`
 We might write a QuickCheck property like this
 
