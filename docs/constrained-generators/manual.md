@@ -58,17 +58,20 @@ All the examples in this file can be obtained
 ## Constrained Generators is a First-Order Logic
 
 
-A First-order typed logic has 4 components
+A First-order typed logic (FOTL) has 4 components, where each component uses types to ensure well-formedness.
 
 1. **Terms** consisting of 
    - Variables: `x`, `y` . 
    - Constants: `5`, `"abc"`, `True` . 
-   - Applications: `elem_ "abc" xs`.  Applications apply a function symbol (i.e. `elem_`) to a list of Terms
+   - Applications: `elem_ "abc" xs`.  Applications apply a function symbol (i.e. `elem_`) to a list of Terms, or support infix application (i.e. `abc ==. y`)
 2. **Predicates**   (Assert (x ==. 5)). Predicates are the assertions of boolean typed terms.
 3. **Connectives**  (And, Or, Not, =>, ...).  Connectives make more complex Predicates out of simpler ones.
 4. **Quantifiers**  (Forall, Exists)
 
-The **Constrained generators** system allows programmers to write Haskell programs with type `(Specification T)` that denotes a set of random values for the type `T`, that are subject to a set of constraints expressed as Predicates. This supports property based testing where a completely random set of values may not be useful.
+The **Constrained generators** system is a FOTL implemented as an embedded domain specific language in Haskell.
+It allows programmers to write Haskell programs with type `Specification T` that denotes a set of random
+values for the type `T`, that are subject to a set of constraints expressed as Predicates. This supports property
+based testing where a completely random set of values may not be useful.
 
 
 ## Design Goals of the Library
@@ -114,8 +117,8 @@ leqPair = constrained $ \ p ->
 
 The library uses Haskell lambda expressions to introduce variables in the Term language of the system,
 and Haskell functions to build Terms and Predicates. The Haskell function `lit` takes Haskell values 
-and turns them into constants in the Term language. The types of the Haskell functions used in the 
-above definitions are
+and turns them into constants in the Term language. We give monomorphic types to Haskell the functions used in the 
+above definitions. We discuss more general types in a [later section](#overloaded).
 
 ```
 constrained :: HasSpec a => (Term a -> Pred) -> Specification a
@@ -179,10 +182,10 @@ Note that `(<=.)` , and `(==.)` are two of the function symbols in the first ord
 useful naming convention. Infix function symbols corresponding to Haskell infix operators have 
 corresponding infix operators,  lifting Haskell infix functions with type `(a -> b -> c)`, to library infix 
 functions which have analogous types `(Term a -> Term b -> Term c)`
-and are named using the convention that we add the dot `(.) to the end of the Haskell operator.
+and are named using the convention that we add the dot (`.`) to the end of the Haskell operator.
 
 A similar naming convention holds for prefix function symbols, except instead of adding a
-dot to the end of the Haskell name, we add an underscore `(_) to the end of the Haskell prefix functions's
+dot to the end of the Haskell name, we add an underscore (`_`) to the end of the Haskell prefix functions's
 name. Some examples follow.
 
 ```
@@ -204,13 +207,17 @@ name. Some examples follow.
 (member_ :: HasSpec a => Term a -> Term (Set a) -> Term Bool)
 ```
 
+While the underscored function symbols, may appear to be just to an Applicative lifting over `Term`, that is not the case.
+An Applicative lifting would allow the base function to be applied under the `Term` type, but The underscored function symbols
+also know how to reason logically about the function.
+
 
 ## Predefined HasSpec instances and their function symbols.
 
 In order to write specifications for a particular type, that type must have a `HasSpec` instance. 
 A type with a `HasSpec` instance might have a number of Function Symbols that operate on that type.
 There are a number of types that have predefined `HasSpec` instances. As a reference, we list them 
-here along with the type of their function symbols.
+here along with the types of their function symbols.
 
 ### Function symbols for numeric types
 
@@ -222,7 +229,7 @@ The function symbols of numeric types are:
  2. `(<.) :: OrdLike a => Term a -> Term a -> Term Bool`
  3. `(>=.) :: OrdLike a => Term a -> Term a -> Term Bool`
  4. `(>.) :: OrdLike a => Term a -> Term a -> Term Bool`
- 5. `(==.) :: HasSpec a => Term a -> Term a -> Term Bool`
+ 5. `(==.) :: (Eq a, HasSpec a) => Term a -> Term a -> Term Bool`
  6.  A partial Num instance for (Term n) where n is a Numeric type. Operators `(+)`, `(-)`, `(*)`
  
 ### ` Function symbols for Bool`
@@ -257,7 +264,7 @@ The function symbols of `(Set a)` are:
 
 ###  Function symbols for Map
 
-`(HasSpec k, HasSpec v) => HasSpec (Mapk k v)`
+`(HasSpec k, HasSpec v) => HasSpec (Map k v)`
 
 The function symbols of `(Map k v)` are:
 
@@ -493,6 +500,7 @@ using match. This shows how to bring the new variables `x` and `y` into scope..
 match p $ \ x y -> x <. y
 ```
 
+<a id="overloaded"></a>
 ## Overloaded types in the library
 
 In previous sections we provided some types for several of the library functions: `constrained`, `match`, 
