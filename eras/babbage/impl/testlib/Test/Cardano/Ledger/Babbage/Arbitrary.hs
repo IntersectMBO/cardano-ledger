@@ -14,11 +14,9 @@ import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Plutus
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
@@ -137,17 +135,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance
-  ( BabbageEraTxBody era
-  , Arbitrary (Sized (TxOut era))
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (BabbageTxBody era)
-  where
+instance Arbitrary (TxBody BabbageEra) where
   arbitrary =
     BabbageTxBody
       <$> arbitrary

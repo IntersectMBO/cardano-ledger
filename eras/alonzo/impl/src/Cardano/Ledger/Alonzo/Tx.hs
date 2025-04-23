@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,7 +53,7 @@ module Cardano.Ledger.Alonzo.Tx (
   txdats',
   txscripts',
   txrdmrs,
-  AlonzoTxBody (..),
+  TxBody (AlonzoTxBody),
   -- Figure 4
   totExUnits,
   alonzoMinFeeTx,
@@ -82,9 +83,9 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
-  AlonzoTxBody (..),
   AlonzoTxBodyUpgradeError,
   ScriptIntegrityHash,
+  TxBody (AlonzoTxBody),
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),

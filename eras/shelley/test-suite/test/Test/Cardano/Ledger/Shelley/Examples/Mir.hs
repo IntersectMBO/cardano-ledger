@@ -20,7 +20,7 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)

@@ -16,10 +16,11 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Allegra.TxBody (
   AllegraEraTxBody (..),
-  AllegraTxBody (
+  TxBody (
     MkAllegraTxBody,
     AllegraTxBody,
     atbAuxDataHash,
@@ -57,7 +58,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -195,55 +195,39 @@ emptyAllegraTxBodyRaw =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype AllegraTxBody e = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () e))
-  deriving newtype (SafeToHash, ToCBOR, DecCBOR)
+instance Memoized (TxBody AllegraEra) where
+  type RawType (TxBody AllegraEra) = AllegraTxBodyRaw () AllegraEra
 
-instance Memoized (AllegraTxBody era) where
-  type RawType (AllegraTxBody era) = AllegraTxBodyRaw () era
+deriving instance Eq (TxBody AllegraEra)
 
-deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
-  Eq (AllegraTxBody era)
+deriving instance Show (TxBody AllegraEra)
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Compactible (Value era), Show (PParamsUpdate era)) =>
-  Show (AllegraTxBody era)
+deriving instance Generic (TxBody AllegraEra)
 
-deriving instance Generic (AllegraTxBody era)
+deriving newtype instance NoThunks (TxBody AllegraEra)
 
-deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (AllegraTxBody era)
-
-deriving newtype instance
-  ( NFData (TxOut era)
-  , NFData (TxCert era)
-  , NFData (PParamsUpdate era)
-  , Era era
-  ) =>
-  NFData (AllegraTxBody era)
+deriving newtype instance NFData (TxBody AllegraEra)
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (AllegraTxBody era)
+instance EncCBOR (TxBody AllegraEra)
 
 type instance MemoHashIndex (AllegraTxBodyRaw c era) = EraIndependentTxBody
 
-instance Era era => HashAnnotated (AllegraTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody AllegraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern AllegraTxBody ::
-  forall era.
-  (EraTxOut era, EraTxCert era) =>
+  (EraTxOut AllegraEra, EraTxCert AllegraEra) =>
   Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut AllegraEra) ->
+  StrictSeq (TxCert AllegraEra) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update AllegraEra) ->
   StrictMaybe TxAuxDataHash ->
-  AllegraTxBody era
+  TxBody AllegraEra
 pattern AllegraTxBody
   { atbInputs
   , atbOutputs
@@ -276,7 +260,7 @@ pattern AllegraTxBody
       validityInterval
       update
       auxDataHash =
-        mkMemoizedEra @era $
+        mkMemoizedEra @AllegraEra $
           AllegraTxBodyRaw
             { atbrInputs = inputs
             , atbrOutputs = outputs
@@ -292,7 +276,8 @@ pattern AllegraTxBody
 {-# COMPLETE AllegraTxBody #-}
 
 instance EraTxBody AllegraEra where
-  type TxBody AllegraEra = AllegraTxBody AllegraEra
+  newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
+    deriving newtype (SafeToHash, ToCBOR, DecCBOR)
 
   mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
 
@@ -365,6 +350,4 @@ instance AllegraEraTxBody AllegraEra where
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
-instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
-  EqRaw (AllegraTxBody era)
+instance EqRaw (TxBody AllegraEra)

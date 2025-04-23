@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
   module Test.Cardano.Ledger.Mary.Binary.Annotator,
 ) where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx hiding (wits)
 import Cardano.Ledger.Alonzo.TxAuxData
@@ -238,10 +239,9 @@ deriving via
     Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
 
 deriving via
-  Mem (AlonzoTxBodyRaw era)
+  Mem (AlonzoTxBodyRaw AlonzoEra)
   instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-    DecCBOR (Annotator (AlonzoTxBody era))
+    DecCBOR (Annotator (TxBody AlonzoEra))
 
 instance
   (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>

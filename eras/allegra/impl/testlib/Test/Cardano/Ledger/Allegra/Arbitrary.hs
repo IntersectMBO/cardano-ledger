@@ -28,11 +28,11 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (AllegraTxBody))
+import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
-import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedNativeScriptGens)
@@ -102,15 +102,7 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (AllegraTxBody era)
-  where
+instance Arbitrary (TxBody AllegraEra) where
   arbitrary =
     AllegraTxBody
       <$> arbitrary

@@ -196,7 +196,7 @@ class
   EraTxBody era
   where
   -- | The body of a transaction.
-  type TxBody era = (r :: Type) | r -> era
+  data TxBody era
 
   type TxBodyUpgradeError era :: Type
   type TxBodyUpgradeError era = Void

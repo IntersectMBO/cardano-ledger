@@ -27,7 +27,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   -- Constructors are not exported for safety:
   Addr28Extra,
   DataHash32,
-  AlonzoTxBody (
+  TxBody (
     MkAlonzoTxBody,
     AlonzoTxBody,
     atbInputs,
@@ -105,7 +105,9 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary.TxBody (
+  TxBody (..),
+ )
 import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
@@ -172,12 +174,12 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   { atbrInputs :: !(Set TxIn)
   , atbrCollateral :: !(Set TxIn)
-  , atbrOutputs :: !(StrictSeq (TxOut era))
-  , atbrCerts :: !(StrictSeq (TxCert era))
+  , atbrOutputs :: !(StrictSeq (TxOut AlonzoEra))
+  , atbrCerts :: !(StrictSeq (TxCert AlonzoEra))
   , atbrWithdrawals :: !Withdrawals
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
-  , atbrUpdate :: !(StrictMaybe (Update era))
+  , atbrUpdate :: !(StrictMaybe (Update AlonzoEra))
   , atbrReqSignerHashes :: Set (KeyHash 'Witness)
   , atbrMint :: !MultiAsset
   , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
@@ -202,12 +204,8 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
-newtype AlonzoTxBody era = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw era))
-  deriving (ToCBOR, Generic)
-  deriving newtype (SafeToHash)
-
-instance Memoized (AlonzoTxBody era) where
-  type RawType (AlonzoTxBody era) = AlonzoTxBodyRaw era
+instance Memoized (TxBody AlonzoEra) where
+  type RawType (TxBody AlonzoEra) = AlonzoTxBodyRaw AlonzoEra
 
 data AlonzoTxBodyUpgradeError
   = -- | The TxBody contains a protocol parameter update that attempts to update
@@ -217,7 +215,9 @@ data AlonzoTxBodyUpgradeError
   deriving (Show)
 
 instance EraTxBody AlonzoEra where
-  type TxBody AlonzoEra = AlonzoTxBody AlonzoEra
+  newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw AlonzoEra))
+    deriving (ToCBOR, Generic)
+    deriving newtype (SafeToHash)
   type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoizedEra @AlonzoEra emptyAlonzoTxBodyRaw
@@ -363,43 +363,31 @@ instance AlonzoEraTxBody AlonzoEra where
 
   redeemerPointerInverse = alonzoRedeemerPointerInverse
 
-deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (AlonzoTxBody era)
+deriving newtype instance Eq (TxBody AlonzoEra)
 
-deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (AlonzoTxBody era)
+deriving instance NoThunks (TxBody AlonzoEra)
 
-deriving instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (AlonzoTxBody era)
+deriving instance NFData (TxBody AlonzoEra)
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (AlonzoTxBody era)
+deriving instance Show (TxBody AlonzoEra)
 
-deriving newtype instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (AlonzoTxBody era)
+deriving newtype instance DecCBOR (TxBody AlonzoEra)
 
 pattern AlonzoTxBody ::
-  forall era.
-  (EraTxOut era, EraTxCert era) =>
   Set TxIn ->
   Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut AlonzoEra) ->
+  StrictSeq (TxCert AlonzoEra) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update AlonzoEra) ->
   Set (KeyHash 'Witness) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
-  AlonzoTxBody era
+  TxBody AlonzoEra
 pattern AlonzoTxBody
   { atbInputs
   , atbCollateral
@@ -447,7 +435,7 @@ pattern AlonzoTxBody
       scriptIntegrityHash
       auxDataHash
       txNetworkId =
-        mkMemoizedEra @era $
+        mkMemoizedEra @AlonzoEra $
           AlonzoTxBodyRaw
             { atbrInputs = inputs
             , atbrCollateral = collateral
@@ -468,7 +456,7 @@ pattern AlonzoTxBody
 
 type instance MemoHashIndex (AlonzoTxBodyRaw era) = EraIndependentTxBody
 
-instance HashAnnotated (AlonzoTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody AlonzoEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================
@@ -477,19 +465,19 @@ instance HashAnnotated (AlonzoTxBody era) EraIndependentTxBody where
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: AlonzoTxBody era -> Set TxIn
-collateral' :: AlonzoTxBody era -> Set TxIn
-outputs' :: AlonzoTxBody era -> StrictSeq (TxOut era)
-certs' :: AlonzoTxBody era -> StrictSeq (TxCert era)
-txfee' :: AlonzoTxBody era -> Coin
-withdrawals' :: AlonzoTxBody era -> Withdrawals
-vldt' :: AlonzoTxBody era -> ValidityInterval
-update' :: AlonzoTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness)
-adHash' :: AlonzoTxBody era -> StrictMaybe TxAuxDataHash
-mint' :: AlonzoTxBody era -> MultiAsset
-scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe ScriptIntegrityHash
-txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network
+inputs' :: TxBody AlonzoEra -> Set TxIn
+collateral' :: TxBody AlonzoEra -> Set TxIn
+outputs' :: TxBody AlonzoEra -> StrictSeq (TxOut AlonzoEra)
+certs' :: TxBody AlonzoEra -> StrictSeq (TxCert AlonzoEra)
+txfee' :: TxBody AlonzoEra -> Coin
+withdrawals' :: TxBody AlonzoEra -> Withdrawals
+vldt' :: TxBody AlonzoEra -> ValidityInterval
+update' :: TxBody AlonzoEra -> StrictMaybe (Update AlonzoEra)
+reqSignerHashes' :: TxBody AlonzoEra -> Set (KeyHash 'Witness)
+adHash' :: TxBody AlonzoEra -> StrictMaybe TxAuxDataHash
+mint' :: TxBody AlonzoEra -> MultiAsset
+scriptIntegrityHash' :: TxBody AlonzoEra -> StrictMaybe ScriptIntegrityHash
+txnetworkid' :: TxBody AlonzoEra -> StrictMaybe Network
 inputs' = atbrInputs . getMemoRawType
 {-# DEPRECATED inputs' "In favor of inputsTxBodyL" #-}
 
@@ -529,16 +517,14 @@ scriptIntegrityHash' = atbrScriptIntegrityHash . getMemoRawType
 txnetworkid' = atbrTxNetworkId . getMemoRawType
 {-# DEPRECATED txnetworkid' "In favor of networkIdTxBodyL" #-}
 
-instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
-  EqRaw (AlonzoTxBody era)
+instance EqRaw (TxBody AlonzoEra)
 
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (AlonzoTxBody era)
+instance EncCBOR (TxBody AlonzoEra)
 
 instance
   (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>

@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (
@@ -122,7 +122,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -197,7 +197,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -273,7 +273,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: ShelleyTxBody ShelleyEra
+txbodyEx3 :: TxBody ShelleyEra
 txbodyEx3 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])

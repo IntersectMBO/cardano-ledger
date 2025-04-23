@@ -97,9 +97,7 @@ instance
   (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
   ToExpr (AlonzoTxBodyRaw era)
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBody era)
+instance ToExpr (TxBody AlonzoEra)
 
 -- Tx
 instance ToExpr IsValid

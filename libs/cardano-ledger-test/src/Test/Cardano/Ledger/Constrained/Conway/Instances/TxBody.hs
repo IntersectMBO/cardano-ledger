@@ -13,17 +13,20 @@
 module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.TxBody (TxBody (..))
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.TxBody (TxBody (..))
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.TxBody (TxBody (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Binary (EncCBOR (..), Sized (..))
+import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Constrained.API
 import Constrained.Generic
@@ -58,15 +61,10 @@ type ShelleyTxBodyTypes era =
    , Maybe TxAuxDataHash
    ]
 
-instance
-  ( EraTxOut era
-  , EncCBOR (TxCert era)
-  ) =>
-  HasSimpleRep (ShelleyTxBody era)
-  where
-  type SimpleRep (ShelleyTxBody era) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes era]
+instance HasSimpleRep (TxBody ShelleyEra) where
+  type SimpleRep (TxBody ShelleyEra) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
   toSimpleRep (ShelleyTxBody is os certs w c s up aux) =
-    inject @"ShelleyTxBody" @'["ShelleyTxBody" ::: ShelleyTxBodyTypes era]
+    inject @"ShelleyTxBody" @'["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
       is
       (toList os)
       (toList certs)
@@ -77,7 +75,7 @@ instance
       (strictMaybeToMaybe aux)
 
   fromSimpleRep rep =
-    algebra @'["ShelleyTxBody" ::: ShelleyTxBodyTypes era]
+    algebra @'["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
       rep
       ( \is os certs w c s up aux ->
           ShelleyTxBody
@@ -91,21 +89,16 @@ instance
             (maybeToStrictMaybe aux)
       )
 
-instance
-  ( EraSpecPParams era
-  , HasSpec (TxOut era)
-  , HasSpec (TxCert era)
-  ) =>
-  HasSpec (ShelleyTxBody era)
+instance HasSpec (TxBody ShelleyEra)
 
-fromShelleyBody :: forall era. EraTxBody era => ShelleyTxBody era -> TxBody era
+fromShelleyBody :: forall era. EraTxBody era => TxBody ShelleyEra -> TxBody era
 fromShelleyBody (ShelleyTxBody inputs outputs certs withdrawals coin _slot _up aux) =
   mkBasicTxBody @era
     & inputsTxBodyL @era .~ inputs
-    & outputsTxBodyL @era .~ outputs
+    & outputsTxBodyL @era .~ undefined outputs
     & feeTxBodyL @era .~ coin
     & withdrawalsTxBodyL @era .~ withdrawals
-    & certsTxBodyL @era .~ certs
+    & certsTxBodyL @era .~ undefined certs
     & auxDataHashTxBodyL @era .~ aux
 
 -- =======================================================
@@ -126,15 +119,10 @@ type AllegraTxBodyTypes era =
    , Maybe TxAuxDataHash
    ]
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
-  HasSimpleRep (AllegraTxBody era)
-  where
-  type SimpleRep (AllegraTxBody era) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes era]
+instance HasSimpleRep (TxBody AllegraEra) where
+  type SimpleRep (TxBody AllegraEra) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
   toSimpleRep (AllegraTxBody is os certs w c vi up aux) =
-    inject @"AllegraTxBody" @'["AllegraTxBody" ::: AllegraTxBodyTypes era]
+    inject @"AllegraTxBody" @'["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
       is
       (toList os)
       (toList certs)
@@ -145,7 +133,7 @@ instance
       (strictMaybeToMaybe aux)
 
   fromSimpleRep rep =
-    algebra @'["AllegraTxBody" ::: AllegraTxBodyTypes era]
+    algebra @'["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
       rep
       ( \is os certs w c vi up aux ->
           AllegraTxBody
@@ -158,21 +146,16 @@ instance
             (maybeToStrictMaybe up)
             (maybeToStrictMaybe aux)
       )
-instance
-  ( EraSpecPParams era
-  , HasSpec (TxOut era)
-  , HasSpec (TxCert era)
-  ) =>
-  HasSpec (AllegraTxBody era)
+instance HasSpec (TxBody AllegraEra)
 
-fromAllegraBody :: forall era. AllegraEraTxBody era => AllegraTxBody era -> TxBody era
+fromAllegraBody :: forall era. AllegraEraTxBody era => TxBody AllegraEra -> TxBody era
 fromAllegraBody (AllegraTxBody inputs outputs certs withdrawals coin vi _up aux) =
   mkBasicTxBody @era
     & inputsTxBodyL @era .~ inputs
-    & outputsTxBodyL @era .~ outputs
+    & outputsTxBodyL @era .~ undefined outputs
     & feeTxBodyL @era .~ coin
     & withdrawalsTxBodyL @era .~ withdrawals
-    & certsTxBodyL @era .~ certs
+    & certsTxBodyL @era .~ undefined certs
     & auxDataHashTxBodyL @era .~ aux
     & vldtTxBodyL @era .~ vi
 
@@ -195,15 +178,10 @@ type MaryTxBodyTypes era =
    , MultiAsset
    ]
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
-  HasSimpleRep (MaryTxBody era)
-  where
-  type SimpleRep (MaryTxBody era) = SOP '["MaryTxBody" ::: MaryTxBodyTypes era]
+instance HasSimpleRep (TxBody MaryEra) where
+  type SimpleRep (TxBody MaryEra) = SOP '["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
   toSimpleRep (MaryTxBody is os certs w c vi up aux ma) =
-    inject @"MaryTxBody" @'["MaryTxBody" ::: MaryTxBodyTypes era]
+    inject @"MaryTxBody" @'["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
       is
       (toList os)
       (toList certs)
@@ -215,7 +193,7 @@ instance
       ma
 
   fromSimpleRep rep =
-    algebra @'["MaryTxBody" ::: MaryTxBodyTypes era]
+    algebra @'["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
       rep
       ( \is os certs w c vi up aux ma ->
           MaryTxBody
@@ -229,21 +207,16 @@ instance
             (maybeToStrictMaybe aux)
             ma
       )
-instance
-  ( EraSpecPParams era
-  , HasSpec (TxOut era)
-  , HasSpec (TxCert era)
-  ) =>
-  HasSpec (MaryTxBody era)
+instance HasSpec (TxBody MaryEra)
 
-fromMaryBody :: forall era. MaryEraTxBody era => MaryTxBody era -> TxBody era
+fromMaryBody :: forall era. MaryEraTxBody era => TxBody MaryEra -> TxBody era
 fromMaryBody (MaryTxBody inputs outputs certs withdrawals coin vi _up aux ma) =
   mkBasicTxBody @era
     & inputsTxBodyL @era .~ inputs
-    & outputsTxBodyL @era .~ outputs
+    & outputsTxBodyL @era .~ undefined outputs
     & feeTxBodyL @era .~ coin
     & withdrawalsTxBodyL @era .~ withdrawals
-    & certsTxBodyL @era .~ certs
+    & certsTxBodyL @era .~ undefined certs
     & auxDataHashTxBodyL @era .~ aux
     & vldtTxBodyL @era .~ vi
     & mintTxBodyL @era .~ ma
@@ -271,15 +244,10 @@ type AlonzoTxBodyTypes era =
    , Maybe Network
    ]
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
-  HasSimpleRep (AlonzoTxBody era)
-  where
-  type SimpleRep (AlonzoTxBody era) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes era]
+instance HasSimpleRep (TxBody AlonzoEra) where
+  type SimpleRep (TxBody AlonzoEra) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
   toSimpleRep (AlonzoTxBody inputs colinputs os certs w c vi up kh ma ihash aux nw) =
-    inject @"AlonzoTxBody" @'["AlonzoTxBody" ::: AlonzoTxBodyTypes era]
+    inject @"AlonzoTxBody" @'["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
       inputs
       colinputs
       (toList os)
@@ -295,7 +263,7 @@ instance
       (strictMaybeToMaybe nw)
 
   fromSimpleRep rep =
-    algebra @'["AlonzoTxBody" ::: AlonzoTxBodyTypes era]
+    algebra @'["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
       rep
       ( \inputs colinputs os certs w c vi up kh ma ihash aux nw ->
           AlonzoTxBody
@@ -314,22 +282,17 @@ instance
             (maybeToStrictMaybe nw)
       )
 
-instance
-  ( EraSpecPParams era
-  , HasSpec (TxOut era)
-  , HasSpec (TxCert era)
-  ) =>
-  HasSpec (AlonzoTxBody era)
+instance HasSpec (TxBody AlonzoEra)
 
-fromAlonzoBody :: forall era. AlonzoEraTxBody era => AlonzoTxBody era -> TxBody era
+fromAlonzoBody :: forall era. AlonzoEraTxBody era => TxBody AlonzoEra -> TxBody era
 fromAlonzoBody (AlonzoTxBody colinputs inputs outputs certs withdrawals coin vi _up kh ma ihash aux nw) =
   mkBasicTxBody @era
     & inputsTxBodyL @era .~ inputs
     & collateralInputsTxBodyL @era .~ colinputs
-    & outputsTxBodyL @era .~ outputs
+    & outputsTxBodyL @era .~ undefined outputs
     & feeTxBodyL @era .~ coin
     & withdrawalsTxBodyL @era .~ withdrawals
-    & certsTxBodyL @era .~ certs
+    & certsTxBodyL @era .~ undefined certs
     & auxDataHashTxBodyL @era .~ aux
     & vldtTxBodyL @era .~ vi
     & mintTxBodyL @era .~ ma
@@ -364,13 +327,10 @@ type BabbageTxBodyTypes era =
    , Maybe Network
    ]
 
-instance
-  (EraTxOut era, EraTxCert era, BabbageEraTxBody era) =>
-  HasSimpleRep (BabbageTxBody era)
-  where
-  type SimpleRep (BabbageTxBody era) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes era]
+instance HasSimpleRep (TxBody BabbageEra) where
+  type SimpleRep (TxBody BabbageEra) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
   toSimpleRep (BabbageTxBody inputs colinputs refinputs os colOut coin certs w c vi up kh ma ihash aux nw) =
-    inject @"BabbageTxBody" @'["BabbageTxBody" ::: BabbageTxBodyTypes era]
+    inject @"BabbageTxBody" @'["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
       inputs
       colinputs
       refinputs
@@ -389,7 +349,7 @@ instance
       (strictMaybeToMaybe nw)
 
   fromSimpleRep rep =
-    algebra @'["BabbageTxBody" ::: BabbageTxBodyTypes era]
+    algebra @'["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
       rep
       ( \inputs colinputs refinputs os colret totalcol certs w fee vi up kh ma ihash aux nw ->
           BabbageTxBody
@@ -411,24 +371,18 @@ instance
             (maybeToStrictMaybe nw)
       )
 
-instance
-  ( EraSpecPParams era
-  , BabbageEraTxBody era
-  , HasSpec (TxOut era)
-  , HasSpec (TxCert era)
-  ) =>
-  HasSpec (BabbageTxBody era)
+instance HasSpec (TxBody BabbageEra)
 
-fromBabbageBody :: forall era. BabbageEraTxBody era => BabbageTxBody era -> TxBody era
+fromBabbageBody :: forall era. BabbageEraTxBody era => TxBody BabbageEra -> TxBody era
 fromBabbageBody (BabbageTxBody inputs colinputs refinputs os colret totalcol certs w fee vi _up kh ma ihash aux nw) =
   mkBasicTxBody @era
     & inputsTxBodyL @era .~ inputs
     & collateralInputsTxBodyL @era .~ colinputs
     & referenceInputsTxBodyL @era .~ refinputs
-    & sizedOutputsTxBodyL @era .~ os
-    & sizedCollateralReturnTxBodyL @era .~ colret
+    & sizedOutputsTxBodyL @era .~ undefined os
+    & sizedCollateralReturnTxBodyL @era .~ undefined colret
     & totalCollateralTxBodyL @era .~ totalcol
-    & certsTxBodyL @era .~ certs
+    & certsTxBodyL @era .~ undefined certs
     & withdrawalsTxBodyL @era .~ w
     & feeTxBodyL @era .~ fee
     & vldtTxBodyL @era .~ vi

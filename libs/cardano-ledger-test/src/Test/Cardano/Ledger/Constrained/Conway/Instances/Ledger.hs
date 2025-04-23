@@ -200,10 +200,10 @@ type ConwayTxBodyTypes =
    , StrictMaybe Coin
    , Coin
    ]
-instance HasSpec (ConwayTxBody ConwayEra)
+instance HasSpec (TxBody ConwayEra)
 
-instance HasSimpleRep (ConwayTxBody ConwayEra) where
-  type TheSop (ConwayTxBody ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
+instance HasSimpleRep (TxBody ConwayEra) where
+  type TheSop (TxBody ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
   toSimpleRep ConwayTxBody {..} =
     inject @"ConwayTxBody" @'["ConwayTxBody" ::: ConwayTxBodyTypes]
       ctbSpendInputs

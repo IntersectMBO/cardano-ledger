@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxBody (
-  ShelleyTxBody (
+  TxBody (
     ShelleyTxBody,
     MkShelleyTxBody,
     stbInputs,
@@ -124,7 +124,7 @@ deriving instance
   Show (ShelleyTxBodyRaw era)
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (ShelleyTxBody era)
+instance EncCBOR (TxBody ShelleyEra)
 
 instance
   ( Era era
@@ -208,22 +208,15 @@ instance
   where
   encCBOR = encode . txSparse
 
--- ====================================================
--- Introduce ShelleyTxBody as a newtype around a MemoBytes
+instance Memoized (TxBody ShelleyEra) where
+  type RawType (TxBody ShelleyEra) = ShelleyTxBodyRaw ShelleyEra
 
-newtype ShelleyTxBody era = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw era))
-  deriving (Generic)
-  deriving newtype (SafeToHash, ToCBOR)
-
-instance Memoized (ShelleyTxBody era) where
-  type RawType (ShelleyTxBody era) = ShelleyTxBodyRaw era
-
-instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  EqRaw (ShelleyTxBody era)
+instance EqRaw (TxBody ShelleyEra)
 
 instance EraTxBody ShelleyEra where
-  type TxBody ShelleyEra = ShelleyTxBody ShelleyEra
+  newtype TxBody ShelleyEra = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw ShelleyEra))
+    deriving (Generic)
+    deriving newtype (SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
@@ -279,39 +272,27 @@ instance ShelleyEraTxBody ShelleyEra where
     lensMemoRawType @ShelleyEra stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
-deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (ShelleyTxBody era)
+deriving newtype instance NoThunks (TxBody ShelleyEra)
 
-deriving newtype instance EraTxBody era => NFData (ShelleyTxBody era)
+deriving newtype instance NFData (TxBody ShelleyEra)
 
-deriving instance EraTxBody era => Show (ShelleyTxBody era)
+deriving instance Show (TxBody ShelleyEra)
 
-deriving instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (ShelleyTxBody era)
+deriving instance Eq (TxBody ShelleyEra)
 
-deriving newtype instance
-  ( Era era
-  , DecCBOR (PParamsUpdate era)
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (ShelleyTxBody era)
+deriving newtype instance DecCBOR (TxBody ShelleyEra)
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  forall era.
-  (EraTxOut era, EncCBOR (TxCert era)) =>
   Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut ShelleyEra) ->
+  StrictSeq (TxCert ShelleyEra) ->
   Withdrawals ->
   Coin ->
   SlotNo ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update ShelleyEra) ->
   StrictMaybe TxAuxDataHash ->
-  ShelleyTxBody era
+  TxBody ShelleyEra
 pattern ShelleyTxBody
   { stbInputs
   , stbOutputs
@@ -344,7 +325,7 @@ pattern ShelleyTxBody
       ttl
       update
       auxDataHash =
-        mkMemoizedEra @era $
+        mkMemoizedEra @ShelleyEra $
           ShelleyTxBodyRaw
             { stbrInputs = inputs
             , stbrOutputs = outputs
@@ -362,7 +343,7 @@ pattern ShelleyTxBody
 
 type instance MemoHashIndex (ShelleyTxBodyRaw era) = EraIndependentTxBody
 
-instance Era era => HashAnnotated (ShelleyTxBody era) EraIndependentTxBody where
+instance HashAnnotated (TxBody ShelleyEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ===============================================================

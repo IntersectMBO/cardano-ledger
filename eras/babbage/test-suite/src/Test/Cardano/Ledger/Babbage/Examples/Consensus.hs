@@ -12,7 +12,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))

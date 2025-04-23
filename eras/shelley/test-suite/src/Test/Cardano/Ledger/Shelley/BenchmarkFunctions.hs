@@ -57,7 +57,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
@@ -153,7 +153,7 @@ testLEDGER initSt tx env = do
     Right _ -> ()
     Left e -> error $ show e
 
-txbSpendOneUTxO :: ShelleyTxBody ShelleyEra
+txbSpendOneUTxO :: TxBody ShelleyEra
 txbSpendOneUTxO =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -211,7 +211,7 @@ stakeKeyRegistrations keys =
 
 -- Create a transaction body given a sequence of certificates.
 -- It spends the genesis coin given by the index ix.
-txbFromCerts :: TxIx -> StrictSeq (TxCert ShelleyEra) -> ShelleyTxBody ShelleyEra
+txbFromCerts :: TxIx -> StrictSeq (TxCert ShelleyEra) -> TxBody ShelleyEra
 txbFromCerts ix regCerts =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId ix])
@@ -224,7 +224,7 @@ txbFromCerts ix regCerts =
     SNothing
 
 makeSimpleTx ::
-  ShelleyTxBody ShelleyEra ->
+  TxBody ShelleyEra ->
   [KeyPair 'Witness] ->
   ShelleyTx ShelleyEra
 makeSimpleTx txbody keysAddr =
@@ -279,7 +279,7 @@ ledgerRegisterStakeKeys x y state =
 
 -- Create a transaction body that de-registers stake credentials,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0)
-txbDeRegStakeKey :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbDeRegStakeKey :: Word64 -> Word64 -> TxBody ShelleyEra
 txbDeRegStakeKey x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -317,7 +317,7 @@ ledgerDeRegisterStakeKeys x y state =
 
 -- Create a transaction body that withdrawals from reward accounts,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0).
-txbWithdrawals :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbWithdrawals :: Word64 -> Word64 -> TxBody ShelleyEra
 txbWithdrawals x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -434,7 +434,7 @@ ledgerReRegisterStakePools x y state =
 
 -- Create a transaction body that retires stake pools,
 -- corresponding to the keys seeded with (RawSeed x 1 0 0 0) to (RawSeed y 1 0 0 0)
-txbRetireStakePool :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbRetireStakePool :: Word64 -> Word64 -> TxBody ShelleyEra
 txbRetireStakePool x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -482,7 +482,7 @@ ledgerStateWithNkeysMpools n m =
 
 -- Create a transaction body that delegates several keys to ONE stake pool,
 -- corresponding to the keys seeded with (RawSeed n 0 0 0 0) to (RawSeed m 0 0 0 0)
-txbDelegate :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbDelegate :: Word64 -> Word64 -> TxBody ShelleyEra
 txbDelegate n m =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 2])

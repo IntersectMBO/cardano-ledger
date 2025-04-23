@@ -6,8 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Ledger.Shelley.Fees (
   sizeTests,
@@ -26,13 +24,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
   PoolParams (..),
   RewardAccount (..),
-  ShelleyTxBody (..),
   ShelleyTxOut (..),
   TxIn (..),
  )
@@ -81,7 +78,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-sizeTest :: HasCallStack => BSL.ByteString -> ShelleyTx Shelley -> Assertion
+sizeTest :: HasCallStack => BSL.ByteString -> ShelleyTx ShelleyEra -> Assertion
 sizeTest b16 tx = do
   Base16.encode (Plain.serialize tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
@@ -156,7 +153,7 @@ carlPay = KeyPair vk sk
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
-txbSimpleUTxO :: ShelleyTxBody Shelley
+txbSimpleUTxO :: TxBody ShelleyEra
 txbSimpleUTxO =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -169,7 +166,7 @@ txbSimpleUTxO =
     , stbMDHash = SNothing
     }
 
-txSimpleUTxO :: ShelleyTx Shelley
+txSimpleUTxO :: ShelleyTx ShelleyEra
 txSimpleUTxO =
   ShelleyTx
     { body = txbSimpleUTxO
@@ -186,7 +183,7 @@ txSimpleUTxOBytes16 =
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
-txbMutiUTxO :: ShelleyTxBody Shelley
+txbMutiUTxO :: TxBody ShelleyEra
 txbMutiUTxO =
   ShelleyTxBody
     { stbInputs =
@@ -210,7 +207,7 @@ txbMutiUTxO =
     , stbMDHash = SNothing
     }
 
-txMutiUTxO :: ShelleyTx Shelley
+txMutiUTxO :: ShelleyTx ShelleyEra
 txMutiUTxO =
   ShelleyTx
     { body = txbMutiUTxO
@@ -231,7 +228,7 @@ txMutiUTxOBytes16 =
   "83a4008282582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c1113140082582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131401018582583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a82583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df761482583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76181e825839000d2a471489a90f2910ec67ded8e215bfcd669bae77e7f9ab15850abd4e130c0bdeb7768edf2e8f85007fd52073e3dc1871f4c47f9dfca92e1828825839000d2a471489a90f2910ec67ded8e215bfcd669bae77e7f9ab15850abd4e130c0bdeb7768edf2e8f85007fd52073e3dc1871f4c47f9dfca92e18320218c7030aa1008282582037139648f2c22bbf1d0ef9af37cfebc9014b1e0e2a55be87c4b3b231a8d84d2658405ef09b22172cd28678e76e600e899886852e03567e2e72b4815629471e736a0cd424dc71cdaa0d0403371d79ea3d0cb7f28cb0740ebfcd8947343eba99a6aa088258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e5840ea98ef8052776aa5c182621cfd2ec91011d327527fc2531be9e1a8356c10f25f3fe5a5a7f549a0dc3b17c4ad8e4b8673b63a87977ac899b675f3ce3d6badae01f6"
 
 -- | Transaction which registers a stake key
-txbRegisterStake :: ShelleyTxBody Shelley
+txbRegisterStake :: TxBody ShelleyEra
 txbRegisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -244,7 +241,7 @@ txbRegisterStake =
     , stbMDHash = SNothing
     }
 
-txRegisterStake :: ShelleyTx Shelley
+txRegisterStake :: ShelleyTx ShelleyEra
 txRegisterStake =
   ShelleyTx
     { body = txbRegisterStake
@@ -260,7 +257,7 @@ txRegisterStakeBytes16 =
   "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a048182008200581cc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76a100818258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e58403271792b002eb39bcb133668e851a5ffba9c13ad2b5c5a7bbc850a17de8309cbb9649d9e90eb4c9cc82f28f204408d513ccc575ce1f61808f67793429ff1880ef6"
 
 -- | Transaction which delegates a stake key
-txbDelegateStake :: ShelleyTxBody Shelley
+txbDelegateStake :: TxBody ShelleyEra
 txbDelegateStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -276,7 +273,7 @@ txbDelegateStake =
     , stbMDHash = SNothing
     }
 
-txDelegateStake :: ShelleyTx Shelley
+txDelegateStake :: ShelleyTx ShelleyEra
 txDelegateStake =
   ShelleyTx
     { body = txbDelegateStake
@@ -295,7 +292,7 @@ txDelegateStakeBytes16 =
   "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a048183028200581c4e130c0bdeb7768edf2e8f85007fd52073e3dc1871f4c47f9dfca92e581c5d43e1f1048b2619f51abc0cf505e4d4f9cb84becefd468d1a2fe335a100828258209921fa37a7d167aab519bb937d7ac6e522ad6d259a6173523357b971e05f41ff58403bad563c201b4f62448db12711af2d916776194b5176e9d312d07a328ce7780a63032dce887abc67985629b7aeabb0c334e84094f44d7e51ae51b5c799a83c0d8258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e584064aef85b046d2d0072cd64844e9f13d86651a1db74d356a10ecd7fb35a664fc466e543ea55cfbffd74025dc092d62c4b22d7e2de4decb4f049df354cfae9790af6"
 
 -- | Transaction which de-registers a stake key
-txbDeregisterStake :: ShelleyTxBody Shelley
+txbDeregisterStake :: TxBody ShelleyEra
 txbDeregisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -308,7 +305,7 @@ txbDeregisterStake =
     , stbMDHash = SNothing
     }
 
-txDeregisterStake :: ShelleyTx Shelley
+txDeregisterStake :: ShelleyTx ShelleyEra
 txDeregisterStake =
   ShelleyTx
     { body = txbDeregisterStake
@@ -324,7 +321,7 @@ txDeregisterStakeBytes16 =
   "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a048182018200581cc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76a100818258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e5840409db925fa592b7f4c76e44d738789f4b0ffb2b9cf4567af127121d635491b4eb736e8c92571f1329f14d06aad7ec42ca654ae65eb63b0b01d30cc4454aee80cf6"
 
 -- | Transaction which registers a stake pool
-txbRegisterPool :: ShelleyTxBody Shelley
+txbRegisterPool :: TxBody ShelleyEra
 txbRegisterPool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -337,7 +334,7 @@ txbRegisterPool =
     , stbMDHash = SNothing
     }
 
-txRegisterPool :: ShelleyTx Shelley
+txRegisterPool :: ShelleyTx ShelleyEra
 txRegisterPool =
   ShelleyTx
     { body = txbRegisterPool
@@ -353,7 +350,7 @@ txRegisterPoolBytes16 =
   "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a04818a03581c5d43e1f1048b2619f51abc0cf505e4d4f9cb84becefd468d1a2fe33558208e61e1fa4855ea3aa0b8881a9e2e453c8c73536bdaabb64d36de86ee5a02519a0105d81e82010a581de0c6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df7681581cc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da100818258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e5840165c6aa107571daafb1f9093d3cdc184a4068e8ff9243715c13335feb3652dc0d817b3b015a9929c9d83a0dd406fe71658fdccbf7925d2fff316237b499c2003f6"
 
 -- | Transaction which retires a stake pool
-txbRetirePool :: ShelleyTxBody Shelley
+txbRetirePool :: TxBody ShelleyEra
 txbRetirePool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -366,7 +363,7 @@ txbRetirePool =
     , stbMDHash = SNothing
     }
 
-txRetirePool :: ShelleyTx Shelley
+txRetirePool :: ShelleyTx ShelleyEra
 txRetirePool =
   ShelleyTx
     { body = txbRetirePool
@@ -386,7 +383,7 @@ txRetirePoolBytes16 =
 md :: Era era => ShelleyTxAuxData era
 md = ShelleyTxAuxData $ Map.singleton 0 (List [I 5, S "hello"])
 
-txbWithMD :: ShelleyTxBody Shelley
+txbWithMD :: TxBody ShelleyEra
 txbWithMD =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -396,10 +393,10 @@ txbWithMD =
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
     , stbUpdate = SNothing
-    , stbMDHash = SJust $ hashTxAuxData @Shelley md
+    , stbMDHash = SJust $ hashTxAuxData @ShelleyEra md
     }
 
-txWithMD :: ShelleyTx Shelley
+txWithMD :: ShelleyTx ShelleyEra
 txWithMD =
   ShelleyTx
     { body = txbWithMD
@@ -426,7 +423,7 @@ msig =
         ]
     )
 
-txbWithMultiSig :: ShelleyTxBody Shelley
+txbWithMultiSig :: TxBody ShelleyEra
 txbWithMultiSig =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound] -- acting as if this is multi-sig
@@ -439,14 +436,14 @@ txbWithMultiSig =
     , stbMDHash = SNothing
     }
 
-txWithMultiSig :: ShelleyTx Shelley
+txWithMultiSig :: ShelleyTx ShelleyEra
 txWithMultiSig =
   ShelleyTx
     { body = txbWithMultiSig
     , wits =
         mkBasicTxWits
           & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay]
-          & scriptTxWitsL .~ Map.singleton (hashScript @Shelley msig) msig
+          & scriptTxWitsL .~ Map.singleton (hashScript @ShelleyEra msig) msig
     , auxiliaryData = SNothing
     }
 
@@ -455,7 +452,7 @@ txWithMultiSigBytes16 =
   "83a4008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030aa2008282582037139648f2c22bbf1d0ef9af37cfebc9014b1e0e2a55be87c4b3b231a8d84d265840e3b8f50632325fbd1f82202ce5a8b4672bd96c50a338d70c0aa96720f6f7fbf60e0ce708f3a7e28faa0d78dc437a0b61e02205ddb1db22d02ba35b37a7fe03068258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e584089c20cb6246483bbd0b2006f658597eff3e8ab3b8a6e9b22cb3c5b95cf0d3a2b96107acef88319fa2dd0fb28adcfdb330bb99f1f0058918a75d951ca9b73660c0181830302838200581ce9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371f8200581c0d2a471489a90f2910ec67ded8e215bfcd669bae77e7f9ab15850abd8200581cd0671052191a58c554eee27808b2b836a03ca369ca7a847f8c37d6f9f6"
 
 -- | Transaction with a Reward Withdrawal
-txbWithWithdrawal :: ShelleyTxBody Shelley
+txbWithWithdrawal :: TxBody ShelleyEra
 txbWithWithdrawal =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
@@ -469,7 +466,7 @@ txbWithWithdrawal =
     , stbMDHash = SNothing
     }
 
-txWithWithdrawal :: ShelleyTx Shelley
+txWithWithdrawal :: ShelleyTx ShelleyEra
 txWithWithdrawal =
   ShelleyTx
     { body = txbWithWithdrawal
@@ -491,7 +488,7 @@ txWithWithdrawalBytes16 =
 -- given minfeeA and minfeeB are set to 1.
 testEstimateMinFee :: Assertion
 testEstimateMinFee =
-  estimateMinFeeTx @Shelley
+  estimateMinFeeTx @ShelleyEra
     pp
     txSimpleUTxONoWit
     1

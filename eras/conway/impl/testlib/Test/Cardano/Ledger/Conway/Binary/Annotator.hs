@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Conway.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxBody
 import Test.Cardano.Ledger.Babbage.Binary.Annotator
@@ -25,10 +26,6 @@ instance
   decCBOR = pure <$> decCBOR
 
 deriving via
-  Mem (ConwayTxBodyRaw era)
+  Mem (ConwayTxBodyRaw ConwayEra)
   instance
-    ( DecCBOR (TxOut era)
-    , EraTxCert era
-    , EraPParams era
-    ) =>
-    DecCBOR (Annotator (ConwayTxBody era))
+    DecCBOR (Annotator (TxBody ConwayEra))

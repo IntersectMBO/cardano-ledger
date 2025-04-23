@@ -25,7 +25,7 @@ import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), Co
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (TxBody (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))

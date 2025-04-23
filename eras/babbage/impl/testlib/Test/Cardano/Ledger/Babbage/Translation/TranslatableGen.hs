@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (BabbageTxBody))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
@@ -109,7 +109,7 @@ genTxOut l = do
     _ -> arbitrary
   pure $ BabbageTxOut addr value datum script
 
-genTxBody :: Language -> Gen (BabbageTxBody BabbageEra)
+genTxBody :: Language -> Gen (TxBody BabbageEra)
 genTxBody l = do
   let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)

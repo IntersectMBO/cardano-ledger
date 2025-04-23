@@ -44,14 +44,14 @@ module Test.Cardano.Ledger.Generic.Fields (
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Network (..),
@@ -66,17 +66,16 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (TxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary (TxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn (..))

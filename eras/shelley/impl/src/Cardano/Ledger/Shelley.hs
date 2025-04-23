@@ -3,7 +3,7 @@ module Cardano.Ledger.Shelley (
   ShelleyEra,
   ShelleyTx,
   ShelleyTxOut,
-  ShelleyTxBody,
+  TxBody (..),
   ShelleyTxAuxData,
   nativeMultiSigTag,
 )
@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody)
+import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.UTxO ()
 
