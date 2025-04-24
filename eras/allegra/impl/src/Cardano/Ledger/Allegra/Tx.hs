@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.Tx (
   shelleyMinFeeTx,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  witsShelleyTxL, ShelleyTxRaw, Tx(ShelleyTx), mkShelleyTx, mkBasicShelleyTx,
+  witsShelleyTxL, ShelleyTxRaw, Tx(ShelleyTx), mkBasicShelleyTx,
  )
 import qualified Data.Set as Set (map)
 import Lens.Micro ((^.))

@@ -90,13 +90,14 @@ import Data.Maybe.Strict (
 import Data.Set (Set)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, to, (^.))
+import Lens.Micro (Lens', SimpleGetter, to, (^.), lens)
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
 
 class EraTx era => ShelleyEraTx era where
   mkShelleyTxMemo :: MemoBytes (ShelleyTxRaw era) -> Tx era
+  shelleyTxRawL :: Lens' (Tx era) (ShelleyTxRaw era)
 
 mkShelleyTx :: forall era. ShelleyEraTx era => ShelleyTxRaw era -> Tx era
 mkShelleyTx = mkShelleyTxMemo . memoBytesEra @era . encodeShelleyTxRaw
@@ -219,6 +220,8 @@ instance EraTx ShelleyEra where
 instance ShelleyEraTx ShelleyEra where
   mkShelleyTxMemo = MkShelleyTx
   {-# INLINEABLE mkShelleyTxMemo #-}
+
+  shelleyTxRawL = lens undefined undefined
 
 instance (Tx era ~ Tx ShelleyEra, EraTx era) => EqRaw (Tx ShelleyEra) where
   eqRaw = shelleyEqTxRaw
