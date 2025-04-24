@@ -118,7 +118,6 @@ library
     data-default >=0.8,
     deepseq,
     groups,
-    heapwords,
     iproute,
     measures,
     mempack,

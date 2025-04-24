@@ -116,7 +116,6 @@ library
     data-default,
     deepseq,
     groups,
-    heapwords,
     mempack,
     microlens,
     mtl,
