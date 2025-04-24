@@ -5,6 +5,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Cardano.Ledger.Allegra.Tx (
   validateTimelock,
@@ -22,26 +25,29 @@ import Cardano.Ledger.Core (
   EraTxAuxData (upgradeTxAuxData),
   EraTxWits (..),
   NativeScript,
-  upgradeTxBody,
+  upgradeTxBody, SafeToHash,
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (
-  ShelleyTx (..),
   auxDataShelleyTxL,
   bodyShelleyTxL,
-  mkBasicShelleyTx,
   shelleyMinFeeTx,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  witsShelleyTxL,
+  witsShelleyTxL, ShelleyTxRaw, Tx(ShelleyTx), mkShelleyTx, mkBasicShelleyTx,
  )
 import qualified Data.Set as Set (map)
 import Lens.Micro ((^.))
+import Cardano.Ledger.MemoBytes (MemoBytes)
+import Cardano.Ledger.Binary (ToCBOR)
+import GHC.Generics (Generic)
 
 -- ========================================
 
 instance EraTx AllegraEra where
-  type Tx AllegraEra = ShelleyTx AllegraEra
+  newtype Tx AllegraEra = MkAllegraTx (MemoBytes (ShelleyTxRaw AllegraEra))
+    deriving newtype (SafeToHash, ToCBOR)
+    deriving (Generic)
 
   mkBasicTx = mkBasicShelleyTx
 

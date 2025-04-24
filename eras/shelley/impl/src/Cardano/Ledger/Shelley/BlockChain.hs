@@ -51,7 +51,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (segWitTx, ShelleyEraTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -72,7 +72,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyTxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (ShelleyTx era))
+  { txSeqTxns' :: !(StrictSeq (Tx era))
   , txSeqBodyBytes :: BSL.ByteString
   , txSeqWitsBytes :: BSL.ByteString
   , txSeqMetadataBytes :: BSL.ByteString
@@ -95,14 +95,14 @@ deriving via
      ]
     (ShelleyTxSeq era)
   instance
-    (Typeable era, NoThunks (ShelleyTx era)) => NoThunks (ShelleyTxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (ShelleyTxSeq era)
 
 deriving stock instance
-  Show (ShelleyTx era) =>
+  Show (Tx era) =>
   Show (ShelleyTxSeq era)
 
 deriving stock instance
-  Eq (ShelleyTx era) =>
+  Eq (Tx era) =>
   Eq (ShelleyTxSeq era)
 
 -- ===========================
@@ -126,7 +126,7 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 pattern ShelleyTxSeq ::
   forall era.
   ( EraTx era
-  , Tx era ~ ShelleyTx era
+  , Tx era ~ Tx ShelleyEra
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
@@ -156,7 +156,7 @@ pattern ShelleyTxSeq xs <-
 
 {-# COMPLETE ShelleyTxSeq #-}
 
-txSeqTxns :: ShelleyTxSeq era -> StrictSeq (ShelleyTx era)
+txSeqTxns :: ShelleyTxSeq era -> StrictSeq (Tx era)
 txSeqTxns (TxSeq' ts _ _ _) = ts
 
 instance
@@ -204,7 +204,7 @@ auxDataSeqDecoder bodiesLength auxDataMap lax = do
     indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
     indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
-instance EraTx era => DecCBOR (ShelleyTxSeq era) where
+instance ShelleyEraTx era => DecCBOR (ShelleyTxSeq era) where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR

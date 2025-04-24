@@ -134,7 +134,7 @@ class
   ) =>
   EraTx era
   where
-  type Tx era = (r :: Type) | r -> era
+  data Tx era
 
   type TxUpgradeError era :: Type
   type TxUpgradeError era = Void

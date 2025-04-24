@@ -619,24 +619,6 @@ genTxCert slot =
       delta <- lift $ choose (nextEpoch, fromIntegral maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
--- getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert )
--- getShelleyTxCertDelegG = case reify @era of
---   Shelley -> getShelleyTxCertDeleg
---   Mary -> getShelleyTxCertDeleg
---   Allegra -> getShelleyTxCertDeleg
---   Alonzo -> getShelleyTxCertDeleg
---   Babbage -> getShelleyTxCertDeleg
---   Conway -> getShelleyTxCertDeleg -- TODO write a generator for Conwayerts
-
--- mkShelleyTxCertDelegG :: forall era. Reflect era => ShelleyDelegCert  -> TxCert era
--- mkShelleyTxCertDelegG = case reify @era of
---   Shelley -> mkShelleyTxCertDeleg
---   Mary -> mkShelleyTxCertDeleg
---   Allegra -> mkShelleyTxCertDeleg
---   Alonzo -> mkShelleyTxCertDeleg
---   Babbage -> mkShelleyTxCertDeleg
---   Conway -> mkShelleyTxCertDeleg -- TODO write a generator for Conwayerts
-
 genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
 genTxCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do

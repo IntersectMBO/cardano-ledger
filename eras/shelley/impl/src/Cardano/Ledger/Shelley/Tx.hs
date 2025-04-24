@@ -1,12 +1,13 @@
 module Cardano.Ledger.Shelley.Tx (
   -- * Transaction
-  ShelleyTx (
+  Tx (
     MkShelleyTx,
     ShelleyTx,
     body,
     wits,
     auxiliaryData
   ),
+  ShelleyEraTx (..),
   ShelleyTxRaw (..),
   bodyShelleyTxL,
   witsShelleyTxL,
@@ -15,6 +16,7 @@ module Cardano.Ledger.Shelley.Tx (
   wireSizeShelleyTxF,
   segWitTx,
   mkBasicShelleyTx,
+  mkShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
