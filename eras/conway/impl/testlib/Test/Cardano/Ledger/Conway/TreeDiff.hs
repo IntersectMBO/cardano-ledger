@@ -166,9 +166,7 @@ instance
   ToExpr (ConwayUtxosPredFailure era)
 
 -- TxBody
-instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era), ToExpr (TxCert era)) =>
-  ToExpr (ConwayTxBodyRaw era)
+instance ToExpr ConwayTxBodyRaw
 
 instance ToExpr (TxBody ConwayEra)
 

@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Remove `MaryTxBody`
 * Move `Annotator` instances to `testlib`
 * Converted `MaryTxBodyRaw` into a type synonym
 * Expose constructor `MkMaryTxBody`

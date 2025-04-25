@@ -79,7 +79,7 @@ class AllegraEraTxBody era => MaryEraTxBody era where
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
 
-type MaryTxBodyRaw era = AllegraTxBodyRaw MultiAsset era
+type MaryTxBodyRaw = AllegraTxBodyRaw MultiAsset MaryEra
 
 -- | Encodes memoized bytes created upon construction.
 instance EncCBOR (TxBody MaryEra)
@@ -87,7 +87,7 @@ instance EncCBOR (TxBody MaryEra)
 instance EqRaw (TxBody MaryEra)
 
 instance Memoized (TxBody MaryEra) where
-  type RawType (TxBody MaryEra) = MaryTxBodyRaw MaryEra
+  type RawType (TxBody MaryEra) = MaryTxBodyRaw
 
 deriving newtype instance Eq (TxBody MaryEra)
 
@@ -101,7 +101,7 @@ deriving newtype instance NFData (TxBody MaryEra)
 
 deriving newtype instance DecCBOR (TxBody MaryEra)
 
-type instance MemoHashIndex (MaryTxBodyRaw era) = EraIndependentTxBody
+type instance MemoHashIndex MaryTxBodyRaw = EraIndependentTxBody
 
 instance HashAnnotated (TxBody MaryEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
@@ -170,7 +170,7 @@ pattern MaryTxBody
 {-# COMPLETE MaryTxBody #-}
 
 instance EraTxBody MaryEra where
-  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes (MaryTxBodyRaw MaryEra))
+  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes MaryTxBodyRaw)
     deriving newtype (SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw

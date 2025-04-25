@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Remove `ConwayTxBody`
+* Removed `era` parameter from `ConwayTxBodyRaw`
 * Add `MkConwayTxBody` and all members of `ConwayTxBodyRaw`:
   (`ConwayTxBodyRaw`, `ctbrAuxDataHash`, `ctbrCerts`, `ctbrCollateralInputs`,
   `ctbrCollateralReturn`, `ctbrCurrentTreasuryValue`, `ctbrFee`, `ctbrMint`, `ctbrNetworkId`,

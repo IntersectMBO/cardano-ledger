@@ -95,45 +95,30 @@ class (ShelleyEraTxCert era, EraTxBody era, ProtVerAtMost era 8) => ShelleyEraTx
 -- ==============================
 -- The underlying type for TxBody
 
-data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
+data ShelleyTxBodyRaw = ShelleyTxBodyRaw
   { stbrInputs :: !(Set TxIn)
-  , stbrOutputs :: !(StrictSeq (TxOut era))
-  , stbrCerts :: !(StrictSeq (TxCert era))
+  , stbrOutputs :: !(StrictSeq (TxOut ShelleyEra))
+  , stbrCerts :: !(StrictSeq (TxCert ShelleyEra))
   , stbrWithdrawals :: !Withdrawals
   , stbrFee :: !Coin
   , stbrTtl :: !SlotNo
-  , stbrUpdate :: !(StrictMaybe (Update era))
+  , stbrUpdate :: !(StrictMaybe (Update ShelleyEra))
   , stbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   }
   deriving (Generic)
 
-deriving instance
-  (NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (ShelleyTxBodyRaw era)
+deriving instance NoThunks ShelleyTxBodyRaw
 
-deriving instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (ShelleyTxBodyRaw era)
+deriving instance NFData ShelleyTxBodyRaw
 
-deriving instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (ShelleyTxBodyRaw era)
+deriving instance Eq ShelleyTxBodyRaw
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (ShelleyTxBodyRaw era)
+deriving instance Show ShelleyTxBodyRaw
 
 -- | Encodes memoized bytes created upon construction.
 instance EncCBOR (TxBody ShelleyEra)
 
-instance
-  ( Era era
-  , DecCBOR (PParamsUpdate era)
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (ShelleyTxBodyRaw era)
-  where
+instance DecCBOR ShelleyTxBodyRaw where
   decCBOR =
     decode
       ( SparseKeyed
@@ -151,14 +136,7 @@ instance
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
-boxBody ::
-  ( Era era
-  , DecCBOR (PParamsUpdate era)
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  ) =>
-  Word ->
-  Field (ShelleyTxBodyRaw era)
+boxBody :: Word -> Field ShelleyTxBodyRaw
 boxBody 0 = field (\x tx -> tx {stbrInputs = x}) From
 boxBody 1 = field (\x tx -> tx {stbrOutputs = x}) From
 boxBody 4 = field (\x tx -> tx {stbrCerts = x}) From
@@ -172,10 +150,7 @@ boxBody n = invalidField n
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
-txSparse ::
-  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
-  ShelleyTxBodyRaw era ->
-  Encode ('Closed 'Sparse) (ShelleyTxBodyRaw era)
+txSparse :: ShelleyTxBodyRaw -> Encode ('Closed 'Sparse) ShelleyTxBodyRaw
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> ShelleyTxBodyRaw i o c w f t u h)
     !> Key 0 (To input) -- We don't have to send these in ShelleyTxBodyRaw order
@@ -189,7 +164,7 @@ txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
-basicShelleyTxBodyRaw :: ShelleyTxBodyRaw era
+basicShelleyTxBodyRaw :: ShelleyTxBodyRaw
 basicShelleyTxBodyRaw =
   ShelleyTxBodyRaw
     { stbrInputs = Set.empty
@@ -202,19 +177,16 @@ basicShelleyTxBodyRaw =
     , stbrAuxDataHash = SNothing
     }
 
-instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
-  EncCBOR (ShelleyTxBodyRaw era)
-  where
+instance EncCBOR ShelleyTxBodyRaw where
   encCBOR = encode . txSparse
 
 instance Memoized (TxBody ShelleyEra) where
-  type RawType (TxBody ShelleyEra) = ShelleyTxBodyRaw ShelleyEra
+  type RawType (TxBody ShelleyEra) = ShelleyTxBodyRaw
 
 instance EqRaw (TxBody ShelleyEra)
 
 instance EraTxBody ShelleyEra where
-  newtype TxBody ShelleyEra = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw ShelleyEra))
+  newtype TxBody ShelleyEra = MkShelleyTxBody (MemoBytes ShelleyTxBodyRaw)
     deriving (Generic)
     deriving newtype (SafeToHash, ToCBOR)
 
@@ -341,7 +313,7 @@ pattern ShelleyTxBody
 
 -- =========================================
 
-type instance MemoHashIndex (ShelleyTxBodyRaw era) = EraIndependentTxBody
+type instance MemoHashIndex ShelleyTxBodyRaw = EraIndependentTxBody
 
 instance HashAnnotated (TxBody ShelleyEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash

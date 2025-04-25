@@ -16,16 +16,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxBody
 import Test.Cardano.Ledger.Babbage.Binary.Annotator
 
-instance
-  ( DecCBOR (TxOut era)
-  , EraTxCert era
-  , EraPParams era
-  ) =>
-  DecCBOR (Annotator (ConwayTxBodyRaw era))
-  where
+instance DecCBOR (Annotator ConwayTxBodyRaw) where
   decCBOR = pure <$> decCBOR
 
-deriving via
-  Mem (ConwayTxBodyRaw ConwayEra)
-  instance
-    DecCBOR (Annotator (TxBody ConwayEra))
+deriving via Mem ConwayTxBodyRaw instance DecCBOR (Annotator (TxBody ConwayEra))
