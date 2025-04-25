@@ -38,6 +38,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import System.Environment (getEnv)
 import System.Random.Stateful
@@ -176,10 +177,12 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 
-decodeTx :: ByteString -> Tx CurrentEra
+decodeTx :: HasCallStack => ByteString -> Tx CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
-  first show $ decodeFull (eraProtVerHigh @CurrentEra) bsl
+  tx <- first show $ decodeFull (eraProtVerHigh @BabbageEra) bsl
+  -- TODO: remove this after the transactions below are updated
+  first show $ upgradeTx tx
 
 -- | Most basic ada-only transaction:
 --
@@ -235,8 +238,8 @@ validatedTx3 =
       \424643546f6b656e1a006cc9f2021a0002afe90e81581c780648b89ea2f11fa9bbdd67\
       \552db5dd020eda1c9a54142dd9f1b136a10081825820cf2477066091b565f87f044581\
       \7c4df726900b29af3f05d229309afdbf94296d584088444a5845b198a2d255175770be\
-      \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45aa\
-      \54cceb568ff1886e2716e84e6260df5f6"
+      \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45a\
+      \a54cceb568ff1886e2716e84e6260df5f6"
 
 mkGlobals :: ShelleyGenesis -> Globals
 mkGlobals genesis =
