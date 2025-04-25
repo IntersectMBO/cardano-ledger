@@ -27,6 +27,7 @@ import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
+import Control.Monad (when)
 import Criterion.Main
 import Data.Aeson
 import Data.Bifunctor (first)
@@ -41,6 +42,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import System.Environment (getEnv)
+import System.Exit (die)
 import System.Random.Stateful
 import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
 import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
@@ -67,9 +69,13 @@ main = do
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
-  let largeKeysNum = 100000
+  let utxoMap = unUTxO $ getUTxO es
+      utxoSize = Map.size utxoMap
+      largeKeysNum = 100000
       stdGen = mkStdGen 2022
-  largeKeys <- selectRandomMapKeys 100000 stdGen (unUTxO (getUTxO es))
+  when (utxoSize < largeKeysNum) $
+    die $ "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
+  largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
   defaultMain
     [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -109,9 +115,8 @@ main = do
               bench "areAllAdaOnly" . nf areAllAdaOnly
           ]
     , env (pure es) $ \newEpochState ->
-        let utxo = getUTxO es
-            (_, minTxOut) = Map.findMin $ unUTxO utxo
-            (_, maxTxOut) = Map.findMax $ unUTxO utxo
+        let (_, minTxOut) = Map.findMin utxoMap
+            (_, maxTxOut) = Map.findMax utxoMap
             setAddr =
               Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
          in bgroup
@@ -141,10 +146,10 @@ main = do
               ]
     , bgroup
         "DeleteTxOuts"
-        [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys
-        , extractKeysBench (unUTxO (getUTxO es)) 9 (Set.take 9 largeKeys)
-        , extractKeysBench (unUTxO (getUTxO es)) 5 (Set.take 5 largeKeys)
-        , extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys)
+        [ extractKeysBench utxoMap largeKeysNum largeKeys
+        , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
+        , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
+        , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
         ]
     ]
 
