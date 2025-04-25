@@ -144,18 +144,18 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 
 -- ======================================
 
-data BabbageTxBodyRaw era = BabbageTxBodyRaw
+data BabbageTxBodyRaw = BabbageTxBodyRaw
   { btbrInputs :: !(Set TxIn)
   , btbrCollateralInputs :: !(Set TxIn)
   , btbrReferenceInputs :: !(Set TxIn)
-  , btbrOutputs :: !(StrictSeq (Sized (TxOut era)))
-  , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
+  , btbrOutputs :: !(StrictSeq (Sized (TxOut BabbageEra)))
+  , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut BabbageEra)))
   , btbrTotalCollateral :: !(StrictMaybe Coin)
-  , btbrCerts :: !(StrictSeq (TxCert era))
+  , btbrCerts :: !(StrictSeq (TxCert BabbageEra))
   , btbrWithdrawals :: !Withdrawals
   , btbrFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
-  , btbrUpdate :: !(StrictMaybe (Update era))
+  , btbrUpdate :: !(StrictMaybe (Update BabbageEra))
   , btbrReqSignerHashes :: !(Set (KeyHash 'Witness))
   , btbrMint :: !MultiAsset
   , -- The spec makes it clear that the mint field is a
@@ -171,10 +171,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
 -- We override this instance because the 'Sized' types also reference their
 -- serialisation and as such cannot be compared directly. An alternative would
 -- be to derive `EqRaw` for `Sized`.
-instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  EqRaw (BabbageTxBodyRaw era)
-  where
+instance EqRaw BabbageTxBodyRaw where
   eqRaw a b =
     btbrInputs a == btbrInputs b
       && btbrCollateralInputs a == btbrCollateralInputs b
@@ -202,28 +199,20 @@ instance
           && F.foldl' (\acc (x', y') -> acc && x' `eqUnsized` y') True (StrictSeq.zip x y)
       eqUnsized x y = sizedValue x == sizedValue y
 
-type instance MemoHashIndex (BabbageTxBodyRaw era) = EraIndependentTxBody
+type instance MemoHashIndex BabbageTxBodyRaw = EraIndependentTxBody
 
-deriving instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (BabbageTxBodyRaw era)
+deriving instance Eq BabbageTxBodyRaw
 
-instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (BabbageTxBodyRaw era)
+instance NoThunks BabbageTxBodyRaw
 
-instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (BabbageTxBodyRaw era)
+instance NFData BabbageTxBodyRaw
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (BabbageTxBodyRaw era)
+deriving instance Show BabbageTxBodyRaw
 
 deriving newtype instance DecCBOR (TxBody BabbageEra)
 
 instance Memoized (TxBody BabbageEra) where
-  type RawType (TxBody BabbageEra) = BabbageTxBodyRaw BabbageEra
+  type RawType (TxBody BabbageEra) = BabbageTxBodyRaw
 
 deriving newtype instance NFData (TxBody BabbageEra)
 
@@ -265,7 +254,7 @@ data BabbageTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTxBody BabbageEra where
-  newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes (BabbageTxBodyRaw BabbageEra))
+  newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes BabbageTxBodyRaw)
     deriving newtype (Generic, SafeToHash, ToCBOR)
   type TxBodyUpgradeError BabbageEra = BabbageTxBodyUpgradeError
 
@@ -618,10 +607,7 @@ txnetworkid' = btbrNetworkId . getMemoRawType
 -- | Encodes memoized bytes created upon construction.
 instance EncCBOR (TxBody BabbageEra)
 
-instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
-  EncCBOR (BabbageTxBodyRaw era)
-  where
+instance EncCBOR BabbageTxBodyRaw where
   encCBOR
     BabbageTxBodyRaw
       { btbrInputs
@@ -664,10 +650,7 @@ instance
           !> encodeKeyedStrictMaybe 7 btbrAuxDataHash
           !> encodeKeyedStrictMaybe 15 btbrNetworkId
 
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (BabbageTxBodyRaw era)
-  where
+instance DecCBOR BabbageTxBodyRaw where
   decCBOR =
     decode $
       SparseKeyed
@@ -676,7 +659,7 @@ instance
         bodyFields
         requiredFields
     where
-      bodyFields :: Word -> Field (BabbageTxBodyRaw era)
+      bodyFields :: Word -> Field BabbageTxBodyRaw
       bodyFields 0 = field (\x tx -> tx {btbrInputs = x}) From
       bodyFields 13 = field (\x tx -> tx {btbrCollateralInputs = x}) From
       bodyFields 18 = field (\x tx -> tx {btbrReferenceInputs = x}) From
@@ -710,7 +693,7 @@ instance
         ]
   {-# INLINE decCBOR #-}
 
-basicBabbageTxBodyRaw :: BabbageTxBodyRaw era
+basicBabbageTxBodyRaw :: BabbageTxBodyRaw
 basicBabbageTxBodyRaw =
   BabbageTxBodyRaw
     mempty

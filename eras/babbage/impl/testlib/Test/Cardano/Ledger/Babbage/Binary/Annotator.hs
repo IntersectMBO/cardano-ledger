@@ -16,13 +16,7 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Binary
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 
-deriving via
-  Mem (BabbageTxBodyRaw BabbageEra)
-  instance
-    DecCBOR (Annotator (TxBody BabbageEra))
+deriving via Mem BabbageTxBodyRaw instance DecCBOR (Annotator (TxBody BabbageEra))
 
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (Annotator (BabbageTxBodyRaw era))
-  where
+instance DecCBOR (Annotator BabbageTxBodyRaw) where
   decCBOR = pure <$> decCBOR

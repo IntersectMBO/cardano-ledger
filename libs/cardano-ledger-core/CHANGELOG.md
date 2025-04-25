@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Change `TxBody` to an associated `data` family
 * Remove `HeapWords` instances for: #5001
   - `Coin`
   - `DeltaCoin`

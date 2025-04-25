@@ -115,16 +115,16 @@ import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
 
 instance Memoized (TxBody ConwayEra) where
-  type RawType (TxBody ConwayEra) = ConwayTxBodyRaw ConwayEra
+  type RawType (TxBody ConwayEra) = ConwayTxBodyRaw
 
-data ConwayTxBodyRaw era = ConwayTxBodyRaw
+data ConwayTxBodyRaw = ConwayTxBodyRaw
   { ctbrSpendInputs :: !(Set TxIn)
   , ctbrCollateralInputs :: !(Set TxIn)
   , ctbrReferenceInputs :: !(Set TxIn)
-  , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
-  , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
+  , ctbrOutputs :: !(StrictSeq (Sized (TxOut ConwayEra)))
+  , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut ConwayEra)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
-  , ctbrCerts :: !(OSet.OSet (TxCert era))
+  , ctbrCerts :: !(OSet.OSet (TxCert ConwayEra))
   , ctbrWithdrawals :: !Withdrawals
   , ctbrFee :: !Coin
   , ctbrVldt :: !ValidityInterval
@@ -133,34 +133,22 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , ctbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , ctbrNetworkId :: !(StrictMaybe Network)
-  , ctbrVotingProcedures :: !(VotingProcedures era)
-  , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
+  , ctbrVotingProcedures :: !(VotingProcedures ConwayEra)
+  , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure ConwayEra))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , ctbrTreasuryDonation :: !Coin
   }
   deriving (Generic)
 
-deriving instance (EraPParams era, Eq (TxCert era), Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
+deriving instance Eq ConwayTxBodyRaw
 
-instance
-  (EraPParams era, NoThunks (TxCert era), NoThunks (TxOut era)) =>
-  NoThunks (ConwayTxBodyRaw era)
+instance NoThunks ConwayTxBodyRaw
 
-instance
-  (EraPParams era, NFData (TxCert era), NFData (TxOut era)) =>
-  NFData (ConwayTxBodyRaw era)
+instance NFData ConwayTxBodyRaw
 
-deriving instance
-  (EraPParams era, Show (TxCert era), Show (TxOut era)) =>
-  Show (ConwayTxBodyRaw era)
+deriving instance Show ConwayTxBodyRaw
 
-instance
-  ( EraPParams era
-  , EraTxCert era
-  , DecCBOR (TxOut era)
-  ) =>
-  DecCBOR (ConwayTxBodyRaw era)
-  where
+instance DecCBOR ConwayTxBodyRaw where
   decCBOR =
     decode $
       SparseKeyed
@@ -169,7 +157,7 @@ instance
         bodyFields
         requiredFields
     where
-      bodyFields :: Word -> Field (ConwayTxBodyRaw era)
+      bodyFields :: Word -> Field ConwayTxBodyRaw
       bodyFields 0 = field (\x tx -> tx {ctbrSpendInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {ctbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {ctbrFee = x}) From
@@ -259,7 +247,7 @@ deriving newtype instance NFData (TxBody ConwayEra)
 
 deriving instance Show (TxBody ConwayEra)
 
-type instance MemoHashIndex (ConwayTxBodyRaw era) = EraIndependentTxBody
+type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
 
 instance HashAnnotated (TxBody ConwayEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
@@ -267,7 +255,7 @@ instance HashAnnotated (TxBody ConwayEra) EraIndependentTxBody where
 mkConwayTxBody :: TxBody ConwayEra
 mkConwayTxBody = mkMemoizedEra @ConwayEra basicConwayTxBodyRaw
 
-basicConwayTxBodyRaw :: ConwayTxBodyRaw era
+basicConwayTxBodyRaw :: ConwayTxBodyRaw
 basicConwayTxBodyRaw =
   ConwayTxBodyRaw
     mempty
@@ -300,7 +288,7 @@ data ConwayTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTxBody ConwayEra where
-  newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes (ConwayTxBodyRaw ConwayEra))
+  newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes ConwayTxBodyRaw)
     deriving (Generic, SafeToHash, ToCBOR)
   type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
@@ -610,9 +598,8 @@ pattern ConwayTxBody
 --------------------------------------------------------------------------------
 
 encodeTxBodyRaw ::
-  ConwayEraTxBody era =>
-  ConwayTxBodyRaw era ->
-  Encode ('Closed 'Sparse) (ConwayTxBodyRaw era)
+  ConwayTxBodyRaw ->
+  Encode ('Closed 'Sparse) ConwayTxBodyRaw
 encodeTxBodyRaw ConwayTxBodyRaw {..} =
   let ValidityInterval bot top = ctbrVldt
    in Keyed
@@ -640,7 +627,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To ctbrTreasuryDonation)
 
-instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
+instance EncCBOR ConwayTxBodyRaw where
   encCBOR = encode . encodeTxBodyRaw
 
 -- | Encodes memoized bytes created upon construction.

@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Remove `ShelleyTxBody`
+* Removed `era` parameter from `ShelleyTxBodyRaw`
 * Remove `HeapWords` instances for: #5001
   - `ShelleyTxOut`
 * Move `Annotator` instances, `txSeqDecoder` and `mapTraverseableDecoderA` to `testlib`

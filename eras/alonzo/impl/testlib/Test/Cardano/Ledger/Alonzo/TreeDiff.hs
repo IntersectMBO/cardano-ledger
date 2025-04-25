@@ -93,9 +93,7 @@ instance ToExpr DataHash32
 instance ToExpr (CompactForm (Value era)) => ToExpr (AlonzoTxOut era)
 
 -- TxBody
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBodyRaw era)
+instance ToExpr AlonzoTxBodyRaw
 
 instance ToExpr (TxBody AlonzoEra)
 

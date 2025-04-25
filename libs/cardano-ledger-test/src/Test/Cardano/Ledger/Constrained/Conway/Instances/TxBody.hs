@@ -49,21 +49,21 @@ instance EraSpecPParams era => HasSpec (Update era)
 --   and (Maybe x) instead of (StrictMaybe x). It transforms bewtween the two, in the toSimpleRep
 --   and fromSimpleRep methods. This makes it much easier to write Specifications, because
 --   the Constrained packaage knows about Lists and Maybe.
-type ShelleyTxBodyTypes era =
+type ShelleyTxBodyTypes =
   '[ Set TxIn
-   , [TxOut era]
-   , [TxCert era]
+   , [TxOut ShelleyEra]
+   , [TxCert ShelleyEra]
    , Map RewardAccount Coin
    , Coin
    , SlotNo
-   , Maybe (Update era)
+   , Maybe (Update ShelleyEra)
    , Maybe TxAuxDataHash
    ]
 
 instance HasSimpleRep (TxBody ShelleyEra) where
-  type SimpleRep (TxBody ShelleyEra) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
+  type SimpleRep (TxBody ShelleyEra) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes]
   toSimpleRep (ShelleyTxBody is os certs w c s up aux) =
-    inject @"ShelleyTxBody" @'["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
+    inject @"ShelleyTxBody" @'["ShelleyTxBody" ::: ShelleyTxBodyTypes]
       is
       (toList os)
       (toList certs)
@@ -74,7 +74,7 @@ instance HasSimpleRep (TxBody ShelleyEra) where
       (strictMaybeToMaybe aux)
 
   fromSimpleRep rep =
-    algebra @'["ShelleyTxBody" ::: ShelleyTxBodyTypes ShelleyEra]
+    algebra @'["ShelleyTxBody" ::: ShelleyTxBodyTypes]
       rep
       ( \is os certs w c s up aux ->
           ShelleyTxBody
@@ -97,21 +97,21 @@ instance HasSpec (TxBody ShelleyEra)
 --   and (Maybe x) instead of (StrictMaybe x). It transforms bewtween the two, in the toSimpleRep
 --   and fromSimpleRep methods. This makes it much easier to write Specifications, because
 --   the Constrained packaage knows about Lists and Maybe.
-type AllegraTxBodyTypes era =
+type AllegraTxBodyTypes =
   '[ Set TxIn
-   , [TxOut era]
-   , [TxCert era]
+   , [TxOut AllegraEra]
+   , [TxCert AllegraEra]
    , Map RewardAccount Coin
    , Coin
    , ValidityInterval
-   , Maybe (Update era)
+   , Maybe (Update AllegraEra)
    , Maybe TxAuxDataHash
    ]
 
 instance HasSimpleRep (TxBody AllegraEra) where
-  type SimpleRep (TxBody AllegraEra) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
+  type SimpleRep (TxBody AllegraEra) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes]
   toSimpleRep (AllegraTxBody is os certs w c vi up aux) =
-    inject @"AllegraTxBody" @'["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
+    inject @"AllegraTxBody" @'["AllegraTxBody" ::: AllegraTxBodyTypes]
       is
       (toList os)
       (toList certs)
@@ -122,7 +122,7 @@ instance HasSimpleRep (TxBody AllegraEra) where
       (strictMaybeToMaybe aux)
 
   fromSimpleRep rep =
-    algebra @'["AllegraTxBody" ::: AllegraTxBodyTypes AllegraEra]
+    algebra @'["AllegraTxBody" ::: AllegraTxBodyTypes]
       rep
       ( \is os certs w c vi up aux ->
           AllegraTxBody
@@ -144,22 +144,22 @@ instance HasSpec (TxBody AllegraEra)
 --   and (Maybe x) instead of (StrictMaybe x). It transforms between the abstractions and the
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
-type MaryTxBodyTypes era =
+type MaryTxBodyTypes =
   '[ Set TxIn
-   , [TxOut era]
-   , [TxCert era]
+   , [TxOut MaryEra]
+   , [TxCert MaryEra]
    , Map RewardAccount Coin
    , Coin
    , ValidityInterval
-   , Maybe (Update era)
+   , Maybe (Update MaryEra)
    , Maybe TxAuxDataHash
    , MultiAsset
    ]
 
 instance HasSimpleRep (TxBody MaryEra) where
-  type SimpleRep (TxBody MaryEra) = SOP '["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
+  type SimpleRep (TxBody MaryEra) = SOP '["MaryTxBody" ::: MaryTxBodyTypes]
   toSimpleRep (MaryTxBody is os certs w c vi up aux ma) =
-    inject @"MaryTxBody" @'["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
+    inject @"MaryTxBody" @'["MaryTxBody" ::: MaryTxBodyTypes]
       is
       (toList os)
       (toList certs)
@@ -171,7 +171,7 @@ instance HasSimpleRep (TxBody MaryEra) where
       ma
 
   fromSimpleRep rep =
-    algebra @'["MaryTxBody" ::: MaryTxBodyTypes MaryEra]
+    algebra @'["MaryTxBody" ::: MaryTxBodyTypes]
       rep
       ( \is os certs w c vi up aux ma ->
           MaryTxBody
@@ -194,15 +194,15 @@ instance HasSpec (TxBody MaryEra)
 --   and (Maybe x) instead of (StrictMaybe x). It transforms between the abstractions and the
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
-type AlonzoTxBodyTypes era =
+type AlonzoTxBodyTypes =
   '[ Set TxIn
    , Set TxIn
-   , [TxOut era]
-   , [TxCert era]
+   , [TxOut AlonzoEra]
+   , [TxCert AlonzoEra]
    , Map RewardAccount Coin
    , Coin
    , ValidityInterval
-   , Maybe (Update era)
+   , Maybe (Update AlonzoEra)
    , Set (KeyHash 'Witness)
    , MultiAsset
    , Maybe ScriptIntegrityHash
@@ -211,9 +211,9 @@ type AlonzoTxBodyTypes era =
    ]
 
 instance HasSimpleRep (TxBody AlonzoEra) where
-  type SimpleRep (TxBody AlonzoEra) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
+  type SimpleRep (TxBody AlonzoEra) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes]
   toSimpleRep (AlonzoTxBody inputs colinputs os certs w c vi up kh ma ihash aux nw) =
-    inject @"AlonzoTxBody" @'["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
+    inject @"AlonzoTxBody" @'["AlonzoTxBody" ::: AlonzoTxBodyTypes]
       inputs
       colinputs
       (toList os)
@@ -229,7 +229,7 @@ instance HasSimpleRep (TxBody AlonzoEra) where
       (strictMaybeToMaybe nw)
 
   fromSimpleRep rep =
-    algebra @'["AlonzoTxBody" ::: AlonzoTxBodyTypes AlonzoEra]
+    algebra @'["AlonzoTxBody" ::: AlonzoTxBodyTypes]
       rep
       ( \inputs colinputs os certs w c vi up kh ma ihash aux nw ->
           AlonzoTxBody
@@ -257,18 +257,18 @@ instance HasSpec (TxBody AlonzoEra)
 --   and (Maybe x) instead of (StrictMaybe x). It transforms between the abstractions and the
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
-type BabbageTxBodyTypes era =
+type BabbageTxBodyTypes =
   '[ Set TxIn
    , Set TxIn
    , Set TxIn
-   , [Sized (TxOut era)]
-   , Maybe (Sized (TxOut era))
+   , [Sized (TxOut BabbageEra)]
+   , Maybe (Sized (TxOut BabbageEra))
    , Maybe Coin
-   , [TxCert era]
+   , [TxCert BabbageEra]
    , Map RewardAccount Coin -- Withdrawals without the newtype
    , Coin
    , ValidityInterval
-   , Maybe (Update era)
+   , Maybe (Update BabbageEra)
    , Set (KeyHash 'Witness)
    , MultiAsset
    , Maybe ScriptIntegrityHash
@@ -277,9 +277,9 @@ type BabbageTxBodyTypes era =
    ]
 
 instance HasSimpleRep (TxBody BabbageEra) where
-  type SimpleRep (TxBody BabbageEra) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
+  type SimpleRep (TxBody BabbageEra) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes]
   toSimpleRep (BabbageTxBody inputs colinputs refinputs os colOut coin certs w c vi up kh ma ihash aux nw) =
-    inject @"BabbageTxBody" @'["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
+    inject @"BabbageTxBody" @'["BabbageTxBody" ::: BabbageTxBodyTypes]
       inputs
       colinputs
       refinputs
@@ -298,7 +298,7 @@ instance HasSimpleRep (TxBody BabbageEra) where
       (strictMaybeToMaybe nw)
 
   fromSimpleRep rep =
-    algebra @'["BabbageTxBody" ::: BabbageTxBodyTypes BabbageEra]
+    algebra @'["BabbageTxBody" ::: BabbageTxBodyTypes]
       rep
       ( \inputs colinputs refinputs os colret totalcol certs w fee vi up kh ma ihash aux nw ->
           BabbageTxBody

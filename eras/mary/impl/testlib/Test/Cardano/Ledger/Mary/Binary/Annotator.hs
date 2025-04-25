@@ -13,7 +13,4 @@ import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody
 import Test.Cardano.Ledger.Allegra.Binary.Annotator
 
-deriving via
-  Mem (MaryTxBodyRaw MaryEra)
-  instance
-    DecCBOR (Annotator (TxBody MaryEra))
+deriving via Mem MaryTxBodyRaw instance DecCBOR (Annotator (TxBody MaryEra))

@@ -48,9 +48,7 @@ instance
   ToExpr (BabbageTxOut era)
 
 -- TxBody
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBodyRaw era)
+instance ToExpr BabbageTxBodyRaw
 
 instance ToExpr (TxBody BabbageEra)
 

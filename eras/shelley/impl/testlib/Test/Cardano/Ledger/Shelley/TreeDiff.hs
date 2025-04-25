@@ -82,12 +82,7 @@ instance (EraTxOut era, ToExpr (Value era)) => ToExpr (ShelleyTxOut era) where
   toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]
 
 -- TxBody
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBodyRaw era)
+instance ToExpr ShelleyTxBodyRaw
 
 instance ToExpr (TxBody ShelleyEra)
 

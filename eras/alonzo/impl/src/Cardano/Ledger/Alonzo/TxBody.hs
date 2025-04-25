@@ -171,7 +171,7 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 
 -- ======================================
 
-data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
+data AlonzoTxBodyRaw = AlonzoTxBodyRaw
   { atbrInputs :: !(Set TxIn)
   , atbrCollateral :: !(Set TxIn)
   , atbrOutputs :: !(StrictSeq (TxOut AlonzoEra))
@@ -188,24 +188,16 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   }
   deriving (Generic)
 
-deriving instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (AlonzoTxBodyRaw era)
+deriving instance Eq AlonzoTxBodyRaw
 
-instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (AlonzoTxBodyRaw era)
+instance NoThunks AlonzoTxBodyRaw
 
-instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (AlonzoTxBodyRaw era)
+instance NFData AlonzoTxBodyRaw
 
-deriving instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (AlonzoTxBodyRaw era)
+deriving instance Show AlonzoTxBodyRaw
 
 instance Memoized (TxBody AlonzoEra) where
-  type RawType (TxBody AlonzoEra) = AlonzoTxBodyRaw AlonzoEra
+  type RawType (TxBody AlonzoEra) = AlonzoTxBodyRaw
 
 data AlonzoTxBodyUpgradeError
   = -- | The TxBody contains a protocol parameter update that attempts to update
@@ -215,7 +207,7 @@ data AlonzoTxBodyUpgradeError
   deriving (Show)
 
 instance EraTxBody AlonzoEra where
-  newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw AlonzoEra))
+  newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes AlonzoTxBodyRaw)
     deriving (ToCBOR, Generic)
     deriving newtype (SafeToHash)
   type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
@@ -454,7 +446,7 @@ pattern AlonzoTxBody
 
 {-# COMPLETE AlonzoTxBody #-}
 
-type instance MemoHashIndex (AlonzoTxBodyRaw era) = EraIndependentTxBody
+type instance MemoHashIndex AlonzoTxBodyRaw = EraIndependentTxBody
 
 instance HashAnnotated (TxBody AlonzoEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
@@ -526,10 +518,7 @@ instance EqRaw (TxBody AlonzoEra)
 -- | Encodes memoized bytes created upon construction.
 instance EncCBOR (TxBody AlonzoEra)
 
-instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
-  EncCBOR (AlonzoTxBodyRaw era)
-  where
+instance EncCBOR AlonzoTxBodyRaw where
   encCBOR
     AlonzoTxBodyRaw
       { atbrInputs
@@ -566,10 +555,7 @@ instance
           !> encodeKeyedStrictMaybe 7 atbrAuxDataHash
           !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
 
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (AlonzoTxBodyRaw era)
-  where
+instance DecCBOR AlonzoTxBodyRaw where
   decCBOR =
     decode $
       SparseKeyed
@@ -578,7 +564,7 @@ instance
         bodyFields
         requiredFields
     where
-      bodyFields :: Word -> Field (AlonzoTxBodyRaw era)
+      bodyFields :: Word -> Field AlonzoTxBodyRaw
       bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
@@ -606,7 +592,7 @@ instance
         , (2, "fee")
         ]
 
-emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw era
+emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw
 emptyAlonzoTxBodyRaw =
   AlonzoTxBodyRaw
     mempty

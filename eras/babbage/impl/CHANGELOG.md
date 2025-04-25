@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Remove `BabbageTxBody`
+* Removed `era` parameter from `BabbageTxBodyRaw`
 * Move `Annotator` instances to `testlib`
 * Expose access to `BabbageTxBodyRaw`
 * Expose constructor `MkBabbageTxBody`

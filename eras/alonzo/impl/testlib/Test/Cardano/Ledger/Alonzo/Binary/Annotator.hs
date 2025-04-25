@@ -238,15 +238,9 @@ deriving via
   instance
     Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
 
-deriving via
-  Mem (AlonzoTxBodyRaw AlonzoEra)
-  instance
-    DecCBOR (Annotator (TxBody AlonzoEra))
+deriving via Mem AlonzoTxBodyRaw instance DecCBOR (Annotator (TxBody AlonzoEra))
 
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (Annotator (AlonzoTxBodyRaw era))
-  where
+instance DecCBOR (Annotator AlonzoTxBodyRaw) where
   decCBOR = pure <$> decCBOR
 
 instance

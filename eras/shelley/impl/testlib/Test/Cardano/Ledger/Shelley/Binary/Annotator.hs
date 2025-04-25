@@ -61,20 +61,10 @@ instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
         pure (3, MultiSigMOf m <$> multiSigs)
       k -> invalidKey k
 
-instance
-  ( Era era
-  , DecCBOR (PParamsUpdate era)
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (Annotator (ShelleyTxBodyRaw era))
-  where
+instance DecCBOR (Annotator ShelleyTxBodyRaw) where
   decCBOR = pure <$> decCBOR
 
-deriving via
-  Mem (ShelleyTxBodyRaw ShelleyEra)
-  instance
-    DecCBOR (Annotator (TxBody ShelleyEra))
+deriving via Mem ShelleyTxBodyRaw instance DecCBOR (Annotator (TxBody ShelleyEra))
 
 instance Era era => DecCBOR (Annotator (ShelleyTxAuxDataRaw era)) where
   decCBOR = pure <$> decCBOR

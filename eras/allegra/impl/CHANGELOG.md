@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Remove `AllegraTxBody`
+* Removed `era` parameter from `AllegraTxBodyRaw`
 * Move `Annotator` instances to `testlib`
 * Expose access to `AllegraTxBodyRaw`, `AllegraTxAuxData` and `TimelockRaw`
 * Expose constructor `MkAllegraTxBody`, `MkTxAuxData` and `MkTimelock`
