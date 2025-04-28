@@ -184,6 +184,7 @@ library testlib
     microlens-mtl,
     mtl,
     plutus-ledger-api,
+    plutus-preprocessor,
     prettyprinter,
     small-steps >=1.1,
     text,

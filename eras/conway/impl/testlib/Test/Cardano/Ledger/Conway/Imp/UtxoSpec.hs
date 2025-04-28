@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,8 +18,10 @@ import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript, plutusBinary)
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusLanguage, SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus.Preprocessor.Binary.V2 (inputsIsSubsetOfRefInputsBytes)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
@@ -39,6 +43,11 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Data.Maybe (fromJust)
+import Cardano.Ledger.Conway.Core (AlonzoEraTxWits(..), ppMaxTxExUnitsL, AlonzoEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers(..))
+import Cardano.Ledger.Plutus (Data(..))
+import qualified PlutusLedgerApi.Common as P
 
 spec ::
   forall era.
@@ -63,6 +72,37 @@ spec =
         [fromNativeScript spendingScript, fromNativeScript spendingScript]
           ++ extraScripts
           ++ extraScripts
+    describe "disjoint inputs and reference inputs" $ do
+      let
+        plutus = Plutus $ snd inputsIsSubsetOfRefInputsBytes
+        scriptAddr :: forall (pv :: Language). PlutusLanguage pv => Addr
+        scriptAddr =
+          mkAddr
+            (ScriptHashObj @'Payment $ hashPlutusScript @pv plutus)
+            StakeRefNull
+        script :: forall (pv :: Language). PlutusLanguage pv => PlutusScript era
+        script = fromJust $ mkPlutusScript @era @pv plutus
+      --it "Same script can appear in regular and reference inputs in PlutusV2" $ do
+      --  txIn <- sendCoinTo (scriptAddr @'PlutusV2) $ Coin 1_000_000
+      --  submitTx_ $
+      --    mkBasicTx mkBasicTxBody
+      --      & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
+      --      & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+      --      & witsTxL . scriptTxWitsL .~ Map.singleton (hashPlutusScript @'PlutusV2 plutus) (PlutusScript $ script @'PlutusV2)
+      it "Same script cannot appear in regular and reference inputs in PlutusV3" $ do
+        maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
+        txIn <- sendCoinTo (scriptAddr @'PlutusV3) $ Coin 1_000_000
+        collateralIn <- sendCoinTo (scriptAddr @'PlutusV3) $ Coin 1_000_000_000
+        let
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
+              & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+              & bodyTxL . collateralInputsTxBodyL .~ Set.singleton collateralIn
+              & bodyTxL . feeTxBodyL .~ Coin 100_000_000
+              & witsTxL . scriptTxWitsL .~ Map.singleton (hashPlutusScript @'PlutusV3 plutus) (PlutusScript $ script @'PlutusV3)
+              & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.singleton (SpendingPurpose (AsIx 0)) (Data $ P.I 0, maxExUnits))
+        submitTx_ @era tx
   where
     checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do

@@ -28,6 +28,7 @@ $purposeIsWellformedWithDatumQ
 $datumIsWellformedQ
 $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
+$inputsIsSubsetOfRefInputsQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -109,4 +110,10 @@ inputsOutputsAreNotEmptyWithDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyWithDatumBytes =
   ( inputsOutputsAreNotEmptyWithDatumQ
   , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
+  )
+
+inputsIsSubsetOfRefInputsBytes :: (Q [Dec], PlutusBinary)
+inputsIsSubsetOfRefInputsBytes =
+  ( inputsIsSubsetOfRefInputsQ
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||inputsIsSubsetOfRefInputs||])
   )
