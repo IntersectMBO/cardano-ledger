@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Remove `BabbageNonDisjointRefInputs` for protocol versions >10
 * Added `ppCoinsPerUTxOByte` to `PParams`
 * Removed `babbagePParamsHKDPairs` and `babbageCommonPParamsHKDPairs` from `PParams`
 * Remove `BabbageTxBody`

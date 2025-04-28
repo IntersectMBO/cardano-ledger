@@ -57,7 +57,7 @@ import Cardano.Ledger.BaseTypes (
   strictMaybe,
   txIxToInt,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -114,6 +114,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Set as Set
@@ -162,6 +163,7 @@ data ConwayContextError era
   | VotingProceduresFieldNotSupported !(VotingProcedures era)
   | ProposalProceduresFieldNotSupported !(OSet.OSet (ProposalProcedure era))
   | TreasuryDonationFieldNotSupported !Coin
+  | ReferenceInputsNotDisjointFromInputs !(NonEmpty TxIn)
   deriving (Generic)
 
 deriving instance
@@ -228,6 +230,8 @@ instance
       encode $ Sum ProposalProceduresFieldNotSupported 13 !> To proposalProcedures
     TreasuryDonationFieldNotSupported coin ->
       encode $ Sum TreasuryDonationFieldNotSupported 14 !> To coin
+    ReferenceInputsNotDisjointFromInputs common ->
+      encode $ Sum ReferenceInputsNotDisjointFromInputs 15 !> To common
 
 instance
   ( EraPParams era
@@ -245,6 +249,7 @@ instance
     12 -> SumD VotingProceduresFieldNotSupported <! From
     13 -> SumD ProposalProceduresFieldNotSupported <! From
     14 -> SumD TreasuryDonationFieldNotSupported <! From
+    15 -> SumD ReferenceInputsNotDisjointFromInputs <! From
     n -> Invalid n
 
 instance
@@ -277,6 +282,10 @@ instance
       kindObject
         "TreasuryDonationFieldNotSupported"
         ["treasury_donation" .= toJSON coin]
+    ReferenceInputsNotDisjointFromInputs common ->
+      kindObject
+        "ReferenceInputsNotDisjointFromInputs"
+        ["common" .= toJSON common]
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
@@ -453,8 +462,16 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
       Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    let
+      txInputs = txBody ^. inputsTxBodyL
+      refInputs = txBody ^. referenceInputsTxBodyL
+    inputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
+    refInputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
+    let
+      commonInputs = txInputs `Set.intersection` refInputs
+    unless (pvMajor ltiProtVer < natVersion @11) $ case toList commonInputs of
+      (x : xs) -> Left $ ReferenceInputsNotDisjointFromInputs $ x :| xs
+      _ -> Right ()
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
@@ -464,9 +481,9 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
     plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure
       PV3.TxInfo
-        { PV3.txInfoInputs = inputs
+        { PV3.txInfoInputs = inputsInfo
         , PV3.txInfoOutputs = outputs
-        , PV3.txInfoReferenceInputs = refInputs
+        , PV3.txInfoReferenceInputs = refInputsInfo
         , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
         , PV3.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
         , PV3.txInfoTxCerts = txCerts
