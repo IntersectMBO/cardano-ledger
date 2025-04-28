@@ -2,7 +2,15 @@
 
 ## 1.17.0.0
 
-- Remove `CorruptRewardUpdate` predicate failure and replace that check with an assertion. #5007
+* Add:
+  * `unlessMajorVersion`
+  * `whenMajorVersion`
+  * `whenMajorVersionAtLeast`
+  * `whenMajorVersionAtMost`
+  * `cantFollow`
+  * `majorFollow`
+  * `minorFollow`
+* Remove `CorruptRewardUpdate` predicate failure and replace that check with an assertion. #5007
 * Added to `PParams`: `shelleyPParams`, `ppA0`,`ppD`,`ppEMax`,`ppExtraEntropy`,`ppMaxBBSize`,`ppKeyDeposit`,`ppMinFeeA`,`ppMinFeeB`,`ppMinPoolCost` `ppMaxBHSize`,`ppMaxTxSize`,`ppNOpt`,`ppProtocolVersion`,`ppPoolDeposit`,`ppRho`,`ppTau`
 * Removed from `PParams`: `shelleyCommonPParamsHKDPairs`,`shelleyCommonPParamsHKDPairsV6`,`shelleyCommonPParamsHKDPairsV8`
 * Replace export from `Cardano.Ledger.Shelley.UTxO` of deprecated `balance` and `coinBalance` with `sumUTxO` and `sumCoinUTxO` respectively

@@ -210,3 +210,16 @@ inputsOutputsAreNotEmptyWithDatumQ =
           PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
             not $ PLD.null (PV3D.txInfoInputs txInfo) || PLD.null (PV3D.txInfoOutputs txInfo)
     |]
+
+inputsOverlapsWithRefInputsQ :: Q [Dec]
+inputsOverlapsWithRefInputsQ =
+  [d|
+    inputsOverlapsWithRefInputs :: P.BuiltinData -> P.BuiltinUnit
+    inputsOverlapsWithRefInputs context =
+      P.check $
+        case unsafeFromBuiltinData context of
+          PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
+            PLD.any (\x -> P.isJust . PLD.find (P.== x) $ PV3D.txInfoReferenceInputs txInfo) $
+              PV3D.txInfoInputs txInfo
+          _ -> False
+    |]

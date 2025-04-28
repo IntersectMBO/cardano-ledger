@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -115,10 +116,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectNoCurrentProposals,
   expectPulserProposals,
   expectNoPulserProposals,
-  minorFollow,
-  majorFollow,
-  cantFollow,
-  getsPParams,
   currentProposalsShouldContain,
   ifBootstrap,
   whenBootstrap,
@@ -142,14 +139,12 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
-  ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
   UnitInterval,
   addEpochInterval,
   binOpEpochNo,
   inject,
-  succVersion,
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -487,9 +482,6 @@ getDRepState dRepCred = do
   case Map.lookup dRepCred drepsState of
     Nothing -> error $ "Expected for DRep " ++ show dRepCred ++ " to be present in the CertState"
     Just state -> pure state
-
-getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
-getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
 
 -- | Sets up a stake pool with coin delegated to it.
 --
@@ -1577,29 +1569,11 @@ pulsingStateSnapshotL = lens getter setter
     setter (DRComplete _ y) snap = DRComplete snap y
     setter state snap = DRComplete snap $ snd $ finishDRepPulser state
 
--- | A legal ProtVer that differs in the minor Version
-minorFollow :: ProtVer -> ProtVer
-minorFollow (ProtVer x y) = ProtVer x (y + 1)
-
--- | A legal ProtVer that moves to the next major Version
-majorFollow :: ProtVer -> ProtVer
-majorFollow pv@(ProtVer x _) = case succVersion x of
-  Just x' -> ProtVer x' 0
-  Nothing -> error ("The last major version can't be incremented. " ++ show pv)
-
--- | An illegal ProtVer that skips 3 minor versions
-cantFollow :: ProtVer -> ProtVer
-cantFollow (ProtVer x y) = ProtVer x (y + 3)
-
 whenBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
-whenBootstrap a = do
-  pv <- getProtVer
-  when (HardForks.bootstrapPhase pv) a
+whenBootstrap = whenMajorVersion @9
 
 whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
-whenPostBootstrap a = do
-  pv <- getProtVer
-  unless (HardForks.bootstrapPhase pv) a
+whenPostBootstrap = whenMajorVersionAtLeast @10
 
 ifBootstrap :: EraGov era => ImpTestM era a -> ImpTestM era a -> ImpTestM era a
 ifBootstrap inBootstrap outOfBootstrap = do

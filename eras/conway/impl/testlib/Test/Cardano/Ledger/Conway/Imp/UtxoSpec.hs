@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,14 +12,23 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript, plutusBinary)
+import Cardano.Ledger.Plutus.Language (
+  Plutus (..),
+  SLanguage (..),
+  hashPlutusScript,
+ )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
@@ -38,11 +49,15 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsOverlapsWithRefInputs)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec =
   describe "Reference scripts" $ do
@@ -63,6 +78,29 @@ spec =
         [fromNativeScript spendingScript, fromNativeScript spendingScript]
           ++ extraScripts
           ++ extraScripts
+    describe "disjoint inputs and reference inputs" $ do
+      let
+        scriptHash lang = hashPlutusScript $ inputsOverlapsWithRefInputs lang
+        mkTestTx :: TxIn -> Tx era
+        mkTestTx txIn =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
+            & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+
+      it "Cannot run scripts that expect inputs and refInputs to overlap (PV 9/10)" $ do
+        whenMajorVersionAtMost @10 $ do
+          txIn <- produceScript $ scriptHash SPlutusV3
+          submitFailingTx @era
+            (mkTestTx txIn)
+            [ injectFailure $ BabbageNonDisjointRefInputs [txIn]
+            ]
+      it "Same script cannot appear in regular and reference inputs in PlutusV3 (PV 11)" $ whenMajorVersionAtLeast @11 $ do
+        txIn <- produceScript $ scriptHash SPlutusV3
+        submitFailingTx @era
+          (mkTestTx txIn)
+          [ injectFailure $
+              CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era [txIn]]
+          ]
   where
     checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do

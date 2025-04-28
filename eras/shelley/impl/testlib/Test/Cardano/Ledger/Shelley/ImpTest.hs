@@ -104,6 +104,14 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   modifyImpInitProtVer,
   modifyImpInitExpectLedgerRuleConformance,
   disableImpInitExpectLedgerRuleConformance,
+  minorFollow,
+  majorFollow,
+  cantFollow,
+  whenMajorVersion,
+  whenMajorVersionAtLeast,
+  whenMajorVersionAtMost,
+  unlessMajorVersion,
+  getsPParams,
 
   -- * Logging
   Doc,
@@ -242,7 +250,7 @@ import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
-import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import GHC.TypeLits (KnownNat, KnownSymbol, Symbol, symbolVal, type (<=))
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
@@ -1631,3 +1639,68 @@ advanceToPointOfNoReturn = do
   impLastTick <- gets impLastTick
   (_, slotOfNoReturn, _) <- runShelleyBase $ getTheSlotOfNoReturn impLastTick
   impLastTickL .= slotOfNoReturn
+
+-- | A legal ProtVer that differs in the minor Version
+minorFollow :: ProtVer -> ProtVer
+minorFollow (ProtVer x y) = ProtVer x (y + 1)
+
+-- | A legal ProtVer that moves to the next major Version
+majorFollow :: ProtVer -> ProtVer
+majorFollow pv@(ProtVer x _) = case succVersion x of
+  Just x' -> ProtVer x' 0
+  Nothing -> error ("The last major version can't be incremented. " ++ show pv)
+
+-- | An illegal ProtVer that skips 3 minor versions
+cantFollow :: ProtVer -> ProtVer
+cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+whenMajorVersion ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+whenMajorVersion a = do
+  pv <- getProtVer
+  when (pvMajor pv == natVersion @v) a
+
+whenMajorVersionAtLeast ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+whenMajorVersionAtLeast a = do
+  pv <- getProtVer
+  when (pvMajor pv >= natVersion @v) a
+
+whenMajorVersionAtMost ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+whenMajorVersionAtMost a = do
+  pv <- getProtVer
+  when (pvMajor pv <= natVersion @v) a
+
+unlessMajorVersion ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+unlessMajorVersion a = do
+  pv <- getProtVer
+  unless (pvMajor pv == natVersion @v) a
+
+getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
+getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
