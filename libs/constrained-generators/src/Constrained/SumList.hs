@@ -27,6 +27,7 @@ import Data.Semigroup (sconcat)
 import System.Random (Random (..))
 import Test.QuickCheck (Arbitrary, Gen, choose, shuffle, vectorOf)
 
+import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec)
 import Constrained.Core (Value (..))
@@ -54,6 +55,7 @@ import Constrained.NumSpec (
   ltSpec,
   nubOrd,
  )
+import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Data.List ((\\))

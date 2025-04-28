@@ -25,13 +25,16 @@
 
 module Constrained.Spec.Map where
 
+import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
 import Constrained.Core
+import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic (Prod (..))
 import Constrained.List
 import Constrained.NumSpec (cardinality, geqSpec, leqSpec, nubOrd)
+import Constrained.PrettyUtils
 import Constrained.Spec.Set
 import Constrained.Spec.SumProd
 import Constrained.Syntax

@@ -21,7 +21,6 @@ import Constrained.Base (
   BaseW (..),
   HOLE (..),
   appTerm,
-  (/>),
  )
 import Constrained.Conformance (
   monitorSpec,
@@ -56,6 +55,7 @@ import Constrained.NumSpec (
   IntW (..),
   NumOrdW (..),
  )
+import Constrained.PrettyUtils
 import Constrained.Spec.Map (
   MapW (..),
  )

@@ -32,14 +32,14 @@
 
 module Constrained.NumSpec where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
+  GenericRequires,
   HOLE (..),
   HasSpec (..),
   Logic (..),
-  Semantics (..),
-  Specification (..),
-  Syntax (..),
-  Term (..),
+  Specification,
+  Term,
   appTerm,
   equalSpec,
   explainSpecOpt,
@@ -47,13 +47,14 @@ import Constrained.Base (
   fromSimpleRepSpec,
   memberSpecList,
   notMemberSpec,
-  showType,
   typeSpec,
+  pattern TypeSpec,
   pattern Unary,
   pattern (:<:),
  )
 import Constrained.Conformance ()
 import Constrained.Core (unionWithMaybe)
+import Constrained.FunctionSymbol
 import Constrained.GenT (
   GenT,
   MonadGenError (..),
@@ -65,6 +66,7 @@ import Constrained.Generic (
   HasSimpleRep (..),
   SimpleRep,
  )
+import Constrained.PrettyUtils
 
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
@@ -109,10 +111,7 @@ instance Semantics NumOrdW where
   semantics GreaterOrEqualW = (>=)
 
 instance Syntax NumOrdW where
-  inFix LessOrEqualW = True
-  inFix LessW = True
-  inFix GreaterOrEqualW = True
-  inFix GreaterW = True
+  isInfix _ = True
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic
@@ -121,8 +120,7 @@ instance Syntax NumOrdW where
 class (Ord a, HasSpec a) => OrdLike a where
   leqSpec :: a -> Specification a
   default leqSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
+    ( GenericRequires a
     , OrdLike (SimpleRep a)
     ) =>
     a ->
@@ -131,9 +129,8 @@ class (Ord a, HasSpec a) => OrdLike a where
 
   ltSpec :: a -> Specification a
   default ltSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    , OrdLike (SimpleRep a)
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
     ) =>
     a ->
     Specification a
@@ -141,9 +138,8 @@ class (Ord a, HasSpec a) => OrdLike a where
 
   geqSpec :: a -> Specification a
   default geqSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    , OrdLike (SimpleRep a)
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
     ) =>
     a ->
     Specification a
@@ -151,9 +147,8 @@ class (Ord a, HasSpec a) => OrdLike a where
 
   gtSpec :: a -> Specification a
   default gtSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    , OrdLike (SimpleRep a)
+    ( OrdLike (SimpleRep a)
+    , GenericRequires a
     ) =>
     a ->
     Specification a
@@ -659,9 +654,8 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = TrueSpec
 class (Num a, HasSpec a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
   default subtractSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    , NumLike (SimpleRep a)
+    ( NumLike (SimpleRep a)
+    , GenericRequires a
     ) =>
     a ->
     TypeSpec a ->
@@ -670,9 +664,8 @@ class (Num a, HasSpec a) => NumLike a where
 
   negateSpec :: TypeSpec a -> Specification a
   default negateSpec ::
-    ( TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    , NumLike (SimpleRep a)
+    ( NumLike (SimpleRep a)
+    , GenericRequires a
     ) =>
     TypeSpec a ->
     Specification a
@@ -765,7 +758,7 @@ instance Logic IntW where
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
           [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
-          , "The Spec is a MemberSpec = " ++ show (MemberSpec es)
+          , "The Spec is a MemberSpec = " ++ show es -- show (MemberSpec @HasSpec @TS es)
           , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
           ]
       )

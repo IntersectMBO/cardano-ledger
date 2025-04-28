@@ -64,17 +64,18 @@ module Constrained.Spec.SumProd (
   SumW (..),
 ) where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
   BaseW (..),
-  Binder (..),
+  Binder,
   Forallable (..),
   Fun (..),
+  GenericRequires,
   HasSpec (..),
   IsPred (..),
-  Pred (..),
-  Specification (..),
-  Term (..),
-  Weighted (..),
+  Pred,
+  Specification,
+  Term,
   appTerm,
   bind,
   constrained,
@@ -408,10 +409,7 @@ right_ = fromGeneric_ . injRight_
 
 caseOn ::
   forall a.
-  ( HasSpec a
-  , HasSpec (SimpleRep a)
-  , HasSimpleRep a
-  , TypeSpec a ~ TypeSpec (SimpleRep a)
+  ( GenericRequires a
   , SimpleRep a ~ SumOver (Cases (SimpleRep a))
   , TypeList (Cases (SimpleRep a))
   ) =>
@@ -465,9 +463,9 @@ branchW w body =
 
 match ::
   forall p a.
-  ( HasSpec a
-  , IsProductType a
+  ( IsProductType a
   , IsPred p
+  , GenericRequires a
   ) =>
   Term a ->
   FunTy (MapList Term (ProductAsList a)) p ->
@@ -481,12 +479,11 @@ con ::
   ( SimpleRep a ~ SOP (TheSop a)
   , TypeSpec a ~ TypeSpec (SOP (TheSop a))
   , TypeList (ConstrOf c (TheSop a))
-  , HasSpec a
-  , HasSimpleRep a
   , r ~ FunTy (MapList Term (ConstrOf c (TheSop a))) (Term a)
   , ResultType r ~ Term a
   , SOPTerm c (TheSop a)
   , ConstrTerm (ConstrOf c (TheSop a))
+  , GenericRequires a
   ) =>
   r
 con =
@@ -510,6 +507,7 @@ sel ::
   , HasSpec a
   , HasSpec (ProdOver as)
   , HasSimpleRep a
+  , GenericRequires a
   ) =>
   Term a ->
   Term (At n as)
@@ -528,6 +526,7 @@ forAll' ::
   , IsPred p
   , IsProd (SimpleRep a)
   , HasSpec a
+  , GenericRequires a
   ) =>
   Term t ->
   FunTy (MapList Term (Args (SimpleRep a))) p ->
@@ -545,6 +544,7 @@ constrained' ::
   , IsProd (SimpleRep a)
   , HasSpec a
   , IsPred p
+  , GenericRequires a
   ) =>
   FunTy (MapList Term (Args (SimpleRep a))) p ->
   Specification a
@@ -562,6 +562,7 @@ reify' ::
   , HasSpec a
   , HasSpec b
   , IsPred p
+  , GenericRequires b
   ) =>
   Term a ->
   (a -> b) ->
@@ -582,10 +583,7 @@ instance
 onCon ::
   forall c a p.
   ( IsConstrOf c (ProdOver (ConstrOf c (TheSop a))) (TheSop a)
-  , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , HasSimpleRep a
-  , HasSpec a
-  , HasSpec (SimpleRep a)
+  , GenericRequires a
   , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
   , All HasSpec (Cases (SOP (TheSop a)))
   , HasSpec (ProdOver (ConstrOf c (TheSop a)))
@@ -608,13 +606,10 @@ onCon tm p =
 isCon ::
   forall c a.
   ( IsConstrOf c (ProdOver (ConstrOf c (TheSop a))) (TheSop a)
-  , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , HasSimpleRep a
-  , HasSpec a
-  , HasSpec (SimpleRep a)
   , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
   , All HasSpec (Cases (SOP (TheSop a)))
   , HasSpec (ProdOver (ConstrOf c (TheSop a)))
+  , GenericRequires a
   ) =>
   Term a ->
   Pred

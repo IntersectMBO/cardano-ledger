@@ -874,6 +874,7 @@ instance Typeable a => HasSimpleRep (THKD tag Identity a) where
   type SimpleRep (THKD tag Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
+
 instance
   ( IsNormalType a
   , Typeable tag

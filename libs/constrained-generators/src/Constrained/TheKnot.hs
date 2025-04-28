@@ -34,25 +34,24 @@
 -- | All the things that are mutually recursive.
 module Constrained.TheKnot where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
   AppRequires,
   BinaryShow (..),
-  Binder (..),
+  Binder,
   Forallable (..),
   Fun (..),
+  GenericRequires,
   HOLE (..),
   HasGenHint (..),
   HasSpec (..),
+  HintF (..),
   IsPred,
   Logic (..),
-  Pred (..),
-  Semantics (..),
-  Specification (..),
-  Syntax (..),
-  Term (..),
+  Pred,
+  Specification,
+  Term,
   TypeSpec,
-  Weighted (..),
-  WithPrec (..),
   addToErrorSpec,
   appFun,
   appTerm,
@@ -70,33 +69,26 @@ import Constrained.Base (
   fromGESpec,
   fromSimpleRepSpec,
   genFromTypeSpec,
-  getWitness,
   guardTypeSpec,
   isErrorLike,
-  mapWeighted,
   memberSpecList,
   notEqualSpec,
   notMemberSpec,
-  parensIf,
-  prettyPrec,
   propagateSpec,
-  sameFunSym,
-  short,
-  showType,
   shrinkWithTypeSpec,
   toCtx,
   toPred,
   toPreds,
-  traverseWeighted,
   typeSpec,
   typeSpecOpt,
-  vsep',
-  (/>),
   pattern FromGeneric,
+  pattern TypeSpec,
   pattern Unary,
   pattern (:<:),
   pattern (:>:),
  )
+import Constrained.FunctionSymbol
+import Constrained.PrettyUtils
 import Constrained.SumList
 
 import Constrained.Conformance (
@@ -287,7 +279,6 @@ pattern SumSpec a b c <- SumSpecRaw _ a b c
     SumSpec a b c = SumSpecRaw Nothing a b c
 
 {-# COMPLETE SumSpec #-}
-{-# COMPLETE SumSpecRaw #-}
 
 guardSumSpec ::
   forall a b.
@@ -583,8 +574,7 @@ instance Show (EqW d r) where
   show EqualW = "==."
 
 instance Syntax EqW where
-  inFix EqualW = True
-  prettyWit _ _ _ = Nothing
+  isInfix EqualW = True
 
 instance Semantics EqW where
   semantics EqualW = (==)
@@ -984,7 +974,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
   ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
   Monitor {} -> pure mempty
-  GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t
+  GenHint (HintF h) t -> propagateSpec (giveHint h) <$> toCtx x t
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
@@ -1628,8 +1618,8 @@ saturatePred p =
 -- HasSpec for Products
 -- ================================================================
 
-pairView :: forall a b. (HasSpec a, HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
-pairView (App (sameFunSym $ ProdW @a @b -> Just (_, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
+pairView :: Term (Prod a b) -> Maybe (Term a, Term b)
+pairView (App (getWitness -> Just ProdW) (x :> y :> Nil)) = Just (x, y)
 pairView _ = Nothing
 
 cartesian ::
@@ -2083,9 +2073,9 @@ instance Semantics ListW where
   semantics = listSem
 
 instance Syntax ListW where
-  prettyWit AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
-  prettyWit AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
-  prettyWit _ _ _ = Nothing
+  prettySymbol AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
+  prettySymbol AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
+  prettySymbol _ _ _ = Nothing
 
 listSem :: ListW dom rng -> FunTy dom rng
 listSem (FoldMapW (Fun f)) = adds . map (semantics f)
@@ -2281,7 +2271,7 @@ combineFoldSpec NoFold s = pure s
 combineFoldSpec s NoFold = pure s
 combineFoldSpec (FoldSpec (Fun f) s) (FoldSpec (Fun g) s') =
   case sameFunSym f g of
-    Just (_h, Refl, Refl, Refl) -> pure $ FoldSpec (Fun f) (s <> s')
+    Just (_, _, Refl) -> pure $ FoldSpec (Fun f) (s <> s')
     Nothing -> Left ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show g]
 
 conformsToFoldSpec :: forall a. [a] -> FoldSpec a -> Bool
@@ -2316,11 +2306,8 @@ class Sized t where
 
   liftSizeSpec :: HasSpec t => SizeSpec -> [Integer] -> Specification t
   default liftSizeSpec ::
-    ( HasSpec t
-    , HasSimpleRep t
-    , Sized (SimpleRep t)
-    , HasSpec (SimpleRep t)
-    , TypeSpec t ~ TypeSpec (SimpleRep t)
+    ( Sized (SimpleRep t)
+    , GenericRequires t
     ) =>
     SizeSpec ->
     [Integer] ->
@@ -2329,11 +2316,8 @@ class Sized t where
 
   liftMemberSpec :: HasSpec t => [Integer] -> Specification t
   default liftMemberSpec ::
-    ( HasSpec t
-    , HasSpec (SimpleRep t)
-    , HasSimpleRep t
-    , Sized (SimpleRep t)
-    , TypeSpec t ~ TypeSpec (SimpleRep t)
+    ( Sized (SimpleRep t)
+    , GenericRequires t
     ) =>
     [Integer] ->
     Specification t
@@ -2361,11 +2345,10 @@ adds = foldr (semantics theAddFn) theZero
 -- ==============================================================
 
 -- We need Arbitrary Specification to do this
-instance {-# OVERLAPPABLE #-} (Arbitrary (Specification a {- Arbitrary (TypeSpec a), -}), Foldy a) => Arbitrary (FoldSpec a) where
+instance {-# OVERLAPPABLE #-} (Arbitrary (Specification a), Foldy a) => Arbitrary (FoldSpec a) where
   arbitrary = oneof [FoldSpec (Fun IdW) <$> arbitrary, pure NoFold]
   shrink NoFold = []
-  shrink (FoldSpec (Fun wit) spec)
-    | Just (idW, Refl, Refl, Refl) <- sameFunSym (IdW @a) wit = FoldSpec (Fun idW) <$> shrink spec
+  shrink (FoldSpec (Fun (getWitness -> Just IdW)) spec) = FoldSpec (Fun IdW) <$> shrink spec
   shrink FoldSpec {} = [NoFold]
 
 data FunW (dom :: [Type]) (rng :: Type) where
