@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default (def)
+import Data.Either (isLeft, isRight)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -120,11 +121,17 @@ datumAndReferenceInputsSpec = do
               , mkTxInPartial producingTx 1
               ]
           & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    submitFailingTx
-      consumingTx
-      ( pure . injectFailure . BabbageNonDisjointRefInputs $
-          mkTxInPartial producingTx 0 :| []
-      )
+    pv <- getProtVer
+    res <- trySubmitTx consumingTx
+    if pv == ProtVer (natVersion @10) 0
+      then case res of
+        Left (err, _) ->
+          err
+            `shouldBeExpr` ( pure . injectFailure . BabbageNonDisjointRefInputs $
+                              mkTxInPartial producingTx 0 :| []
+                           )
+        x -> x `shouldSatisfyExpr` isLeft
+      else res `shouldSatisfyExpr` isRight
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
     refTxOut <- mkRefTxOut shSpending
@@ -150,22 +157,6 @@ datumAndReferenceInputsSpec = do
             CollectErrors
               [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
         )
-  it "fails with same txIn in regular inputs and reference inputs" $ do
-    producingTx <- setupRefTx
-    let
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    submitFailingTx
-      consumingTx
-      ( pure . injectFailure . BabbageNonDisjointRefInputs $
-          mkTxInPartial producingTx 0 :| []
-      )
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
     refTxOut <- mkRefTxOut shSpending

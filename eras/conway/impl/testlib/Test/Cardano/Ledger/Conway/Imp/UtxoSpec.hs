@@ -1,23 +1,35 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript, plutusBinary)
+import Cardano.Ledger.Plutus.Language (
+  Plutus (..),
+  SLanguage (..),
+  hashPlutusScript,
+ )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
@@ -30,6 +42,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Functor ((<&>))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -38,11 +51,15 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsOverlapsWithRefInputs)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , ContextError era ~ ConwayContextError era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec =
   describe "Reference scripts" $ do
@@ -63,6 +80,44 @@ spec =
         [fromNativeScript spendingScript, fromNativeScript spendingScript]
           ++ extraScripts
           ++ extraScripts
+    describe "disjoint inputs and reference inputs" $ do
+      let
+        scriptHash lang = hashPlutusScript $ inputsOverlapsWithRefInputs lang
+        tx :: TxIn -> Tx era
+        tx txIn =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
+            & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+
+      it "Can run scripts that expect inputs and refInputs to overlap (PV 9)"
+        . whenMajorVersion @9
+        $ do
+          txIn <- produceScript $ scriptHash SPlutusV3
+          submitTx_ @era $ tx txIn
+      it "Same script cannot appear in regular and reference inputs in PlutusV3 (PV 10)"
+        . whenMajorVersion @10
+        $ do
+          txIn <- produceScript $ scriptHash SPlutusV3
+          submitFailingTx @era
+            (tx txIn)
+            [ injectFailure $
+                BabbageNonDisjointRefInputs
+                  (txIn NE.:| [])
+            ]
+      it "Same script cannot appear in regular and reference inputs in PlutusV3 (PV 11)"
+        . whenMajorVersion @11
+        $ do
+          txIn <- produceScript $ scriptHash SPlutusV3
+          submitFailingTx @era
+            (tx txIn)
+            [ injectFailure $
+                CollectErrors
+                  [ BadTranslation
+                      ( ReferenceInputsNotDisjointFromInputs
+                          (Set.singleton txIn)
+                      )
+                  ]
+            ]
   where
     checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do
