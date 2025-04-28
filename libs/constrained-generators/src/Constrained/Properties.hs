@@ -16,12 +16,12 @@
 module Constrained.Properties where
 
 import Constrained.API
+import Constrained.AbstractSyntax
 import Constrained.Base (
   AppRequires,
   BaseW (..),
   HOLE (..),
   appTerm,
-  (/>),
  )
 import Constrained.Conformance (
   monitorSpec,
@@ -75,6 +75,7 @@ import Constrained.TheKnot (
   prettyPlan,
   shrinkWithSpec,
  )
+import Constrained.Utils
 
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)

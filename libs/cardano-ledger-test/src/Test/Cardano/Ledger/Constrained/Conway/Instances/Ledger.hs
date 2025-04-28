@@ -124,6 +124,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
 import Constrained.API
+import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
@@ -874,6 +875,7 @@ instance Typeable a => HasSimpleRep (THKD tag Identity a) where
   type SimpleRep (THKD tag Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
+
 instance
   ( IsNormalType a
   , Typeable tag

@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val
 import Constrained.API
+import Constrained.AbstractSyntax
 import Constrained.Base (IsPred (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

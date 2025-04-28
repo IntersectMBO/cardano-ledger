@@ -25,9 +25,11 @@
 
 module Constrained.Spec.Map where
 
+import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance
 import Constrained.Core
+import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic (Prod (..))
 import Constrained.List
@@ -36,6 +38,7 @@ import Constrained.Spec.Set
 import Constrained.Spec.SumProd
 import Constrained.Syntax
 import Constrained.TheKnot
+import Constrained.Utils
 import Control.Monad
 import Data.Foldable
 import Data.Kind

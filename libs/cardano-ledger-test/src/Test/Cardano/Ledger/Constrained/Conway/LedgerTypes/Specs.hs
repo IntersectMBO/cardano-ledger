@@ -42,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Constrained.API
+import Constrained.AbstractSyntax
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
