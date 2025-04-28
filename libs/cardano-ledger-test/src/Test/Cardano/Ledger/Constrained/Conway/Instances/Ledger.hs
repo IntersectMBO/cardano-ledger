@@ -393,6 +393,7 @@ instance
       err = error $ "toCompact @" ++ show (typeOf x) ++ " " ++ show x
 instance
   ( Compactible a
+  , GenericallyInstantiated (CompactForm a)
   , Typeable (TypeSpec (SimpleRep a))
   , Show (TypeSpec (SimpleRep a))
   , HasSpec a
@@ -873,7 +874,13 @@ instance Typeable a => HasSimpleRep (THKD tag Identity a) where
   type SimpleRep (THKD tag Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
-instance (IsNormalType a, Typeable tag, HasSpec a) => HasSpec (THKD tag Identity a)
+instance
+  ( IsNormalType a
+  , Typeable tag
+  , HasSpec a
+  , GenericallyInstantiated (THKD tag Identity a)
+  ) =>
+  HasSpec (THKD tag Identity a)
 
 instance HasSimpleRep GovActionPurpose
 instance HasSpec GovActionPurpose

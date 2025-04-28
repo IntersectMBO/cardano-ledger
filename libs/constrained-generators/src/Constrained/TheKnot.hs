@@ -27,6 +27,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-name-shadowing #-}
 
@@ -779,6 +780,7 @@ aggressiveInlining pred
 
     underBinder fvs x p = fvs `without` [Name x] <> singleton (Name x) (countOf (Name x) p)
 
+    underBinderSub :: HasSpec a => Subst -> Var a -> Subst
     underBinderSub sub x =
       [ x' := t
       | x' := t <- sub
@@ -1294,6 +1296,7 @@ shrinkFromPreds p
 shrinkEnvFromPlan :: Env -> SolverPlan -> [Env]
 shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
   where
+    go :: Env -> [SolverStage] -> [Env]
     go _ [] = [] -- In this case we decided to keep every variable the same so nothing to return
     go env ((substStage env -> SolverStage {..}) : plan) = do
       Just a <- [lookupEnv initialEnv stageVar]
@@ -1308,6 +1311,7 @@ shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
         ++ go (extendEnv stageVar a env) plan
 
     -- Fix the rest of the plan given an environment `env` for the plan so far
+    fixupPlan :: Env -> [SolverStage] -> Maybe Env
     fixupPlan env [] = pure env
     fixupPlan env ((substStage env -> SolverStage {..}) : plan) =
       case lookupEnv initialEnv stageVar >>= fixupWithSpec stageSpec of
@@ -1534,6 +1538,7 @@ backPropagation :: SolverPlan -> SolverPlan
 -- backPropagation (SolverPlan _plan _graph) =
 backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initplan)) graph
   where
+    go :: [SolverStage] -> [SolverStage] -> [SolverStage]
     go acc [] = acc
     go acc (s@(SolverStage (x :: Var a) ps spec) : plan) = go (s : acc) plan'
       where

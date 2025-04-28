@@ -41,7 +41,6 @@ import Data.Int
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
-import Data.Typeable
 import Data.Word
 import GHC.Natural
 import Test.Hspec
@@ -264,9 +263,6 @@ sizeTests =
     testSpec "hasSizeSet" hasSizeSet
     testSpec "hasSizeMap" hasSizeMap
 
-data NumberyType where
-  N :: (Typeable a, Numbery a) => Proxy a -> NumberyType
-
 testNumberyListSpec :: String -> (forall a. Numbery a => Specification [a]) -> Spec
 testNumberyListSpec = testNumberyListSpec' True
 
@@ -275,25 +271,17 @@ testNumberyListSpecNoShrink = testNumberyListSpec' False
 
 testNumberyListSpec' :: Bool -> String -> (forall a. Numbery a => Specification [a]) -> Spec
 testNumberyListSpec' withShrink n p =
-  describe n $
-    sequence_
-      [ testSpec' withShrink (show $ typeRep proxy) (p @a)
-      | N (proxy :: Proxy a) <- numberyTypes
-      ]
-  where
-    numberyTypes =
-      [ N @Int Proxy
-      , N @Integer Proxy
-      , N @Natural Proxy
-      , N @Word64 Proxy
-      , N @Word32 Proxy
-      , N @Word16 Proxy
-      , N @Word8 Proxy
-      , N @Int64 Proxy
-      , N @Int32 Proxy
-      , N @Int16 Proxy
-      , N @Int8 Proxy
-      ]
+  describe n $ do
+    testSpec' withShrink "Integer" (p @Integer)
+    testSpec' withShrink "Natural" (p @Natural)
+    testSpec' withShrink "Word64" (p @Word64)
+    testSpec' withShrink "Word32" (p @Word32)
+    testSpec' withShrink "Word16" (p @Word16)
+    testSpec' withShrink "Word8" (p @Word8)
+    testSpec' withShrink "Int64" (p @Int64)
+    testSpec' withShrink "Int32" (p @Int32)
+    testSpec' withShrink "Int16" (p @Int16)
+    testSpec' withShrink "Int8" (p @Int8)
 
 testSpec :: HasSpec a => String -> Specification a -> Spec
 testSpec = testSpec' True

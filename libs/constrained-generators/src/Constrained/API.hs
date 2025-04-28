@@ -5,6 +5,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Constrained.API (
+  GenericallyInstantiated,
   Logic (..),
   Semantics (..),
   Syntax (..),
@@ -144,6 +145,7 @@ where
 
 import Constrained.Base (
   Fun (..),
+  GenericallyInstantiated,
   HasSpec (..),
   Logic (..),
   Pred (..),

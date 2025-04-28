@@ -162,9 +162,9 @@ prop_conformEmpty ::
 prop_conformEmpty a = QC.property $ conformsTo a (emptySpec @a)
 
 prop_univSound :: TestableFn -> QC.Property
-prop_univSound (TestableFn fn) =
+prop_univSound (TestableFn (fn :: t as b)) =
   QC.label (show fn) $
-    QC.forAllShrinkBlind QC.arbitrary QC.shrink $ \tc@(TestableCtx ctx) ->
+    QC.forAllShrinkBlind @QC.Property (QC.arbitrary @(TestableCtx as)) QC.shrink $ \tc@(TestableCtx ctx) ->
       QC.forAllShrinkBlind QC.arbitrary QC.shrink $ \spec ->
         QC.counterexample ("\nfn ctx = " ++ showCtxWith fn tc) $
           QC.counterexample (show $ "\nspec =" <+> pretty spec) $
@@ -221,7 +221,7 @@ showCtxWith fn (TestableCtx ctx) = show tm
     tm :: Term b
     tm =
       uncurryList (appTerm fn) $
-        fillListCtx (mapListCtxC @HasSpec (lit @_ . unValue) ctx) (\HOLE -> V $ Var 0 "v")
+        fillListCtx (mapListCtxC @HasSpec @_ @Value @Term (lit @_ . unValue) ctx) (\HOLE -> V $ Var 0 "v")
 
 data TestableFn where
   TestableFn ::
