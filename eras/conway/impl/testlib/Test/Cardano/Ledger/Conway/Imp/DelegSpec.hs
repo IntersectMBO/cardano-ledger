@@ -77,7 +77,7 @@ spec = do
 
     it "When already already registered" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      let sh = hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      let sh = hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
       let tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
