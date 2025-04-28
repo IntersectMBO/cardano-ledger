@@ -19,9 +19,11 @@ source-repository head
 library
   exposed-modules:
     Constrained.API
+    Constrained.AbstractSyntax
     Constrained.Base
     Constrained.Conformance
     Constrained.Core
+    Constrained.DependencyInjection
     Constrained.Env
     Constrained.Examples
     Constrained.Examples.Basic
@@ -32,11 +34,13 @@ library
     Constrained.Examples.Map
     Constrained.Examples.Set
     Constrained.Examples.Tree
+    Constrained.FunctionSymbol
     Constrained.GenT
     Constrained.Generic
     Constrained.Graph
     Constrained.List
     Constrained.NumSpec
+    Constrained.PrettyUtils
     Constrained.Properties
     Constrained.Spec.Map
     Constrained.Spec.Set

@@ -28,6 +28,7 @@ import Constrained.List (
   List (..),
   mapList,
  )
+import Constrained.PrettyUtils
 
 import Control.Applicative
 import Data.Function
@@ -111,6 +112,9 @@ unValue (Value v) = v
 
 data Evidence c where
   Evidence :: c => Evidence c
+
+instance Typeable c => Show (Evidence c) where
+  show _ = "Evidence@(" ++ showType @c ++ ")"
 
 unionWithMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 unionWithMaybe f ma ma' = (f <$> ma <*> ma') <|> ma <|> ma'

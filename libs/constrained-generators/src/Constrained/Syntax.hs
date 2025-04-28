@@ -32,25 +32,22 @@
 --    5) Syntacic only transformations
 module Constrained.Syntax where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
-  Binder (..),
+  Binder,
   Forallable,
   HasGenHint,
   HasSpec,
   Hint,
+  HintF (..),
   IsPred,
-  Pred (..),
-  Specification (..),
-  Term (..),
-  Weighted (..),
+  Pred,
+  Specification,
+  Term,
   bind,
   explainSpecOpt,
   forAllToList,
-  mapWeighted,
-  semantics,
   toPred,
-  vsep',
-  (/>),
  )
 import Constrained.Core (
   Rename (rename),
@@ -67,6 +64,7 @@ import Constrained.Env (
   removeVar,
   singletonEnv,
  )
+import Constrained.FunctionSymbol
 import Constrained.GenT (
   GE (..),
   MonadGenError (..),
@@ -89,8 +87,8 @@ import Constrained.List (
   mapMList,
   uncurryList_,
  )
+import Constrained.PrettyUtils
 
-import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
 import qualified Data.List.NonEmpty as NE
@@ -366,18 +364,6 @@ backwardsSubstitution sub0 t =
           Just x'
       | otherwise = findMatch sub1 t1
 
--- | Sound but not complete inequality on terms
-fastInequality :: Term a -> Term b -> Bool
-fastInequality (V (Var i _)) (V (Var j _)) = i /= j
-fastInequality Lit {} Lit {} = False
-fastInequality (App _ as) (App _ bs) = go as bs
-  where
-    go :: List Term as -> List Term bs -> Bool
-    go Nil Nil = False
-    go (a :> as') (b :> bs') = fastInequality a b || go as' bs'
-    go _ _ = True
-fastInequality _ _ = True
-
 -- ===================================================================
 
 substituteTerm :: forall a. Subst -> Term a -> Term a
@@ -583,7 +569,7 @@ mkCase tm cs
 runCaseOn ::
   SumOver as ->
   List Binder as ->
-  (forall a. HasSpec a => Var a -> a -> Pred -> r) ->
+  (forall a. (Typeable a, Show a) => Var a -> a -> Pred -> r) ->
   r
 runCaseOn _ Nil _ = error "The impossible happened in runCaseOn"
 runCaseOn a ((x :-> ps) :> Nil) f = f x a ps
@@ -840,7 +826,7 @@ lit :: HasSpec a => a -> Term a
 lit = Lit
 
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
-genHint = GenHint
+genHint = GenHint . HintF
 
 -- ==============================================================================
 
@@ -883,28 +869,6 @@ envFromPred env p = case p of
   And (pp : ps) -> do
     env' <- envFromPred env pp
     envFromPred env' (And ps)
-
--- ============================================================
--- A bit more than just syntax, but it is used here
--- Either it doesn't evaluate successfully: Left (NE.NonEmpty whatWentWrong),
--- or it does: Right thevalue
-
-runTermE :: forall a. Env -> Term a -> Either (NE.NonEmpty String) a
-runTermE env = \case
-  Lit a -> Right a
-  V v -> case lookupEnv env v of
-    Just a -> Right a
-    Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
-  App f (ts :: List Term dom) -> do
-    vs <- mapMList (fmap Identity . runTermE env) ts
-    pure $ uncurryList_ runIdentity (semantics f) vs
-
--- TODO: Why on gods earth is this in a module called `Syntax`?!
--- Because we don't want a module named `Semantics` with just 15 lines
-runTerm :: MonadGenError m => Env -> Term a -> m a
-runTerm env x = case runTermE env x of
-  Left msgs -> fatalErrorNE msgs
-  Right val -> pure val
 
 -- ===============================================================================
 -- Syntax for Solving : stages and plans

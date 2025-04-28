@@ -26,7 +26,7 @@ oddSpec = ExplainSpec ["odd via (y+y+1)"] $
   constrained $ \ [var|oddx|] ->
     exists
       (\eval -> pure (div (eval oddx - 1) 2))
-      (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
+      (\ [var|y|] -> [assert $ oddx ==. y + y + 1])
 
 evenSpec ::
   forall n.
@@ -36,16 +36,16 @@ evenSpec = ExplainSpec ["even via (x+x)"] $
   constrained $ \ [var|evenx|] ->
     exists
       (\eval -> pure (div (eval evenx) 2))
-      (\ [var|somey|] -> [Assert $ evenx ==. somey + somey])
+      (\ [var|somey|] -> [assert $ evenx ==. somey + somey])
 
 sum3WithLength :: Integer -> Specification ([Int], Int, Int, Int)
 sum3WithLength n =
   constrained $ \ [var|quad|] ->
     match quad $ \ [var|l|] [var|n1|] [var|n2|] [var|n3|] ->
-      [ Assert $ sizeOf_ l ==. lit n
+      [ assert $ sizeOf_ l ==. lit n
       , forAll l $ \ [var|item|] -> item >=. lit 0
-      , Assert $ sum_ l ==. n1 + n2 + n3
-      , Assert $ n1 + n2 + n3 >=. lit (fromInteger n)
+      , assert $ sum_ l ==. n1 + n2 + n3
+      , assert $ n1 + n2 + n3 >=. lit (fromInteger n)
       ]
 
 sum3 :: Specification [Int]

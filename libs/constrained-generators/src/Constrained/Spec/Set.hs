@@ -31,17 +31,14 @@
 
 module Constrained.Spec.Set where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
-  Binder (..),
   Forallable (..),
   HOLE (..),
   HasSpec (..),
   Logic (..),
-  Pred (..),
-  Semantics (..),
-  Specification (..),
-  Syntax (..),
-  Term (..),
+  Specification,
+  Term,
   appTerm,
   constrained,
   equalSpec,
@@ -51,12 +48,8 @@ import Constrained.Base (
   memberSpecList,
   notEqualSpec,
   notMemberSpec,
-  parensIf,
-  prettyPrec,
-  short,
-  showType,
   typeSpec,
-  (/>),
+  pattern TypeSpec,
   pattern Unary,
  )
 import Constrained.Conformance (
@@ -64,9 +57,11 @@ import Constrained.Conformance (
   satisfies,
  )
 import Constrained.Core
+import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.List
 import Constrained.NumSpec
+import Constrained.PrettyUtils
 import Constrained.SumList (knownUpperBound, maxFromSpec)
 import Constrained.Syntax
 import Constrained.TheKnot
@@ -276,14 +271,14 @@ instance Semantics SetW where
   semantics = setSem
 
 instance Syntax SetW where
-  prettyWit SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettyWit SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettyWit DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettyWit DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettyWit UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> short (Set.toList n) <+> prettyPrec 10 y
-  prettyWit UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettyWit MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> short (Set.toList n)
-  prettyWit _ _ _ = Nothing
+  prettySymbol SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettySymbol SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettySymbol DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettySymbol DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettySymbol UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettySymbol UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettySymbol MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettySymbol _ _ _ = Nothing
 
 instance (Ord a, HasSpec a, HasSpec (Set a)) => Semigroup (Term (Set a)) where
   (<>) = union_

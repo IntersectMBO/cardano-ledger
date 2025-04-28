@@ -429,7 +429,7 @@ witShelleyTxCert univ =
       (caseOn txcert)
         ( branchW 5 $ \delegcert ->
             (caseOn delegcert)
-              (branch $ \_register -> TruePred)
+              (branch $ \_register -> TruePred :: Pred)
               (branch $ \unregisterAuthor -> satisfies unregisterAuthor (witCredSpec univ))
               (branch $ \delegateAuthor _ -> satisfies delegateAuthor (witCredSpec univ))
         )
@@ -440,7 +440,7 @@ witShelleyTxCert univ =
         )
         ( branchW 1 $ \genesiscert -> match genesiscert $ \authorkey _ _ -> satisfies authorkey (witKeyHashSpec univ)
         )
-        (branchW 1 $ \_mircert -> FalsePred (pure "NO MIR"))
+        (branchW 1 $ \_mircert -> FalsePred (pure "NO MIR") :: Pred)
 
 -- | Constrains all the Certificate Authors. Sometimes thay are keyHashes, and sometimes Credentials
 witConwayTxCert ::
@@ -455,7 +455,7 @@ witConwayTxCert univ =
             (caseOn delegcert)
               ( branch $ \registerAuthor deposit ->
                   (caseOn deposit)
-                    (branch $ \_ -> TruePred)
+                    (branch $ \_ -> TruePred :: Pred)
                     (branch $ \_ -> satisfies registerAuthor (witCredSpec univ))
               )
               (branch $ \unregisterAuthor _ -> satisfies unregisterAuthor (witCredSpec univ))

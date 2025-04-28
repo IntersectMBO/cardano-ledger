@@ -5,6 +5,9 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Constrained.API (
+  PredD (..),
+  TermD (..),
+  SpecificationD (..),
   GenericallyInstantiated,
   Logic (..),
   Semantics (..),
@@ -13,12 +16,13 @@ module Constrained.API (
   NumSpec (..),
   MaybeBounded (..),
   NonEmpty ((:|)),
-  Specification (..),
-  Term (..),
+  Specification,
+  pattern TypeSpec,
+  Term,
   Fun (..),
   name,
   named,
-  Pred (..),
+  Pred,
   HasSpec (..),
   HasSimpleRep (..),
   OrdLike (..),
@@ -143,16 +147,15 @@ module Constrained.API (
 )
 where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
   Fun (..),
   GenericallyInstantiated,
   HasSpec (..),
   Logic (..),
-  Pred (..),
-  Semantics (..),
-  Specification (..),
-  Syntax (..),
-  Term (..),
+  Pred,
+  Specification,
+  Term,
   constrained,
   equalSpec,
   fromGeneric_,
@@ -164,6 +167,7 @@ import Constrained.Base (
   toGeneric_,
   pattern FromGeneric,
   pattern ToGeneric,
+  pattern TypeSpec,
   pattern Unary,
   pattern (:<:),
   pattern (:>:),
@@ -174,6 +178,7 @@ import Constrained.Conformance (
   satisfies,
  )
 import Constrained.Core (NonEmpty ((:|)))
+import Constrained.FunctionSymbol
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.NumSpec (
   MaybeBounded (..),

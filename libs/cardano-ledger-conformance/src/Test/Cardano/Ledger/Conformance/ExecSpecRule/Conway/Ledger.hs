@@ -45,7 +45,6 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Constrained.API (
-  Specification (..),
   assert,
   constrained,
   constrained',
@@ -119,7 +118,7 @@ instance ExecSpecRule "LEDGER" ConwayEra where
 
   genExecContext = do
     ctx <- arbitrary
-    env <- genFromSpec TrueSpec
+    env <- genFromSpec mempty
     ConwayLedgerExecContext
       <$> arbitrary
       <*> genFromSpec (enactStateSpec ctx env)

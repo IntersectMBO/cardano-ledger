@@ -153,6 +153,11 @@ type family SimplifyRep f where
 
 instance HasSimpleRep Bool
 
+instance HasSimpleRep () where
+  type SimpleRep () = ()
+  toSimpleRep x = x
+  fromSimpleRep x = x
+
 -- ===============================================================
 -- How to move back and forth from (SimpleRep a) to 'a' in a
 -- generic way, derived by the Generics machinery is captured

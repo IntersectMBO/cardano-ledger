@@ -64,7 +64,7 @@ epochStateSpec epochNo = constrained $ \es ->
                       reify proposals (toInteger . proposalsSize) $ \ [var|sz|] ->
                         [ ifElse
                             (sz <=. 0)
-                            (expired ==. (Lit mempty))
+                            (expired ==. mempty)
                             (sizeOf_ expired <. sz)
                         ]
                     , forAll expired $ \ [var| gasId |] ->

@@ -22,13 +22,12 @@
 
 module Constrained.Conformance where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
-  Binder (..),
   HasSpec,
-  Pred (..),
-  Specification (..),
-  Term (..),
-  Weighted (..),
+  Pred,
+  Specification,
+  Term,
   addToErrorSpec,
   combineSpec,
   conformsTo,
@@ -36,8 +35,8 @@ import Constrained.Base (
   forAllToList,
   memberSpecList,
   notMemberSpec,
-  showType,
   toPreds,
+  pattern TypeSpec,
  )
 import Constrained.Core (
   NonEmpty ((:|)),
@@ -60,10 +59,9 @@ import Constrained.GenT (
 import Constrained.List (
   mapList,
  )
+import Constrained.PrettyUtils
 import Constrained.Syntax (
   runCaseOn,
-  runTerm,
-  runTermE,
   substitutePred,
  )
 
