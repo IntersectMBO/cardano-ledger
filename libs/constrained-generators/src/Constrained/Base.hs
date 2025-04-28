@@ -24,7 +24,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 -- Show Evidence
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-unticked-promoted-constructors #-}
 
 -- | This module contains the most basic parts the implementation. Essentially
 --   everything to define Specification, HasSpec, HasSimpleRep, Term, Pred, and the Syntax,
@@ -71,6 +71,7 @@ import Constrained.List (
   pattern ListCtx,
   pattern NilCtx,
  )
+import Constrained.TypeErrors
 
 import Control.Monad.Writer (
   Writer,
@@ -383,7 +384,66 @@ typeSpec ts = TypeSpec ts mempty
 -- Don't be afraid of all the methods. Most have default implementations.
 -- =================================================================
 
-class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => HasSpec a where
+type GenericallyInstantiated a =
+  ( AssertComputes
+      (SimpleRep a)
+      ( Text "Trying to use a generic instantiation of "
+          :<>: ShowType a
+          :<>: Text ", likely in a HasSpec instance."
+          :$$: Text
+                "However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep."
+      )
+  , HasSimpleRep a
+  , HasSpec (SimpleRep a)
+  , TypeSpec a ~ TypeSpec (SimpleRep a)
+  )
+
+type TypeSpecEqShow a =
+  ( AssertComputes
+      (TypeSpec a)
+      ( Text "Can't compute "
+          :<>: ShowType (TypeSpec a)
+          :$$: Text "Either because of a missing definition of TypeSpec or a missing instance of HasSimpleRep."
+      )
+  , Show (TypeSpec a)
+  , Typeable (TypeSpec a)
+  )
+
+{- NOTE: type errors in constrained-generators
+    It's easy to make a mistake like this:
+      data Bad = Bad | Worse deriving (Eq, Show)
+      instance HasSpec Bad
+    Missing that this requires an instance of HasSimpleRep for Bad to work.
+    The two `AssertComputes` uses above are here to give you better error messages when you make this mistake,
+    e.g. giving you something like this:
+      src/Constrained/Examples/Basic.hs:327:10: error: [GHC-64725]
+          • Can't compute TypeSpec (SimpleRep Bad)
+            Either because of a missing definition of TypeSpec or a missing instance of HasSimpleRep.
+          • In the instance declaration for ‘HasSpec Bad’
+          |
+      327 | instance HasSpec Bad
+          |          ^^^^^^^^^^^
+
+      src/Constrained/Examples/Basic.hs:327:10: error: [GHC-64725]
+          • Trying to use a generic instantiation of Bad, likely in a HasSpec instance.
+            However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep.
+          • In the expression: Constrained.Base.$dmemptySpec @(Bad)
+            In an equation for ‘emptySpec’:
+                emptySpec = Constrained.Base.$dmemptySpec @(Bad)
+            In the instance declaration for ‘HasSpec Bad’
+          |
+      327 | instance HasSpec Bad
+          |          ^^^^^^^^^^^
+-}
+
+class
+  ( Typeable a
+  , Eq a
+  , Show a
+  , TypeSpecEqShow a
+  ) =>
+  HasSpec a
+  where
   -- | The `TypeSpec a` is the type-specific `Specification a`.
   type TypeSpec a
 
@@ -489,63 +549,45 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
      a` using `fromSimpleRepSpec`.
    -}
 
-  default emptySpec ::
-    (HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a)) => TypeSpec a
+  default emptySpec :: GenericallyInstantiated a => TypeSpec a
   emptySpec = emptySpec @(SimpleRep a)
 
   default combineSpec ::
-    ( HasSimpleRep a
-    , HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    ) =>
+    GenericallyInstantiated a =>
     TypeSpec a ->
     TypeSpec a ->
     Specification a
   combineSpec s s' = fromSimpleRepSpec $ combineSpec @(SimpleRep a) s s'
 
   default genFromTypeSpec ::
-    ( HasSimpleRep a
-    , HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    ) =>
-    (HasCallStack, MonadGenError m) =>
+    (GenericallyInstantiated a, HasCallStack, MonadGenError m) =>
     TypeSpec a ->
     GenT m a
   genFromTypeSpec s = fromSimpleRep <$> genFromTypeSpec s
 
   default conformsTo ::
-    ( HasSimpleRep a
-    , HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    ) =>
-    HasCallStack =>
+    (GenericallyInstantiated a, HasCallStack) =>
     a ->
     TypeSpec a ->
     Bool
   a `conformsTo` s = conformsTo (toSimpleRep a) s
 
   default toPreds ::
-    ( HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    ) =>
+    GenericallyInstantiated a =>
     Term a ->
     TypeSpec a ->
     Pred
   toPreds v s = toPreds (toGeneric_ v) s
 
   default shrinkWithTypeSpec ::
-    ( HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    , HasSimpleRep a
-    ) =>
+    GenericallyInstantiated a =>
     TypeSpec a ->
     a ->
     [a]
   shrinkWithTypeSpec spec a = map fromSimpleRep $ shrinkWithTypeSpec spec (toSimpleRep a)
 
   default cardinalTypeSpec ::
-    (HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a)) =>
+    GenericallyInstantiated a =>
     TypeSpec a ->
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)

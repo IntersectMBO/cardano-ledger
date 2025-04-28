@@ -601,6 +601,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 letSubexpressionElimination :: HasSpec Bool => Pred -> Pred
 letSubexpressionElimination = go []
   where
+    adjustSub :: HasSpec a => Var a -> Subst -> Subst
     adjustSub x sub =
       [ x' := t
       | x' := t <- sub
@@ -663,6 +664,7 @@ letFloating = fold . go []
   where
     goBlock ctx ps = goBlock' (freeVarNames ctx <> freeVarNames ps) ctx ps
 
+    goBlock' :: Set Int -> [Pred] -> [Pred] -> [Pred]
     goBlock' _ ctx [] = ctx
     goBlock' fvs ctx (Let t (x :-> p) : ps) =
       -- We can do `goBlock'` here because we've already done let floating
