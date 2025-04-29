@@ -118,6 +118,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModels,
  )
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
@@ -137,6 +138,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.Common as P (Data (..))
 
 class BabbageEraPParams era => ConwayEraPParams era where
   modifiedPPGroups :: PParamsUpdate era -> Set PPGroups
@@ -291,6 +293,24 @@ instance DecCBOR PoolVotingThresholds where
       pvtPPSecurityGroup <- decCBOR
       pure $ PoolVotingThresholds {..}
 
+instance ToPlutusData PoolVotingThresholds where
+  toPlutusData x =
+    P.List
+      [ toPlutusData (pvtMotionNoConfidence x)
+      , toPlutusData (pvtCommitteeNormal x)
+      , toPlutusData (pvtCommitteeNoConfidence x)
+      , toPlutusData (pvtHardForkInitiation x)
+      , toPlutusData (pvtPPSecurityGroup x)
+      ]
+  fromPlutusData (P.List [a, b, c, d, e]) =
+    PoolVotingThresholds
+      <$> fromPlutusData a
+      <*> fromPlutusData b
+      <*> fromPlutusData c
+      <*> fromPlutusData d
+      <*> fromPlutusData e
+  fromPlutusData _ = Nothing
+
 data DRepVotingThresholds = DRepVotingThresholds
   { dvtMotionNoConfidence :: !UnitInterval
   , dvtCommitteeNormal :: !UnitInterval
@@ -343,6 +363,34 @@ instance FromJSON DRepVotingThresholds where
         <*> o .: "ppTechnicalGroup"
         <*> o .: "ppGovGroup"
         <*> o .: "treasuryWithdrawal"
+
+instance ToPlutusData DRepVotingThresholds where
+  toPlutusData x =
+    P.List
+      [ toPlutusData (dvtMotionNoConfidence x)
+      , toPlutusData (dvtCommitteeNormal x)
+      , toPlutusData (dvtCommitteeNoConfidence x)
+      , toPlutusData (dvtUpdateToConstitution x)
+      , toPlutusData (dvtHardForkInitiation x)
+      , toPlutusData (dvtPPNetworkGroup x)
+      , toPlutusData (dvtPPEconomicGroup x)
+      , toPlutusData (dvtPPTechnicalGroup x)
+      , toPlutusData (dvtPPGovGroup x)
+      , toPlutusData (dvtTreasuryWithdrawal x)
+      ]
+  fromPlutusData (P.List [a, b, c, d, e, f, g, h, i, j]) =
+    DRepVotingThresholds
+      <$> fromPlutusData a
+      <*> fromPlutusData b
+      <*> fromPlutusData c
+      <*> fromPlutusData d
+      <*> fromPlutusData e
+      <*> fromPlutusData f
+      <*> fromPlutusData g
+      <*> fromPlutusData h
+      <*> fromPlutusData i
+      <*> fromPlutusData j
+  fromPlutusData _ = Nothing
 
 dvtPPNetworkGroupL :: Lens' DRepVotingThresholds UnitInterval
 dvtPPNetworkGroupL = lens dvtPPNetworkGroup (\x y -> x {dvtPPNetworkGroup = y})

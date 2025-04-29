@@ -2,7 +2,7 @@
 
 ## 1.20.0.0
 
-* Add `MkConwayTxBody` and all members of `ConwayTxBodyRaw`:  
+* Add `MkConwayTxBody` and all members of `ConwayTxBodyRaw`:
   (`ConwayTxBodyRaw`, `ctbrAuxDataHash`, `ctbrCerts`, `ctbrCollateralInputs`,
   `ctbrCollateralReturn`, `ctbrCurrentTreasuryValue`, `ctbrFee`, `ctbrMint`, `ctbrNetworkId`,
   `ctbrOutputs`, `ctbrProposalProcedures`, `ctbrReferenceInputs`, `ctbrReqSignerHashes`,
@@ -15,6 +15,7 @@
 * Added `ConwayEraCertState` class
 * Added `ConwayCertState` and related functions
 * Moved `CertState` to `State` module
+* Move `ToPutusData` instances for `CoinPerByte`, `DRepVotingThresholds` and `PoolVotingThresholds` with their respective types
 
 ## 1.19.0.0
 
