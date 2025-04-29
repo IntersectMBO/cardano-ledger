@@ -166,6 +166,7 @@ library testlib
     base,
     bytestring,
     cardano-data:{cardano-data, testlib},
+    cardano-crypto-class,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},

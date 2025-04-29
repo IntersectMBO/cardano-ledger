@@ -233,4 +233,4 @@ requireExprEqualWithMessage fail_ message expected actual =
   if actual == expected then mempty else fail_ doc
   where
     doc = Pretty.width message (\w -> if w == 0 then diff else Pretty.line <> Pretty.indent 2 diff)
-    diff = diffExpr expected actual
+    diff = diffExpr actual expected

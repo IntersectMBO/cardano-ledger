@@ -54,7 +54,7 @@ import Cardano.Ledger.BaseTypes (
   strictMaybe,
   txIxToInt,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -466,7 +466,8 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
     refInputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
     let
       commonInputs = txInputs `Set.intersection` refInputs
-    unless (Set.null commonInputs) . Left $ ReferenceInputsNotDisjointFromInputs commonInputs
+    unless (pvMajor ltiProtVer < natVersion @11 || Set.null commonInputs) . Left $
+      ReferenceInputsNotDisjointFromInputs commonInputs
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
