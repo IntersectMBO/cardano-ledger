@@ -18,7 +18,9 @@ import qualified Cardano.Ledger.UMap as UMap
 import Control.Monad (when)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
+import Data.TreeDiff
 import qualified Data.VMap as VMap
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
@@ -84,13 +86,13 @@ newEpochStatePreds _proof =
 -- ========================
 
 epochStateStage ::
-  Reflect era =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 epochStateStage proof = toolChainSub proof standardOrderInfo (epochstatePreds proof)
 
-demoES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoES :: (Reflect era, AlonzoEraTest era) => Proof era -> ReplMode -> IO ()
 demoES proof mode = do
   env <-
     generate
@@ -107,7 +109,7 @@ demoES proof mode = do
       )
   epochstate <- monadTyped $ runTarget env (epochStateT proof)
   let env2 = getTarget epochstate (epochStateT proof) emptyEnv
-  when (mode == Interactive) $ print (pcEpochState proof epochstate)
+  when (mode == Interactive) $ print (toExpr epochstate)
   modeRepl mode proof env2 ""
 
 demoESTest :: TestTree
@@ -119,13 +121,13 @@ mainES = defaultMain $ testIO "Testing EpochState Stage" (demoES Conway Interact
 -- ====================================================
 
 newEpochStateStage ::
-  Reflect era =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 newEpochStateStage proof = toolChainSub proof (standardOrderInfo {sumBeforeParts = False}) (newEpochStatePreds proof)
 
-demoNES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoNES :: (Reflect era, AlonzoEraTest era) => Proof era -> ReplMode -> IO ()
 demoNES proof mode = do
   env <-
     generate
@@ -142,7 +144,7 @@ demoNES proof mode = do
       )
   newepochstate <- monadTyped $ runTarget env (newEpochStateT proof)
   let env2 = getTarget newepochstate (newEpochStateT proof) emptyEnv
-  when (mode == Interactive) $ putStrLn (show (pcNewEpochState proof newepochstate))
+  when (mode == Interactive) $ print (toExpr newepochstate)
   modeRepl mode proof env2 ""
 
 demoNESTest :: TestTree

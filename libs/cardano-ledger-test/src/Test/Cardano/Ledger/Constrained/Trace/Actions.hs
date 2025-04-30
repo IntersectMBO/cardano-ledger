@@ -12,6 +12,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Classes (TxOutF (..))
 import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (TraceM, getTerm, updateVar)
 import Test.Cardano.Ledger.Constrained.Vars
@@ -21,16 +22,17 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 -- Some experiments with updating the state (Stored in the Env)
 -- Used as a means to track what applySTS does.
 
-inputsAction :: Era era => Proof era -> Set TxIn -> TraceM era ()
+inputsAction :: AlonzoEraTest era => Proof era -> Set TxIn -> TraceM era ()
 inputsAction proof is = updateVar (utxo proof) (\u -> Map.withoutKeys u is)
 
-outputsAction :: Reflect era => Proof era -> TxBody era -> [TxOutF era] -> TraceM era ()
+outputsAction ::
+  (Reflect era, AlonzoEraTest era) => Proof era -> TxBody era -> [TxOutF era] -> TraceM era ()
 outputsAction proof txb outs = updateVar (utxo proof) (\u -> Map.union u (makemap outs))
   where
     makemap outPuts = Map.fromList (fmap (\(out, n) -> (mkTxInPartial txid n, out)) (zip outPuts [0 ..]))
     txid = TxId (hashAnnotated txb)
 
-feesAction :: Era era => Coin -> TraceM era ()
+feesAction :: AlonzoEraTest era => Coin -> TraceM era ()
 feesAction feeCoin = updateVar fees (<+> feeCoin)
 
 certAction :: Era era => Proof era -> TxCert era -> TraceM era ()

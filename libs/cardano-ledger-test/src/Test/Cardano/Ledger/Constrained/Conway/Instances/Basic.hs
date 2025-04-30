@@ -69,7 +69,7 @@ import Numeric.Natural (Natural)
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
+import Test.Cardano.Ledger.Era ()
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 import Text.PrettyPrint.HughesPJ (Doc)
 
@@ -291,7 +291,7 @@ data SimplePParams era = SimplePParams
 instance ToExpr PoolVotingThresholds
 instance ToExpr DRepVotingThresholds
 
-instance (EraSpecPParams era, EraGov era, EraTxOut era, Reflect era) => Show (SimplePParams era) where
+instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
   show x = show (toExpr (subsetToPP @era x))
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams

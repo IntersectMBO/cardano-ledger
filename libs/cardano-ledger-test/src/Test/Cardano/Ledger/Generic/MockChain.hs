@@ -71,6 +71,13 @@ data MockChainFailure era
   | BlocksOutOfOrder
       !SlotNo -- The last applied block SlotNo
       !SlotNo -- The candidate block SlotNo
+  deriving (Generic)
+
+instance
+  ( ToExpr (ShelleyTickPredFailure era)
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ToExpr (MockChainFailure era) -- TODO: consider relocating
 
 data MockChainEvent era
   = MockChainFromTickEvent !(ShelleyTickEvent era)

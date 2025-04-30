@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -1126,22 +1127,20 @@ mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
 
 data Box era = Box (Proof era) (TRC (EraRule "LEDGER" era)) (GenState era)
 
+instance (Era era, Signal (EraRule "LEDGER" era) ~ Tx era) => ToExpr (Box era) where
+  toExpr = toExpr . show
+
 instance
   ( Era era
-  , ToExpr (State (EraRule "LEDGER" era))
-  , ToExpr (Script era)
-  , ToExpr (Signal (EraRule "LEDGER" era))
-  , ToExpr (Box era)
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , -- , ToExpr (State (EraRule "LEDGER" era))
+    -- , ToExpr (Script era)
+    -- , ToExpr (Signal (EraRule "LEDGER" era))
+    -- , ToExpr (Box era)
+    Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   Show (Box era)
   where
-  show =
-    show . toExpr
-
--- ppRecord
---   "Box"
---   []
+  show _ = "Box {}"
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism

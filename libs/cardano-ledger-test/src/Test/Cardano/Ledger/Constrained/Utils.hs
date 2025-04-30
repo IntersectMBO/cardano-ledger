@@ -7,12 +7,12 @@ module Test.Cardano.Ledger.Constrained.Utils (
   explainBad,
 ) where
 
-import Cardano.Ledger.Conway.Core (Era)
 import qualified Control.Exception as Exc
 import Control.Monad (void)
 import qualified Data.HashSet as HashSet
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast (
   Pred,
   Subst (..),
@@ -23,7 +23,6 @@ import Test.Cardano.Ledger.Constrained.Ast (
  )
 import Test.Cardano.Ledger.Constrained.Env (Env, Name (..), V (..), emptyEnv)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, monadTyped)
-import Test.Cardano.Ledger.Constrained.TypeRep (ToExprs)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (assertFailure, testCase)
 
@@ -34,7 +33,7 @@ testIO msg x = testCase msg (Exc.catch (void x) handler)
     handler (Exc.SomeException zs) = assertFailure (unlines [msg, show zs])
 
 checkForSoundness ::
-  (Era era, ToExprs era) => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
+  AlonzoEraTest era => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
 checkForSoundness preds subst = do
   !env <- monadTyped $ substToEnv subst emptyEnv
   testTriples <- mapM (makeTest env) preds
@@ -43,7 +42,7 @@ checkForSoundness preds subst = do
     then pure (env, Nothing)
     else pure (env, Just ("Some conditions fail\n" ++ explainBad bad subst))
 
-explainBad :: (Era era, ToExprs era) => [(String, Bool, Pred era)] -> Subst era -> String
+explainBad :: AlonzoEraTest era => [(String, Bool, Pred era)] -> Subst era -> String
 explainBad cs (Subst subst) = unlines (map getString cs) ++ "\n" ++ show restricted
   where
     names = List.foldl' varsOfPred HashSet.empty (map getPred cs)

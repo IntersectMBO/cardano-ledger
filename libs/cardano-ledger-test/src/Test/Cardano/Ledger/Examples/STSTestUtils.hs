@@ -89,6 +89,8 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
+import Test.Cardano.Ledger.Alonzo.Era
+import Test.Cardano.Ledger.Common (ToExpr, toExpr)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 
 -- =================================================================
@@ -226,7 +228,7 @@ trustMeP _ _ tx = tx
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 testBBODY ::
-  (Reflect era, HasCallStack) =>
+  (Reflect era, HasCallStack, AlonzoEraTest era) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block BHeaderView era ->
@@ -239,7 +241,8 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
         Alonzo -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Babbage -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Conway -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
-        other -> error ("We cannot testBBODY in era " ++ show other)
+
+-- other -> error ("We cannot testBBODY in era " ++ show other) REDUNDANT
 
 testUTXOW ::
   forall era.
@@ -348,8 +351,8 @@ genericCont ::
   ( Foldable t
   , Eq (t x)
   , Eq y
-  , PrettyA x
-  , PrettyA y
+  , ToExpr x
+  , ToExpr y
   , HasCallStack
   ) =>
   String ->
@@ -371,18 +374,18 @@ genericCont cause expected computed =
     causedBy
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
-    expectedToPass y = "Expected to pass with:\n" ++ show (prettyA y) ++ "\n"
-    expectedToFail x = "Expected to fail with:\n" ++ show (prettyA $ toList x) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (prettyA $ toList x)
-    passedWith y = "But passed with:\n" ++ show (prettyA y)
+    expectedToPass y = "Expected to pass with:\n" ++ show (toExpr y) ++ "\n"
+    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ toList x) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (toExpr $ toList x)
+    passedWith y = "But passed with:\n" ++ show (toExpr y)
 
 subsetCont ::
   ( Foldable t
   , Eq (t x)
   , Eq x
   , Eq y
-  , PrettyA x
-  , PrettyA y
+  , ToExpr x
+  , ToExpr y
   , Show (t x)
   , Show y
   ) =>
@@ -398,15 +401,15 @@ subsetCont expected computed =
     (Left x, Right y) ->
       error $
         "expected to pass with "
-          ++ show (prettyA y)
+          ++ show (toExpr y)
           ++ "\n\nBut failed with\n\n"
-          ++ show (prettyA $ toList x)
+          ++ show (toExpr $ toList x)
     (Right y, Left x) ->
       error $
         "expected to fail with "
-          ++ show (prettyA $ toList x)
+          ++ show (toExpr $ toList x)
           ++ "\n\nBut passed with\n\n"
-          ++ show (prettyA y)
+          ++ show (toExpr y)
 
 specialCont ::
   ( Eq (PredicateFailure (EraRule "UTXOW" era))

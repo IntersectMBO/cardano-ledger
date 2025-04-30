@@ -75,6 +75,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
@@ -132,9 +133,9 @@ alonzoBBODYexamplesP ::
   ( HasTokens era
   , PostShelley era
   , Value era ~ MaryValue
-  , EraSegWits era
   , Reflect era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , AlonzoEraTest era
   ) =>
   Proof era ->
   TestTree

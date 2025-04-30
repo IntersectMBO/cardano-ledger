@@ -47,7 +47,9 @@ import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.TreeDiff
 import Lens.Micro (Lens', lens)
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
@@ -237,7 +239,7 @@ And generate: partC suchthat: (Sum partC) = availableC
 
 -}
 
-certsPreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+certsPreds :: forall era. (Reflect era, AlonzoEraTest era) => UnivSize -> Proof era -> [Pred era]
 certsPreds UnivSize {..} p = case whichTxCert p of
   TxCertShelleyToBabbage ->
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ shelleycerts)
@@ -569,7 +571,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     drep2b = Var (pV p "drep2b" DRepR No)
 
 certsStage ::
-  Reflect era =>
+  (Reflect era, AlonzoEraTest era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -596,7 +598,7 @@ demo mode seed = do
           >>= (\subst -> monadTyped (substToEnv subst emptyEnv))
       )
   certsv <- monadTyped (findVar (unVar certs) env)
-  when (mode == Interactive) $ putStrLn (show (ppList (\(TxCertF _ x) -> pcTxCert proof x) certsv))
+  when (mode == Interactive) $ print (ppList (\(TxCertF _ x) -> toExpr x) certsv)
   modeRepl mode proof env ""
 
 demoTest :: TestTree

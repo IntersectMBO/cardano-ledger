@@ -107,7 +107,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   PState (..),
-  RewardUpdate,
   smartUTxOState,
   totalObligation,
   utxosGovStateL,
@@ -130,7 +129,6 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default (Default (def))
-import Data.Functor.Identity (Identity)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
@@ -145,6 +143,7 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
@@ -195,12 +194,15 @@ data GenSize = GenSize
   , regCertFreq :: !Int
   , delegCertFreq :: !Int
   }
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToExpr GenSize
 
 data GenEnv era = GenEnv
   { gePParams :: PParams era
   , geSize :: GenSize
   }
+  deriving (Generic)
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
@@ -228,17 +230,7 @@ data GenState era = GenState
   }
   deriving (Generic)
 
-type GenStateExpr era =
-  ( ToExpr (PParamsHKD Identity era)
-  , ToExpr (Script era)
-  , ToExpr (TxOut era)
-  , ToExpr (Proof era)
-  , ToExpr (GenEnv era)
-  , ToExpr ValidityInterval
-  , ToExpr PlutusPurposeTag
-  , ToExpr IsValid
-  , ToExpr (StrictMaybe RewardUpdate)
-  )
+instance EraTest era => ToExpr (GenEnv era)
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
 emptyGenState proof genv =
@@ -313,7 +305,9 @@ data PlutusPurposeTag
   | Rewarding
   | Voting
   | Proposing
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Show, Enum, Bounded, Generic)
+
+instance ToExpr PlutusPurposeTag
 
 plutusPurposeTags :: Proof era -> [PlutusPurposeTag]
 plutusPurposeTags = \case
@@ -777,7 +771,7 @@ genValidityInterval (SlotNo s) = do
 
 -- =================================================================
 
-pcGenState :: GenStateExpr era => GenState era -> Expr
+pcGenState :: EraTest era => GenState era -> Expr
 pcGenState = toExpr
 
 -- ppRecord
@@ -802,14 +796,14 @@ pcGenState = toExpr
 --   ]
 
 -- | Helper function for development and debugging in ghci
-viewGenState :: (Reflect era, GenStateExpr era) => Proof era -> GenSize -> Bool -> IO ()
+viewGenState :: (Reflect era, EraTest era) => Proof era -> GenSize -> Bool -> IO ()
 viewGenState proof gsize verbose = do
   st <- generate (genGenState proof gsize)
   when verbose $ print (pcGenState st)
 
-instance GenStateExpr era => ToExpr (GenState era)
+instance EraTest era => ToExpr (GenState era)
 
-instance (Reflect era, GenStateExpr era) => Show (GenState era) where
+instance (Reflect era, EraTest era) => Show (GenState era) where
   show x = show (pcGenState x)
 
 -- =====================================================================

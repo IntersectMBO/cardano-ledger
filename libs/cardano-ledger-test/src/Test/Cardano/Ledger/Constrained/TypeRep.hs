@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   (:~:) (Refl),
   Singleton (..),
   Eql,
-  ToExprs,
   typeRepOf,
   synopsis,
   genSizedRep,
@@ -167,9 +166,10 @@ import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed, failT)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Conway.Arbitrary (genConwayPlutusPurposePointer, genProposals)
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField, TxField, WitnessesField (..))
+import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
@@ -314,42 +314,6 @@ data Rep era t where
 
 stringR :: Rep era String
 stringR = ListR CharR
-
-type ToExprs e =
-  ( ToExpr (Value e)
-  , ToExpr (TxOut e)
-  , ToExpr (TxBody e)
-  , ToExpr (TxWits e)
-  , ToExpr (TxCert e)
-  , ToExpr (TxAuxData e)
-  , ToExpr (Tx e)
-  , ToExpr (PParamsHKD Identity e)
-  , ToExpr (PParamsHKD StrictMaybe e)
-  , ToExpr (CertState e)
-  , ToExpr MultiAsset
-  , ToExpr (WitnessesField e)
-  , ToExpr ValidityInterval
-  , ToExpr (Script e)
-  , ToExpr (PlutusPurpose AsIx e)
-  , ToExpr (PlutusPurpose AsIxItem e)
-  , ToExpr (ConwayTxCert e)
-  , ToExpr (ScriptsNeeded e)
-  , ToExpr (GovAction e)
-  , ToExpr (GovState e)
-  , ToExpr (GovActionState e)
-  , ToExpr (RatifyState e)
-  , ToExpr (EnactState e)
-  , ToExpr (InstantStake e)
-  , ToExpr GovActionId
-  , ToExpr Delegatee
-  , ToExpr (Proposals e)
-  , ToExpr (Committee e)
-  , ToExpr (Constitution e)
-  , ToExpr (GovRelation StrictMaybe e)
-  , ToExpr (DRepPulser e Identity (RatifyState e))
-  , ToExpr (TxBodyField e)
-  , ToExpr (TxField e)
-  )
 
 -- ===========================================================
 -- Proof of Rep equality
@@ -552,7 +516,7 @@ instance Singleton (Rep era) where
 instance Show (Rep era t) where
   showsPrec d (repHasInstances -> (IsTypeable :: HasInstances t)) = showsPrec d $ typeRep (Proxy @t)
 
-synopsis :: forall e t. ToExprs e => Rep e t -> t -> String
+synopsis :: forall e t. AlonzoEraTest e => Rep e t -> t -> String
 synopsis TxIdR r = show r
 synopsis RationalR r = show r
 synopsis CoinR c = show $ toExpr c
@@ -1141,7 +1105,7 @@ hasEq rep x = case repHasInstances rep of
   IsEq -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Eq instance."]
 
-format :: ToExprs era => Rep era t -> t -> String
+format :: AlonzoEraTest era => Rep era t -> t -> String
 format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x ++ "\nsize=" ++ show (Map.size x)
 format rep@(ListR d) x = show (ppList (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (length x)
 format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (Set.size x)
@@ -1161,5 +1125,5 @@ ppSet p = toExpr . map p . Set.toList
 ppMaybe :: (x -> Expr) -> Maybe x -> Expr
 ppMaybe p = toExpr . fmap p
 
-syn :: ToExprs era => Rep era t -> t -> Expr
+syn :: AlonzoEraTest era => Rep era t -> t -> Expr
 syn d x = toExpr $ format d x

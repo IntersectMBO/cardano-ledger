@@ -43,6 +43,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (IsString (..))
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators (genFromMap, itemFromSet)
@@ -114,7 +115,7 @@ isBootstrapAddr (Addr _ _ _) = False
 -- ================================================================================
 
 txOutPreds ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   UnivSize -> Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
 txOutPreds size@UnivSize {usDatumFreq} p balanceCoin outputS =
   [ Choose
@@ -193,7 +194,7 @@ txOutPreds size@UnivSize {usDatumFreq} p balanceCoin outputS =
     hash = var "hash" DataHashR
     dat = var "dat" DataR
 
-demo :: ToExprs ConwayEra => ReplMode -> IO ()
+demo :: ReplMode -> IO ()
 demo mode = do
   let proof = Conway
   env <-
@@ -205,8 +206,8 @@ demo mode = do
   when (mode == Interactive) (displayTerm env (outputs proof))
   modeRepl mode proof env ""
 
-demoTest :: ToExprs ConwayEra => TestTree
+demoTest :: TestTree
 demoTest = testIO "Testing TxOut Stage" (demo CI)
 
-main :: ToExprs ConwayEra => IO ()
+main :: IO ()
 main = defaultMain $ testIO "Testing TxOut Stage" (demo Interactive)

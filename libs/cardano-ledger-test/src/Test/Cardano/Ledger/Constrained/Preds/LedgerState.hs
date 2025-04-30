@@ -50,6 +50,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff (toExpr)
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), genPParamsUpdate)
 import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet)
@@ -103,7 +104,7 @@ enactStateCheckPreds _ = []
 
 ledgerStatePreds ::
   forall era.
-  (Reflect era, ToExprs era) =>
+  (Reflect era, EraTest era) =>
   UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
@@ -182,7 +183,7 @@ ledgerStatePreds _usize p =
     getOne [] = NoPParamsUpdate
 
 ledgerStateStage ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -196,7 +197,7 @@ ledgerStateStage usize proof subst0 = do
     Just msg -> error msg
 
 demo ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-
@@ -216,10 +217,10 @@ demo proof mode = do
   when (mode == Interactive) . print $ toExpr lstate
   modeRepl mode proof env2 ""
 
-demoTest :: ToExprs ConwayEra => TestTree
+demoTest :: TestTree
 demoTest = testIO "Testing LedgerState Stage" (demo Conway CI)
 
-main :: ToExprs ConwayEra => IO ()
+main :: IO ()
 main = defaultMain $ testIO "Testing LedgerState Stage" (demo Conway Interactive)
 
 -- =============================================
@@ -342,7 +343,7 @@ toProposalMap xs = Map.fromList (map pairup xs)
   where
     pairup gas = (gasId gas, gas)
 
-demoGov :: (ConwayEraPParams era, Reflect era, ToExprs era) => Proof era -> ReplMode -> IO ()
+demoGov :: (ConwayEraPParams era, Reflect era, AlonzoEraTest era) => Proof era -> ReplMode -> IO ()
 demoGov proof mode = do
   env <-
     generate
@@ -354,7 +355,7 @@ demoGov proof mode = do
       )
   modeRepl mode proof env ""
 
-mainGov :: ToExprs ConwayEra => IO ()
+mainGov :: IO ()
 mainGov = demoGov Conway Interactive
 
 setActionId :: GovAction era -> Maybe GovActionId -> GovAction era
