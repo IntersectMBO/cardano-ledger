@@ -8,76 +8,78 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+-- EqSym instances
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+-- {-# OPTIONS_GHC -Wno-unused-matches #-} -- Remove this
 
 module Constrained.MinModel where
 
-import qualified Constrained.Base as Base
 import Constrained.Core (
-  Evidence (..),
-  Rename (rename),
-  Value (..),
   Var (..),
   eqVar,
   freshen,
-  unValue,
   unionWithMaybe,
  )
 import Constrained.Env
 import Constrained.GenT
-import Constrained.Graph
+import qualified Constrained.Graph as Graph
 import Constrained.List hiding (ListCtx)
+import Constrained.MinBase
+import Constrained.MinSyntax
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
-import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable (fold)
-import qualified Data.Foldable as Foldable (fold, toList)
+import qualified Data.Foldable as Foldable (fold)
 import Data.Kind
-import Data.List (intersect, nub, (\\))
+import Data.List (nub, partition, (\\))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-
--- (Pretty (pretty),Doc)
-
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, maybeToList)
-import qualified Data.Monoid as Monoid
-import Data.Semigroup (Any (..), Max (..), getMax, sconcat)
+import Data.Maybe (isNothing, listToMaybe, maybeToList)
+import Data.Semigroup (Any (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.String (fromString)
 import Data.Typeable
 import GHC.Stack
-import MinBase
-import MinSyntax
 import Prettyprinter
 import Test.QuickCheck hiding (forAll)
 
--- This is where the logical properties of a function symbol are applied to transform one spec into another
--- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
--- we propagate each of those nested function symbols over the current spec, one at a time.
--- The result of this propagation is then made the current spec in the recusive calls to 'propagateSpec'
-propagateSpec ::
-  forall v a.
-  HasSpec v =>
-  Spec a ->
-  Ctx v a ->
-  Spec v
-propagateSpec spec = \case
-  Hole -> spec
-  CtxApp f (Unary ctx) | Evidence <- ctxHasSpec ctx -> propagate f (Unary ctx) spec
-  CtxApp f (ctx :-+ v) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (ctx :-+ v) spec) Hole
-  CtxApp f (v :+- ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (v :+- ctx) spec) Hole
-
 toCtx :: Var a -> Term b -> GE (Ctx a b)
 toCtx = undefined
+
+{-
+toCtxList ::
+  forall m v as.
+  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
+  Var v ->
+  List Term as ->
+  m (ListCtx Value as (Ctx v))
+toCtxList v xs = prefix xs
+  where
+    prefix :: forall as'. HasCallStack => List Term as' -> m (ListCtx Value as' (Ctx v))
+    prefix Nil = fatalError ("toCtxList without hole, for variable " ++ show v)
+    prefix (Lit l :> ts) = do
+      ctx <- prefix ts
+      pure $ l :-+ ctx
+    prefix (t :> ts) = do
+      hole <- toCtx v t
+      suf <- suffix ts
+      pure $ hole :? suf
+
+    suffix :: forall as'. List Term as' -> m (List Value as')
+    suffix Nil = pure Nil
+    suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
+    suffix (_ :> _) = fatalErrorNE $ NE.fromList ["toCtxList with too many holes, for variable " ++ show v]
+-}
 
 -- ====================================================
 -- Now some concrete examples
@@ -110,27 +112,25 @@ instance Semantics IntegerSym where
   semantics GreaterOrEqW = (>=)
 
 instance Logic IntegerSym where
-  propagateTypeSpec PlusW (Hole :-+ n) (Interval lo hi) bad =
-    TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-  propagateTypeSpec PlusW (n :+- Hole) (Interval lo hi) bad =
-    TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-  propagateTypeSpec MinusW (Hole :-+ n) (Interval lo hi) bad =
-    TypeSpec (Interval (minus n <$> lo) (minus n <$> hi)) (map (minus n) bad)
-  propagateTypeSpec MinusW (n :+- Hole) (Interval lo hi) bad =
-    TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-  propagateTypeSpec LessOrEqW (Hole :-+ n) boolspec bad = undefined
-  propagateTypeSpec LessOrEqW (n :+- Hole) boolspec bad = undefined
-  propagateTypeSpec GreaterOrEqW (Hole :-+ n) boolspec bad = undefined
-  propagateTypeSpec GreaterOrEqW (n :+- Hole) boolspec bad = undefined
+  propagate tag ctx spec = case (tag, ctx, spec) of
+    (_, _, TrueSpec) -> TrueSpec
+    (_, _, ErrorSpec xs) -> ErrorSpec xs
+    (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
+    (LessOrEqW, HOLE :-+ l, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
+    (LessOrEqW, l :+- HOLE, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> ltSpec l
+    (GreaterOrEqW, HOLE :-+ x, spec1) -> propagate LessOrEqW (x :+- HOLE) spec1
+    (GreaterOrEqW, x :+- HOLE, spec2) -> propagate LessOrEqW (HOLE :-+ x) spec2
+    (PlusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (PlusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
+    (PlusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (PlusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
+    (MinusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval (minus n <$> lo) (minus n <$> hi)) (map (minus n) bad)
+    (MinusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (MinusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (MinusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
 
-  propagateMemberSpec PlusW (Hole :-+ n) xs = MemberSpec (fmap (+ n) xs)
-  propagateMemberSpec PlusW (n :+- Hole) xs = MemberSpec (fmap (+ n) xs)
-  propagateMemberSpec MinusW (Hole :-+ n) xs = MemberSpec (fmap (minus n) xs)
-  propagateMemberSpec MinusW (n :+- Hole) xs = MemberSpec (fmap (+ n) xs)
-  propagateMemberSpec LessOrEqW (Hole :-+ n) boolList = undefined
-  propagateMemberSpec LessOrEqW (n :+- Hole) boolList = undefined
-  propagateMemberSpec GreaterOrEqW (Hole :-+ n) boolList = undefined
-  propagateMemberSpec GreaterOrEqW (n :+- Hole) boolList = undefined
+minus :: Integer -> Integer -> Integer
+minus n x = x - n
 
 geqSpec :: Integer -> Spec Integer
 geqSpec n = typeSpec (Interval (Just n) Nothing)
@@ -138,11 +138,26 @@ geqSpec n = typeSpec (Interval (Just n) Nothing)
 leqSpec :: Integer -> Spec Integer
 leqSpec n = typeSpec (Interval Nothing (Just n))
 
-minus :: Integer -> Integer -> Integer
-minus n x = x - n
+gtSpec :: Integer -> Spec Integer
+gtSpec n = typeSpec (Interval (Just (n + 1)) Nothing)
+
+ltSpec :: Integer -> Spec Integer
+ltSpec n = typeSpec (Interval Nothing (Just (n - 1)))
 
 (<=.) :: Term Integer -> Term Integer -> Term Bool
-(<=.) = undefined
+(<=.) x y = App LessOrEqW (x :> y :> Nil)
+
+(>=.) :: Term Integer -> Term Integer -> Term Bool
+(>=.) x y = App GreaterOrEqW (x :> y :> Nil)
+
+(+.) :: Term Integer -> Term Integer -> Term Integer
+(+.) x y = App PlusW (x :> y :> Nil)
+
+(-.) :: Term Integer -> Term Integer -> Term Integer
+(-.) x y = App MinusW (x :> y :> Nil)
+
+-- =========================
+-- HasSpec Integer instance
 
 data Range = Interval (Maybe Integer) (Maybe Integer) deriving (Eq, Show)
 
@@ -165,6 +180,7 @@ instance HasSpec Integer where
   guardTypeSpec r@(Interval (Just n) (Just m))
     | n > m = ErrorSpec (pure ("lower bound greater than upper bound\n" ++ show r))
     | otherwise = typeSpec r
+  guardTypeSpec range = typeSpec range
 
   genFromTypeSpec (Interval ml mu) = do
     n <- sizeT
@@ -182,6 +198,10 @@ instance HasSpec Integer where
 data BoolSym (dom :: [Type]) rng where
   NotW :: BoolSym '[Bool] Bool
 
+deriving instance Eq (BoolSym dom rng)
+
+instance Show (BoolSym dom rng) where show = name
+
 instance Syntax BoolSym where
   name NotW = "not_"
   inFix _ = False
@@ -192,10 +212,16 @@ instance Semantics BoolSym where
 instance Logic BoolSym where
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate NotW (Unary Hole) (SuspendedSpec v ps) =
+  propagate NotW (Unary HOLE) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App NotW (v' :> Nil)) (v :-> ps)
-  propagate NotW (Unary Hole) spec =
+  propagate NotW (Unary HOLE) spec =
     caseBoolSpec spec (equalSpec . not)
+
+not_ :: Term Bool -> Term Bool
+not_ x = App NotW (x :> Nil)
+
+-- =========================
+-- HasSpec Bool instance
 
 instance HasSpec Bool where
   type TypeSpec Bool = Set Bool
@@ -221,9 +247,9 @@ instance HasSpec Bool where
 -- ========== Set example =======================
 
 data SetSym (dom :: [Type]) rng where
-  MemberW :: Ord a => SetSym [a, Set a] Bool
-  SizeW :: SetSym '[Set a] Integer
-  SubsetW :: Ord a => SetSym [Set a, Set a] Bool
+  MemberW :: (HasSpec a, Ord a) => SetSym [a, Set a] Bool
+  SizeW :: (HasSpec a, Ord a) => SetSym '[Set a] Integer
+  SubsetW :: (HasSpec a, Ord a) => SetSym [Set a, Set a] Bool
 
 deriving instance Eq (SetSym dom rng)
 
@@ -241,17 +267,41 @@ instance Semantics SetSym where
   semantics SubsetW = Set.isSubsetOf
 
 instance Logic SetSym where
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec es) = ErrorSpec es
-  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
-
-{-
-propagate SizeW (Unary Hole) spec = undefined
-propagate MemberW (Hole :-+ ss) spec = undefined
-propagate MemberW (x :+- Hole) spec = undefined
-propagate SubsetW (Hole :-+ ss) spec = undefined
-propagate SubsetW (x :+- Hole) spec = undefined
--}
+  propagate tag ctx spec = case (tag, ctx, spec) of
+    (_, _, TrueSpec) -> TrueSpec
+    (_, _, ErrorSpec es) -> ErrorSpec es
+    (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
+    (MemberW, HOLE :-+ (s :: Set a), spec1) ->
+      caseBoolSpec spec1 $ \case
+        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
+        False -> notMemberSpec s
+    (MemberW, e :+- HOLE, spec2) ->
+      caseBoolSpec spec2 $ \case
+        True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
+        False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
+    (SizeW, Unary HOLE, spec3) -> typeSpec (SetSpec mempty mempty spec3)
+    (SubsetW, HOLE :-+ big, spec4) -> caseBoolSpec spec4 $ \case
+      True -> constrained $ \small ->
+        And
+          [ Assert $ size_ small <=. Lit (setSize big)
+          , forAll small $ \x -> Assert $ member_ x (Lit big)
+          ]
+      False -> constrained $ \small ->
+        exists (\eval -> headGE $ Set.difference big (eval small)) $ \e ->
+          And
+            [ -- set `DependsOn` e,
+              Assert $ not_ $ member_ e (Lit big)
+            , Assert $ member_ e small
+            ]
+    (SubsetW, small :+- HOLE, spec5) -> caseBoolSpec spec5 $ \case
+      True -> typeSpec $ SetSpec small TrueSpec mempty
+      False -> constrained $ \big ->
+        exists (\eval -> headGE $ Set.difference (eval big) small) $ \e ->
+          And
+            [ -- set `DependsOn` e,
+              Assert $ member_ e (Lit small)
+            , Assert $ not_ $ member_ e big
+            ]
 
 setSize :: Set a -> Integer
 setSize = toInteger . Set.size
@@ -262,13 +312,16 @@ size_ s = App SizeW (s :> Nil)
 subset_ :: (HasSpec s, Ord s) => Term (Set s) -> Term (Set s) -> Term Bool
 subset_ s1 s2 = App SubsetW (s1 :> s2 :> Nil)
 
+member_ :: (Ord a, HasSpec a) => Term a -> Term (Set a) -> Term Bool
+member_ x y = App MemberW (x :> y :> Nil)
+
 -- Helpers for the `HasSpec (Set s)` instance
 
-instance Ord s => Forallable (Set s) s where
+instance Ord s => Container (Set s) s where
   fromForAllSpec e = typeSpec $ SetSpec mempty e TrueSpec
   forAllToList = Set.toList
 
-data SetSpec a = SetSpec (Set a) (Spec a) (Spec Integer)
+data SetSpec a = SetSpec {setMust :: Set a, setAll :: Spec a, setCount :: Spec Integer}
   deriving (Show)
 
 guardSetSpec :: (HasSpec a, Ord a) => SetSpec a -> Spec (Set a)
@@ -305,9 +358,10 @@ instance (Ord a, HasSpec a) => Semigroup (SetSpec a) where
 instance (Ord a, HasSpec a) => Monoid (SetSpec a) where
   mempty = SetSpec mempty mempty TrueSpec
 
--- ===== The Set HasSpec instance
+-- =========================
+-- HasSpec Set instance
 
-instance (Forallable (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
+instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
   type TypeSpec (Set a) = SetSpec a
 
   emptySpec = SetSpec Set.empty TrueSpec TrueSpec
@@ -345,7 +399,7 @@ instance (Forallable (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
           )
   -- Special case when elemS is a MemberSpec.
   -- Just union 'must' with enough elements of 'xs' to meet  'szSpec'
-  genFromTypeSpec (SetSpec must elemS@(MemberSpec xs) szSpec) = do
+  genFromTypeSpec (SetSpec must (MemberSpec xs) szSpec) = do
     let szSpec' = szSpec <> geqSpec (setSize must) -- <> maxSpec (cardinality elemS)
     choices <- pureGen $ shuffle (NE.toList xs \\ Set.toList must)
     size <- fromInteger <$> genFromSpecT szSpec'
@@ -353,13 +407,13 @@ instance (Forallable (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
     pure (Set.union must additions)
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = szSpec <> geqSpec (setSize must) -- <> maxSpec (cardinality elemS)
-    count <-
+    sizecount <-
       explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'
-    let targetSize = count - setSize must
+    let targetSize = sizecount - setSize must
     explainNE
       ( NE.fromList
-          [ "Choose size count = " ++ show count
+          [ "Choose size count = " ++ show sizecount
           , "szSpec' = " ++ show szSpec'
           , "Picking items not in must = " ++ show (Set.toList must)
           , "that also meet the element test: "
@@ -384,7 +438,7 @@ instance (Forallable (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
 
         go tries (n - 1) (Set.insert e s)
 
--- ========== The Pair (a,b) HasSpec instance
+-- ========== Pairs example =======================
 
 data PairSym (dom :: [Type]) rng where
   FstW :: PairSym '[(a, b)] a
@@ -407,13 +461,49 @@ instance Semantics PairSym where
   semantics PairW = (,)
 
 instance Logic PairSym where
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec es) = ErrorSpec es
-  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
-  propagate FstW (Unary Hole) spec = undefined
-  propagate SndW (Unary Hole) spec = undefined
-  propagate PairW (x :+- Hole) spec = undefined
-  propagate PairW (Hole :-+ ss) spec = undefined
+  propagateTypeSpec FstW (Unary HOLE) ts cant = typeSpec $ Cartesian (TypeSpec ts cant) TrueSpec
+  propagateTypeSpec SndW (Unary HOLE) ts cant = typeSpec $ Cartesian TrueSpec (TypeSpec ts cant)
+  propagateTypeSpec PairW (a :+- HOLE) sc@(Cartesian sa sb) cant
+    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
+          )
+  propagateTypeSpec PairW (HOLE :-+ b) sc@(Cartesian sa sb) cant
+    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show (TypeSpec sc cant)]
+          )
+
+  propagateMemberSpec FstW (Unary HOLE) es = typeSpec $ Cartesian (MemberSpec es) TrueSpec
+  propagateMemberSpec SndW (Unary HOLE) es = typeSpec $ Cartesian TrueSpec (MemberSpec es)
+  propagateMemberSpec PairW (a :+- HOLE) es =
+    case (nub (sameFst a (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
+            ]
+  propagateMemberSpec PairW (HOLE :-+ b) es =
+    case (nub (sameSnd b (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
+            ]
+
+sameFst :: Eq a1 => a1 -> [(a1, a2)] -> [a2]
+sameFst a ps = [b | (a', b) <- ps, a == a']
+
+sameSnd :: Eq a1 => a1 -> [(a2, a1)] -> [a2]
+sameSnd b ps = [a | (a, b') <- ps, b == b']
 
 fst_ :: (HasSpec a, HasSpec b) => Term (a, b) -> Term a
 fst_ x = App FstW (x :> Nil)
@@ -424,19 +514,12 @@ snd_ x = App SndW (x :> Nil)
 pair_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a, b)
 pair_ a b = App PairW (a :> b :> Nil)
 
+-- ========== The Pair (a,b) HasSpec instance
+
 data PairSpec a b = Cartesian (Spec a) (Spec b)
 
 instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
-  show pair@(Cartesian l r) = "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
-
-{-
-instance (Arbitrary (Spec a), Arbitrary (Spec b)) => Arbitrary (PairSpec a b) where
-  arbitrary = Cartesian <$> arbitrary <*> arbitrary
-  shrink (Cartesian a b) = uncurry Cartesian <$> shrink (a, b) -}
-
--- pairView :: forall a b. (HasSpec a, HasSpec b) => Term (a,b) -> Maybe (Term a, Term b)
--- pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
--- pairView _ = Nothing
+  show (Cartesian l r) = "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
 
 guardPair :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (a, b)
 guardPair (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
@@ -461,7 +544,7 @@ instance (HasSpec a, HasSpec b) => HasSpec (a, b) where
     satisfies (fst_ x) sf
       <> satisfies (snd_ x) ss
 
--- ========== The Either HasSpec instance
+-- ========== Either example =======================
 
 data EitherSym (dom :: [Type]) rng where
   LeftW :: EitherSym '[a] (Either a b)
@@ -480,17 +563,31 @@ instance Semantics EitherSym where
   semantics RightW = Right
 
 instance Logic EitherSym where
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec es) = ErrorSpec es
-  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
-  propagate LeftW (Unary Hole) spec = undefined
-  propagate RightW (Unary Hole) spec = undefined
+  propagateTypeSpec LeftW (Unary HOLE) (SumSpec sl _) cant = sl <> foldMap notEqualSpec [a | Left a <- cant]
+  propagateTypeSpec RightW (Unary HOLE) (SumSpec _ sr) cant = sr <> foldMap notEqualSpec [a | Right a <- cant]
+
+  propagateMemberSpec LeftW (Unary HOLE) es =
+    case [a | Left a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propMemberSpec (left_ HOLE) on (MemberSpec es) with no Left in es: " ++ show (NE.toList es)
+  propagateMemberSpec RightW (Unary HOLE) es =
+    case [a | Right a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propagate (Right HOLE) on (MemberSpec es) with no Right in es: " ++ show (NE.toList es)
 
 left_ :: (HasSpec a, HasSpec b) => Term a -> Term (Either a b)
 left_ x = App LeftW (x :> Nil)
 
 right_ :: (HasSpec a, HasSpec b) => Term b -> Term (Either a b)
 right_ x = App RightW (x :> Nil)
+
+-- ========== The Either HasSpec instance
 
 data SumSpec a b = SumSpec (Spec a) (Spec b)
   deriving (Show)
@@ -513,7 +610,7 @@ instance (HasSpec a, HasSpec b) => HasSpec (Either a b) where
   conformsTo (Left a) (SumSpec sa _) = conformsToSpec a sa
   conformsTo (Right b) (SumSpec _ sb) = conformsToSpec b sb
 
-  toPreds x (SumSpec a b) = Case x (bind $ \x -> satisfies x a) (bind $ \y -> satisfies y b)
+  toPreds x (SumSpec a b) = Case x (bind $ \y -> satisfies y a) (bind $ \y -> satisfies y b)
 
   genFromTypeSpec (SumSpec (simplifySpec -> sa) (simplifySpec -> sb))
     | emptyA, emptyB = genError "genFromTypeSpec @SumSpec: empty"
@@ -577,7 +674,7 @@ constrainInterval ml mu r =
       | otherwise = min u (a + b)
 
 -- =========================================================================
-
+-- User Facing functions
 -- ====================================================================
 
 -- | Generalize `genFromTypeSpec` from `TypeSpec t` to `Spec t`
@@ -641,9 +738,6 @@ fromGESpec ge = case ge of
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: forall m. MonadGenError m => Env -> Pred -> GenT m Env
-genFromPreds env0 preds = error "Not yet genFromPreds"
-
-{-
 -- TODO: remove this once optimisePred does a proper fixpoint computation
 genFromPreds env0 (optimisePred . optimisePred -> preds) =
   {- explain1 (show $ "genFromPreds fails\nPreds are:" /> pretty preds) -} do
@@ -659,7 +753,6 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
       (env', plan') <-
         explain (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan env plan
       go env' plan'
--}
 
 ------- Stages of simplifying -------------------------------
 
@@ -674,11 +767,11 @@ optimisePred p =
     $ p
 
 aggressiveInlining :: Pred -> Pred
-aggressiveInlining pred
+aggressiveInlining pred0
   | inlined = aggressiveInlining pInlined
-  | otherwise = pred
+  | otherwise = pred0
   where
-    (pInlined, Any inlined) = runWriter $ go (freeVars pred) [] pred
+    (pInlined, Any inlined) = runWriter $ go (freeVars pred0) [] pred0
 
     underBinder fvs x p = fvs `without` [Name x] <> singleton (Name x) (countOf (Name x) p)
 
@@ -753,7 +846,7 @@ aggressiveInlining pred
             tell $ Any True
             pure $ unBind a (x :-> p)
         | otherwise -> Let t . (x :->) <$> go (underBinder fvs x p) (x := t : sub) p
-      -- Exists k b -> Exists k <$> goBinder fvs sub b
+      Exists k b -> Exists k <$> goBinder fvs sub b
       And ps -> Foldable.fold <$> mapM (go fvs sub) ps
       Assert t
         | not (isLit t)
@@ -806,7 +899,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   Let t b -> pure $ SuspendedSpec x (Let t b)
-  -- Exists k b -> pure $ SuspendedSpec x (Exists k b)
+  Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError (show pred3)
   -- Elem was a pattern
@@ -818,6 +911,10 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
   Case (Lit val) as bs -> runCaseOn val as bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case t as bs -> do
+    simpAs <- computeSpecBinderSimplified as
+    simpBs <- computeSpecBinderSimplified bs
+    propagateSpec (typeSpec (SumSpec simpAs simpBs)) <$> toCtx x t
   where
     -- When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
     -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
@@ -871,27 +968,295 @@ computeSpecBinder (x :-> p) = computeSpec x p
 computeSpecBinderSimplified :: Binder a -> GE (Spec a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
-{-
-toCtxList ::
-  forall m v as.
-  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
-  Var v ->
-  List Term as ->
-  m (ListCtx Value as (Ctx v))
-toCtxList v xs = prefix xs
-  where
-    prefix :: forall as'. HasCallStack => List Term as' -> m (ListCtx Value as' (Ctx v))
-    prefix Nil = fatalError ("toCtxList without hole, for variable " ++ show v)
-    prefix (Lit l :> ts) = do
-      ctx <- prefix ts
-      pure $ l :-+ ctx
-    prefix (t :> ts) = do
-      hole <- toCtx v t
-      suf <- suffix ts
-      pure $ hole :? suf
+-- ---------------------- Building a plan -----------------------------------
 
-    suffix :: forall as'. List Term as' -> m (List Value as')
-    suffix Nil = pure Nil
-    suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
-    suffix (_ :> _) = fatalErrorNE $ NE.fromList ["toCtxList with too many holes, for variable " ++ show v]
+substStage :: Env -> SolverStage -> SolverStage
+substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec
+
+normalizeSolverStage :: SolverStage -> SolverStage
+normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec')
+  where
+    (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
+    spec' = fromGESpec $ computeSpec x (And ps')
+
+{-
+-- Try to fix a value w.r.t a specification
+fixupWithSpec :: forall a. HasSpec a => Spec a -> a -> Maybe a
+fixupWithSpec spec a
+  | a `conformsToSpec` spec = Just a
+  | otherwise = case spec of
+      MemberSpec (x :| _) -> Just x
+      _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
 -}
+
+type Hints = DependGraph
+type DependGraph = Graph.Graph Name
+
+dependency :: HasVariables t => Name -> t -> DependGraph
+dependency x (freeVarSet -> xs) = Graph.dependency x xs
+
+irreflexiveDependencyOn ::
+  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
+irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
+
+noDependencies :: HasVariables t => t -> DependGraph
+noDependencies (freeVarSet -> xs) = Graph.noDependencies xs
+
+respecting :: Hints -> DependGraph -> DependGraph
+respecting hints g = g `Graph.subtractGraph` Graph.opGraph hints
+
+solvableFrom :: Name -> Set Name -> DependGraph -> Bool
+solvableFrom x s g =
+  let less = Graph.dependencies x g
+   in s `Set.isSubsetOf` less && not (x `Set.member` less)
+
+-- TODO: here we can compute both the explicit hints (i.e. constraints that
+-- define the order of two variables) and any whole-program smarts.
+computeHints :: [Pred] -> Hints
+computeHints _ps =
+  Graph.transitiveClosure $ fold [] -- [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
+
+saturatePred :: Pred -> [Pred]
+saturatePred p = [p]
+
+-- | Linearize a predicate, turning it into a list of variables to solve and
+-- their defining constraints such that each variable can be solved independently.
+prepareLinearization :: Pred -> GE SolverPlan
+prepareLinearization p = do
+  let preds = concatMap saturatePred $ flattenPred p
+      hints = computeHints preds
+      graph = Graph.transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
+  plan <-
+    explainNE
+      ( NE.fromList
+          [ "Linearizing"
+          , show $ "  preds: " <> pretty preds
+          , show $ "  graph: " <> pretty graph
+          ]
+      )
+      $ linearize preds graph
+  pure $ backPropagation $ SolverPlan plan graph
+
+-- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
+-- `Exists` bound variables become free in the result.
+flattenPred :: Pred -> [Pred]
+flattenPred pIn = go (freeVarNames pIn) [pIn]
+  where
+    go _ [] = []
+    go fvs (p : ps) = case p of
+      And ps' -> go fvs (ps' ++ ps)
+      -- NOTE: the order of the arguments to `==.` here are important.
+      -- The whole point of `Let` is that it allows us to solve all of `t`
+      -- before we solve the variables in `t`.
+      Let t b -> goBinder fvs b ps (\x -> (Assert (t ==. (V x)) :))
+      Exists _ b -> goBinder fvs b ps (const id)
+      _ -> p : go fvs ps
+
+    goBinder ::
+      Set Int ->
+      Binder a ->
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
+    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
+      where
+        (x', p') = freshen x p fvs
+
+-- Consider: A + B = C + D
+-- We want to fail if A and B are independent.
+-- Consider: A + B = A + C, A <- B
+-- Here we want to consider this constraint defining for A
+linearize ::
+  MonadGenError m => [Pred] -> DependGraph -> m [SolverStage]
+linearize preds graph = do
+  sorted <- case Graph.topsort graph of
+    Left cycleX ->
+      fatalError
+        ( show $
+            "linearize: Dependency cycle in graph:"
+              /> vsep'
+                [ "cycle:" /> pretty cycleX
+                , "graph:" /> pretty graph
+                ]
+        )
+    Right sorted -> pure sorted
+  go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
+  where
+    isRelevantPred TruePred = False
+    -- isRelevantPred DependsOn {} = False
+    isRelevantPred (Assert (Lit True)) = False
+    isRelevantPred _ = True
+
+    go [] [] = pure []
+    go [] ps
+      | null $ foldMap fst ps =
+          case checkPredsE (pure "Linearizing fails") mempty (map snd ps) of
+            Nothing -> pure []
+            Just msgs -> genErrorNE msgs
+      | otherwise =
+          fatalErrorNE $
+            NE.fromList
+              [ "Dependency error in `linearize`: "
+              , show $ indent 2 $ "graph: " /> pretty graph
+              , show $
+                  indent 2 $
+                    "the following left-over constraints are not defining constraints for a unique variable:"
+                      /> vsep' (map (pretty . snd) ps)
+              ]
+    go (n@(Name x) : ns) ps = do
+      let (nps, ops) = partition (isLastVariable n . fst) ps
+      (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
+
+    isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
+
+-- =================================
+-- Operations on Stages and Plans
+
+-- | Does nothing if the variable is not in the plan already.
+mergeSolverStage :: SolverStage -> [SolverStage] -> [SolverStage]
+mergeSolverStage (SolverStage x ps spec) plan =
+  [ case eqVar x y of
+      Just Refl ->
+        SolverStage
+          y
+          (ps ++ ps')
+          ( addToErrorSpec
+              ( NE.fromList
+                  ( [ "Solving var " ++ show x ++ " fails."
+                    , "Merging the Specs"
+                    , "   1. " ++ show spec
+                    , "   2. " ++ show spec'
+                    ]
+                  )
+              )
+              (spec <> spec')
+          )
+      Nothing -> stage
+  | stage@(SolverStage y ps' spec') <- plan
+  ]
+
+prettyPlan :: HasSpec a => Spec a -> Doc ann
+prettyPlan (simplifySpec -> spec)
+  | SuspendedSpec _ p <- spec
+  , Result plan <- prepareLinearization p =
+      vsep'
+        [ "Simplified spec:" /> pretty spec
+        , pretty plan
+        ]
+  | otherwise = "Simplfied spec:" /> pretty spec
+
+printPlan :: HasSpec a => Spec a -> IO ()
+printPlan = print . prettyPlan
+
+isEmptyPlan :: SolverPlan -> Bool
+isEmptyPlan (SolverPlan plan _) = null plan
+
+stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
+stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
+stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
+  (spec', specs) <- runGE
+    $ explain
+      ( show
+          ( "Computing specs for variable "
+              <> pretty x
+                /> vsep' (map pretty ps)
+          )
+      )
+    $ do
+      ispecs <- mapM (computeSpec x) ps
+      pure $ (fold ispecs, ispecs)
+  val <-
+    genFromSpecT
+      ( addToErrorSpec
+          ( NE.fromList
+              ( ( "\nStepPlan for variable: "
+                    ++ show x
+                    ++ " fails to produce Specification, probably overconstrained."
+                    ++ "PS = "
+                    ++ unlines (map show ps)
+                )
+                  : ("Original spec " ++ show spec)
+                  : "Predicates"
+                  : zipWith
+                    (\pred1 specx -> "  pred " ++ show pred1 ++ " -> " ++ show specx)
+                    ps
+                    specs
+              )
+          )
+          (spec <> spec')
+      )
+  let env1 = extendEnv x val env
+  pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (Graph.deleteNode (Name x) gr))
+
+computeDependencies :: Pred -> DependGraph
+computeDependencies = \case
+  ElemPred _bool term _xs -> computeTermDependencies term
+  -- Monitor {} -> mempty
+  Subst x t p -> computeDependencies (substitutePred x t p)
+  Assert t -> computeTermDependencies t
+  -- Reifies t' t _ -> t' `irreflexiveDependencyOn` t
+  ForAll set b ->
+    let innerG = computeBinderDependencies b
+     in innerG <> set `irreflexiveDependencyOn` Graph.nodes innerG
+  -- x `DependsOn` y -> x `irreflexiveDependencyOn` y
+  Case t as bs -> noDependencies t <> computeBinderDependencies as <> computeBinderDependencies bs
+  {- When b p ->
+    let pG = computeDependencies p
+        oG = nodes pG `irreflexiveDependencyOn` b
+     in oG <> pG -}
+  TruePred -> mempty
+  FalsePred {} -> mempty
+  And ps -> foldMap computeDependencies ps
+  Exists _ b -> computeBinderDependencies b
+  Let t b -> noDependencies t <> computeBinderDependencies b
+
+-- GenHint _ t -> noDependencies t
+-- Explain _ p -> computeDependencies p
+
+computeBinderDependencies :: Binder a -> DependGraph
+computeBinderDependencies (x :-> p) =
+  Graph.deleteNode (Name x) $ computeDependencies p
+
+computeTermDependencies :: Term a -> DependGraph
+computeTermDependencies = fst . computeTermDependencies'
+
+computeTermDependencies' :: Term a -> (DependGraph, Set Name)
+computeTermDependencies' = \case
+  (App _ args) -> go args
+  Lit {} -> (mempty, mempty)
+  (V x) -> (noDependencies (Name x), Set.singleton (Name x))
+  where
+    go :: List Term as -> (DependGraph, Set Name)
+    go Nil = (mempty, mempty)
+    go (t :> ts) =
+      let (gr, ngr) = go ts
+          (tgr, ntgr) = computeTermDependencies' t
+       in (ntgr `irreflexiveDependencyOn` ngr <> tgr <> gr, ngr <> ntgr)
+
+-- | Push as much information we can backwards through the plan.
+backPropagation :: SolverPlan -> SolverPlan
+-- backPropagation (SolverPlan _plan _graph) =
+backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initplan)) graph
+  where
+    go acc [] = acc
+    go acc (s@(SolverStage (x :: Var a) ps spec) : plan) = go (s : acc) plan'
+      where
+        newStages = concatMap (newStage spec) ps
+        plan' = foldr mergeSolverStage plan newStages
+        -- Note use of the Term Pattern Equal
+        newStage specl (Assert (Equal (V x') t)) =
+          termVarEqCases specl x' t
+        newStage specr (Assert (Equal t (V x'))) =
+          termVarEqCases specr x' t
+        newStage _ _ = []
+
+        termVarEqCases :: HasSpec b => Spec a -> Var b -> Term b -> [SolverStage]
+        termVarEqCases (MemberSpec vs) x' t
+          | Set.singleton (Name x) == freeVarSet t =
+              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (singletonEnv x v) t) vs))]
+        termVarEqCases specx x' t
+          | Just Refl <- eqVar x x'
+          , [Name y] <- Set.toList $ freeVarSet t
+          , Result ctx <- toCtx y t =
+              [SolverStage y [] (propagateSpec specx ctx)]
+        termVarEqCases _ _ _ = []

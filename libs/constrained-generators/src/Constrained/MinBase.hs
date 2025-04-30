@@ -7,53 +7,24 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- Base types: Term, Pred, Spec, Ctx, and classes: HasSpec, Syntax, Semantics, and Logic for the MinModel
-module MinBase where
+module Constrained.MinBase where
 
--- import qualified Constrained.Base as Base
-import Constrained.Core (
-  Evidence (..),
-  Rename (rename),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
-  unionWithMaybe,
- )
-import Constrained.Env
+import Constrained.Core (Evidence (..), Var (..))
 import Constrained.GenT
-import Constrained.Graph
 import Constrained.List hiding (ListCtx)
-import Control.Applicative ((<|>))
-import Control.Monad (guard)
-import Control.Monad.Identity
-import Control.Monad.Writer (Writer, runWriter, tell)
-import Data.Foldable (fold)
-import qualified Data.Foldable as Foldable (fold, toList)
 import Data.Kind
-import Data.List (intersect, nub, (\\))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, maybeToList)
-import qualified Data.Monoid as Monoid
-import Data.Semigroup (Any (..), Max (..), getMax, sconcat)
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
 import GHC.Stack
 import Prettyprinter
-import Test.QuickCheck hiding (forAll)
 
 -- ===========================================
 -- Terms
@@ -118,17 +89,17 @@ class (Typeable t, Syntax t, Semantics t) => Logic (t :: [Type] -> Type -> Type)
 
   propagateTypeSpec ::
     (AppRequires t as b, HasSpec a) =>
-    t as b -> ListCtx as a -> TypeSpec b -> [b] -> Spec a
+    t as b -> ListCtx as (HOLE a) -> TypeSpec b -> [b] -> Spec a
   propagateTypeSpec f ctx ts cant = propagate f ctx (TypeSpec ts cant)
 
   propagateMemberSpec ::
     (AppRequires t as b, HasSpec a) =>
-    t as b -> ListCtx as a -> NonEmpty b -> Spec a
+    t as b -> ListCtx as (HOLE a) -> NonEmpty b -> Spec a
   propagateMemberSpec f ctx xs = propagate f ctx (MemberSpec xs)
 
   propagate ::
     (AppRequires t as b, HasSpec a) =>
-    t as b -> ListCtx as a -> Spec b -> Spec a
+    t as b -> ListCtx as (HOLE a) -> Spec b -> Spec a
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec es) = ErrorSpec es
   propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
@@ -142,7 +113,8 @@ class (Typeable t, Syntax t, Semantics t) => Logic (t :: [Type] -> Type -> Type)
 data Pred where
   ElemPred :: forall a. HasSpec a => Bool -> Term a -> NonEmpty a -> Pred
   And :: [Pred] -> Pred
-  ForAll :: (Forallable t a, HasSpec t, HasSpec a) => Term t -> Binder a -> Pred
+  Exists :: ((forall b. Term b -> b) -> GE a) -> Binder a -> Pred
+  ForAll :: (Container t a, HasSpec t, HasSpec a) => Term t -> Binder a -> Pred
   Assert :: Term Bool -> Pred
   TruePred :: Pred
   FalsePred :: NonEmpty String -> Pred
@@ -153,7 +125,7 @@ data Pred where
 data Binder a where
   (:->) :: HasSpec a => Var a -> Pred -> Binder a
 
-class Forallable t e | t -> e where
+class Container t e | t -> e where
   fromForAllSpec :: (HasSpec t, HasSpec e) => Spec e -> Spec t
   forAllToList :: t -> [e]
 
@@ -193,6 +165,7 @@ bind bodyf = newv :-> bodyPred
     bound (And ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
+    bound (Exists _ b) = boundBinder b
     bound (Case _ ba bb) = max (boundBinder ba) (boundBinder bb)
     bound Assert {} = -1
     bound TruePred = -1
@@ -238,14 +211,16 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 -- Contexts
 -- =========================================
 
-data HOLE a where HOLE :: HOLE a
+data HOLE a b where
+  HOLE :: HOLE a a
 
-data ListCtx (as :: [Type]) a where
-  Unary :: Ctx a a -> ListCtx '[a] a
-  (:-+) :: Ctx b a -> b -> ListCtx '[a, b] a
-  (:+-) :: a -> Ctx a b -> ListCtx '[a, b] b
+data ListCtx (as :: [Type]) (c :: Type -> Type) where
+  Unary :: c a -> ListCtx '[a] c
+  (:-+) :: c b -> x -> ListCtx '[b, x] c
+  (:+-) :: x -> c b -> ListCtx '[x, b] c
 
-data Ctx var (hole :: Type) where
+data Ctx v (a :: Type) where
+  CtxHole :: HasSpec v => Ctx v v
   CtxApp ::
     ( AppRequires fn as b
     , HasSpec b
@@ -254,16 +229,163 @@ data Ctx var (hole :: Type) where
     , All HasSpec as
     , Logic fn
     ) =>
-    fn as b -> ListCtx as v -> Ctx v b
-  Hole :: HasSpec v => Ctx v v
+    fn as b -> ListCtx as (Ctx v) -> Ctx v b
 
 ctxHasSpec :: Ctx v a -> Evidence (HasSpec a)
-ctxHasSpec Hole = Evidence
+ctxHasSpec CtxHole = Evidence
 ctxHasSpec CtxApp {} = Evidence
 
 -- | From a ListCtx, build a (List Term as), to which the function symbol can be applied.
---   Hole becomes 't', values become `Lit`
-fromListCtx :: All HasSpec as => ListCtx as a -> Term a -> List Term as
-fromListCtx (Unary c) t = t :> Nil
-fromListCtx (Hole :-+ y) t = t :> Lit y :> Nil
-fromListCtx (x :+- Hole) t = Lit x :> t :> Nil
+--   Hole becomes 't', values become `Lit` .
+fromListCtx :: All HasSpec as => ListCtx as (HOLE a) -> Term a -> List Term as
+fromListCtx (Unary HOLE) t = t :> Nil
+fromListCtx (HOLE :-+ y) t = t :> Lit y :> Nil
+fromListCtx (x :+- HOLE) t = Lit x :> t :> Nil
+
+propagateSpec ::
+  forall v a.
+  HasSpec v =>
+  Spec a ->
+  Ctx v a ->
+  Spec v
+propagateSpec spec = \case
+  CtxHole -> spec
+  CtxApp f (Unary ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (Unary HOLE) spec) ctx
+  CtxApp f (ctx :-+ v) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (HOLE :-+ v) spec) ctx
+  CtxApp f (v :+- ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (v :+- HOLE) spec) ctx
+
+-- ===================================================================
+-- Pretty Printer Helper functions
+-- ===================================================================
+
+data WithPrec a = WithPrec Int a
+
+parensIf :: Bool -> Doc ann -> Doc ann
+parensIf True = parens
+parensIf False = id
+
+prettyPrec :: Pretty (WithPrec a) => Int -> a -> Doc ann
+prettyPrec p = pretty . WithPrec p
+
+ppList ::
+  forall f as ann.
+  All HasSpec as => -- can we use something other than All HasSpec as here? We know Function Symbol HERE
+  (forall a. HasSpec a => f a -> Doc ann) ->
+  List f as ->
+  [Doc ann]
+ppList _ Nil = []
+ppList pp (a :> as) = pp a : ppList pp as
+
+ppList_ :: forall f as ann. (forall a. f a -> Doc ann) -> List f as -> [Doc ann]
+ppList_ _ Nil = []
+ppList_ pp (a :> as) = pp a : ppList_ pp as
+
+prettyType :: forall t x. Typeable t => Doc x
+prettyType = fromString $ show (typeRep (Proxy @t))
+
+vsep' :: [Doc ann] -> Doc ann
+vsep' = align . mconcat . punctuate hardline
+
+(/>) :: Doc ann -> Doc ann -> Doc ann
+h /> cont = hang 2 $ sep [h, align cont]
+
+infixl 5 />
+
+short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
+short [] = "[]"
+short [x] =
+  let raw = show x
+      refined = if length raw <= 20 then raw else take 20 raw ++ " ... "
+   in "[" <+> fromString refined <+> "]"
+short xs =
+  let raw = show xs
+   in if length raw <= 50
+        then fromString raw
+        else "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <> ")"
+
+showType :: forall t. Typeable t => String
+showType = show (typeRep (Proxy @t))
+
+-- ============================================================================================
+
+-- ==========================================================================
+-- Pretty and Show instances
+-- ==========================================================================
+
+-- ------------ Term -----------------
+instance Show a => Pretty (WithPrec (Term a)) where
+  pretty (WithPrec p t) = case t of
+    Lit n -> fromString $ showsPrec p n ""
+    V x -> viaShow x
+    App x Nil -> viaShow x
+    App f as
+      | inFix f
+      , a :> b :> Nil <- as ->
+          parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
+      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
+
+instance Show a => Pretty (Term a) where
+  pretty = prettyPrec 0
+
+instance Show a => Show (Term a) where
+  showsPrec p t = shows $ pretty (WithPrec p t)
+
+-- ------------ Pred -----------------
+
+instance Pretty Pred where
+  pretty = \case
+    ElemPred True term vs ->
+      align $
+        sep
+          [ "memberPred"
+          , pretty term
+          , "(" <> viaShow (length vs) <> " items)"
+          , brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
+          ]
+    ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
+    -- Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
+    Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
+    And ps -> braces $ vsep' $ map pretty ps
+    Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
+    Assert t -> "assert $" <+> pretty t
+    -- Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
+    -- DependsOn a b -> pretty a <+> "<-" /> pretty b
+    ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
+    Case t as bs -> "case" <+> pretty t <+> "of" /> vsep' [pretty as, pretty bs]
+    -- When b p -> "whenTrue" <+> pretty (WithPrec 11 b) <+> "$" /> pretty p
+    Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
+    -- GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
+    TruePred -> "True"
+    FalsePred {} -> "False"
+
+-- Monitor {} -> "monitor"
+-- Explain es p -> "Explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p
+
+instance Show Pred where
+  show = show . pretty
+
+instance Pretty (Binder a) where
+  pretty (x :-> p) = viaShow x <+> "->" <+> pretty p
+
+-- ------------ Specifications -----------------
+
+instance HasSpec a => Pretty (WithPrec (Spec a)) where
+  pretty (WithPrec d s) = case s of
+    ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
+    TrueSpec -> fromString $ "TrueSpec @(" ++ showType @a ++ ")"
+    MemberSpec xs -> "MemberSpec" <+> short (NE.toList xs)
+    SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
+    -- TODO: require pretty for `TypeSpec` to make this much nicer
+    TypeSpec ts cant ->
+      parensIf (d > 10) $
+        "TypeSpec"
+          /> vsep
+            [ fromString (showsPrec 11 ts "")
+            , viaShow cant
+            ]
+
+instance HasSpec a => Pretty (Spec a) where
+  pretty = pretty . WithPrec 0
+
+instance HasSpec a => Show (Spec a) where
+  showsPrec d = shows . pretty . WithPrec d

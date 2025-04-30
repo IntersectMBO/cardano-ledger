@@ -1,232 +1,94 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
--- Base types: Term, Pred, Spec, Ctx, and classes: HasSpec, Syntax, Semantics, and Logic for the MinModel
-module MinSyntax where
+-- Syntactic operations on types: Term, Pred, Spec, Ctx, etc.
+module Constrained.MinSyntax where
 
-import Constrained.Core (
-  Evidence (..),
-  Rename (rename),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
-  unionWithMaybe,
- )
+import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue)
 import Constrained.Env
 import Constrained.GenT
 import Constrained.Graph
 import Constrained.List hiding (ListCtx)
-import Control.Applicative ((<|>))
-import Control.Monad (guard)
+import Constrained.MinBase
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
-import Data.Foldable (fold)
 import qualified Data.Foldable as Foldable (fold, toList)
 import Data.Kind
-import Data.List (intersect, nub, (\\))
+import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-
--- (Pretty (pretty),Doc)
-
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe)
 import qualified Data.Monoid as Monoid
-import Data.Semigroup (Any (..), Max (..), getMax, sconcat)
+import Data.Semigroup (Any (..), sconcat)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
-import GHC.Stack
-import MinBase
 import Prettyprinter
-import Test.QuickCheck hiding (forAll)
-
--- ===================================================================
--- Pretty Printer Helper functions
--- ===================================================================
-
-data WithPrec a = WithPrec Int a
-
-parensIf :: Bool -> Doc ann -> Doc ann
-parensIf True = parens
-parensIf False = id
-
-prettyPrec :: Pretty (WithPrec a) => Int -> a -> Doc ann
-prettyPrec p = pretty . WithPrec p
-
-ppList ::
-  forall f as ann.
-  All HasSpec as => -- can we use something other than All HasSpec as here? We know Function Symbol HERE
-  (forall a. HasSpec a => f a -> Doc ann) ->
-  List f as ->
-  [Doc ann]
-ppList _ Nil = []
-ppList pp (a :> as) = pp a : ppList pp as
-
-ppList_ :: forall f as ann. (forall a. f a -> Doc ann) -> List f as -> [Doc ann]
-ppList_ _ Nil = []
-ppList_ pp (a :> as) = pp a : ppList_ pp as
-
-prettyType :: forall t x. Typeable t => Doc x
-prettyType = fromString $ show (typeRep (Proxy @t))
-
-vsep' :: [Doc ann] -> Doc ann
-vsep' = align . mconcat . punctuate hardline
-
-(/>) :: Doc ann -> Doc ann -> Doc ann
-h /> cont = hang 2 $ sep [h, align cont]
-
-infixl 5 />
-
-short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
-short [] = "[]"
-short [x] =
-  let raw = show x
-      refined = if length raw <= 20 then raw else take 20 raw ++ " ... "
-   in "[" <+> fromString refined <+> "]"
-short xs =
-  let raw = show xs
-   in if length raw <= 50
-        then fromString raw
-        else "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <> ")"
-
-showType :: forall t. Typeable t => String
-showType = show (typeRep (Proxy @t))
-
--- ============================================================================================
-
--- ==========================================================================
--- Pretty and Show instances
--- ==========================================================================
-
--- ------------ Term -----------------
-instance Show a => Pretty (WithPrec (Term a)) where
-  pretty (WithPrec p t) = case t of
-    Lit n -> fromString $ showsPrec p n ""
-    V x -> viaShow x
-    App x Nil -> viaShow x
-    App f as
-      | inFix f
-      , a :> b :> Nil <- as ->
-          parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
-      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
-
-instance Show a => Pretty (Term a) where
-  pretty = prettyPrec 0
-
-instance Show a => Show (Term a) where
-  showsPrec p t = shows $ pretty (WithPrec p t)
-
--- ------------ Pred -----------------
-
-instance Pretty Pred where
-  pretty = \case
-    ElemPred True term vs ->
-      align $
-        sep
-          [ "memberPred"
-          , pretty term
-          , "(" <> viaShow (length vs) <> " items)"
-          , brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
-          ]
-    ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
-    -- Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
-    Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
-    And ps -> braces $ vsep' $ map pretty ps
-    Assert t -> "assert $" <+> pretty t
-    -- Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
-    -- DependsOn a b -> pretty a <+> "<-" /> pretty b
-    ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
-    Case t as bs -> "case" <+> pretty t <+> "of" /> vsep' [pretty as, pretty bs]
-    -- When b p -> "whenTrue" <+> pretty (WithPrec 11 b) <+> "$" /> pretty p
-    Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
-    -- GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
-    TruePred -> "True"
-    FalsePred {} -> "False"
-
--- Monitor {} -> "monitor"
--- Explain es p -> "Explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p
-
-instance Show Pred where
-  show = show . pretty
-
-instance Pretty (Binder a) where
-  pretty (x :-> p) = viaShow x <+> "->" <+> pretty p
-
--- ------------ Specifications -----------------
-
-instance HasSpec a => Pretty (WithPrec (Spec a)) where
-  pretty (WithPrec d s) = case s of
-    ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
-    TrueSpec -> fromString $ "TrueSpec @(" ++ showType @a ++ ")"
-    MemberSpec xs -> "MemberSpec" <+> short (NE.toList xs)
-    SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
-    -- TODO: require pretty for `TypeSpec` to make this much nicer
-    TypeSpec ts cant ->
-      parensIf (d > 10) $
-        "TypeSpec"
-          /> vsep
-            [ fromString (showsPrec 11 ts "")
-            , viaShow cant
-            ]
-
-instance HasSpec a => Pretty (Spec a) where
-  pretty = pretty . WithPrec 0
-
-instance HasSpec a => Show (Spec a) where
-  showsPrec d = shows . pretty . WithPrec d
 
 -- =======================================
 -- Tools for building Spec
 
-caseBoolSpec :: (HasSpec Bool, HasSpec a) => Spec Bool -> (Bool -> Spec a) -> Spec a
-caseBoolSpec spec cont = case possibleValues spec of
-  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
-  [b] -> cont b
-  _ -> mempty
-  where
-    possibleValues s = filter (flip conformsToSpec s) [True, False]
-
-forAll :: (Forallable t a, HasSpec t, HasSpec a) => Term t -> (Term a -> Pred) -> Pred
+forAll :: (Container t a, HasSpec t, HasSpec a) => Term t -> (Term a -> Pred) -> Pred
 forAll tm = mkForAll tm . bind
 
+-- forSome :: (Container t a, HasSpec t, HasSpec a) => Term t -> (Term a -> Pred) -> Pred
+-- forSome tm = mkForSome tm . bind
+
 mkForAll ::
-  (Forallable t a, HasSpec t, HasSpec a) =>
+  (Container t a, HasSpec t, HasSpec a) =>
   Term t -> Binder a -> Pred
 mkForAll (Lit (forAllToList -> [])) _ = TruePred
 mkForAll _ (_ :-> TruePred) = TruePred
 mkForAll tm binder = ForAll tm binder
 
-equalSpec :: a -> Spec a
-equalSpec = MemberSpec . pure
+exists ::
+  forall a.
+  HasSpec a =>
+  ((forall b. Term b -> b) -> GE a) ->
+  (Term a -> Pred) ->
+  Pred
+exists sem k =
+  Exists sem $ bind k
+
+unsafeExists ::
+  forall a.
+  HasSpec a =>
+  (Term a -> Pred) ->
+  Pred
+unsafeExists = exists (\_ -> fatalError "unsafeExists")
 
 notMemberSpec :: forall a f. (HasSpec a, Foldable f) => f a -> Spec a
 notMemberSpec x = TypeSpec (emptySpec @a) (Foldable.toList x)
 
 isErrorLike :: forall a. Spec a -> Bool
-isErrorLike ErrorSpec {} = True
-isErrorLike (TypeSpec x _) =
+isErrorLike spec = isJust (hasError spec)
+
+hasError :: forall a. Spec a -> Maybe (NonEmpty String)
+hasError (ErrorSpec ss) = Just ss
+hasError (TypeSpec x _) =
   case guardTypeSpec @a x of
-    ErrorSpec msgs -> True
-    _ -> False
-isErrorLike _ = False
+    ErrorSpec ss -> Just ss
+    _ -> Nothing
+hasError _ = Nothing
 
 -- =========================================================
 -- Conformance of Pred and Spec
@@ -262,14 +124,19 @@ runTermE env = \case
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
 
+runTerm :: MonadGenError m => Env -> Term a -> m a
+runTerm env x = case runTermE env x of
+  Left msgs -> fatalErrorNE msgs
+  Right val -> pure val
+
 conformsToSpec :: forall a. HasSpec a => a -> Spec a -> Bool
 conformsToSpec _ TrueSpec = True
 conformsToSpec a (MemberSpec as) = elem a as
-conformsToSpec a spec@(TypeSpec s cant) = notElem a cant && conformsTo a s
+conformsToSpec a (TypeSpec s cant) = notElem a cant && conformsTo a s
 conformsToSpec a (SuspendedSpec v ps) = case checkPredE (singletonEnv v a) (pure "checkPredE") ps of
   Nothing -> True
   Just _ -> False
-conformsToSpec _ (ErrorSpec es) = False
+conformsToSpec _ (ErrorSpec _) = False
 
 checkPredE :: Env -> NonEmpty String -> Pred -> Maybe (NonEmpty String)
 checkPredE env msgs = \case
@@ -312,11 +179,35 @@ checkPredE env msgs = \case
     case catMaybes (fmap (checkPredE env (pure "Some items in And  fail")) ps) of
       [] -> Nothing
       (x : xs) -> Just (msgs <> NE.nub (sconcat (x NE.:| xs)))
+  Exists k (x :-> p) ->
+    let eval :: forall b. Term b -> b
+        eval term = case runTermE env term of
+          Right v -> v
+          Left es -> error $ unlines $ NE.toList (msgs <> es)
+     in case k eval of
+          Result a -> checkPredE (extendEnv x a env) msgs p
+          FatalError es -> Just (msgs <> catMessageList es)
+          GenError es -> Just (msgs <> catMessageList es)
 
 runCaseOn ::
   Either a b -> Binder a -> Binder b -> (forall x. HasSpec x => Var x -> x -> Pred -> r) -> r
 runCaseOn (Left a) (x :-> xps) (_ :-> _) f = f x a xps
 runCaseOn (Right b) (_ :-> _) (y :-> yps) f = f y b yps
+
+-- | Like checkPred, But it takes [Pred] rather than a single Pred,
+--   and it builds a much more involved explanation if it fails.
+--   Does the Pred evaluate to True under the given Env?
+--   If it doesn't, an involved explanation appears in the (Just message)
+--   If it does, then it returns Nothing
+checkPredsE ::
+  NE.NonEmpty String ->
+  Env ->
+  [Pred] ->
+  Maybe (NE.NonEmpty String)
+checkPredsE msgs env ps =
+  case catMaybes (fmap (checkPredE env msgs) ps) of
+    [] -> Nothing
+    (x : xs) -> Just (NE.nub (sconcat (x NE.:| xs)))
 
 -- ==========================================================
 -- Semigroup and Monoid instances for Syntax Pred and Spec
@@ -420,9 +311,10 @@ instance Rename Pred where
     | v == v' = id
     | otherwise = \case
         ElemPred bool t xs -> ElemPred bool (rename v v' t) xs
-        -- nSubst x t p -> rename v v' $ substitutePred x t p
+        Subst x t p -> rename v v' $ substitutePred x t p
         And ps -> And (rename v v' ps)
-        -- Let t b -> Let (rename v v' t) (rename v v' b)
+        Exists k b -> Exists (\eval -> k $ eval . rename v v') (rename v v' b)
+        Let t b -> Let (rename v v' t) (rename v v' b)
         Assert t -> Assert (rename v v' t)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
         Case t a b -> Case (rename v v' t) (rename v v' a) (rename v v' b)
@@ -525,6 +417,7 @@ instance HasVariables Pred where
     -- GenHint _ t -> freeVars t
     Subst x t p -> freeVars t <> freeVars p `without` [Name x]
     And ps -> foldMap freeVars ps
+    Exists _ b -> freeVars b
     Let t b -> freeVars t <> freeVars b
     -- Exists _ b -> freeVars b
     Assert t -> freeVars t
@@ -543,6 +436,7 @@ instance HasVariables Pred where
     -- GenHint _ t -> freeVarSet t
     Subst x t p -> freeVarSet t <> Set.delete (Name x) (freeVarSet p)
     And ps -> foldMap freeVarSet ps
+    Exists _ b -> freeVarSet b
     Let t b -> freeVarSet t <> freeVarSet b
     -- Exists _ b -> freeVarSet b
     Assert t -> freeVarSet t
@@ -564,7 +458,7 @@ instance HasVariables Pred where
       | otherwise -> countOf n t + countOf n p
     And ps -> sum $ map (countOf n) ps
     Let t b -> countOf n t + countOf n b
-    -- Exists _ b -> countOf n b
+    Exists _ b -> countOf n b
     Assert t -> countOf n t
     -- Reifies t' t _ -> countOf n t' + countOf n t
     -- DependsOn x y -> countOf n x + countOf n y
@@ -584,7 +478,7 @@ instance HasVariables Pred where
       | otherwise -> appearsIn n t || appearsIn n p
     And ps -> any (appearsIn n) ps
     Let t b -> appearsIn n t || appearsIn n b
-    -- Exists _ b -> appearsIn n b
+    Exists _ b -> appearsIn n b
     Assert t -> appearsIn n t
     -- Reifies t' t _ -> appearsIn n t' || appearsIn n t
     -- DependsOn x y -> appearsIn n x || appearsIn n y
@@ -717,7 +611,7 @@ substitutePred x tm = \case
   Subst x' t p -> substitutePred x tm $ substitutePred x' t p
   Assert t -> Assert (substituteTerm [x := tm] t)
   And ps -> Foldable.fold (substitutePred x tm <$> ps)
-  -- Exists k b -> Exists (\eval -> k (eval . substituteTerm [x := tm])) (substituteBinder x tm b)
+  Exists k b -> Exists (\eval -> k (eval . substituteTerm [x := tm])) (substituteBinder x tm b)
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t as bs -> Case (substituteTerm [x := tm] t) (substituteBinder x tm as) (substituteBinder x tm bs)
@@ -762,7 +656,7 @@ substPred env = \case
   TruePred -> TruePred
   FalsePred es -> FalsePred es
   And ps -> Foldable.fold (substPred env <$> ps)
-  -- Exists k b -> Exists (\eval -> k $ eval . substTerm env) (substBinder env b)
+  Exists k b -> Exists (\eval -> k $ eval . substTerm env) (substBinder env b)
   Let t b -> Let (substTerm env t) (substBinder env b)
 
 -- Monitor m -> Monitor m
@@ -787,22 +681,17 @@ regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred
     x' = regularize x p
 
 regularizeNamesPred :: Pred -> Pred
-regularizeNamesPred pred = case pred of
-  ElemPred {} -> pred
-  -- Monitor {} -> pred
+regularizeNamesPred pred0 = case pred0 of
+  ElemPred {} -> pred0
   And ps -> And $ map regularizeNamesPred ps
-  -- Exists k b -> Exists k (regularizeBinder b)
+  Exists k b -> Exists k (regularizeBinder b)
   Subst v t p -> regularizeNamesPred (substitutePred v t p)
   Let t b -> Let t (regularizeBinder b)
-  Assert {} -> pred
-  -- Reifies {} -> pred
-  -- DependsOn {} -> pred
+  Assert {} -> pred0
   ForAll t b -> ForAll t (regularizeBinder b)
   Case t as bs -> Case t (regularizeBinder as) (regularizeBinder bs)
-  -- When b p' -> When b (regularizeNamesPred p')
-  -- GenHint {} -> pred
-  TruePred {} -> pred
-  FalsePred {} -> pred
+  TruePred {} -> pred0
+  FalsePred {} -> pred0
 
 -- Explain es p' -> Explain es (regularizeNamesPred p')
 
@@ -852,6 +741,9 @@ simplifyPred = \case
   Assert t -> Assert $ simplifyTerm t
   ForAll (ts :: Term t) (b :: Binder a) -> case simplifyTerm ts of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
+    set' -> case simplifyBinder b of
+      (_ :-> TruePred) -> TruePred
+      b' -> ForAll set' b'
   Case t as@(_ :-> _) bs@(_ :-> _) -> mkCase (simplifyTerm t) (simplifyBinder as) (simplifyBinder bs)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -860,6 +752,12 @@ simplifyPred = \case
     t'@App {} -> Let t' (simplifyBinder b)
     -- Variable or literal
     t' | x :-> p <- b -> simplifyPred $ substitutePred x t' p
+  Exists k b -> case simplifyBinder b of
+    _ :-> TruePred -> TruePred
+    -- This is to get rid of exisentials like:
+    -- `constrained $ \ x -> exists $ \ y -> [x ==. y, y + 2 <. 10]`
+    x :-> p | Just t <- pinnedBy x p -> simplifyPred $ substitutePred x t p
+    b' -> Exists k b'
 
 mkCase ::
   HasSpec (Either a b) => Term (Either a b) -> Binder a -> Binder b -> Pred
@@ -887,6 +785,7 @@ simplifyPreds = go [] . map simplifyPred
 simplifyBinder :: Binder a -> Binder a
 simplifyBinder (x :-> p) = x :-> simplifyPred p
 
+toPred :: Bool -> Pred
 toPred True = TruePred
 toPred False = FalsePred (pure "toPred False")
 
@@ -909,22 +808,10 @@ letFloating = Foldable.fold . go []
     goBlock' fvs ctx (And ps : ps') = goBlock' fvs ctx (ps ++ ps')
     goBlock' fvs ctx (p : ps) = goBlock' fvs (p : ctx) ps
 
-    goExists ::
-      HasSpec a =>
-      [Pred] ->
-      (Binder a -> Pred) ->
-      Var a ->
-      Pred ->
-      [Pred]
-    goExists ctx ex x (Let t (y :-> p))
-      | not $ Name x `appearsIn` t =
-          let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
-           in go ctx (Let t (y' :-> ex (x :-> p')))
-    goExists ctx ex x p = ex (x :-> p) : ctx
-
     go ctx = \case
       ElemPred bool t xs -> ElemPred bool t xs : ctx
       And ps0 -> goBlock ctx (map letFloating ps0)
+      Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
       Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
       Subst x t p -> go ctx (substitutePred x t p)
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
@@ -932,6 +819,13 @@ letFloating = Foldable.fold . go []
       Assert t -> Assert t : ctx
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
+
+    goExists :: HasSpec a => [Pred] -> (Binder a -> Pred) -> Var a -> Pred -> [Pred]
+    goExists ctx ex x (Let t (y :-> p))
+      | not $ Name x `appearsIn` t =
+          let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
+           in go ctx (Let t (y' :-> ex (x :-> p')))
+    goExists ctx ex x p = ex (x :-> p) : ctx
 
 -- Common subexpression elimination but only on terms that are already let-bound.
 letSubexpressionElimination :: HasSpec Bool => Pred -> Pred
@@ -952,6 +846,7 @@ letSubexpressionElimination = go []
     go sub = \case
       ElemPred bool t xs -> ElemPred bool (backwardsSubstitution sub t) xs
       And ps -> And (go sub <$> ps)
+      Exists k b -> Exists k (goBinder sub b)
       Let t (x :-> p) -> Let t' (x :-> go (x := t' : sub') p)
         where
           t' = backwardsSubstitution sub t
@@ -980,11 +875,11 @@ instance Pretty SolverStage where
   pretty SolverStage {..} =
     viaShow stageVar
       <+> "<-"
-      /> vsep'
-        ( [pretty stageSpec | not $ isTrueSpec stageSpec]
-            ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
-            ++ map pretty stagePreds
-        )
+        /> vsep'
+          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
+              ++ map pretty stagePreds
+          )
 
 data SolverPlan = SolverPlan
   { solverPlan :: [SolverStage]
@@ -1005,3 +900,83 @@ isTrueSpec _ = False
 
 prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
+
+-- ==========================================================
+-- The equality function symbol (==.)
+
+data EqSym :: [Type] -> Type -> Type where
+  EqualW :: (Eq a, HasSpec a) => EqSym '[a, a] Bool
+
+deriving instance Eq (EqSym dom rng)
+
+instance Show (EqSym d r) where
+  show EqualW = "==."
+
+instance Syntax EqSym where
+  inFix EqualW = True
+  name EqualW = "==."
+
+instance Semantics EqSym where
+  semantics EqualW = (==)
+
+-- We don't need a HasSpec instance, since we can make equality specs at any type
+-- using just MemberSpec and TypeSpec
+
+equalSpec :: a -> Spec a
+equalSpec = MemberSpec . pure
+
+notEqualSpec :: forall a. HasSpec a => a -> Spec a
+notEqualSpec n = TypeSpec (emptySpec @a) [n]
+
+caseBoolSpec :: (HasSpec Bool, HasSpec a) => Spec Bool -> (Bool -> Spec a) -> Spec a
+caseBoolSpec spec cont = case possibleValues spec of
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+  [b] -> cont b
+  _ -> mempty
+  where
+    possibleValues s = filter (flip conformsToSpec s) [True, False]
+
+instance Logic EqSym where
+  propagate tag ctx spec = case (tag, ctx, spec) of
+    (_, _, TrueSpec) -> TrueSpec
+    (_, _, ErrorSpec msgs) -> ErrorSpec msgs
+    (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
+    (EqualW, HOLE :-+ s, bspec) -> caseBoolSpec bspec $ \case
+      True -> equalSpec s
+      False -> notEqualSpec s
+    (EqualW, s :+- HOLE, bspec) -> caseBoolSpec bspec $ \case
+      True -> equalSpec s
+      False -> notEqualSpec s
+
+infix 4 ==.
+(==.) :: (HasSpec Bool, HasSpec a) => Term a -> Term a -> Term Bool
+(==.) x y = App EqualW (x :> y :> Nil)
+
+getWitness :: forall t t' d r. (AppRequires t d r, Typeable t') => t d r -> Maybe (t' d r)
+getWitness = cast
+
+pattern Equal ::
+  forall b.
+  () =>
+  forall a.
+  (b ~ Bool, Eq a, HasSpec a) =>
+  Term a ->
+  Term a ->
+  Term b
+pattern Equal x y <-
+  ( App
+      (getWitness -> Just EqualW)
+      (x :> y :> Nil)
+    )
+
+-- | Is the variable x pinned to some free term in p? (free term
+-- meaning that all the variables in the term are free in p).
+--
+-- TODO: complete this with more cases!
+pinnedBy :: forall a. HasSpec a => Var a -> Pred -> Maybe (Term a)
+-- pinnedBy x (Assert (App (extractFn @EqFn @fn -> Just EqualW) (t :> t' :> Nil)))
+pinnedBy x (Assert (Equal t t'))
+  | V x' <- t, Just Refl <- eqVar x x' = Just t'
+  | V x' <- t', Just Refl <- eqVar x x' = Just t
+pinnedBy x (And ps) = listToMaybe $ catMaybes $ map (pinnedBy x) ps
+pinnedBy _ _ = Nothing

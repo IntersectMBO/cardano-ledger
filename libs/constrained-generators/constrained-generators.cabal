@@ -36,6 +36,9 @@ library
     Constrained.Generic
     Constrained.Graph
     Constrained.List
+    Constrained.MinBase
+    Constrained.MinSyntax
+    Constrained.MinModel
     Constrained.NumSpec
     Constrained.Properties
     Constrained.Spec.Map
