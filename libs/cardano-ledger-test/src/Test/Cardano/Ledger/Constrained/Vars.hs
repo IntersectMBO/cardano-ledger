@@ -179,7 +179,8 @@ import Test.Cardano.Ledger.Constrained.Env (
   pV,
  )
 import Test.Cardano.Ledger.Constrained.Lenses
-import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), ToExprs, testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
@@ -198,7 +199,7 @@ import Type.Reflection (Typeable, typeRep)
 -- Where fooPart1 :: Term era a, and fooPart2 :: Term era b
 -- And fooPart1 has an (Access foo a)
 -- And fooPart2 has an (Access foo b)
-field :: (Era era, ToExprs era) => Rep era s -> Term era t -> AnyF era s
+field :: AlonzoEraTest era => Rep era s -> Term era t -> AnyF era s
 field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> AnyF (Field name rept repS2 l)
   Nothing ->
@@ -211,7 +212,7 @@ field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
       )
 field _ term = error ("field can only be applied to variable terms: " ++ show term)
 
-getName :: ToExprs era => Term era t -> Name era
+getName :: AlonzoEraTest era => Term era t -> Name era
 getName (Var v) = Name v
 getName x = error ("nameOf can't find the name in: " ++ show x)
 
@@ -483,7 +484,7 @@ govL = lens f g
     g (GovState p@Conway _) y = GovState p y
 
 govStateT ::
-  forall era. (Era era, ToExprs era) => Proof era -> RootTarget era (GovState era) (GovState era)
+  forall era. EraTest era => Proof era -> RootTarget era (GovState era) (GovState era)
 govStateT p@Shelley = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@Allegra = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@Mary = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
@@ -1010,7 +1011,7 @@ newEpochStateConstr
 -- | Target for NewEpochState
 newEpochStateT ::
   forall era.
-  (Reflect era, ToExprs era) => Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
 newEpochStateT proof =
   Invert "NewEpochState" (typeRep @(NewEpochState era)) (newEpochStateConstr proof)
     :$ Lensed currentEpoch nesELL
@@ -1022,7 +1023,7 @@ newEpochStateT proof =
 -- | Target for EpochState
 epochStateT ::
   forall era.
-  (Reflect era, ToExprs era) => Proof era -> RootTarget era (EpochState era) (EpochState era)
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (EpochState era) (EpochState era)
 epochStateT proof =
   Invert "EpochState" (typeRep @(EpochState era)) epochStateFun
     :$ Shift accountStateT chainAccountStateL
@@ -1041,7 +1042,7 @@ accountStateT =
 -- | Target for LedgerState
 ledgerStateT ::
   forall era.
-  (Reflect era, ToExprs era) => Proof era -> RootTarget era (LedgerState era) (LedgerState era)
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (LedgerState era) (LedgerState era)
 ledgerStateT proof =
   Invert "LedgerState" (typeRep @(LedgerState era)) ledgerStateFun
     :$ Shift (utxoStateT proof) lsUTxOStateL
@@ -1059,7 +1060,7 @@ ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 -- | Target for UTxOState
 utxoStateT ::
   forall era.
-  (Gov.EraGov era, ToExprs era) => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
+  EraTest era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
 utxoStateT p =
   Invert "UTxOState" (typeRep @(UTxOState era)) (unReflect utxofun p)
     :$ Lensed (utxo p) (utxoL . unUtxoL p)
@@ -1189,10 +1190,10 @@ instantaneousRewardsT =
     :$ Lensed deltaTreasury deltaTreasuryL
 
 -- | A String that pretty prints the complete set of variables of the NewEpochState
-allvars :: ToExprs ConwayEra => String
+allvars :: String
 allvars = show (ppTarget (newEpochStateT Conway))
 
-printTarget :: ToExprs era => RootTarget era root t -> IO ()
+printTarget :: AlonzoEraTest era => RootTarget era root t -> IO ()
 printTarget t = putStrLn (show (ppTarget t))
 
 -- =====================================================================
@@ -1873,7 +1874,7 @@ prevPulsingPreds p =
 --   from 'drepPulser' :: forall era. Term era (DRepPulser era Identity (RatifyState era))
 pulsingPulsingStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, ConwayEraCertState era, ToExprs era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraTest era) =>
   RootTarget era (DRepPulsingState era) (DRepPulsingState era)
 pulsingPulsingStateT =
   Invert "DRPulsing" (typeRep @(DRepPulsingState era)) DRPulsing
@@ -2121,7 +2122,7 @@ prevRegPoolsL =
 
 conwayGovStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, ConwayEraCertState era, ToExprs era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraTest era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =

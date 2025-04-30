@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Constrained.Preds.PParams (
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
-import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
@@ -22,6 +21,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Control.Monad (when)
 import GHC.Num (Natural)
 import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env (Access (..), V (..), emptyEnv)
@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
 
-extract :: (Era era, ToExprs era) => Term era t -> Term era s -> Pred era
+extract :: AlonzoEraTest era => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
@@ -99,7 +99,7 @@ genPParams proof tx bb bh = do
           ]
     )
 
-pParamsPreds :: (Reflect era, ToExprs era) => Proof era -> [Pred era]
+pParamsPreds :: (Reflect era, AlonzoEraTest era) => Proof era -> [Pred era]
 pParamsPreds p =
   [ GenFrom
       (pparams p)
@@ -139,13 +139,13 @@ pParamsPreds p =
        )
 
 pParamsStage ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 pParamsStage proof = toolChainSub proof standardOrderInfo (pParamsPreds proof)
 
-demo :: ToExprs BabbageEra => ReplMode -> IO ()
+demo :: ReplMode -> IO ()
 demo mode = do
   let proof = Babbage
   subst <- generate (pParamsStage proof emptySubst)
@@ -153,8 +153,8 @@ demo mode = do
   when (mode == Interactive) $ putStrLn "\n" >> putStrLn (show subst)
   modeRepl mode proof env ""
 
-demoTest :: ToExprs BabbageEra => TestTree
+demoTest :: TestTree
 demoTest = testIO "Testing TxOut Stage" (demo CI)
 
-mainPParams :: ToExprs BabbageEra => IO ()
+mainPParams :: IO ()
 mainPParams = defaultMain $ testIO "Testing TxOut Stage" (demo Interactive)

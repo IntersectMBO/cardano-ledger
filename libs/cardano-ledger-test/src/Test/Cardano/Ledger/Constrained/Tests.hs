@@ -39,6 +39,7 @@ import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Shelley
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
@@ -100,7 +101,7 @@ data GenEnv era = GenEnv
   --   dependencies).
   }
 
-deriving instance ToExprs era => Show (GenEnv era)
+deriving instance AlonzoEraTest era => Show (GenEnv era)
 
 type Depth = Int
 
@@ -613,25 +614,25 @@ initEnv info =
     , gSolved = mempty
     }
 
-showVal :: ToExprs era => Rep era t -> t -> String
+showVal :: AlonzoEraTest era => Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
 showVal (MapR kr vr) t =
   "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
 showVal rep t = synopsis rep t
 
-showTerm :: ToExprs era => Term era t -> String
+showTerm :: AlonzoEraTest era => Term era t -> String
 showTerm (Lit rep t) = showVal rep t
 showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
-showPred :: ToExprs era => Pred era -> String
+showPred :: AlonzoEraTest era => Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
-showEnv :: ToExprs era => Env era -> String
+showEnv :: AlonzoEraTest era => Env era -> String
 showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
   where
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
@@ -663,7 +664,7 @@ predConstr Oneof {} = "Oneof"
 predConstr ListWhere {} = "ListWhere"
 
 constraintProperty ::
-  ToExprs ShelleyEra =>
+  AlonzoEraTest ShelleyEra =>
   Bool ->
   [String] ->
   OrderInfo ->
@@ -675,7 +676,7 @@ constraintProperty strict whitelist info prop =
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
           checkTyped (compile info preds) $ \graph ->
-            forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
+            forAllBlind (genDependGraph False graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
                   n = let Env e = gEnv genenv in Map.size e
                in tabulate "Var count" [show n] $
@@ -699,7 +700,7 @@ constraintProperty strict whitelist info prop =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
-checkPredicates :: ToExprs era => [Pred era] -> Env era -> Property
+checkPredicates :: AlonzoEraTest era => [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $
@@ -707,16 +708,16 @@ checkPredicates preds env =
   where
     checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
 
-runPreds :: ToExprs ShelleyEra => [Pred ShelleyEra] -> IO ()
+runPreds :: AlonzoEraTest ShelleyEra => [Pred ShelleyEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps
-  subst <- generate $ genDependGraph True testProof g
+  subst <- generate $ genDependGraph True g
   print subst
 
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
-prop_soundness :: ToExprs ShelleyEra => OrderInfo -> Property
+prop_soundness :: AlonzoEraTest ShelleyEra => OrderInfo -> Property
 prop_soundness x = prop_soundness' False [] x
 
 defaultWhitelist :: [String]
@@ -724,16 +725,16 @@ defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "Th
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
-prop_soundness' :: ToExprs ShelleyEra => Bool -> [String] -> OrderInfo -> Property
+prop_soundness' :: AlonzoEraTest ShelleyEra => Bool -> [String] -> OrderInfo -> Property
 prop_soundness' strict whitelist info =
   constraintProperty strict whitelist info $ \preds _graph env ->
     checkPredicates preds env
 
 -- | Check that shrinking is sound, i.e. that all shrink steps preserves constraint satisfaction.
-prop_shrinking :: ToExprs ShelleyEra => OrderInfo -> Property
+prop_shrinking :: AlonzoEraTest ShelleyEra => OrderInfo -> Property
 prop_shrinking = prop_shrinking' False []
 
-prop_shrinking' :: ToExprs ShelleyEra => Bool -> [String] -> OrderInfo -> Property
+prop_shrinking' :: AlonzoEraTest ShelleyEra => Bool -> [String] -> OrderInfo -> Property
 prop_shrinking' strict whitelist info =
   constraintProperty strict whitelist info $ \preds graph env ->
     counterexample ("-- Original solution --\n" ++ showEnv env) $

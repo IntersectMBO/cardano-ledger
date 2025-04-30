@@ -18,6 +18,7 @@ import Control.Monad (when)
 import Data.Default (Default (def))
 import Data.TreeDiff (toExpr)
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), unCertStateF)
 import Test.Cardano.Ledger.Constrained.Env
@@ -94,13 +95,13 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
-  (Reflect era, ToExprs era) =>
+  AlonzoEraTest era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 vstateStage proof = toolChainSub proof standardOrderInfo (vstatePreds proof)
 
-demoV :: ToExprs ConwayEra => ReplMode -> IO ()
+demoV :: ReplMode -> IO ()
 demoV mode = do
   let proof = Conway
   env <-
@@ -115,10 +116,10 @@ demoV mode = do
   when (mode == Interactive) . print $ toExpr vstate
   modeRepl mode proof env ""
 
-demoTestV :: ToExprs ConwayEra => TestTree
+demoTestV :: TestTree
 demoTestV = testIO "Testing VState Stage" (demoV CI)
 
-mainV :: ToExprs ConwayEra => IO ()
+mainV :: IO ()
 mainV = defaultMain $ testIO "Testing VState Stage" (demoV Interactive)
 
 -- ==========================================
@@ -165,13 +166,13 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 pstateStage proof = toolChainSub proof standardOrderInfo (pstatePreds proof)
 
-demoP :: ToExprs BabbageEra => ReplMode -> IO ()
+demoP :: ReplMode -> IO ()
 demoP mode = do
   let proof = Babbage
   env <-
@@ -185,10 +186,10 @@ demoP mode = do
   when (mode == Interactive) . print $ toExpr pstate
   modeRepl mode proof env ""
 
-demoTestP :: ToExprs BabbageEra => TestTree
+demoTestP :: TestTree
 demoTestP = testIO "Testing PState Stage" (demoP CI)
 
-mainP :: ToExprs BabbageEra => IO ()
+mainP :: IO ()
 mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 
 -- =================================================
@@ -305,13 +306,13 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  (Reflect era, ToExprs era) =>
+  (Reflect era, AlonzoEraTest era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 dstateStage proof = toolChainSub proof standardOrderInfo (certStatePreds proof)
 
-demoD :: ToExprs BabbageEra => ReplMode -> Int -> IO ()
+demoD :: ReplMode -> Int -> IO ()
 demoD mode seed = do
   let proof = Babbage
   env <-
@@ -326,15 +327,15 @@ demoD mode seed = do
   when (mode == Interactive) . print $ toExpr dState
   modeRepl mode proof env ""
 
-demoTestD :: ToExprs BabbageEra => TestTree
+demoTestD :: TestTree
 demoTestD = testIO "Testing DState Stage" (demoD CI 99)
 
-mainD :: ToExprs BabbageEra => Int -> IO ()
+mainD :: Int -> IO ()
 mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed)
 
 -- ===============================================
 
-demoC :: ToExprs ConwayEra => ReplMode -> IO ()
+demoC :: ReplMode -> IO ()
 demoC mode = do
   let proof = Conway
   env <-
@@ -351,13 +352,13 @@ demoC mode = do
   when (mode == Interactive) . print . toExpr $ unCertStateF certState
   modeRepl mode proof env ""
 
-demoTestC :: ToExprs ConwayEra => TestTree
+demoTestC :: TestTree
 demoTestC = testIO "Testing CertState Stage" (demoC CI)
 
-mainC :: ToExprs ConwayEra => IO ()
+mainC :: IO ()
 mainC = defaultMain $ testIO "Testing CertState Stage" (demoC Interactive)
 
-demoTest :: (ToExprs ConwayEra, ToExprs BabbageEra) => TestTree
+demoTest :: TestTree
 demoTest =
   testGroup
     "CertState tests"

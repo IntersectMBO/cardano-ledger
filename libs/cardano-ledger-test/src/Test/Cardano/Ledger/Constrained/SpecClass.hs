@@ -16,11 +16,11 @@ module Test.Cardano.Ledger.Constrained.SpecClass where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
-import Cardano.Ledger.Core (Era)
 import Data.Kind
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Word (Word64)
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Common (Arbitrary (arbitrary), Gen)
 import Test.Cardano.Ledger.Constrained.Classes (Adds)
 import Test.Cardano.Ledger.Constrained.Monad (LiftT)
@@ -66,7 +66,7 @@ import Test.Cardano.Ledger.Constrained.Spec (
   sizeForSetSpec,
   word64CoinL,
  )
-import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), ToExprs)
+import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..))
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -149,7 +149,7 @@ instance Specification Size Int where
   genFromS _ _ _ = genFromSize
 
 instance
-  (Era era, Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng, ToExprs era) =>
+  (Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng, AlonzoEraTest era) =>
   Specification (MapSpec era dom rng) (Map dom rng)
   where
   type Count (MapSpec era dom rng) = Int
@@ -162,7 +162,7 @@ instance
   genFromS msgs _count (genD, genR) spec = genFromMapSpec "genFromMapSpec" msgs genD genR spec
 
 instance
-  (Era era, Ord dom, Eq rng, HasRep dom, HasRep rng, ToExprs era) =>
+  (Ord dom, Eq rng, HasRep dom, HasRep rng, AlonzoEraTest era) =>
   Specification (PairSpec era dom rng) (Map dom rng)
   where
   type Count (PairSpec era dom rng) = Int
@@ -175,7 +175,7 @@ instance
   genFromS msgs _count () spec = genFromPairSpec msgs spec
 
 instance
-  (Era era, Ord dom, HasRep dom, ToExprs era) =>
+  (Ord dom, HasRep dom, AlonzoEraTest era) =>
   Specification (RelSpec era dom) (Set dom)
   where
   type Count (RelSpec era dom) = Int
@@ -188,7 +188,7 @@ instance
   genFromS msgs count g spec = genFromRelSpec msgs g count spec
 
 instance
-  (Era era, Adds rng, Ord rng, ToExprs era) =>
+  (Adds rng, Ord rng, AlonzoEraTest era) =>
   Specification (RngSpec era rng) [rng]
   where
   type Count (RngSpec era rng) = Int
@@ -201,7 +201,7 @@ instance
   genFromS msgs count g spec = genFromRngSpec msgs g count spec
 
 instance
-  (Era era, Ord a, HasRep a, ToExprs era) =>
+  (Ord a, HasRep a, AlonzoEraTest era) =>
   Specification (SetSpec era a) (Set a)
   where
   type Count (SetSpec era a) = Int
@@ -214,7 +214,7 @@ instance
   genFromS msgs _count g spec = genFromSetSpec msgs g spec
 
 instance
-  (Era era, HasRep a, Adds a, ToExprs era) =>
+  (HasRep a, Adds a, AlonzoEraTest era) =>
   Specification (ElemSpec era a) [a]
   where
   type Count (ElemSpec era a) = Size
@@ -227,7 +227,7 @@ instance
   genFromS msgs count g spec = genFromElemSpec msgs g count spec
 
 instance
-  (Era era, HasRep a, Adds a, ToExprs era) =>
+  (HasRep a, Adds a, AlonzoEraTest era) =>
   Specification (ListSpec era a) [a]
   where
   type Count (ListSpec era a) = Size
@@ -252,7 +252,7 @@ testSound l r c g = do
   ans <- genFromS @spec ["testSound"] 10 g spec
   pure $ runS ans spec
 
-main :: ToExprs BabbageEra => IO ()
+main :: AlonzoEraTest BabbageEra => IO ()
 main =
   defaultMain $
     testGroup
