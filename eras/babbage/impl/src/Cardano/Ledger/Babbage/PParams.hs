@@ -92,6 +92,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams (shelleyCommonPParamsHKDPairsV8)
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
@@ -116,6 +117,10 @@ import Numeric.Natural (Natural)
 newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+instance ToPlutusData CoinPerByte where
+  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
 
 class AlonzoEraPParams era => BabbageEraPParams era where
   hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)

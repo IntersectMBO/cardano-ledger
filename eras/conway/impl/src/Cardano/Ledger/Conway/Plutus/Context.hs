@@ -5,7 +5,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Plutus.Context (
   pparamUpdateToData,
@@ -25,12 +24,9 @@ import Cardano.Ledger.Alonzo.PParams (
   ppuPricesL,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Babbage.PParams (CoinPerByte (..), ppuCoinsPerUTxOByteL)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Babbage.PParams (ppuCoinsPerUTxOByteL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
-  DRepVotingThresholds (..),
-  PoolVotingThresholds (..),
   ppuCommitteeMaxTermLengthL,
   ppuCommitteeMinSizeL,
   ppuDRepActivityL,
@@ -102,61 +98,6 @@ pparamUpdateFromData pparamMap (Map pairs) =
       val <- fromPlutusData value
       pure (ppu & ppuL .~ SJust val, Map.delete tg leftOverMap)
 pparamUpdateFromData _ _ = Nothing
-
--- ===================================================================
--- ToPlutusData instances necessary for (PParamUpdate (CowayEra c))
-
-instance ToPlutusData PoolVotingThresholds where
-  toPlutusData x =
-    List
-      [ toPlutusData (pvtMotionNoConfidence x)
-      , toPlutusData (pvtCommitteeNormal x)
-      , toPlutusData (pvtCommitteeNoConfidence x)
-      , toPlutusData (pvtHardForkInitiation x)
-      , toPlutusData (pvtPPSecurityGroup x)
-      ]
-  fromPlutusData (List [a, b, c, d, e]) =
-    PoolVotingThresholds
-      <$> fromPlutusData a
-      <*> fromPlutusData b
-      <*> fromPlutusData c
-      <*> fromPlutusData d
-      <*> fromPlutusData e
-  fromPlutusData _ = Nothing
-
-instance ToPlutusData DRepVotingThresholds where
-  toPlutusData x =
-    List
-      [ toPlutusData (dvtMotionNoConfidence x)
-      , toPlutusData (dvtCommitteeNormal x)
-      , toPlutusData (dvtCommitteeNoConfidence x)
-      , toPlutusData (dvtUpdateToConstitution x)
-      , toPlutusData (dvtHardForkInitiation x)
-      , toPlutusData (dvtPPNetworkGroup x)
-      , toPlutusData (dvtPPEconomicGroup x)
-      , toPlutusData (dvtPPTechnicalGroup x)
-      , toPlutusData (dvtPPGovGroup x)
-      , toPlutusData (dvtTreasuryWithdrawal x)
-      ]
-  fromPlutusData (List [a, b, c, d, e, f, g, h, i, j]) =
-    DRepVotingThresholds
-      <$> fromPlutusData a
-      <*> fromPlutusData b
-      <*> fromPlutusData c
-      <*> fromPlutusData d
-      <*> fromPlutusData e
-      <*> fromPlutusData f
-      <*> fromPlutusData g
-      <*> fromPlutusData h
-      <*> fromPlutusData i
-      <*> fromPlutusData j
-  fromPlutusData _ = Nothing
-
-instance ToPlutusData CoinPerByte where
-  toPlutusData (CoinPerByte c) = toPlutusData @Coin c
-  fromPlutusData x = CoinPerByte <$> fromPlutusData @Coin x
-
--- ==========================================================
 
 -- | A Map for the Conway era
 conwayPParamMap :: ConwayEraPParams era => Map Word (PParam era)
