@@ -18,6 +18,7 @@ import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
+import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
@@ -29,9 +30,9 @@ import Test.Cardano.Ledger.Babbage.ImpTest (
   submitTx_,
  )
 import Test.Cardano.Ledger.Common (SpecWith, describe, it)
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common (mkAddr)
 import Test.Cardano.Ledger.Plutus.Examples (inputsIsSubsetOfRefInputs)
-import Test.Cardano.Ledger.Core.Utils (txInAt)
 
 spec :: forall era. (AlonzoEraImp era, BabbageEraTxBody era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
@@ -41,7 +42,7 @@ spec = describe "UTXO" $ do
         txOut =
           mkBasicTxOut
             ( mkAddr
-                (ScriptHashObj @'Payment $ hashPlutusScript (inputsIsSubsetOfRefInputs SPlutusV2))
+                (ScriptHashObj @'Payment $ hashPlutusScript (fromJust $ inputsIsSubsetOfRefInputs SPlutusV2))
                 StakeRefNull
             )
             (inject $ Coin 1_000_000)

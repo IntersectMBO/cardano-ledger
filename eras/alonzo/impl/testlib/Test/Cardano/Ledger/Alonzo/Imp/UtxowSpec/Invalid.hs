@@ -34,7 +34,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
@@ -76,9 +76,9 @@ spec = describe "Invalid transactions" $ do
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
-        let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
-            alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
-            alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang
+        let redeemerSameAsDatumHash = hashPlutusScript . fromJust $ redeemerSameAsDatum slang
+            alwaysSucceedsWithDatumHash = hashPlutusScript . fromJust $ alwaysSucceedsWithDatum slang
+            alwaysSucceedsNoDatumHash = hashPlutusScript . fromJust $ alwaysSucceedsNoDatum slang
 
         it "MissingRedeemers" $ do
           let scriptHash = redeemerSameAsDatumHash

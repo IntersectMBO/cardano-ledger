@@ -36,6 +36,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   purposeIsWellformedWithDatum,
   redeemerSameAsDatum,
  )
+import Data.Maybe (fromJust)
 
 spec ::
   forall era.
@@ -47,14 +48,14 @@ spec = describe "UTXOS" $
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
-        let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
-            alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+        let redeemerSameAsDatumHash = hashPlutusScript . fromJust $ redeemerSameAsDatum slang
+            alwaysSucceedsWithDatumHash = hashPlutusScript . fromJust $ alwaysSucceedsWithDatum slang
 
         let scripts =
-              [ ("redeemerSameAsDatum", redeemerSameAsDatum)
-              , ("purposeIsWellformedWithDatum", purposeIsWellformedWithDatum)
-              , ("datumIsWellformed", datumIsWellformed)
-              , ("inputsOutputsAreNotEmptyWithDatum", inputsOutputsAreNotEmptyWithDatum)
+              [ ("redeemerSameAsDatum", fromJust . redeemerSameAsDatum)
+              , ("purposeIsWellformedWithDatum", fromJust . purposeIsWellformedWithDatum)
+              , ("datumIsWellformed", fromJust . datumIsWellformed)
+              , ("inputsOutputsAreNotEmptyWithDatum", fromJust . inputsOutputsAreNotEmptyWithDatum)
               ]
 
         describe "Spending scripts with a Datum" $ do
@@ -73,7 +74,7 @@ spec = describe "UTXOS" $
           submitFailingTx tx [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
 
         it "Invalid transaction marked as valid" $ do
-          txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
+          txIn <- produceScript . hashPlutusScript . fromJust $ alwaysFailsWithDatum slang
           submitPhase2Invalid_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
         it "Invalid plutus script fails in phase 2" $ do

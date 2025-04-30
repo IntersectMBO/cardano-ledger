@@ -32,6 +32,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
+import Data.Maybe (fromJust)
 
 spec ::
   forall era.
@@ -73,7 +74,7 @@ spec = describe "UTXOW" $ do
     -- There is ExtraRedeemers test for PlutusV1 in Alonzo, thus we start with PlutusV2
     forM_ ([PlutusV2 .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
       logString $ "Testing for " <> show lang
-      let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
+      let scriptHash = withSLanguage lang (hashPlutusScript . fromJust . redeemerSameAsDatum)
       txIn <- produceScript scriptHash
       let prp = MintingPurpose (AsIx 2)
       dt <- arbitrary

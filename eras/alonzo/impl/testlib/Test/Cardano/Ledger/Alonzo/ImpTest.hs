@@ -370,16 +370,18 @@ alonzoFixupFees tx = do
 
 mkScriptTestEntry ::
   PlutusLanguage l =>
-  Plutus l ->
+  Maybe (Plutus l) ->
   PlutusArgs ->
-  (ScriptHash, ScriptTestContext)
-mkScriptTestEntry script args =
-  ( hashPlutusScript script
-  , ScriptTestContext
-      { stcScript = script
-      , stcArgs = args
-      }
-  )
+  Maybe (ScriptHash, ScriptTestContext)
+mkScriptTestEntry (Just script) args =
+  Just
+    ( hashPlutusScript script
+    , ScriptTestContext
+        { stcScript = script
+        , stcArgs = args
+        }
+    )
+mkScriptTestEntry _ _ = Nothing
 
 plutusTestScripts ::
   forall l.
@@ -387,24 +389,25 @@ plutusTestScripts ::
   SLanguage l ->
   Map.Map ScriptHash ScriptTestContext
 plutusTestScripts lang =
-  Map.fromList
-    [ mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 7)
-    , mkScriptTestEntry (alwaysSucceedsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
-    , mkScriptTestEntry (alwaysSucceedsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
-    , mkScriptTestEntry (alwaysFailsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
-    , mkScriptTestEntry (alwaysFailsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
-    , mkScriptTestEntry (redeemerSameAsDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
-    , mkScriptTestEntry (evenDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 26)
-    , mkScriptTestEntry (evenRedeemerNoDatum lang) $ PlutusArgs (P.I 2) Nothing
-    , mkScriptTestEntry (evenRedeemerWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
-    , mkScriptTestEntry (purposeIsWellformedNoDatum lang) $ PlutusArgs (P.I 2) Nothing
-    , mkScriptTestEntry (purposeIsWellformedWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
-    , mkScriptTestEntry (datumIsWellformed lang) $ PlutusArgs (P.I 221) (Just $ P.I 5)
-    , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
-    , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
-    , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
-    , mkScriptTestEntry (inputsIsSubsetOfRefInputs lang) $ PlutusArgs (P.I 0) Nothing
-    ]
+  Map.fromList $
+    catMaybes
+      [ mkScriptTestEntry (Just $ malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 7)
+      , mkScriptTestEntry (alwaysSucceedsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
+      , mkScriptTestEntry (alwaysSucceedsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
+      , mkScriptTestEntry (alwaysFailsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
+      , mkScriptTestEntry (alwaysFailsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
+      , mkScriptTestEntry (redeemerSameAsDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
+      , mkScriptTestEntry (evenDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 26)
+      , mkScriptTestEntry (evenRedeemerNoDatum lang) $ PlutusArgs (P.I 2) Nothing
+      , mkScriptTestEntry (evenRedeemerWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
+      , mkScriptTestEntry (purposeIsWellformedNoDatum lang) $ PlutusArgs (P.I 2) Nothing
+      , mkScriptTestEntry (purposeIsWellformedWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
+      , mkScriptTestEntry (datumIsWellformed lang) $ PlutusArgs (P.I 221) (Just $ P.I 5)
+      , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
+      , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
+      , mkScriptTestEntry (Just guardrailScript) $ PlutusArgs (P.I 0) Nothing
+      , mkScriptTestEntry (inputsIsSubsetOfRefInputs lang) $ PlutusArgs (P.I 0) Nothing
+      ]
 
 malformedPlutus :: Plutus l
 malformedPlutus = Plutus (PlutusBinary "invalid")

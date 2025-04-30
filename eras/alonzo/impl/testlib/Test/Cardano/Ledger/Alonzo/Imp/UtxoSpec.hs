@@ -25,6 +25,7 @@ import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Data.Maybe (fromJust)
 
 spec ::
   forall era.
@@ -44,7 +45,7 @@ spec = describe "UTXO" $ do
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
         it "Too many execution units for tx" $ do
-          txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
+          txIn <- produceScript . hashPlutusScript . fromJust $ alwaysSucceedsWithDatum slang
           maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
           let
             txExUnits = maxExUnits <> ExUnits 1 1
@@ -61,7 +62,7 @@ spec = describe "UTXO" $ do
             ]
 
         it "Insufficient collateral" $ do
-          scriptInput <- produceScript $ hashPlutusScript $ alwaysSucceedsWithDatum slang
+          scriptInput <- produceScript . hashPlutusScript . fromJust $ alwaysSucceedsWithDatum slang
           collateralAddr <- freshKeyAddr_
           collateralInput <- sendCoinTo collateralAddr mempty -- 0 will be changed to MinUTxO
           collateral <- (^. coinTxOutL) <$> impGetUTxO collateralInput

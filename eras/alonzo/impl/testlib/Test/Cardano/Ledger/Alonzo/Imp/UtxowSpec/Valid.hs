@@ -44,6 +44,7 @@ import Test.Cardano.Ledger.Plutus.Examples
 
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.Common as P
+import Data.Maybe (fromJust)
 
 spec ::
   forall era.
@@ -72,10 +73,10 @@ spec = describe "Valid transactions" $ do
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
         let
-          alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang :: ScriptHash
-          alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang :: ScriptHash
-          alwaysFailsWithDatumHash = hashPlutusScript $ alwaysFailsWithDatum slang :: ScriptHash
-          alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash
+          alwaysSucceedsWithDatumHash = hashPlutusScript . fromJust $ alwaysSucceedsWithDatum slang :: ScriptHash
+          alwaysSucceedsNoDatumHash = hashPlutusScript . fromJust $ alwaysSucceedsNoDatum slang :: ScriptHash
+          alwaysFailsWithDatumHash = hashPlutusScript . fromJust $ alwaysFailsWithDatum slang :: ScriptHash
+          alwaysFailsNoDatumHash = hashPlutusScript . fromJust $ alwaysFailsNoDatum slang :: ScriptHash
 
         it "Validating SPEND script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
