@@ -41,7 +41,7 @@ data ConwayEra
 instance Era ConwayEra where
   type PreviousEra ConwayEra = BabbageEra
   type ProtVerLow ConwayEra = 9
-  type ProtVerHigh ConwayEra = 10
+  type ProtVerHigh ConwayEra = 11
 
   eraName = "Conway"
 

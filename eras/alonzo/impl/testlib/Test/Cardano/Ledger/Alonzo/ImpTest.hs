@@ -403,6 +403,7 @@ plutusTestScripts lang =
     , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
     , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
     , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (inputsIsSubsetOfRefInputs lang) $ PlutusArgs (P.I 0) Nothing
     ]
 
 malformedPlutus :: Plutus l

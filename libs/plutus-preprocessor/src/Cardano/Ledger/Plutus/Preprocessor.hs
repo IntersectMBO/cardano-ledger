@@ -29,7 +29,7 @@ display :: Handle -> IO ()
 display h = do
   let indent = ("  " ++)
   hPutStr h $
-    unlines $
+    unlines
       [ "{-# LANGUAGE DataKinds #-}"
       , "{-# LANGUAGE GADTs #-}"
       , "{-# LANGUAGE LambdaCase #-}"
@@ -211,5 +211,15 @@ allTestScripts =
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]
+    )
+  ,
+    ( "inputsIsSubsetOfRefInputs"
+    , \case
+        PlutusV1 ->
+          -- TODO think of something better, we can't implement this script in PlutusV1
+          V1.alwaysSucceedsNoDatumBytes
+        PlutusV2 -> V2.inputsIsSubsetOfRefInputsBytes
+        PlutusV3 -> V3.inputsIsSubsetOfRefInputsBytes
+    , "Script that succeeds only if all the inputs also appear in the reference inputs" :| []
     )
   ]

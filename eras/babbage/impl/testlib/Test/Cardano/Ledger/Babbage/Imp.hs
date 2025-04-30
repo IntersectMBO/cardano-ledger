@@ -26,6 +26,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
 
 spec ::
   forall era.
@@ -46,3 +47,4 @@ spec = do
   AlonzoImp.spec @era
   describe "BabbageImpSpec" . withImpInit @(LedgerSpec era) $ do
     Utxow.spec
+    Utxo.spec

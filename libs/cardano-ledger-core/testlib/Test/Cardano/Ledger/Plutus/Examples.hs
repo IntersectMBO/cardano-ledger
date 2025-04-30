@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Plutus.Examples (
   datumIsWellformed,
   inputsOutputsAreNotEmptyNoDatum,
   inputsOutputsAreNotEmptyWithDatum,
+  inputsIsSubsetOfRefInputs,
 ) where
 
 import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage (..))
@@ -964,4 +965,125 @@ inputsOutputsAreNotEmptyWithDatum =
       , "742004600aeb4d5d11aba200135573c6ea8d5d080288ccd5cd1aba3001800400a30028c00044646464aa666ae6"
       , "8cdc3a4004004230021155333573466e1d20000021180098029aba10010898042481035054310035573c0046aa"
       , "e74004dd50009baa357426ae88d5d10009aab9e3754005149a260029210350543500119319ab9c00180001"
+      ]
+
+-- | Script that succeeds only if all the inputs also appear in the reference inputs
+inputsIsSubsetOfRefInputs :: SLanguage l -> Plutus l
+inputsIsSubsetOfRefInputs =
+  decodeHexPlutus . mconcat . \case
+    -- ScriptHash "25e76058427573fc1abccab80e5a00ab99a94dc1691b639f963f70b1"
+    -- Preprocessed PlutusV1 Script:
+    -- @@@
+    -- alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                            PlutusTx.Builtins.Internal.BuiltinData -> ()
+    -- alwaysSucceedsNoDatum_0 redeemer_1 context_2 = case PlutusTx.IsData.Class.unsafeFromBuiltinData redeemer_1 of
+    --                                                {PlutusLedgerApi.V1.Scripts.Redeemer _ -> case PlutusTx.IsData.Class.unsafeFromBuiltinData context_2 of
+    --                                                                                          {PlutusLedgerApi.V1.Data.Contexts.ScriptContext _
+    --                                                                                                                                          scriptPurpose_3 -> case scriptPurpose_3 of
+    --                                                                                                                                                             {PlutusLedgerApi.V1.Data.Contexts.Spending _ -> PlutusTx.Builtins.error GHC.Tuple.Prim.();
+    --                                                                                                                                                              _ -> GHC.Tuple.Prim.()}}}
+    -- @@@
+    SPlutusV1 ->
+      [ "5828010000225335333573466e1d200235573a6ea8d5d09aba235573c6ea800448800848800458448005"
+      ]
+    -- ScriptHash "ed7f104f8cee3f457e012c9731e2c5ef69cfa0cce41dfd3ec95dc5dc"
+    -- Preprocessed PlutusV2 Script:
+    -- @@@
+    -- inputsIsSubsetOfRefInputs_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                PlutusTx.Builtins.Internal.BuiltinData -> ()
+    -- inputsIsSubsetOfRefInputs_0 _datum_1 _redeemer_2 context_3 = case PlutusTx.IsData.Class.unsafeFromBuiltinData context_3 of
+    --                                                              {PlutusLedgerApi.V2.Data.Contexts.ScriptContext txInfo_4
+    --                                                                                                              _scriptPurpose_5 -> if PlutusTx.Data.List.all (\x_6 -> (PlutusTx.Maybe.isJust GHC.Base.. PlutusTx.Data.List.find (PlutusTx.Eq.== x_6)) GHC.Base.$ PlutusLedgerApi.V2.Data.Contexts.txInfoReferenceInputs txInfo_4) GHC.Base.$ PlutusLedgerApi.V2.Data.Contexts.txInfoInputs txInfo_4
+    --                                                                                                                                   then GHC.Tuple.Prim.()
+    --                                                                                                                                   else PlutusTx.Builtins.error GHC.Tuple.Prim.()}
+    -- @@@
+    SPlutusV2 ->
+      [ "59067d010000323322323232323232323232323232222323253353323001001223330160152322533553353002"
+      , "3300622222222222200b2621019101713300500500110173230010012233301901022533532325335323253353"
+      , "33573466e3cc05c008c05c0040780744ccd5cd19b87301b002301b00101e01d101d357420046ae840084ccc048"
+      , "d5d09aba20022222333016357426ae8801488894cd4c8c94cd4cc068d5d08011aba100113253353001357426ae"
+      , "8800c854cd4c008d5d09aba20032132532335333573466e1d200035573a004056054264a66a666ae68cdc3a400"
+      , "06aae740040b00ac4cc080d5d09aab9e003357426aae780044c009263754006260029311998100021111998118"
+      , "03111299a999ab9a3370e00c0060620602a66a666ae68cdc38028010188180999ab9a3370e0080020620602060"
+      , "2060405c40566ea8008409c54cd4c004d5d09aba2002210271027301d2001102535573c6ea8014d55cf1baa008"
+      , "153353333013235023375600244666602a4666ae68cdc3a40006eb400409c09888ccd5cd19b87375a0046eb400"
+      , "40a009cdd58011bab00100700315335532335333573466e1d200035573a6ea801c09409054cd4ccd5cd19b8748"
+      , "000d55ce9baa0030250241025130014984c00526232532335333573466e1d200235573a00404e04c264a66a666"
+      , "ae68cdc3a40046aae740040a009c4ccd5cd19b8f375c6ae84d55cf0019bae357426aae780040a009c4c0092637"
+      , "5400a26002931299a999ab9a3370e90021aab9d0020270261325335333573466e1d200435573a00205004e2666"
+      , "ae68cdd79aba135573c0066ae84d55cf00081401388139baa0051026375400e2a66a00a42a66a00442666ae68c"
+      , "dc780100081301288120a99a8009081208120811881188119191a800800b1191a800800b080d9aab9e375400c6"
+      , "aae78dd500108911801002099802002000800800998009111111111110061308078b1119191919191919191919"
+      , "191999999999998069bac357420166eb0d5d08051bac357420126eacd5d08041bab3574200e6eb0d5d08031bab"
+      , "3574200a6ae84010dd61aba100337566ae84008dd59aba10013019357426ae88004d5d10009aba200135744002"
+      , "6ae88004d5d10009aba2001357440026ae88004d5d10009aba200135573c6ea8d5d09aab9e3754008464644644"
+      , "46600600400264600200244466660324666603440344446a01200a00402a444666603846a01400c4446464a66a"
+      , "666ae68cdd78011aab9d00502001f153353300c35573c0106aae780144ccc02c02c01c010407c54cd4c03cd55c"
+      , "f0040999805805803804899800a99a98079aab9e00514bd6f7b630099aba00054bd6f7b6300021918008009111"
+      , "999811901111119299a980a80089998038038030018a99a999ab9a3375e6aae7401002009809454cd4cc048d55"
+      , "cf007000899980880880699a80c803001881289991980400400099aba000400600335573c00600203c6aae7401"
+      , "801005c008050cc8c004004884cc05805494cd4c014d55cf0008a99801801890008900b0900099918008009109"
+      , "980a80a1299a98021aab9e00115330030031200112015120013323001001221223333012200222233533007007"
+      , "1200100233574000600800401a240024464a6466a666ae68cdc3a40006aae7400804003c4c94cd4ccd5cd19b87"
+      , "48000d55ce8008088080999ab9a3371e6eb8d5d09aab9e003375c6ae84d55cf0008088080980124c6ea800c4c0"
+      , "052625335333573466e1d200235573a00402001e264a66a666ae68cdc3a40046aae740040440404ccd5cd19b8f"
+      , "375c6ae84d55cf0019bae357426aae780040440404040dd500188079baa002222325335333573466e1d2002355"
+      , "73a00201e01c2646466600a6eb4d5d08011bad357420026eb4d5d09aba2001357440026aae780044c009263754"
+      , "006444646464666600a6ae8400cdd59aba1002357420026600eeb8d5d09aba2001357440026ae88004d55cf1ba"
+      , "a003223232325335333573466e1d200200200e00d100615335333573466e1d200000200e00d132122300200330"
+      , "053574200226012921035054310035573c0046aae74004dd5000891000918011aba135573c6ea80048c8c8c94c"
+      , "d4ccd5cd19b87480000080280244dd71aba1001130054901035054310035573c0046aae74004dd5000919319ab"
+      , "9c001002120012375a6ae84d5d11aab9e375400266460020024426600a0084a66a666ae68cdc3a40006eb4d55c"
+      , "f0008028020a998018018900089002890008910010910009112999aab9f0011003133002357420026ae88005"
+      ]
+    -- ScriptHash "f9d0dacde1c64dfa525c4090e5b4ef10163cd94770c5c3dd7b7bc680"
+    -- Preprocessed PlutusV3 Script:
+    -- @@@
+    -- inputsIsSubsetOfRefInputs_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                PlutusTx.Builtins.Internal.BuiltinData -> ()
+    -- inputsIsSubsetOfRefInputs_0 _datum_1 _redeemer_2 context_3 = case PlutusTx.IsData.Class.unsafeFromBuiltinData context_3 of
+    --                                                              {PlutusLedgerApi.V3.Data.Contexts.ScriptContext txInfo_4
+    --                                                                                                              _redeemer_5
+    --                                                                                                              _scriptPurpose_6 -> if PlutusTx.Data.List.all (\x_7 -> (PlutusTx.Maybe.isJust GHC.Base.. PlutusTx.Data.List.find (PlutusTx.Eq.== x_7)) GHC.Base.$ PlutusLedgerApi.V3.Data.Contexts.txInfoReferenceInputs txInfo_4) GHC.Base.$ PlutusLedgerApi.V3.Data.Contexts.txInfoInputs txInfo_4
+    --                                                                                                                                   then GHC.Tuple.Prim.()
+    --                                                                                                                                   else PlutusTx.Builtins.error GHC.Tuple.Prim.()}
+    -- @@@
+    SPlutusV3 ->
+      [ "59061d01010032323232323232323222232325933230010012233301080011912cac9801198031111111111111"
+      , "111007934860011801226600a00a00318010c8c00400488ccc04e00444b26464b26464aa666ae68cdc7980b001"
+      , "180b00088999ab9a3370e602e004602e00300080108c008d5d08011aba100289998091aba13574400444446660"
+      , "2c6ae84d5d100291112c99192c9980d1aba100235742003132593001357426ae8800e42b260046ae84d5d1001c"
+      , "84c94c94ccd5cd19b8748000d55ce80108992a999ab9a3370e90001aab9d0011133020357426aae7800cd5d09a"
+      , "ab9e001113002498dd5001889800a4c466604000844466604600c444aa666ae68cdc380300188aa999ab9a3370"
+      , "e00a00422666ae68cdc3802000c002004230021180114008a0046ea800a30024564c004d5d09aba200290c00a3"
+      , "0000c074800630021aab9e375400a6aae78dd50044564cccc04c8d407cdd580091199980a9199ab9a3370e9000"
+      , "1bad001800400888ccd5cd19b87375a0046eb400600100237560046eac00401c00e2b2a64a666ae68cdc3a4000"
+      , "6aae74dd500388aa999ab9a3370e90001aab9d37540062300011300149844c005262325325333573466e1d2002"
+      , "35573a0042264aa666ae68cdc3a40046aae7400444ccd5cd19b8f375c6ae84d55cf0019bae357426aae7800600"
+      , "1002113002498dd5002889800a4c4aa666ae68cdc3a40086aae7400844c954ccd5cd19b8748010d55ce8008899"
+      , "9ab9a3375e6ae84d55cf0019aba135573c00300080108c008dd500288c008dd5003c56401642b2005213335734"
+      , "66e3c0080060010028c00915900190c00a300023002460048c00852d614b5918010d55cf1baa00635573c6ea80"
+      , "0a300100244cc0100100040020026600244444444444444440204d180045844646464646464646464646464646"
+      , "4646466666666666666660246eb0d5d08081bac3574201e6eb0d5d08071bad3574201a6eacd5d08061bac35742"
+      , "0166eacd5d08051aba100937586ae84020dd59aba100737566ae84018dd71aba100537566ae84010dd61aba100"
+      , "330013574200460026ae84d5d1001180d3ad357440026ae88004d5d10009aba2001357440026ae88004d5d1000"
+      , "9aba2001357440026ae88004d5d10009aba2001357440026ae88004d55cf1baa357426aae78dd5002119191191"
+      , "11980180100099180080091119998099199980a14000888d402401400a000444666602c46a01400c4446464aa6"
+      , "66ae68cdd78011aab9d00511593300c35573c0106aae78016266601601600e009180104564c03cd55cf00444cc"
+      , "c02c02c01c026266002b2601e6aae78016297adef6c60899aba00054bd6f7b6300010646002002444666603a50"
+      , "02222325930150018999803803803001c554ccd5cd19baf35573a00801022b2660246aae780380062666022022"
+      , "01a66a03200c0071801044cc8cc020020004cd5d00020030018d55cf001800c000d55ce803002400000a000664"
+      , "600200244266021000259300535573c0031533003003120018940082400266460020024426601f000259300435"
+      , "573c003153300300312001894008240026646002002442446666018400444466a6600e00e2400200466ae8000c"
+      , "01000a000240024464a64a666ae68cdc3a40006aae7400844c954ccd5cd19b8748000d55ce80088999ab9a3371"
+      , "e6eb8d5d09aab9e003375c6ae84d55cf000c002004226004931baa003113001498954ccd5cd19b8748008d55ce"
+      , "80108992a999ab9a3370e90011aab9d00111333573466e3cdd71aba135573c0066eb8d5d09aab9e00180040084"
+      , "60046ea800c460046ea8008888c954ccd5cd19b8748008d55ce8008899191998029bad357420046eb4d5d08009"
+      , "bad357426ae88004d5d10009aab9e001113002498dd500191119191919998029aba100337566ae84008d5d0800"
+      , "99803bae357426ae88004d5d10009aba200135573c6ea800c88c8c8c954ccd5cd19b87480080084600422aa666"
+      , "ae68cdc3a40000042300130053574200211326335738920103505431008001aab9e00235573a0026ea80048dd7"
+      , "1aba135573c6ea80048dd69aba1357446aae78dd5000999180080091099801c000954ccd5cd19b8748000dd69a"
+      , "ab9e0011153300300312001112801090009112999aab9f0011003133002357420026ae880041"
       ]

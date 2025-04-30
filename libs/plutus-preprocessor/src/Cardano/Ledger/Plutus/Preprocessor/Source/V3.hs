@@ -210,3 +210,16 @@ inputsOutputsAreNotEmptyWithDatumQ =
           PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
             not $ PLD.null (PV3D.txInfoInputs txInfo) || PLD.null (PV3D.txInfoOutputs txInfo)
     |]
+
+inputsIsSubsetOfRefInputsQ :: Q [Dec]
+inputsIsSubsetOfRefInputsQ =
+  [d|
+    inputsIsSubsetOfRefInputs :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    inputsIsSubsetOfRefInputs _datum _redeemer context =
+      case unsafeFromBuiltinData context of
+        PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
+          if PLD.all (\x -> P.isJust . PLD.find (P.== x) $ PV3D.txInfoReferenceInputs txInfo) $
+            PV3D.txInfoInputs txInfo
+            then ()
+            else P.error ()
+    |]

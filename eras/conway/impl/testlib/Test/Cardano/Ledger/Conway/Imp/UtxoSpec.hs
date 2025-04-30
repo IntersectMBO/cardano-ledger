@@ -12,30 +12,21 @@
 
 module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
 
-import Cardano.Crypto.Hash (hashFromTextAsHex)
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unTxDatsL)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
-import Cardano.Ledger.Babbage.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (AlonzoEraTxBody (..), AlonzoEraTxWits (..), ppMaxTxExUnitsL)
-import Cardano.Ledger.Conway.PParams (getLanguageView, ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Plutus (Data (..))
 import Cardano.Ledger.Plutus.Language (
-  Language (..),
   Plutus (..),
-  PlutusLanguage,
   SLanguage (..),
   hashPlutusScript,
  )
-import Cardano.Ledger.Plutus.Preprocessor.Binary.V2 (inputsIsSubsetOfRefInputsBytes)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
@@ -44,22 +35,20 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.State (getMinFeeTxUtxo)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Functor ((<&>))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
-import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsIsSubsetOfRefInputs)
 
 spec ::
   forall era.
@@ -86,62 +75,19 @@ spec =
           ++ extraScripts
     describe "disjoint inputs and reference inputs" $ do
       let
-        plutus = Plutus $ snd inputsIsSubsetOfRefInputsBytes
-        scriptAddr :: forall (pv :: Language). PlutusLanguage pv => Addr
-        scriptAddr =
-          mkAddr
-            (ScriptHashObj @'Payment $ hashPlutusScript @pv plutus)
-            StakeRefNull
-        --script :: forall (pv :: Language). PlutusLanguage pv => PlutusScript era
-        --script = fromJust $ mkPlutusScript @era @pv plutus
-      -- it "Same script can appear in regular and reference inputs in PlutusV2" $ do
-      --  txIn <- sendCoinTo (scriptAddr @'PlutusV2) $ Coin 1_000_000
-      --  submitTx_ $
-      --    mkBasicTx mkBasicTxBody
-      --      & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
-      --      & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
-      --      & witsTxL . scriptTxWitsL .~ Map.singleton (hashPlutusScript @'PlutusV2 plutus) (PlutusScript $ script @'PlutusV2)
+        scriptHash lang = hashPlutusScript (inputsIsSubsetOfRefInputs lang)
+        tx :: TxIn -> Tx era
+        tx txIn =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
+            & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
       it "Same script cannot appear in regular and reference inputs in PlutusV3" $ do
-        --maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-        txIn <- sendCoinTo (scriptAddr @'PlutusV3) $ Coin 1_000_000
-        --collateralIn <- sendCoinTo (scriptAddr @'PlutusV3) $ Coin 1_000_000_000
-        --pp <- getsPParams id
-        let
-          tx = 
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
-              & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
-          --langViews = Set.map (getLanguageView pp) (Set.singleton PlutusV2)
-          --txWits =
-          --  mkBasicTxWits
-          --    & scriptTxWitsL
-          --      .~ Map.singleton (hashPlutusScript @'PlutusV3 plutus) (PlutusScript $ script @'PlutusV3)
-          --    & rdmrsTxWitsL .~ Redeemers (Map.singleton (SpendingPurpose (AsIx 0)) (Data $ P.I 0, maxExUnits))
-          --    & datsTxWitsL . unTxDatsL .~ mempty
-          --tx =
-          --  mkBasicTx mkBasicTxBody
-          --    & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
-          --    & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
-          --    & bodyTxL . collateralInputsTxBodyL .~ Set.singleton collateralIn
-          --    & bodyTxL . feeTxBodyL .~ Coin 100_000_000
-          --    & bodyTxL . scriptIntegrityHashTxBodyL
-          --      .~ hashScriptIntegrity @era langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
-          --    & witsTxL .~ txWits
+        txIn <- produceScript $ scriptHash SPlutusV3
         submitFailingTx @era
-          tx
+          (tx txIn)
           [ injectFailure $
               BabbageNonDisjointRefInputs
-                ( NE.fromList
-                    [ TxIn
-                        ( TxId
-                            ( unsafeMakeSafeHash . fromJust $
-                                hashFromTextAsHex
-                                  "3b3a57c1fe445f8346b94a64ee39baf3f253e0932f37014c2735bb326d12be81"
-                            )
-                        )
-                        (TxIx 0)
-                    ]
-                )
+                (txIn NE.:| [])
           ]
   where
     checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
