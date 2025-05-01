@@ -184,10 +184,10 @@ pparamUpdateSpec =
   describe "PParamUpdate" $ do
     describe "PPU needs to be wellformed" $ do
       let testMalformedProposal lbl lenz val = it lbl $ do
-            let ppUpdate =
+            let ppu =
                   emptyPParamsUpdate
                     & lenz .~ SJust val
-            ga <- mkParameterChangeGovAction SNothing ppUpdate
+            ga <- mkParameterChangeGovAction SNothing ppu
             mkProposal ga
               >>= flip
                 submitFailingProposal

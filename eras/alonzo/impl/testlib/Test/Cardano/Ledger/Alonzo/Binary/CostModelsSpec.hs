@@ -32,8 +32,8 @@ spec = do
     originalUpdate <- mkCostModelsLenient (flattenCostModels validUpdate <> unknownUpdate)
     let
       pp = emptyPParams & ppCostModelsL .~ original
-      ppUpdate = emptyPParamsUpdate & ppuCostModelsL .~ SJust originalUpdate
-      updated = applyPPUpdates @era pp ppUpdate
+      ppu = emptyPParamsUpdate & ppuCostModelsL .~ SJust originalUpdate
+      updated = applyPPUpdates @era pp ppu
     -- Starting with Conway we update CostModel on per-language basis, while before
     -- that CostModels where overwritten completely
     if eraProtVerLow @era >= natVersion @9

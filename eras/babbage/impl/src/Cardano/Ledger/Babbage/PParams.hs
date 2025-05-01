@@ -240,6 +240,8 @@ instance EraPParams BabbageEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
+  eraPParams = []
+
 instance AlonzoEraPParams BabbageEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens bppCostModels $ \pp x -> pp {bppCostModels = x}

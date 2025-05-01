@@ -764,6 +764,8 @@ instance EraPParams ConwayEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
+  eraPParams = []
+
 instance AlonzoEraPParams ConwayEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . cppCostModels) $ \pp x -> pp {cppCostModels = THKD x}

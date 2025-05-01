@@ -22,6 +22,8 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
+  PParam' (..),
+  PParamUpdate (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
@@ -99,6 +101,7 @@ import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -360,6 +363,8 @@ class
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
+  eraPParams :: [PParam' era]
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -564,3 +569,21 @@ data PParam era where
 -- | Turn a list into a Map, this assures we have no duplicates.
 makePParamMap :: [PParam era] -> Map Word (PParam era)
 makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+
+-- | Represents a single protocol parameter and the data required to serialize it.
+data PParam' era where
+  PParam' ::
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
+    { ppName :: Text
+    -- ^ Used as JSON key
+    , ppLens :: Lens' (PParams era) t
+    , ppUpdate :: Maybe (PParamUpdate era t)
+    -- ^ Not all protocol parameters have an update functionality in all eras
+    } ->
+    PParam' era
+
+data PParamUpdate era t = PParamUpdate
+  { ppuTag :: Word
+  -- ^ Used in CBOR and Plutus Data encoding of
+  , ppuLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+  }
