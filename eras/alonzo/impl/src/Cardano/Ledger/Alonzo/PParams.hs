@@ -58,6 +58,15 @@ module Cardano.Ledger.Alonzo.PParams (
 
   -- * JSON helpers
   alonzoCommonPParamsHKDPairs,
+
+  -- * PParam
+  ppCollateralPercentage,
+  ppCostModels,
+  ppMaxBlockExUnits,
+  ppMaxCollateralInputs,
+  ppMaxTxExUnits,
+  ppMaxValSize,
+  ppPrices,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -99,7 +108,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -115,12 +124,7 @@ import Cardano.Ledger.Plutus.ExUnits (
   zipSemiExUnits,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams (..),
-  shelleyCommonPParamsHKDPairs,
-  shelleyCommonPParamsHKDPairsV6,
-  shelleyCommonPParamsHKDPairsV8,
- )
+import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
@@ -353,7 +357,32 @@ instance EraPParams AlonzoEra where
   hkdMinUTxOValueL = notSupportedInThisEraL
   hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
-  eraPParams = []
+  eraPParams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppD
+    , ppExtraEntropy
+    , ppProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOWord
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    ]
 
 instance AlonzoEraPParams AlonzoEra where
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
@@ -856,4 +885,68 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppProtocolVersion = appProtocolVersion
     , sppMinUTxOValue = dappMinUTxOValue -- <- parameter that was dropped in Alonzo
     , sppMinPoolCost = appMinPoolCost
+    }
+
+ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam' era
+ppCoinsPerUTxOWord =
+  PParam'
+    { ppName = "utxoCostPerByte"
+    , ppLens = ppCoinsPerUTxOWordL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL
+    }
+
+ppCostModels :: AlonzoEraPParams era => PParam' era
+ppCostModels =
+  PParam'
+    { ppName = "costModels"
+    , ppLens = ppCostModelsL
+    , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL
+    }
+
+ppPrices :: AlonzoEraPParams era => PParam' era
+ppPrices =
+  PParam'
+    { ppName = "executionUnitPrices"
+    , ppLens = ppPricesL
+    , ppUpdate = Just $ PParamUpdate 19 ppuPricesL
+    }
+
+ppMaxTxExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxTxExUnits =
+  PParam'
+    { ppName = "maxTxExecutionUnits"
+    , ppLens = ppMaxTxExUnitsL
+    , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL
+    }
+
+ppMaxBlockExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxBlockExUnits =
+  PParam'
+    { ppName = "maxBlockExecutionUnits"
+    , ppLens = ppMaxBlockExUnitsL
+    , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL
+    }
+
+ppMaxValSize :: AlonzoEraPParams era => PParam' era
+ppMaxValSize =
+  PParam'
+    { ppName = "maxValueSize"
+    , ppLens = ppMaxValSizeL
+    , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL
+    }
+
+ppCollateralPercentage :: AlonzoEraPParams era => PParam' era
+ppCollateralPercentage =
+  PParam'
+    { ppName = "collateralPercentage"
+    , ppLens = ppCollateralPercentageL
+    , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL
+    }
+
+ppMaxCollateralInputs :: AlonzoEraPParams era => PParam' era
+ppMaxCollateralInputs =
+  PParam'
+    { ppName = "maxCollateralInputs"
+    , ppLens = ppMaxCollateralInputsL
+    , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL
     }
