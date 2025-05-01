@@ -74,7 +74,7 @@ module Cardano.Ledger.Conway.PParams (
 )
 where
 
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..), OrdExUnits (..))
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -106,7 +106,6 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
-  HKD,
   HKDApplicative (hkdLiftA2),
   HKDFunctor (..),
   HKDNoUpdate,
@@ -122,6 +121,7 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
@@ -794,7 +794,39 @@ instance EraPParams ConwayEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
-  pparams = []
+  pparams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppGovProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOByte
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    , ppPoolVotingThresholds
+    , ppDRepVotingThresholds
+    , ppCommitteeMinSize
+    , ppCommitteeMaxTermLength
+    , ppGovActionLifetime
+    , ppGovActionDeposit
+    , ppDRepDeposit
+    , ppDRepActivity
+    , ppMinFeeRefScriptCostPerByte
+    ]
 
 instance AlonzoEraPParams ConwayEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
@@ -1509,3 +1541,119 @@ asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
           <> ","
           <> show (toInteger (maxBound @b))
           <> "]"
+
+ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam' era
+ppCommitteeMaxTermLength =
+  PParam'
+    { ppName = "committeeMaxTermLength"
+    , ppTag = 28
+    , ppLens' = ppCommitteeMaxTermLengthL
+    , ppUpdateLens = ppuCommitteeMaxTermLengthL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppCommitteeMinSize :: ConwayEraPParams era => PParam' era
+ppCommitteeMinSize =
+  PParam'
+    { ppName = "committeeMinSize"
+    , ppTag = 27
+    , ppLens' = ppCommitteeMinSizeL
+    , ppUpdateLens = ppuCommitteeMinSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepActivity :: ConwayEraPParams era => PParam' era
+ppDRepActivity =
+  PParam'
+    { ppName = "dRepActivity"
+    , ppTag = 32
+    , ppLens' = ppDRepActivityL
+    , ppUpdateLens = ppuDRepActivityL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepDeposit :: ConwayEraPParams era => PParam' era
+ppDRepDeposit =
+  PParam'
+    { ppName = "dRepDeposit"
+    , ppTag = 31
+    , ppLens' = ppDRepDepositL
+    , ppUpdateLens = ppuDRepDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepVotingThresholds :: ConwayEraPParams era => PParam' era
+ppDRepVotingThresholds =
+  PParam'
+    { ppName = "dRepVotingThresholds"
+    , ppTag = 26
+    , ppLens' = ppDRepVotingThresholdsL
+    , ppUpdateLens = ppuDRepVotingThresholdsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovActionDeposit :: ConwayEraPParams era => PParam' era
+ppGovActionDeposit =
+  PParam'
+    { ppName = "govActionDeposit"
+    , ppTag = 30
+    , ppLens' = ppGovActionDepositL
+    , ppUpdateLens = ppuGovActionDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovActionLifetime :: ConwayEraPParams era => PParam' era
+ppGovActionLifetime =
+  PParam'
+    { ppName = "govActionLifetime"
+    , ppTag = 29
+    , ppLens' = ppGovActionLifetimeL
+    , ppUpdateLens = ppuGovActionLifetimeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovProtocolVersion ::
+  forall era.
+  ( ConwayEraPParams era
+  , PParamsHKD StrictMaybe era ~ ConwayPParams StrictMaybe era
+  ) =>
+  PParam' era
+ppGovProtocolVersion =
+  PParam'
+    { ppName = "protocolVersion"
+    , ppTag = 14
+    , ppLens' = ppProtocolVersionL
+    , ppUpdateLens =
+        ppuLens . lens (fromNoUpdate @StrictMaybe @ProtVer . cppProtocolVersion) const
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam' era
+ppMinFeeRefScriptCostPerByte =
+  PParam'
+    { ppName = "minFeeRefScriptCostPerByte"
+    , ppTag = 33
+    , ppLens' = ppMinFeeRefScriptCostPerByteL
+    , ppUpdateLens = ppuMinFeeRefScriptCostPerByteL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppPoolVotingThresholds :: ConwayEraPParams era => PParam' era
+ppPoolVotingThresholds =
+  PParam'
+    { ppName = "poolVotingThresholds"
+    , ppTag = 25
+    , ppLens' = ppPoolVotingThresholdsL
+    , ppUpdateLens = ppuPoolVotingThresholdsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
