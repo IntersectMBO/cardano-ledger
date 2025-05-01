@@ -29,11 +29,30 @@ module Cardano.Ledger.Shelley.PParams (
   upgradeUpdate,
   pvCanFollow,
   hasLegalProtVerUpdate,
+  shelleyPParams,
 
   -- * JSON helpers
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
+
+  -- * PParam
+  ppA0,
+  ppD,
+  ppEMax,
+  ppExtraEntropy,
+  ppMaxBBSize,
+  ppKeyDeposit,
+  ppMinFeeA,
+  ppMinFeeB,
+  ppMinPoolCost,
+  ppMaxBHSize,
+  ppMaxTxSize,
+  ppNOpt,
+  ppProtocolVersion,
+  ppPoolDeposit,
+  ppRho,
+  ppTau,
 )
 where
 
@@ -66,6 +85,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Hashes (GenDelegs)
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
@@ -190,7 +210,7 @@ instance EraPParams ShelleyEra where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
-  pparams = []
+  pparams = shelleyPParams
 
 instance Era era => EncCBOR (ShelleyPParams Identity era) where
   encCBOR
@@ -569,3 +589,217 @@ upgradeProposedPPUpdates ::
   ProposedPPUpdates era
 upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
   ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
+
+ppA0 :: EraPParams era => PParam' era
+ppA0 =
+  PParam'
+    { ppName = "poolPledgeInfluence"
+    , ppTag = 9
+    , ppLens' = ppA0L
+    , ppUpdateLens = ppuA0L
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppD :: (EraPParams era, ProtVerAtMost era 6) => PParam' era
+ppD =
+  PParam'
+    { ppName = "decentralization"
+    , ppTag = 12
+    , ppLens' = ppDL
+    , ppUpdateLens = ppuDL
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppEMax :: EraPParams era => PParam' era
+ppEMax =
+  PParam'
+    { ppName = "poolRetireMaxEpoch"
+    , ppTag = 7
+    , ppLens' = ppEMaxL
+    , ppUpdateLens = ppuEMaxL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppExtraEntropy :: (EraPParams era, ProtVerAtMost era 6) => PParam' era
+ppExtraEntropy =
+  PParam'
+    { ppName = "extraPraosEntropy"
+    , ppTag = 13
+    , ppLens' = ppExtraEntropyL
+    , ppUpdateLens = ppuExtraEntropyL
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppKeyDeposit :: EraPParams era => PParam' era
+ppKeyDeposit =
+  PParam'
+    { ppName = "stakeAddressDeposit"
+    , ppTag = 5
+    , ppLens' = ppKeyDepositL
+    , ppUpdateLens = ppuKeyDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxBBSize :: EraPParams era => PParam' era
+ppMaxBBSize =
+  PParam'
+    { ppName = "maxBlockBodySize"
+    , ppTag = 2
+    , ppLens' = ppMaxBBSizeL
+    , ppUpdateLens = ppuMaxBBSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxBHSize :: EraPParams era => PParam' era
+ppMaxBHSize =
+  PParam'
+    { ppName = "maxBlockHeaderSize"
+    , ppTag = 4
+    , ppLens' = ppMaxBHSizeL
+    , ppUpdateLens = ppuMaxBHSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxTxSize :: EraPParams era => PParam' era
+ppMaxTxSize =
+  PParam'
+    { ppName = "maxTxSize"
+    , ppTag = 3
+    , ppLens' = ppMaxTxSizeL
+    , ppUpdateLens = ppuMaxTxSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMinFeeA :: EraPParams era => PParam' era
+ppMinFeeA =
+  PParam'
+    { ppName = "txFeePerByte"
+    , ppTag = 0
+    , ppLens' = ppMinFeeAL
+    , ppUpdateLens = ppuMinFeeAL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMinFeeB :: EraPParams era => PParam' era
+ppMinFeeB =
+  PParam'
+    { ppName = "txFeeFixed"
+    , ppTag = 1
+    , ppLens' = ppMinFeeBL
+    , ppUpdateLens = ppuMinFeeBL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMinPoolCost :: EraPParams era => PParam' era
+ppMinPoolCost =
+  PParam'
+    { ppName = "minPoolCost"
+    , ppTag = 16
+    , ppLens' = ppMinPoolCostL
+    , ppUpdateLens = ppuMinPoolCostL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMinUTxOValue :: (EraPParams era, ProtVerAtMost era 4) => PParam' era
+ppMinUTxOValue =
+  PParam'
+    { ppName = "minUTxOValue"
+    , ppTag = 15
+    , ppLens' = ppMinUTxOValueL
+    , ppUpdateLens = ppuMinUTxOValueL
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppNOpt :: EraPParams era => PParam' era
+ppNOpt =
+  PParam'
+    { ppName = "stakePoolTargetNum"
+    , ppTag = 8
+    , ppLens' = ppNOptL
+    , ppUpdateLens = ppuNOptL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppPoolDeposit :: EraPParams era => PParam' era
+ppPoolDeposit =
+  PParam'
+    { ppName = "stakePoolDeposit"
+    , ppTag = 6
+    , ppLens' = ppPoolDepositL
+    , ppUpdateLens = ppuPoolDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppProtocolVersion :: (EraPParams era, ProtVerAtMost era 8) => PParam' era
+ppProtocolVersion =
+  PParam'
+    { ppName = "protocolVersion"
+    , ppTag = 14
+    , ppLens' = ppProtocolVersionL
+    , ppUpdateLens = ppuProtocolVersionL
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppRho :: EraPParams era => PParam' era
+ppRho =
+  PParam'
+    { ppName = "monetaryExpansion"
+    , ppTag = 10
+    , ppLens' = ppRhoL
+    , ppUpdateLens = ppuRhoL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppTau :: EraPParams era => PParam' era
+ppTau =
+  PParam'
+    { ppName = "treasuryCut"
+    , ppTag = 11
+    , ppLens' = ppTauL
+    , ppUpdateLens = ppuTauL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+shelleyPParams ::
+  ( EraPParams era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  , ProtVerAtMost era 8
+  ) =>
+  [PParam' era]
+shelleyPParams =
+  [ ppMinFeeA
+  , ppMinFeeB
+  , ppMaxBBSize
+  , ppMaxTxSize
+  , ppMaxBHSize
+  , ppKeyDeposit
+  , ppPoolDeposit
+  , ppEMax
+  , ppNOpt
+  , ppA0
+  , ppRho
+  , ppTau
+  , ppD
+  , ppExtraEntropy
+  , ppProtocolVersion
+  , ppMinUTxOValue
+  , ppMinPoolCost
+  ]
