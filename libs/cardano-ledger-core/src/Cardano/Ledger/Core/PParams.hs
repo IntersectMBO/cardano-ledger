@@ -97,7 +97,10 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson (KeyValue, Value, withObject)
+import qualified Data.Aeson.Key as Aeson (fromText)
+import qualified Data.Aeson.Types as Aeson (Parser)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldr')
@@ -427,6 +430,25 @@ class
             ( \PParam' {ppTag, ppUpdateLens} ->
                 (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
             )
+  jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
+  jsonPairsPParams pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens')
+    | PParam' {ppName, ppLens'} <- pparams @era
+    ]
+
+  jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
+  jsonPairsPParamsUpdate ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam' {ppName, ppUpdateLens} <- pparams @era
+    , SJust v <- [ppu ^. ppUpdateLens]
+    ]
+
+  fromJsonPParams :: Aeson.Value -> Aeson.Parser (PParams era)
+  fromJsonPParams =
+    Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+      let accum acc PParam' {ppName, ppLens'} =
+            set ppLens' <$> obj .: Aeson.fromText ppName <*> acc
+       in F.foldl' accum (pure $ emptyPParams @era) (pparams @era)
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
