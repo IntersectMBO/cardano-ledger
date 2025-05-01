@@ -190,6 +190,8 @@ instance EraPParams ShelleyEra where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
+  pparams = []
+
 instance Era era => EncCBOR (ShelleyPParams Identity era) where
   encCBOR
     ShelleyPParams {..} =

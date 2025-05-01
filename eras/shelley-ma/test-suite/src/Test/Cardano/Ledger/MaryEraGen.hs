@@ -267,9 +267,9 @@ addTokens ::
   MultiAsset ->
   StrictSeq (TxOut era) ->
   Maybe (StrictSeq (TxOut era))
-addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
-  if txOut ^. coinTxOutL < getMinCoinTxOut pparams txOut
-    then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
+addTokens proxy tooLittleLovelace pp ts (txOut :<| os) =
+  if txOut ^. coinTxOutL < getMinCoinTxOut pp txOut
+    then addTokens proxy (txOut :<| tooLittleLovelace) pp ts os
     else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue mempty ts) txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
@@ -285,10 +285,10 @@ genTxBody ::
   StrictMaybe (Update MaryEra) ->
   StrictMaybe TxAuxDataHash ->
   Gen (TxBody MaryEra, [NativeScript MaryEra])
-genTxBody pparams slot ins outs cert wdrl fee upd meta = do
+genTxBody pp slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
-  let (mint', outs') = case addTokens (Proxy @MaryEra) StrictSeq.Empty pparams mint outs of
+  let (mint', outs') = case addTokens (Proxy @MaryEra) StrictSeq.Empty pp mint outs of
         Nothing -> (mempty, outs)
         Just os -> (mint, os)
       ps =

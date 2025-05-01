@@ -354,6 +354,8 @@ instance EraPParams AlonzoEra where
   hkdMinUTxOValueL = notSupportedInThisEraL
   hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
+  pparams = []
+
 instance AlonzoEraPParams AlonzoEra where
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
   hkdCostModelsL = lens appCostModels $ \pp x -> pp {appCostModels = x}
