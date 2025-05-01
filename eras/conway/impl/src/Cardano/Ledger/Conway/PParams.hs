@@ -8,6 +8,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -90,6 +91,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (ProtVer),
   UnitInterval,
   integralToBounded,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -125,7 +127,9 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default (Default (def))
+import Data.Foldable (foldlM, foldr')
 import Data.Functor.Identity (Identity)
+import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
 import Data.Proxy
@@ -154,6 +158,35 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdMinFeeRefScriptCostPerByteL ::
     HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
+
+  toPlutusDataPParamsUpdate :: PParamsUpdate era -> P.Data
+  toPlutusDataPParamsUpdate ppu =
+    P.Map (foldr' accum ([] :: [(P.Data, P.Data)]) (pparams @era))
+    where
+      accum PParam' {ppTag, ppUpdateLens, ppToPlutusData} acc =
+        let mbData = do
+              toPlutusDataF <- ppToPlutusData
+              t <- strictMaybeToMaybe $ ppu ^. ppUpdateLens
+              pure (P.I (toInteger @Word ppTag), toPlutusDataF t)
+         in maybe acc (: acc) mbData
+
+  fromPlutusDataPParamsUpdate :: P.Data -> Maybe (PParamsUpdate era)
+  fromPlutusDataPParamsUpdate (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
+    where
+      accum acc (dataKey, dataVal) = do
+        tag <- fromPlutusData @Word dataKey
+        PParam' {ppUpdateLens, ppFromPlutusData} <-
+          IntMap.lookup (fromIntegral tag) ppMap
+        plutusData <- ppFromPlutusData >>= ($ dataVal)
+        pure $ set ppUpdateLens (SJust plutusData) acc
+      ppMap =
+        IntMap.fromList
+          . map
+            ( \pp@PParam' {ppTag} ->
+                (fromIntegral ppTag, pp)
+            )
+          $ pparams @era
+  fromPlutusDataPParamsUpdate _ = Nothing
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
