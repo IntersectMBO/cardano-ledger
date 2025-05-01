@@ -149,7 +149,7 @@ genTx
         scriptspace
         constants
       )
-  (LedgerEnv slot _ txIx pparams reserves)
+  (LedgerEnv slot _ txIx pp reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------
@@ -174,10 +174,10 @@ genTx
           slot
           ksCoreNodes
           ksIndexedGenDelegates
-          pparams
+          pp
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', certWits, certScripts) <-
-        genTxCerts ge pparams dpState slot txIx reserves
+        genTxCerts ge pp dpState slot txIx reserves
       metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
       -- Gather Key TxWits and Scripts, prepare a constructor for Tx Wits
@@ -236,7 +236,7 @@ genTx
 
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
-      let enough = sumVal (getMinCoinTxOut pparams <$> draftOutputs)
+      let enough = sumVal (getMinCoinTxOut pp <$> draftOutputs)
       !_ <-
         when (coin spendingBalance < enough) $
           tracedDiscard $
@@ -246,7 +246,7 @@ genTx
         genEraTxBody
           ge
           utxo
-          pparams
+          pp
           slot
           (Set.fromList inputs)
           draftOutputs
@@ -271,12 +271,12 @@ genTx
           ksKeyPairs
           ksMSigScripts
           utxo
-          pparams
+          pp
           keySpace
           draftTx
       let txOuts = tx ^. bodyTxL . outputsTxBodyL
       !_ <-
-        when (any (\txOut -> getMinCoinTxOut pparams txOut > txOut ^. coinTxOutL) txOuts) $
+        when (any (\txOut -> getMinCoinTxOut pp txOut > txOut ^. coinTxOutL) txOuts) $
           tracedDiscard $
             "TxOut value is too small " <> show txOuts
       pure tx
@@ -373,7 +373,7 @@ genNextDelta ::
 genNextDelta
   scriptinfo
   utxo
-  pparams
+  pp
   KeySpace_
     { ksIndexedStakingKeys
     , ksIndexedPaymentKeys
@@ -382,7 +382,7 @@ genNextDelta
   tx
   _count -- the counter of the fix loop
   delta@(Delta dfees extraInputs extraWitnesses change _ extraScripts) =
-    let !baseTxFee = getMinFeeTxUtxo pparams tx utxo
+    let !baseTxFee = getMinFeeTxUtxo pp tx utxo
         -- based on the current contents of delta, how much will the fee
         -- increase when we add the delta to the tx?
         draftSize =
@@ -398,12 +398,12 @@ genNextDelta
             ]
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
-            accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = draftSize <×> pparams ^. ppMinFeeAL <+> deltaScriptCost
+            accum (s1, _) ans = genEraScriptCost @era pp s1 <+> ans
+        deltaFee = draftSize <×> pp ^. ppMinFeeAL <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
-        minAda = getMinCoinTxOut pparams change
+        minAda = getMinCoinTxOut pp change
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
@@ -489,13 +489,13 @@ genNextDeltaTilFixPoint ::
   KeySpace c era ->
   Tx era ->
   Gen (Delta era)
-genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
+genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pp keySpace tx = do
   addrs <- genRecipients @era 1 keys scripts
   let addr = maybe (error "genNextDeltaTilFixPoint: empty addrs") NE.head $ nonEmpty addrs
   fix
     0
-    (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee pparams addr)
+    (genNextDelta scriptinfo utxo pp keySpace tx)
+    (deltaZero initialfee pp addr)
 
 applyDelta ::
   forall era c.
@@ -512,7 +512,7 @@ applyDelta ::
 applyDelta
   utxo
   scriptinfo
-  pparams
+  pp
   neededKeys
   neededScripts
   KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
@@ -532,7 +532,7 @@ applyDelta
         body2 =
           (updateEraTxBody @era)
             utxo
-            pparams
+            pp
             oldWitnessSet
             txBody
             deltafees -- Override the existing fee
@@ -575,14 +575,14 @@ converge
   keys
   scripts
   utxo
-  pparams
+  pp
   keySpace
   tx = do
-    delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx
+    delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pp keySpace tx
     genEraDone @era
       utxo
-      pparams
-      (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
+      pp
+      (applyDelta utxo scriptinfo pp neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)

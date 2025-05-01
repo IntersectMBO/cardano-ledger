@@ -168,12 +168,12 @@ instance
         _scriptspace
         constants
       )
-    (slot, _txIx, pparams, accountState)
+    (slot, _txIx, pp, accountState)
     (dpState, _certIx) =
       genTxCert
         constants
         ks
-        pparams
+        pp
         accountState
         dpState
         slot

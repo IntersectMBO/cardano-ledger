@@ -40,6 +40,8 @@ instance EraPParams AllegraEra where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
+  pparams = []
+
 instance EraGov AllegraEra where
   type GovState AllegraEra = ShelleyGovState AllegraEra
   emptyGovState = emptyShelleyGovState

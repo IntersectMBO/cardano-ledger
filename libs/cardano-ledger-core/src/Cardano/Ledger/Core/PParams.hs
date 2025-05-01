@@ -22,6 +22,7 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
+  PParam' (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
@@ -100,10 +101,12 @@ import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import Lens.Micro (Lens', SimpleGetter, lens)
 import NoThunks.Class (NoThunks)
+import qualified PlutusLedgerApi.Common as P (Data (..))
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
@@ -361,6 +364,8 @@ class
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
+  pparams :: [PParam' era]
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -565,3 +570,15 @@ data PParam era where
 -- | Turn a list into a Map, this assures we have no duplicates.
 makePParamMap :: [PParam era] -> Map Word (PParam era)
 makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+
+data PParam' era where
+  PParam' ::
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
+    { ppName :: Text
+    , ppTag :: Word
+    , ppLens' :: Lens' (PParams era) t
+    , ppUpdateLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+    , ppToPlutusData :: Maybe (t -> P.Data)
+    , ppFromPlutusData :: Maybe (P.Data -> Maybe t)
+    } ->
+    PParam' era
