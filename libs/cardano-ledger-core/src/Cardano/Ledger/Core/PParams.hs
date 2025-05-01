@@ -10,6 +10,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -88,7 +89,8 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
@@ -98,13 +100,19 @@ import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
+import qualified Data.Foldable as F (foldMap', foldl', foldr')
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 
@@ -365,6 +373,60 @@ class
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   pparams :: [PParam' era]
+
+  encCBORPParams :: PParams era -> Encoding
+  encCBORPParams pp =
+    encodeListLen (fromIntegral (length (pparams @era)))
+      <> F.foldMap' toEnc (pparams @era)
+    where
+      toEnc PParam' {ppLens'} = encCBOR $ pp ^. ppLens'
+
+  encCBORPParamsUpdate :: PParamsUpdate era -> Encoding
+  encCBORPParamsUpdate pp = encodeMapLen count <> enc
+    where
+      (!count, !enc) = countAndConcat encodeField pparams
+      encodeField PParam' {ppTag, ppUpdateLens} =
+        (encodeWord ppTag <>) . encCBOR <$> pp ^. ppUpdateLens
+      countAndConcat f = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case f x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
+
+  decCBORPParams :: Decoder s (PParams era)
+  decCBORPParams =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (pparams @era))))
+      $ F.foldr'
+        accum
+        (pure (emptyPParams @era))
+        (pparams @era)
+    where
+      accum PParam' {ppLens'} acc =
+        set ppLens' <$> decCBOR <*> acc
+
+  decCBORPParamsUpdate :: Decoder s (PParamsUpdate era)
+  decCBORPParamsUpdate =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          (updateFieldMap pparams)
+      updateFieldMap :: [PParam' era] -> IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          . map
+            ( \PParam' {ppTag, ppUpdateLens} ->
+                (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
+            )
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
