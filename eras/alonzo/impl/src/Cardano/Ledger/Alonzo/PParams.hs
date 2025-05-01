@@ -58,6 +58,15 @@ module Cardano.Ledger.Alonzo.PParams (
 
   -- * JSON helpers
   alonzoCommonPParamsHKDPairs,
+
+  -- * PParam
+  ppCollateralPercentage,
+  ppCostModels,
+  ppMaxBlockExUnits,
+  ppMaxCollateralInputs,
+  ppMaxTxExUnits,
+  ppMaxValSize,
+  ppPrices,
 )
 where
 
@@ -100,7 +109,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -116,12 +125,8 @@ import Cardano.Ledger.Plutus.ExUnits (
   zipSemiExUnits,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams (..),
-  shelleyCommonPParamsHKDPairs,
-  shelleyCommonPParamsHKDPairsV6,
-  shelleyCommonPParamsHKDPairsV8,
- )
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
@@ -354,7 +359,32 @@ instance EraPParams AlonzoEra where
   hkdMinUTxOValueL = notSupportedInThisEraL
   hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
-  pparams = []
+  pparams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppD
+    , ppExtraEntropy
+    , ppProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOWord
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    ]
 
 instance AlonzoEraPParams AlonzoEra where
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
@@ -857,4 +887,92 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppProtocolVersion = appProtocolVersion
     , sppMinUTxOValue = dappMinUTxOValue -- <- parameter that was dropped in Alonzo
     , sppMinPoolCost = appMinPoolCost
+    }
+
+ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam' era
+ppCoinsPerUTxOWord =
+  PParam'
+    { ppName = "utxoCostPerByte"
+    , ppTag = 17
+    , ppLens' = ppCoinsPerUTxOWordL
+    , ppUpdateLens = ppuCoinsPerUTxOWordL
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppCollateralPercentage :: AlonzoEraPParams era => PParam' era
+ppCollateralPercentage =
+  PParam'
+    { ppName = "collateralPercentage"
+    , ppTag = 23
+    , ppLens' = ppCollateralPercentageL
+    , ppUpdateLens = ppuCollateralPercentageL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppCostModels :: AlonzoEraPParams era => PParam' era
+ppCostModels =
+  PParam'
+    { ppName = "costModels"
+    , ppTag = 18
+    , ppLens' = ppCostModelsL
+    , ppUpdateLens = ppuCostModelsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxBlockExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxBlockExUnits =
+  PParam'
+    { ppName = "maxBlockExecutionUnits"
+    , ppTag = 21
+    , ppLens' = ppMaxBlockExUnitsL
+    , ppUpdateLens = ppuMaxBlockExUnitsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxCollateralInputs :: AlonzoEraPParams era => PParam' era
+ppMaxCollateralInputs =
+  PParam'
+    { ppName = "maxCollateralInputs"
+    , ppTag = 24
+    , ppLens' = ppMaxCollateralInputsL
+    , ppUpdateLens = ppuMaxCollateralInputsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxTxExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxTxExUnits =
+  PParam'
+    { ppName = "maxTxExecutionUnits"
+    , ppTag = 20
+    , ppLens' = ppMaxTxExUnitsL
+    , ppUpdateLens = ppuMaxTxExUnitsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppMaxValSize :: AlonzoEraPParams era => PParam' era
+ppMaxValSize =
+  PParam'
+    { ppName = "maxValueSize"
+    , ppTag = 22
+    , ppLens' = ppMaxValSizeL
+    , ppUpdateLens = ppuMaxValSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppPrices :: AlonzoEraPParams era => PParam' era
+ppPrices =
+  PParam'
+    { ppName = "executionUnitPrices"
+    , ppTag = 19
+    , ppLens' = ppPricesL
+    , ppUpdateLens = ppuPricesL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
     }
