@@ -37,19 +37,12 @@ module Cardano.Ledger.Babbage.PParams (
   coinsPerUTxOByteToCoinsPerUTxOWord,
   babbagePParamsHKDPairs,
   babbageCommonPParamsHKDPairs,
+  ppCoinsPerUTxOByte,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.PParams (
-  AlonzoEraPParams (..),
-  AlonzoPParams (..),
-  LangDepView (..),
-  OrdExUnits (..),
-  alonzoCommonPParamsHKDPairs,
-  encodeLangViews,
-  getLanguageView,
- )
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -89,10 +82,10 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.Shelley.PParams (shelleyCommonPParamsHKDPairsV8)
+import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
@@ -240,7 +233,30 @@ instance EraPParams BabbageEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
-  eraPParams = []
+  eraPParams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOByte
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    ]
 
 instance AlonzoEraPParams BabbageEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
@@ -640,3 +656,11 @@ coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (Coin c)) = CoinPerWord $ Coin $
 -- invalid.
 coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
 coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ Coin c
+
+ppCoinsPerUTxOByte :: BabbageEraPParams era => PParam' era
+ppCoinsPerUTxOByte =
+  PParam'
+    { ppName = "utxoCostPerByte"
+    , ppLens = ppCoinsPerUTxOByteL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOByteL
+    }
