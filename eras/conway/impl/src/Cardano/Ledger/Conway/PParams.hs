@@ -23,6 +23,16 @@
 -- | This module contains the type of protocol parameters and EraPParams instance
 module Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
+  ppCommitteeMaxTermLength,
+  ppCommitteeMinSize,
+  ppDRepActivity,
+  ppDRepDeposit,
+  ppDRepVotingThresholds,
+  ppGovActionDeposit,
+  ppGovActionLifetime,
+  ppGovProtocolVersion,
+  ppMinFeeRefScriptCostPerByte,
+  ppPoolVotingThresholds,
   ppPoolVotingThresholdsL,
   ppDRepVotingThresholdsL,
   ppCommitteeMinSizeL,
@@ -72,7 +82,7 @@ module Cardano.Ledger.Conway.PParams (
   pvtMotionNoConfidenceL,
 ) where
 
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..), OrdExUnits (..))
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -103,7 +113,6 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
-  HKD,
   HKDApplicative (hkdLiftA2),
   HKDFunctor (..),
   HKDNoUpdate,
@@ -119,6 +128,7 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
@@ -764,7 +774,39 @@ instance EraPParams ConwayEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
-  eraPParams = []
+  eraPParams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppGovProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOByte
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    , ppPoolVotingThresholds
+    , ppDRepVotingThresholds
+    , ppCommitteeMinSize
+    , ppCommitteeMaxTermLength
+    , ppGovActionLifetime
+    , ppGovActionDeposit
+    , ppDRepDeposit
+    , ppDRepActivity
+    , ppMinFeeRefScriptCostPerByte
+    ]
 
 instance AlonzoEraPParams ConwayEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
@@ -1479,3 +1521,83 @@ asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
           <> ","
           <> show (toInteger (maxBound @b))
           <> "]"
+
+ppPoolVotingThresholds :: ConwayEraPParams era => PParam' era
+ppPoolVotingThresholds =
+  PParam'
+    { ppName = "poolVotingThresholds"
+    , ppLens = ppPoolVotingThresholdsL
+    , ppUpdate = Just $ PParamUpdate 25 ppuPoolVotingThresholdsL
+    }
+
+ppDRepVotingThresholds :: ConwayEraPParams era => PParam' era
+ppDRepVotingThresholds =
+  PParam'
+    { ppName = "dRepVotingThresholds"
+    , ppLens = ppDRepVotingThresholdsL
+    , ppUpdate = Just $ PParamUpdate 26 ppuDRepVotingThresholdsL
+    }
+
+ppCommitteeMinSize :: ConwayEraPParams era => PParam' era
+ppCommitteeMinSize =
+  PParam'
+    { ppName = "committeeMinSize"
+    , ppLens = ppCommitteeMinSizeL
+    , ppUpdate = Just $ PParamUpdate 27 ppuCommitteeMinSizeL
+    }
+
+ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam' era
+ppCommitteeMaxTermLength =
+  PParam'
+    { ppName = "committeeMaxTermLength"
+    , ppLens = ppCommitteeMaxTermLengthL
+    , ppUpdate = Just $ PParamUpdate 28 ppuCommitteeMaxTermLengthL
+    }
+
+ppGovActionLifetime :: ConwayEraPParams era => PParam' era
+ppGovActionLifetime =
+  PParam'
+    { ppName = "govActionLifetime"
+    , ppLens = ppGovActionLifetimeL
+    , ppUpdate = Just $ PParamUpdate 29 ppuGovActionLifetimeL
+    }
+
+ppGovActionDeposit :: ConwayEraPParams era => PParam' era
+ppGovActionDeposit =
+  PParam'
+    { ppName = "govActionDeposit"
+    , ppLens = ppGovActionDepositL
+    , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositL
+    }
+
+ppDRepDeposit :: ConwayEraPParams era => PParam' era
+ppDRepDeposit =
+  PParam'
+    { ppName = "dRepDeposit"
+    , ppLens = ppDRepDepositL
+    , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositL
+    }
+
+ppDRepActivity :: ConwayEraPParams era => PParam' era
+ppDRepActivity =
+  PParam'
+    { ppName = "dRepActivity"
+    , ppLens = ppDRepActivityL
+    , ppUpdate = Just $ PParamUpdate 32 ppuDRepActivityL
+    }
+
+ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam' era
+ppMinFeeRefScriptCostPerByte =
+  PParam'
+    { ppName = "minFeeRefScriptCostPerByte"
+    , ppLens = ppMinFeeRefScriptCostPerByteL
+    , ppUpdate = Just $ PParamUpdate 33 ppuMinFeeRefScriptCostPerByteL
+    }
+
+ppGovProtocolVersion :: ConwayEraPParams era => PParam' era
+ppGovProtocolVersion =
+  PParam'
+    { ppName = "protocolVersion"
+    , ppLens = ppProtocolVersionL
+    , ppUpdate = Nothing
+    }
