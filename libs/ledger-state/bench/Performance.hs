@@ -93,6 +93,9 @@ main = do
               bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
           , env (pure (extractTx validatedTx3)) $
               bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
+          , env
+              (pure [validatedTx1, validatedTx2, validatedTx3])
+              $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (\ms -> fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
           ]
     , env (pure (getUTxO es)) $ \utxo ->
         bgroup
