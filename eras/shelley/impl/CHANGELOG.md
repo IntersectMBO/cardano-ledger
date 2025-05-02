@@ -21,6 +21,10 @@
   * `vsDRepsL` moved to Conway
   * `vsCommitteeStateL` moved to Conway
 
+### `testlib`
+
+* Added `Era` module with `ShelleyEraTest` class
+
 ## 1.16.0.0
 
 * Add `ShelleyInstantStake`, `shelleyInstantStakeCredentialsL`, `addShelleyInstantStake`, `deleteShelleyInstantStake`, `resolveShelleyInstantStake`

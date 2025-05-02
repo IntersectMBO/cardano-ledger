@@ -43,6 +43,10 @@
 * Remove patterns: `Block`, `UnserialisedBlock` and `UnsafeUnserialisedBlock`
 * Add ` EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`
 
+### `testlib`
+
+* Added `Era` module with `EraTest` class
+
 ## 1.17.0.0
 
 * Add `goldenJsonPParamsSpec`

@@ -19,6 +19,10 @@
 * Moved `CertState` to `State` module
 * Move `ToPutusData` instances for `CoinPerByte`, `DRepVotingThresholds` and `PoolVotingThresholds` with their respective types
 
+### `testlib`
+
+* Added `Era` module with `ConwayEraTest` class
+
 ## 1.19.0.0
 
 * Add `ConwayInstantStake`, `conwayInstantStakeCredentialsL`, `addConwayInstantStake`, `deleteConwayInstantStake`, `resolveConwayInstantStake`

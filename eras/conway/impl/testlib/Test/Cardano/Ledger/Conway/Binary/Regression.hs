@@ -38,9 +38,7 @@ import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 
 spec ::
   forall era.
-  ( EraTx era
-  , NFData (Tx era)
-  ) =>
+  EraTx era =>
   Spec
 spec = describe "Regression" $ do
   it "DeserialiseFailure on resubmitting Conway Tx with invalid plutus script #4198" $ do

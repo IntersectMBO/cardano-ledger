@@ -9,6 +9,9 @@
 * Expose constructor `MkBabbageTxBody`
 * Deprecate `spendInputs'`, `collateralInputs'`, `referenceInputs'`, `outputs'`, `collateralReturn'`, `totalCollateral'`, `certs'`, `txfee'`, `withdrawals'`, `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`, `spendInputs'`, `txnetworkid'`.
 
+### `testlib`
+
+* Added `Era` module with `BabbageEraTest` class
 
 ## 1.11.0.0
 

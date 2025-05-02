@@ -14,6 +14,10 @@
 * Deprecate `TxDats'` and `AlonzoTxWits'`
 * Deprecate `txwitsVKey'`, `txwitsBoot'`, `txscripts'`, `txdats'` and `txrdmrs'`
 
+### `testlib`
+
+* Added `Era` module with `AlonzoEraTest` class
+
 ## 1.13.0.0
 
 * Add `DecCBOR` instances for:

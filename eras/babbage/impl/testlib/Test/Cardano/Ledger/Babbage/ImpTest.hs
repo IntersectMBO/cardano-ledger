@@ -41,6 +41,7 @@ import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.Era ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 
@@ -104,9 +105,9 @@ impBabbageExpectTxSuccess tx = do
       impAnn "Collateral return should be in UTxO" $
         expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- returns]
 
-instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
+instance MaryEraImp BabbageEra
 
-instance ShelleyEraImp BabbageEra => AlonzoEraImp BabbageEra where
+instance AlonzoEraImp BabbageEra where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
 
 produceRefScript ::

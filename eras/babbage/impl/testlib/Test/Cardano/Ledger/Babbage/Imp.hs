@@ -29,8 +29,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( Arbitrary (TxAuxData era)
-  , AlonzoEraImp era
+  ( AlonzoEraImp era
   , BabbageEraTxBody era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era

@@ -28,7 +28,6 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec ::
   forall era.
   ( ShelleyEraImp era
-  , Arbitrary (TxAuxData era)
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

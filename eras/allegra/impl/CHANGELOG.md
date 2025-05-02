@@ -10,6 +10,10 @@
 * Deprecate `TimelockConstr`
 * Rename `atbrTxFee` to `atbrFee` for consistency
 
+### `testlib`
+
+* Added `Era` module with `AllegraEraTest` class
+
 ## 1.7.0.0
 
 * Add `DecCBOR` instances for:
