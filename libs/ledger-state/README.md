@@ -30,7 +30,13 @@ curl -O -J https://book.play.dev.cardano.org/environments/mainnet/conway-genesis
 
 Download or build copies of `cardano-node` and `cardano-cli`. A convenient way of doing this is to download the assets from one of the `cardano-node` [releases](https://github.com/IntersectMBO/cardano-node/releases) on GitHub. The Linux executables are statically linked, so will run on any system.
 
+Download a snapshot of the node db using [mithril](https://mithril.network/doc/manual/getting-started/bootstrap-cardano-node/#bootstrap-a-cardano-node-from-a-testnet-mithril-cardano-db-snapshot). This will greatly speed up the process of syncing the node. There's a convenient nix-based script for doing it in `scripts/mithril-download.sh`:
+
+```shell
+$ scripts/mithril-download.sh -d "${CARDANO_DATA}/db" mainnet
 ```
+
+Note that you will need to get a snapshot that's compatible with the version of `cardano-node` you're using.
 
 Start the node and wait for it to fully sync
 
