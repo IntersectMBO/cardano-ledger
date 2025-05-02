@@ -123,8 +123,8 @@ class
   , EraTxWits era
   , EraTxAuxData era
   , EraPParams era
-  , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
-    NoThunks (Tx era)
+  , NFData (Tx era)
+  , NoThunks (Tx era)
   , DecCBOR (Tx era)
   , EncCBOR (Tx era)
   , ToCBOR (Tx era)
