@@ -1701,8 +1701,6 @@ instance Reflect era => PrettyA (ShelleyTickPredFailure era) where
 ppShelleyNewEpochPredicateFailure ::
   forall era. Reflect era => ShelleyNewEpochPredFailure era -> PDoc
 ppShelleyNewEpochPredicateFailure (EpochFailure x) = ppEPOCH @era reify x
-ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
-  ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
 ppShelleyNewEpochPredicateFailure (MirFailure _) =
   error "In the Conway era, there is no (EraRule MIR) type instance."
 
