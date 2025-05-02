@@ -51,12 +51,15 @@ $ cardano-node run \
     --port 3001 &
 ```
 
-Dump the ledger state:
+Dump the ledger state and utxo:
 
 ```shell
 $ cardano-cli query ledger-state --mainnet \
     --socket-path "${CARDANO_NODE_SOCKET_PATH}" \
     --out-file "${CARDANO_DATA}/new-epoch-state.bin"
+$ cardano-cli query utxo --mainnet --whole-utxo --output-cbor \
+    --socket-path "${CARDANO_NODE_SOCKET_PATH}" \
+    --out-file "${CARDANO_DATA}/utxo.hex"
 ```
 
 Bring the node back into the foreground and use Ctrl-C to stop it:
@@ -103,6 +106,7 @@ menu, therefore paths to those files must be supplied as environment variables.
 ```shell
 $ export BENCH_GENESIS_PATH=${CARDANO_DATA}/shelley-genesis.json
 $ export BENCH_LEDGER_STATE_PATH=${CARDANO_DATA}/new-epoch-state.bin
+$ export BENCH_UTXO_PATH=${CARDANO_DATA}/utxo.hex
 $ cabal bench ledger-state:performance --benchmark-option=--csv=ledger-state:performance.csv
 ```
 

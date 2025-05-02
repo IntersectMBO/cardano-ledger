@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.Genesis (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Cardano.Ledger.State.UTxO (CurrentEra, readNewEpochState)
+import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -40,7 +40,7 @@ import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import System.Environment (getEnv)
 import System.Exit (die)
 import System.Random.Stateful
@@ -49,11 +49,27 @@ import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
 main = do
-  let ledgerVarName = "BENCH_LEDGER_STATE_PATH"
-      genesisVarName = "BENCH_GENESIS_PATH"
-  ledgerStateFilePath <- getEnv ledgerVarName
+  let genesisVarName = "BENCH_GENESIS_PATH"
+      utxoVarName = "BENCH_UTXO_PATH"
+      ledgerStateVarName = "BENCH_LEDGER_STATE_PATH"
   genesisFilePath <- getEnv genesisVarName
+  utxoFilePath <- getEnv utxoVarName
+  ledgerStateFilePath <- getEnv ledgerStateVarName
+
   genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+  putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
+  utxo <- readHexUTxO utxoFilePath
+  putStrLn "Done importing UTxO"
+  putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
+  es' <- readNewEpochState ledgerStateFilePath
+  putStrLn "Done importing NewEpochState"
+
+  let nesUTxOL = nesEsL . esLStateL . lsUTxOStateL . utxoL
+      es = es' & nesUTxOL .~ utxo
+      utxoMap = unUTxO utxo
+      utxoSize = Map.size utxoMap
+      largeKeysNum = 100000
+      stdGen = mkStdGen 2022
 
   let toMempoolState :: NewEpochState CurrentEra -> MempoolState CurrentEra
       toMempoolState NewEpochState {nesEs = EpochState {esLState}} = esLState
@@ -62,20 +78,15 @@ main = do
       applyTx' mempoolEnv mempoolState =
         either (error . show) seqTuple
           . applyTx globals mempoolEnv mempoolState
-      reapplyTx' mempoolEnv mempoolState tx =
-        case reapplyTx globals mempoolEnv mempoolState tx of
-          Left err -> error (show err)
-          Right st -> st
-  putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
-  es <- readNewEpochState ledgerStateFilePath
-  putStrLn "Done importing NewEpochState"
-  let utxoMap = unUTxO $ getUTxO es
-      utxoSize = Map.size utxoMap
-      largeKeysNum = 100000
-      stdGen = mkStdGen 2022
+      reapplyTx' mempoolEnv mempoolState =
+        either (error . show) id
+          . reapplyTx globals mempoolEnv mempoolState
+
   when (utxoSize < largeKeysNum) $
-    die $ "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
+    die $
+      "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
   largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
+
   defaultMain
     [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -103,15 +114,15 @@ main = do
               (pure [validatedTx1, validatedTx2, validatedTx3])
               $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (\ms -> fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
           ]
-    , env (pure (getUTxO es)) $ \utxo ->
+    , env (pure utxo) $ \utxo' ->
         bgroup
           "UTxO"
-          [ bench "balance" $ nf balance utxo
-          , bench "coinBalance" $ nf coinBalance utxo
+          [ bench "balance" $ nf balance utxo'
+          , bench "coinBalance" $ nf coinBalance utxo'
           , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
             -- from short circuiting and producing results that are way better
             -- than the worst case
-            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo) $
+            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
               bench "areAllAdaOnly" . nf areAllAdaOnly
           ]
     , env (pure es) $ \newEpochState ->
