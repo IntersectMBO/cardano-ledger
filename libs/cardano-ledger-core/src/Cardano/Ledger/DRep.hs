@@ -186,9 +186,8 @@ instance ToJSON DRepState where
           object $
             [ "expiry" .= toJSON drepExpiry
             , "deposit" .= toJSON drepDeposit
-            -- Since the corresponding `FromJSON` instance ignores this field, we omit it from
-            -- the `ToJSON` instance as well. Round-tripping is therefore as expected.
-            -- , "delegators" .= toJSON drepDelegs
+            -- Since the corresponding `FromJSON` instance ignores the `delegators` field,
+            -- we omit it from the `ToJSON` instance, ensuring that round-tripping behaves as expected.
             ]
               ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
 
