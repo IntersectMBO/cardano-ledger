@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping. #5004
 * Change `TxBody` to an associated `data` family
 * Remove `HeapWords` instances for: #5001
   - `Coin`
