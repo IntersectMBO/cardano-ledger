@@ -9,13 +9,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- Base types: Term, Pred, Spec, Ctx, and classes: HasSpec, Syntax, Semantics, and Logic for the MinModel
 module Constrained.MinBase where
 
-import Constrained.Core (Evidence (..), Var (..))
+import Constrained.Core (Evidence (..), Var (..), eqVar)
 import Constrained.GenT
 import Constrained.List hiding (ListCtx)
 import Data.Kind
@@ -62,6 +63,14 @@ instance Eq (Term a) where
       _ -> False
   _ == _ = False
 
+-- | If the list is composed solely of literals, apply the function to get a value
+applyFunSym ::
+  forall t ds rng.
+  (Typeable rng, Eq rng, Show rng, Semantics t) => FunTy ds rng -> List Term ds -> Maybe rng
+applyFunSym f Nil = Just f
+applyFunSym f (Lit x :> xs) = applyFunSym @t (f x) xs
+applyFunSym _ _ = Nothing
+
 -- How to compare the args of two applications for equality
 sameTerms :: All HasSpec as => List Term as -> List Term as -> Bool
 sameTerms Nil Nil = True
@@ -78,9 +87,15 @@ class Syntax (t :: [Type] -> Type -> Type) where
   name :: forall dom rng. t dom rng -> String
 
 -- | Semantic operations are ones that give the function symbol, meaning as a function.
---   I.e. how to apply the function to a list of arguments and return a value.
+--   I.e. how to apply the function to a list of arguments and return a value,
+--   or to apply meaning preserving rewrite rules.
 class Syntax t => Semantics (t :: [Type] -> Type -> Type) where
   semantics :: forall d r. t d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
+  rewriteRules ::
+    forall ds rng.
+    (TypeList ds, Typeable ds, HasSpec rng, All HasSpec ds) =>
+    t ds rng -> List Term ds -> Evidence (Typeable rng, Eq rng, Show rng) -> Maybe (Term rng)
+  rewriteRules t l Evidence = Lit <$> (applyFunSym @t (semantics t) l)
 
 -- | Logical operations are one that support reasoning about how a function symbol
 --   relates to logical properties, that we call Spec's
@@ -214,6 +229,8 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 data HOLE a b where
   HOLE :: HOLE a a
 
+deriving instance Show (HOLE a b)
+
 data ListCtx (as :: [Type]) (c :: Type -> Type) where
   Unary :: c a -> ListCtx '[a] c
   (:-+) :: c b -> x -> ListCtx '[b, x] c
@@ -242,6 +259,17 @@ fromListCtx (Unary HOLE) t = t :> Nil
 fromListCtx (HOLE :-+ y) t = t :> Lit y :> Nil
 fromListCtx (x :+- HOLE) t = Lit x :> t :> Nil
 
+--- | Consider the term `((size_ x +. Lit 3) <=. Lit 12)` with a bunch of nested function symbols, with just 1 variable 'x'
+--  toCtx builds the Ctx:  CtxApp <=. ((CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3)) :-+ 12)
+--  working our way from outside in, we first propagate (<=.), then (+.), then (size_).
+--  Now call:  propagateSpec spec (CtxApp <=. ((CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3)) :-+ 12))
+--  Working our way from outside in, replacing nested Ctx with hole, we call
+--  propagate <=. (CtxApp <=. (Hole :-+ 12)) spec --> spec2
+--  then recursively call propagateSpec to the nested Ctx on the new spec2
+--  propagateSpec spec2 (CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3))
+--  propgate  +. (CtxHole :-+ 3) spec2 --> spec3
+--  propagateSpec spec3 (CtxApp size_ (Unary CtxHole))
+--  propagate size_ (Unary CtxHole) --> spec4
 propagateSpec ::
   forall v a.
   HasSpec v =>
@@ -253,6 +281,71 @@ propagateSpec spec = \case
   CtxApp f (Unary ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (Unary HOLE) spec) ctx
   CtxApp f (ctx :-+ v) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (HOLE :-+ v) spec) ctx
   CtxApp f (v :+- ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (v :+- HOLE) spec) ctx
+
+-- Construct a Ctx for a variable 'v', whish should occur exactly once in the given Term.
+toCtx ::
+  forall m v a.
+  (Typeable v, Show v, MonadGenError m, HasCallStack) =>
+  Var v -> Term a -> m (Ctx v a)
+toCtx v = go
+  where
+    go :: forall b. Term b -> m (Ctx v b)
+    go (Lit i) =
+      fatalErrorNE $
+        NE.fromList
+          [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
+          , "A context is always constructed from an (App f xs) term"
+          , "with a single occurence of the target variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+          ]
+    go t@(App f xs) = CtxApp f <$> toCtxList (show t) v xs
+    go (V v')
+      | Just Refl <- eqVar v v' = pure $ CtxHole
+      | otherwise =
+          fatalErrorNE $
+            NE.fromList
+              [ "A context is always constructed from an (App f xs) term with a single target variable, or"
+              , "just the target variable we are searching for: " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+              , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
+              ]
+
+toCtxList ::
+  forall m v as.
+  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
+  String -> Var v -> List Term as -> m (ListCtx as (Ctx v))
+toCtxList termName v Nil = fatalErrorNE $ ("toCtxList without hole, for variable " ++ show v) :| [termName]
+toCtxList termName v (V v' :> Nil)
+  | Just Refl <- eqVar v v' = pure $ Unary CtxHole
+  | otherwise =
+      fatalErrorNE $
+        NE.fromList
+          [ "A context is always constructed from an (App f xs) term,"
+          , "with a single occurence of the target variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+          , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
+          , "in an application: " ++ termName
+          ]
+toCtxList _ v (Lit i :> t :> Nil) = do
+  hole <- toCtx v t
+  pure $ (i :+- hole)
+toCtxList _ v (t :> Lit i :> Nil) = do
+  hole <- toCtx v t
+  pure $ (hole :-+ i)
+toCtxList termName v (_ :> _ :> Nil) =
+  fatalErrorNE $
+    "toCtx applied to an App with 2 parameters."
+      :| [ "The target variable we are searching for is " ++ show v
+         , "One of these parameters must be a literal, which is not the case."
+         , termName
+         , "If both are non-literals, then term could have two variables, which is not allowed."
+         ]
+toCtxList termName v xs =
+  fatalErrorNE $
+    NE.fromList
+      [ "toCtx applied to an App with more than 2 parameters"
+      , termName
+      , "The target variable we are searching for is " ++ show v
+      , "All function symbols should have 1 or 2 parameters"
+      , "This one appears to accept " ++ show (lengthList xs) ++ "."
+      ]
 
 -- ===================================================================
 -- Pretty Printer Helper functions
@@ -305,8 +398,6 @@ short xs =
 
 showType :: forall t. Typeable t => String
 showType = show (typeRep (Proxy @t))
-
--- ============================================================================================
 
 -- ==========================================================================
 -- Pretty and Show instances

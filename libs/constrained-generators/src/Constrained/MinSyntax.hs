@@ -15,12 +15,21 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+-- Monoid Pred and Spec, Pretty and ReName instances
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- Syntactic operations on types: Term, Pred, Spec, Ctx, etc.
 module Constrained.MinSyntax where
 
-import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue)
+import Constrained.Core (
+  Evidence (..),
+  Rename (rename),
+  Value (..),
+  Var (..),
+  eqVar,
+  freshen,
+  unValue,
+ )
 import Constrained.Env
 import Constrained.GenT
 import Constrained.Graph
@@ -714,7 +723,7 @@ substituteAndSimplifyTerm sub t =
       | otherwise -> t'
 
 -- | Simplify a Term, if the Term is an 'App', apply the rewrite rules
---   chosen by the (Logic sym t bs a) instance attached
+--   chosen by the (Semantics t)  instance attached to the App
 --   to the function witness 'f'
 simplifyTerm :: forall a. Term a -> Term a
 simplifyTerm = \case
@@ -722,8 +731,7 @@ simplifyTerm = \case
   Lit l -> Lit l
   App (f :: t bs a) (mapList simplifyTerm -> ts)
     | Just vs <- fromLits ts -> Lit $ uncurryList_ unValue (semantics f) vs
-    -- \| Just t <- rewriteRules f ts (Evidence @(AppRequires t bs a)) -> simplifyTerm t
-    -- TODO This might matter
+    | Just t <- rewriteRules f ts (Evidence @(Typeable a, Eq a, Show a)) -> simplifyTerm t
     | otherwise -> App f ts
 
 simplifyPred :: Pred -> Pred
@@ -918,6 +926,10 @@ instance Syntax EqSym where
 
 instance Semantics EqSym where
   semantics EqualW = (==)
+
+  rewriteRules EqualW (t :> t' :> Nil) Evidence
+    | t == t' = Just $ Lit True
+  rewriteRules t@EqualW l Evidence = Lit <$> (applyFunSym @EqSym (semantics t) l)
 
 -- We don't need a HasSpec instance, since we can make equality specs at any type
 -- using just MemberSpec and TypeSpec

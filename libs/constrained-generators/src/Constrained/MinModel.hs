@@ -8,22 +8,23 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- EqSym instances
+-- HasSpec instances for known types Integer, Bool, Set , (,)
 {-# OPTIONS_GHC -Wno-orphans #-}
-
--- {-# OPTIONS_GHC -Wno-unused-matches #-} -- Remove this
 
 module Constrained.MinModel where
 
 import Constrained.Core (
+  Evidence (..),
   Var (..),
   eqVar,
   freshen,
@@ -52,34 +53,6 @@ import Data.Typeable
 import GHC.Stack
 import Prettyprinter
 import Test.QuickCheck hiding (forAll)
-
-toCtx :: Var a -> Term b -> GE (Ctx a b)
-toCtx = undefined
-
-{-
-toCtxList ::
-  forall m v as.
-  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
-  Var v ->
-  List Term as ->
-  m (ListCtx Value as (Ctx v))
-toCtxList v xs = prefix xs
-  where
-    prefix :: forall as'. HasCallStack => List Term as' -> m (ListCtx Value as' (Ctx v))
-    prefix Nil = fatalError ("toCtxList without hole, for variable " ++ show v)
-    prefix (Lit l :> ts) = do
-      ctx <- prefix ts
-      pure $ l :-+ ctx
-    prefix (t :> ts) = do
-      hole <- toCtx v t
-      suf <- suffix ts
-      pure $ hole :? suf
-
-    suffix :: forall as'. List Term as' -> m (List Value as')
-    suffix Nil = pure Nil
-    suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
-    suffix (_ :> _) = fatalErrorNE $ NE.fromList ["toCtxList with too many holes, for variable " ++ show v]
--}
 
 -- ====================================================
 -- Now some concrete examples
@@ -117,17 +90,20 @@ instance Logic IntegerSym where
     (_, _, ErrorSpec xs) -> ErrorSpec xs
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
     (LessOrEqW, HOLE :-+ l, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
-    (LessOrEqW, l :+- HOLE, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> ltSpec l
+    (LessOrEqW, l :+- HOLE, bspec) -> caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
     (GreaterOrEqW, HOLE :-+ x, spec1) -> propagate LessOrEqW (x :+- HOLE) spec1
     (GreaterOrEqW, x :+- HOLE, spec2) -> propagate LessOrEqW (HOLE :-+ x) spec2
-    (PlusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (PlusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
-    (PlusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (PlusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
-    (MinusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval (minus n <$> lo) (minus n <$> hi)) (map (minus n) bad)
-    (MinusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (MinusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (MinusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
+    (PlusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (PlusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (PlusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (PlusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (MinusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (MinusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
+    (MinusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
+    (MinusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+
+negateRange :: Range -> Range
+negateRange (Interval ml mu) = Interval (negate <$> mu) (negate <$> ml)
 
 minus :: Integer -> Integer -> Integer
 minus n x = x - n
@@ -265,6 +241,13 @@ instance Semantics SetSym where
   semantics MemberW = Set.member
   semantics SizeW = setSize
   semantics SubsetW = Set.isSubsetOf
+
+  rewriteRules SubsetW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
+  rewriteRules SubsetW (x :> Lit s :> Nil) Evidence | null s = Just $ x ==. Lit Set.empty
+  rewriteRules MemberW (t :> Lit s :> Nil) Evidence
+    | null s = Just $ Lit False
+    | [a] <- Set.toList s = Just $ t ==. Lit a
+  rewriteRules t l Evidence = Lit <$> (applyFunSym @SetSym (semantics t) l)
 
 instance Logic SetSym where
   propagate tag ctx spec = case (tag, ctx, spec) of
@@ -440,6 +423,16 @@ instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
 
 -- ========== Pairs example =======================
 
+pattern Pair ::
+  forall c. () => forall a b. (c ~ (a, b), HasSpec a, HasSpec b) => Term a -> Term b -> Term c
+pattern Pair x y <- App (getWitness -> Just PairW) (x :> y :> Nil)
+
+{-
+pairView :: forall a b. (HasSpec a, HasSpec b) => Term (a,b) -> Maybe (Term a, Term b)
+pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
+pairView _ = Nothing
+-}
+
 data PairSym (dom :: [Type]) rng where
   FstW :: PairSym '[(a, b)] a
   SndW :: PairSym '[(a, b)] b
@@ -459,6 +452,9 @@ instance Semantics PairSym where
   semantics FstW = fst
   semantics SndW = snd
   semantics PairW = (,)
+  rewriteRules FstW (Pair x _ :> Nil) Evidence = Just x
+  rewriteRules SndW (Pair _ y :> Nil) Evidence = Just y
+  rewriteRules t l Evidence = Lit <$> applyFunSym @PairSym (semantics t) l
 
 instance Logic PairSym where
   propagateTypeSpec FstW (Unary HOLE) ts cant = typeSpec $ Cartesian (TypeSpec ts cant) TrueSpec
@@ -715,25 +711,48 @@ genFromSpecT (simplifySpec -> spec) = case spec of
       genFromTypeSpec s `suchThatT` (`notElem` cant)
   ErrorSpec e -> genErrorNE e
 
-simplifySpec :: HasSpec a => Spec a -> Spec a
-simplifySpec spec = case regularizeNames spec of
-  SuspendedSpec x p ->
-    let optP = optimisePred p
-     in fromGESpec $
-          explain
-            ("\nWhile calling simplifySpec on var " ++ show x ++ "\noptP=\n" ++ show optP ++ "\n")
-            (computeSpecSimplified x optP)
-  MemberSpec xs -> MemberSpec xs
-  ErrorSpec es -> ErrorSpec es
-  TypeSpec ts cant -> TypeSpec ts cant
-  TrueSpec -> TrueSpec
+-- | A version of `genFromSpecT` that simply errors if the generator fails
+genFromSpec :: forall a. (HasCallStack, HasSpec a) => Spec a -> Gen a
+genFromSpec spec = do
+  res <- catchGen $ genFromSpecT @a @GE spec
+  either (error . ('\n' :) . catMessages) pure res
 
--- | Turn 'GenError' into 'ErrorSpec', and FatalError into 'error'
-fromGESpec :: HasCallStack => GE (Spec a) -> Spec a
-fromGESpec ge = case ge of
-  Result s -> s
-  GenError xs -> ErrorSpec (catMessageList xs)
-  FatalError es -> error $ catMessages es
+-- | A version of `genFromSpecT` that runs in the IO monad. Good for debugging.
+debugSpec :: forall a. HasSpec a => Spec a -> IO ()
+debugSpec spec = do
+  ans <- generate $ genFromGenT $ inspect (genFromSpecT spec)
+  let f x = putStrLn (unlines (NE.toList x))
+      ok x =
+        if conformsToSpec x spec
+          then putStrLn "True"
+          else putStrLn "False, perhaps there is an unsafeExists in the spec?"
+  case ans of
+    FatalError xs -> mapM_ f xs
+    GenError xs -> mapM_ f xs
+    Result x -> print spec >> print (simplifySpec spec) >> print x >> ok x
+
+{-
+-- |  ChooseSpec is one of the ways we can 'Or' two Specs together
+--    This works for any kind of type that has a HasSpec instance.
+--    If your type is a Sum type. One can use CaseOn which is much easier.
+frequencySpec ::
+  HasSpec a =>
+  (Int, Spec a) ->
+  (Int, Spec a) ->
+  Spec a
+frequencySpec (w, s) (w', s') =
+  constrained $ \x ->
+    exists (\eval -> pure $ eval x `conformsToSpec` s) $ \b ->
+      [ ifElse
+          b
+          (x `satisfies` s)
+          (x `satisfies` s')
+      , caseOn
+          b
+          (branchW w' $ \_ -> True)
+          (branchW w $ \_ -> True)
+      ]
+-}
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
@@ -753,6 +772,30 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
       (env', plan') <-
         explain (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan env plan
       go env' plan'
+
+-- =============================================================
+-- Simplifcation
+-- =============================================================
+
+simplifySpec :: HasSpec a => Spec a -> Spec a
+simplifySpec spec = case regularizeNames spec of
+  SuspendedSpec x p ->
+    let optP = optimisePred p
+     in fromGESpec $
+          explain
+            ("\nWhile calling simplifySpec on var " ++ show x ++ "\noptP=\n" ++ show optP ++ "\n")
+            (computeSpecSimplified x optP)
+  MemberSpec xs -> MemberSpec xs
+  ErrorSpec es -> ErrorSpec es
+  TypeSpec ts cant -> TypeSpec ts cant
+  TrueSpec -> TrueSpec
+
+-- | Turn 'GenError' into 'ErrorSpec', and FatalError into 'error'
+fromGESpec :: HasCallStack => GE (Spec a) -> Spec a
+fromGESpec ge = case ge of
+  Result s -> s
+  GenError xs -> ErrorSpec (catMessageList xs)
+  FatalError es -> error $ catMessages es
 
 ------- Stages of simplifying -------------------------------
 
@@ -1260,3 +1303,6 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
           , Result ctx <- toCtx y t =
               [SolverStage y [] (propagateSpec specx ctx)]
         termVarEqCases _ _ _ = []
+
+spec9 :: Spec (Set Integer)
+spec9 = constrained $ \x -> Assert $ (size_ x +. Lit 3) <=. Lit 12
