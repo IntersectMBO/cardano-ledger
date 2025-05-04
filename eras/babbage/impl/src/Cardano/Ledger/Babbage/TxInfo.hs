@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusScriptPurpose,
   PlutusTxInfo,
+  SupportedLanguage (..),
   lookupTxInfoResultImpossible,
   toPlutusWithContext,
  )
@@ -227,6 +228,11 @@ instance EraPlutusContext BabbageEra where
     = BabbageTxInfoResult -- Fields must be kept lazy
         (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV1))
         (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV2))
+
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    PlutusV2 -> Just $ SupportedLanguage SPlutusV2
+    _lang -> Nothing
 
   mkTxInfoResult lti = BabbageTxInfoResult (toPlutusTxInfo SPlutusV1 lti) (toPlutusTxInfo SPlutusV2 lti)
 

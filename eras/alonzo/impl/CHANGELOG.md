@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add `supportedLanguages` to `EraPlutusContext`
+* Add `SupportedLanguage`, `mkSupportedBinaryPlutusScript` and `mkSupportedPlutusScript`.
 * Deprecate `inputs'`, `collateral'`, `outputs'`, `certs'`, `withdrawals'`, `txfee'`,
   `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`,
   and `txnetworkid'`
