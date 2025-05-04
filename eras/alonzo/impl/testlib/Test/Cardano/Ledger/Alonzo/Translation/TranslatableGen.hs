@@ -20,7 +20,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusTxInfo,
   SupportedLanguage (..),
-  supportedLanguages,
   toPlutusTxInfo,
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
@@ -30,7 +29,6 @@ import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -76,8 +74,8 @@ genTranslationInstance ::
   Gen (TranslationInstance era)
 genTranslationInstance = do
   protVer <- arbitrary
-  supportedLanguage <- elements $ NE.toList (supportedLanguages @era)
-  tx <- tgTx @era supportedLanguage
+  supportedLanguage :: SupportedLanguage era <- arbitrary
+  tx <- tgTx supportedLanguage
   utxo <- tgUtxo supportedLanguage tx
   let lti =
         LedgerTxInfo
