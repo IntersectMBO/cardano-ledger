@@ -8,8 +8,11 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, LedgerTxInfo (..), toPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  LedgerTxInfo (..),
+  SupportedLanguage (..),
+  toPlutusTxInfo,
+ )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
@@ -17,7 +20,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
-  TxInfoLanguage (..),
   epochInfo,
   systemStart,
   toVersionedTxInfo,
@@ -34,10 +36,7 @@ import Test.HUnit (Assertion, assertEqual)
 -- and serializes both arguments and result to golden/translations.cbor file
 generateGoldenFile ::
   forall era.
-  ( Show (ContextError era)
-  , AlonzoEraScript era
-  , TranslatableGen era
-  ) =>
+  TranslatableGen era =>
   FilePath ->
   IO ()
 generateGoldenFile file = do
@@ -49,7 +48,6 @@ generateGoldenFile file = do
 assertTranslationResultsMatchGolden ::
   forall era.
   ( TranslatableGen era
-  , Show (ContextError era)
   , HasCallStack
   ) =>
   IO FilePath ->
@@ -62,14 +60,13 @@ assertTranslationResultsMatchGolden file = do
 assertTranslationComparison ::
   forall era.
   ( TranslatableGen era
-  , Show (ContextError era)
   , HasCallStack
   ) =>
   TranslationInstance era ->
   Assertion
-assertTranslationComparison (TranslationInstance protVer lang utxo tx expected) =
-  case mkTxInfoLanguage @era lang of
-    TxInfoLanguage slang -> do
+assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo tx expected) =
+  case supportedLanguage of
+    SupportedLanguage slang -> do
       case toPlutusTxInfo slang lti of
         Left e -> error $ show e
         Right actual -> assertEqual errorMessage expected $ toVersionedTxInfo slang actual
@@ -84,9 +81,9 @@ assertTranslationComparison (TranslationInstance protVer lang utxo tx expected) 
         }
     errorMessage =
       unlines
-        [ "Unexpected txinfo with arguments: "
+        [ "Unexpected TxInfo with arguments: "
         , " ProtVer: " <> show protVer
-        , " language: " <> show lang
-        , " utxo: " <> show utxo
-        , " tx: " <> show tx
+        , " Language: " <> show supportedLanguage
+        , " UTxO: " <> show utxo
+        , " Tx: " <> show tx
         ]

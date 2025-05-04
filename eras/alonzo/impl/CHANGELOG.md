@@ -18,6 +18,7 @@
 
 ### `testlib`
 
+* Remove `TxInfoLanguage` and `mkTxInfoLanguage`
 * Added `Era` module with `AlonzoEraTest` class
 
 ## 1.13.0.0

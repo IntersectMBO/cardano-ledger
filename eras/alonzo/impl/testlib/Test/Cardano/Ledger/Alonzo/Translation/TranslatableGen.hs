@@ -8,7 +8,6 @@
 
 module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
-  TxInfoLanguage (..),
   translationInstances,
   epochInfo,
   toVersionedTxInfo,
@@ -17,42 +16,36 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  ContextError,
-  EraPlutusTxInfo,
+  EraPlutusContext,
   LedgerTxInfo (..),
   PlutusTxInfo,
+  SupportedLanguage (..),
+  supportedLanguages,
   toPlutusTxInfo,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (eraMaxLanguage))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Core as Core
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import GHC.Stack
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   VersionedTxInfo (..),
  )
-import Test.QuickCheck (Gen, arbitrary, elements, vectorOf)
-import Test.QuickCheck.Gen (Gen (MkGen))
-import Test.QuickCheck.Random (mkQCGen)
+import Test.Cardano.Ledger.Common
 
-data TxInfoLanguage era where
-  TxInfoLanguage :: EraPlutusTxInfo l era => SLanguage l -> TxInfoLanguage era
-
-class EraTx era => TranslatableGen era where
+class (EraTx era, EraPlutusContext era, Arbitrary (Script era)) => TranslatableGen era where
   tgRedeemers :: Gen (Redeemers era)
-  tgTx :: Language -> Gen (Core.Tx era)
-  tgUtxo :: Language -> Core.Tx era -> Gen (UTxO era)
-  mkTxInfoLanguage :: HasCallStack => Language -> TxInfoLanguage era
+  tgTx :: SupportedLanguage era -> Gen (Core.Tx era)
+  tgUtxo :: SupportedLanguage era -> Core.Tx era -> Gen (UTxO era)
 
 instance TranslatableGen AlonzoEra where
   tgRedeemers = arbitrary
@@ -61,24 +54,14 @@ instance TranslatableGen AlonzoEra where
     let ins = tx ^. bodyTxL ^. inputsTxBodyL
     outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut AlonzoEra))
     pure $ UTxO (Map.fromList $ Set.toList ins `zip` outs)
-  mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
-  mkTxInfoLanguage lang =
-    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @AlonzoEra
 
 translationInstances ::
-  forall era.
-  ( AlonzoEraScript era
-  , TranslatableGen era
-  , Show (ContextError era)
-  ) =>
+  TranslatableGen era =>
   Int ->
   Int ->
   [TranslationInstance era]
 translationInstances size seed =
-  generateWithSeed seed $ vectorOf size genTranslationInstance
-
-generateWithSeed :: Int -> Gen a -> a
-generateWithSeed seed (MkGen g) = g (mkQCGen seed) 30
+  runGen seed 30 $ vectorOf size genTranslationInstance
 
 toVersionedTxInfo :: SLanguage l -> PlutusTxInfo l -> VersionedTxInfo
 toVersionedTxInfo slang txInfo =
@@ -89,16 +72,13 @@ toVersionedTxInfo slang txInfo =
 
 genTranslationInstance ::
   forall era.
-  ( AlonzoEraScript era
-  , TranslatableGen era
-  , Show (ContextError era)
-  ) =>
+  TranslatableGen era =>
   Gen (TranslationInstance era)
 genTranslationInstance = do
   protVer <- arbitrary
-  lang <- elements [minBound .. eraMaxLanguage @era]
-  tx <- tgTx @era lang
-  utxo <- tgUtxo lang tx
+  supportedLanguage <- elements $ NE.toList (supportedLanguages @era)
+  tx <- tgTx @era supportedLanguage
+  utxo <- tgUtxo supportedLanguage tx
   let lti =
         LedgerTxInfo
           { ltiProtVer = protVer
@@ -107,11 +87,12 @@ genTranslationInstance = do
           , ltiUTxO = utxo
           , ltiTx = tx
           }
-  case mkTxInfoLanguage @era lang of
-    TxInfoLanguage slang -> do
+  case supportedLanguage of
+    SupportedLanguage slang -> do
       case toPlutusTxInfo slang lti of
         Left err -> error $ show err
-        Right txInfo -> pure $ TranslationInstance protVer lang utxo tx $ toVersionedTxInfo slang txInfo
+        Right txInfo ->
+          pure $ TranslationInstance protVer supportedLanguage utxo tx $ toVersionedTxInfo slang txInfo
 
 epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

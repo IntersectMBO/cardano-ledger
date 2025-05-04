@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   VersionedTxInfo (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, SupportedLanguage)
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -35,11 +36,9 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Core as Core
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.State (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
@@ -54,7 +53,7 @@ data VersionedTxInfo
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
 data TranslationInstance era = TranslationInstance
   { tiProtVer :: ProtVer
-  , tiLanguage :: Language
+  , tiLanguage :: SupportedLanguage era
   , tiUtxo :: UTxO era
   , tiTx :: Core.Tx era
   , tiResult :: VersionedTxInfo
@@ -126,7 +125,7 @@ instance DecCBOR VersionedTxInfo where
   decCBOR = fromPlainDecoder Cborg.decode
 
 instance
-  ( Typeable era
+  ( Era era
   , EncCBOR (PParams era)
   , EncCBOR (UTxO era)
   , EncCBOR (Core.Tx era)
@@ -143,10 +142,10 @@ instance
         !> To r
 
 instance
-  ( Typeable era
-  , DecCBOR (PParams era)
+  ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
   , DecCBOR (Core.Tx era)
+  , EraPlutusContext era
   ) =>
   DecCBOR (TranslationInstance era)
   where
@@ -161,10 +160,10 @@ instance
 
 deserializeTranslationInstances ::
   forall era.
-  ( Era era
-  , DecCBOR (PParams era)
+  ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
   , DecCBOR (Core.Tx era)
+  , EraPlutusContext era
   ) =>
   BSL.ByteString ->
   Either DecoderError [TranslationInstance era]

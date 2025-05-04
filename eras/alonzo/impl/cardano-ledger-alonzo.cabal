@@ -143,7 +143,6 @@ library testlib
 
   build-depends:
     HUnit,
-    QuickCheck,
     base,
     bytestring,
     cardano-data:{cardano-data, testlib},
