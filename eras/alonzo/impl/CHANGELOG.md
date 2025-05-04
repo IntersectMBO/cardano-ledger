@@ -18,6 +18,7 @@
 
 ### `testlib`
 
+* Deprecated `mkPlutusScript'`
 * Change type signature of `genPlutusScript`, `genNativeScript`, `genAlonzoScript`, `alwaysSucceedsLang` and `alwaysFailsLang`.
 * Remove `TxInfoLanguage` and `mkTxInfoLanguage`
 * Added `Era` module with `AlonzoEraTest` class

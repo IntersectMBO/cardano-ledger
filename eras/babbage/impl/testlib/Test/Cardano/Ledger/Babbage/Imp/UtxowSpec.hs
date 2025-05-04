@@ -36,7 +36,7 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , BabbageEraTxBody era
-  , EraPlutusTxInfo PlutusV2 era
+  , EraPlutusTxInfo 'PlutusV2 era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era

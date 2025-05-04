@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (ContextError),
+  EraPlutusTxInfo,
   SupportedLanguage (..),
   mkSupportedPlutusScript,
   supportedLanguages,
@@ -439,17 +440,17 @@ instance Arbitrary AlonzoGenesis where
 
 alwaysSucceeds ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysSucceeds n = mkPlutusScript' (alwaysSucceedsPlutus @l n)
+alwaysSucceeds = fromPlutusScript . mkSupportedPlutusScript . alwaysSucceedsPlutus @l
 
 alwaysFails ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysFails n = mkPlutusScript' (alwaysFailsPlutus @l n)
+alwaysFails = fromPlutusScript . mkSupportedPlutusScript . alwaysFailsPlutus @l
 
 alwaysSucceedsLang ::
   SupportedLanguage era ->
@@ -479,3 +480,4 @@ mkPlutusScript' plutus =
       error $
         "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
     Just plutusScript -> fromPlutusScript plutusScript
+{-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}

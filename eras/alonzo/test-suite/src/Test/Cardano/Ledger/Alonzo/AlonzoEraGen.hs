@@ -129,7 +129,7 @@ import Test.QuickCheck hiding ((><))
 vKeyLockedAdaOnly :: TxOut AlonzoEra -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
-phase2scripts3Arg :: EraPlutusTxInfo PlutusV1 era => [TwoPhase3ArgInfo era]
+phase2scripts3Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
   [ mkTwoPhase3ArgInfo
       (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 3))
@@ -172,7 +172,7 @@ phase2scripts3Arg =
       let script = fromPlutusScript plutusScript
        in TwoPhase3ArgInfo script (hashScript script)
 
-phase2scripts2Arg :: EraPlutusTxInfo PlutusV1 era => [TwoPhase2ArgInfo era]
+phase2scripts2Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
   [ mkTwoPhase2ArgInfo
       (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 2))
@@ -202,7 +202,7 @@ phase2scripts2Arg =
 
 phase2scripts3ArgSucceeds ::
   forall era.
-  EraPlutusTxInfo PlutusV1 era =>
+  EraPlutusTxInfo 'PlutusV1 era =>
   Script era ->
   Bool
 phase2scripts3ArgSucceeds script =
@@ -211,7 +211,7 @@ phase2scripts3ArgSucceeds script =
 
 phase2scripts2ArgSucceeds ::
   forall era.
-  EraPlutusTxInfo PlutusV1 era =>
+  EraPlutusTxInfo 'PlutusV1 era =>
   Script era ->
   Bool
 phase2scripts2ArgSucceeds script =
@@ -219,7 +219,7 @@ phase2scripts2ArgSucceeds script =
     List.find (\info -> getScript2 info == script) phase2scripts2Arg
 
 genPlutus2Arg ::
-  EraPlutusTxInfo PlutusV1 era =>
+  EraPlutusTxInfo 'PlutusV1 era =>
   Gen (Maybe (TwoPhase2ArgInfo era))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
