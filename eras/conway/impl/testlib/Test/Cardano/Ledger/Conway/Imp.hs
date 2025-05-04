@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -31,6 +31,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure,
@@ -62,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (ImpInit)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , EraPlutusTxInfo PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
