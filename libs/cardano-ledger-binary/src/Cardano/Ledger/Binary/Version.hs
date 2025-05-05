@@ -51,7 +51,7 @@ type MinVersion = 0
 
 -- | Maximum supported version. This is the major protocol version of the latest known
 -- protocol version that we want to support, including for development and testing.
-type MaxVersion = 11
+type MaxVersion = 12
 
 instance Enum Version where
   toEnum = errorFail . mkVersion

@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Bump `MaxVersion` to `12`
 * Add `decodeFullFromHexText`
 * Move `translateViaCBORAnnotator`, `decodeFullAnnotator`, `decodeFullAnnotatedBytes`, `decodeFullAnnotatorFromHexText` to `testlib`
 * Moved `Annotator` orphan instance for plutus `Data` into `testlib`

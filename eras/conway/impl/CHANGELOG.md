@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Bump `ProtVerHigh ConwayEra` to `11`
 * Remove `ConwayTxBody`
 * Removed `era` parameter from `ConwayTxBodyRaw`
 * Add `MkConwayTxBody` and all members of `ConwayTxBodyRaw`:
