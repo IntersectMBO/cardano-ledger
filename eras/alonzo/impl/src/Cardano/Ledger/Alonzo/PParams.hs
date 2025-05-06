@@ -110,14 +110,9 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
-  FromJSON (parseJSON),
+  FromJSON,
   Key,
-  KeyValue ((.=)),
   ToJSON (..),
-  object,
-  pairs,
-  withObject,
-  (.:),
  )
 import qualified Data.Aeson.Types as Aeson
 import Data.ByteString (ByteString)
@@ -397,47 +392,6 @@ instance EraGov AlonzoEra where
 
   obligationGovState = const mempty
 
-instance ToJSON (AlonzoPParams Identity AlonzoEra) where
-  toJSON = object . alonzoPParamsPairs
-  toEncoding = pairs . mconcat . alonzoPParamsPairs
-
-alonzoPParamsPairs ::
-  forall a e.
-  KeyValue e a =>
-  PParamsHKD Identity AlonzoEra ->
-  [a]
-alonzoPParamsPairs pp =
-  uncurry (.=) <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
-
-instance FromJSON (AlonzoPParams Identity era) where
-  parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      AlonzoPParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "decentralization"
-        <*> obj .: "extraPraosEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost"
-        <*> obj .: "utxoCostPerByte"
-        <*> obj .: "costModels"
-        <*> obj .: "executionUnitPrices"
-        <*> obj .: "maxTxExecutionUnits"
-        <*> obj .: "maxBlockExecutionUnits"
-        <*> obj .: "maxValueSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
@@ -561,32 +515,6 @@ emptyAlonzoPParamsUpdate =
     , appCollateralPercentage = SNothing
     , appMaxCollateralInputs = SNothing
     }
-
-instance ToJSON (AlonzoPParams StrictMaybe AlonzoEra) where
-  toJSON = object . alonzoPParamsUpdatePairs
-  toEncoding = pairs . mconcat . alonzoPParamsUpdatePairs
-
-alonzoPParamsUpdatePairs ::
-  forall a e.
-  KeyValue e a =>
-  PParamsHKD StrictMaybe AlonzoEra ->
-  [a]
-alonzoPParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- alonzoPParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-alonzoPParamsHKDPairs ::
-  forall f.
-  HKDFunctor f =>
-  Proxy f ->
-  PParamsHKD f AlonzoEra ->
-  [(Key, HKD f Aeson.Value)]
-alonzoPParamsHKDPairs px pp =
-  alonzoCommonPParamsHKDPairs px pp
-    ++ shelleyCommonPParamsHKDPairsV8 px pp
-    ++ shelleyCommonPParamsHKDPairsV6 px pp
-    ++ [("utxoCostPerByte", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
 
 -- | These are the fields that are common across all eras starting with Alonzo.
 alonzoCommonPParamsHKDPairs ::
