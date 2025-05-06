@@ -53,6 +53,8 @@ import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter
 
+-- import Data.Either
+
 -- =======================================
 -- Tools for building Spec
 
@@ -98,6 +100,13 @@ hasError (TypeSpec x _) =
     ErrorSpec ss -> Just ss
     _ -> Nothing
 hasError _ = Nothing
+
+handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
+handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
+  (Just m1, Just m2) -> ErrorSpec (m1 <> m2)
+  (Just m1, _) -> ErrorSpec m1
+  (_, Just m2) -> ErrorSpec m2
+  (Nothing, Nothing) -> f spec1 spec2
 
 -- =========================================================
 -- Conformance of Pred and Spec
@@ -182,6 +191,7 @@ checkPredE env msgs = \case
   Let t (x :-> p) -> case runTermE env t of
     Right val -> checkPredE (extendEnv x val env) msgs p
     Left es -> Just (msgs <> pure "checkPredE: Let fails" <> es)
+  Match terms (Binds vars p) -> undefined terms vars p
   TruePred -> Nothing
   FalsePred es -> Just (msgs <> pure "checkPredE: FalsePred" <> es)
   And ps ->
@@ -324,6 +334,7 @@ instance Rename Pred where
         And ps -> And (rename v v' ps)
         Exists k b -> Exists (\eval -> k $ eval . rename v v') (rename v v' b)
         Let t b -> Let (rename v v' t) (rename v v' b)
+        Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
         Assert t -> Assert (rename v v' t)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
         Case t a b -> Case (rename v v' t) (rename v v' a) (rename v v' b)
@@ -428,6 +439,7 @@ instance HasVariables Pred where
     And ps -> foldMap freeVars ps
     Exists _ b -> freeVars b
     Let t b -> freeVars t <> freeVars b
+    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     -- Exists _ b -> freeVars b
     Assert t -> freeVars t
     -- Reifies t' t _ -> freeVars t' <> freeVars t
@@ -447,6 +459,7 @@ instance HasVariables Pred where
     And ps -> foldMap freeVarSet ps
     Exists _ b -> freeVarSet b
     Let t b -> freeVarSet t <> freeVarSet b
+    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     -- Exists _ b -> freeVarSet b
     Assert t -> freeVarSet t
     -- Reifies t' t _ -> freeVarSet t' <> freeVarSet t
@@ -467,6 +480,7 @@ instance HasVariables Pred where
       | otherwise -> countOf n t + countOf n p
     And ps -> sum $ map (countOf n) ps
     Let t b -> countOf n t + countOf n b
+    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     Exists _ b -> countOf n b
     Assert t -> countOf n t
     -- Reifies t' t _ -> countOf n t' + countOf n t
@@ -487,6 +501,7 @@ instance HasVariables Pred where
       | otherwise -> appearsIn n t || appearsIn n p
     And ps -> any (appearsIn n) ps
     Let t b -> appearsIn n t || appearsIn n b
+    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     Exists _ b -> appearsIn n b
     Assert t -> appearsIn n t
     -- Reifies t' t _ -> appearsIn n t' || appearsIn n t
@@ -622,6 +637,7 @@ substitutePred x tm = \case
   And ps -> Foldable.fold (substitutePred x tm <$> ps)
   Exists k b -> Exists (\eval -> k (eval . substituteTerm [x := tm])) (substituteBinder x tm b)
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
+  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t as bs -> Case (substituteTerm [x := tm] t) (substituteBinder x tm as) (substituteBinder x tm bs)
   -- When b p -> When (substituteTerm [x := tm] b) (substitutePred x tm p)
@@ -667,6 +683,7 @@ substPred env = \case
   And ps -> Foldable.fold (substPred env <$> ps)
   Exists k b -> Exists (\eval -> k $ eval . substTerm env) (substBinder env b)
   Let t b -> Let (substTerm env t) (substBinder env b)
+  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
 
 -- Monitor m -> Monitor m
 -- Explain es p -> Explain es $ substPred env p
@@ -696,6 +713,7 @@ regularizeNamesPred pred0 = case pred0 of
   Exists k b -> Exists k (regularizeBinder b)
   Subst v t p -> regularizeNamesPred (substitutePred v t p)
   Let t b -> Let t (regularizeBinder b)
+  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   Assert {} -> pred0
   ForAll t b -> ForAll t (regularizeBinder b)
   Case t as bs -> Case t (regularizeBinder as) (regularizeBinder bs)
@@ -760,6 +778,7 @@ simplifyPred = \case
     t'@App {} -> Let t' (simplifyBinder b)
     -- Variable or literal
     t' | x :-> p <- b -> simplifyPred $ substitutePred x t' p
+  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   Exists k b -> case simplifyBinder b of
     _ :-> TruePred -> TruePred
     -- This is to get rid of exisentials like:
@@ -821,6 +840,7 @@ letFloating = Foldable.fold . go []
       And ps0 -> goBlock ctx (map letFloating ps0)
       Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
       Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
+      Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
       Subst x t p -> go ctx (substitutePred x t p)
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
       Case t (x :-> px) (y :-> py) -> Case t (x :-> letFloating px) (y :-> letFloating py) : ctx
@@ -859,6 +879,7 @@ letSubexpressionElimination = go []
         where
           t' = backwardsSubstitution sub t
           sub' = adjustSub x sub
+      Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
       Subst x t p -> go sub (substitutePred x t p)
       Assert t -> Assert (backwardsSubstitution sub t)
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
@@ -953,10 +974,10 @@ instance Logic EqSym where
     (_, _, TrueSpec) -> TrueSpec
     (_, _, ErrorSpec msgs) -> ErrorSpec msgs
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
-    (EqualW, HOLE :-+ s, bspec) -> caseBoolSpec bspec $ \case
+    (EqualW, HOLE :<| s, bspec) -> caseBoolSpec bspec $ \case
       True -> equalSpec s
       False -> notEqualSpec s
-    (EqualW, s :+- HOLE, bspec) -> caseBoolSpec bspec $ \case
+    (EqualW, s :|> HOLE, bspec) -> caseBoolSpec bspec $ \case
       True -> equalSpec s
       False -> notEqualSpec s
 

@@ -71,6 +71,11 @@ applyFunSym f Nil = Just f
 applyFunSym f (Lit x :> xs) = applyFunSym @t (f x) xs
 applyFunSym _ _ = Nothing
 
+reducesToLit :: Term a -> Maybe a
+reducesToLit (Lit n) = Just n
+reducesToLit (V _) = Nothing
+reducesToLit (App (f :: t ds r) xs) = applyFunSym @t (semantics f) xs
+
 -- How to compare the args of two applications for equality
 sameTerms :: All HasSpec as => List Term as -> List Term as -> Bool
 sameTerms Nil Nil = True
@@ -135,6 +140,7 @@ data Pred where
   FalsePred :: NonEmpty String -> Pred
   Case :: HasSpec (Either a b) => Term (Either a b) -> Binder a -> Binder b -> Pred
   Let :: Term a -> Binder a -> Pred
+  Match :: (List Term as) -> Binders as -> Pred
   Subst :: HasSpec a => Var a -> Term a -> Pred -> Pred
 
 data Binder a where
@@ -143,6 +149,16 @@ data Binder a where
 class Container t e | t -> e where
   fromForAllSpec :: (HasSpec t, HasSpec e) => Spec e -> Spec t
   forAllToList :: t -> [e]
+
+data Binders as where
+  Binds :: All HasSpec as => List Var as -> Pred -> Binders as
+
+data Bind a where
+  Bind :: HasSpec a => {varBind :: Var a, termBind :: Term a} -> Bind a
+
+toBind :: All HasSpec as => List Term as -> List Var as -> List Bind as
+toBind Nil Nil = Nil
+toBind (t :> ts) (v :> vs) = (Bind v t :> toBind ts vs)
 
 -- ================================
 -- Spec
@@ -175,6 +191,9 @@ bind bodyf = newv :-> bodyPred
     boundBinder :: Binder a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
+    boundBinders :: Binders as -> Int
+    boundBinders (Binds xs p) = max (maximum (toList nameOf xs)) (bound p)
+
     bound (ElemPred _ _ _) = -1
     bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (And ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
@@ -185,6 +204,7 @@ bind bodyf = newv :-> bodyPred
     bound Assert {} = -1
     bound TruePred = -1
     bound FalsePred {} = -1
+    bound (Match _ bs) = boundBinders bs
 
 -- ========================================
 -- HasSpec
@@ -231,10 +251,12 @@ data HOLE a b where
 
 deriving instance Show (HOLE a b)
 
+-- | Note the arrows (n :|> hole) and (hole :<| n) always point towards the term with
+--   type `(c x)`, (i.e. `hole` in the picture above) where the target variable must occur.
 data ListCtx (as :: [Type]) (c :: Type -> Type) where
   Unary :: c a -> ListCtx '[a] c
-  (:-+) :: c b -> x -> ListCtx '[b, x] c
-  (:+-) :: x -> c b -> ListCtx '[x, b] c
+  (:<|) :: c b -> x -> ListCtx '[b, x] c
+  (:|>) :: x -> c b -> ListCtx '[x, b] c
 
 data Ctx v (a :: Type) where
   CtxHole :: HasSpec v => Ctx v v
@@ -256,33 +278,35 @@ ctxHasSpec CtxApp {} = Evidence
 --   Hole becomes 't', values become `Lit` .
 fromListCtx :: All HasSpec as => ListCtx as (HOLE a) -> Term a -> List Term as
 fromListCtx (Unary HOLE) t = t :> Nil
-fromListCtx (HOLE :-+ y) t = t :> Lit y :> Nil
-fromListCtx (x :+- HOLE) t = Lit x :> t :> Nil
+fromListCtx (HOLE :<| y) t = t :> Lit y :> Nil
+fromListCtx (x :|> HOLE) t = Lit x :> t :> Nil
 
 --- | Consider the term `((size_ x +. Lit 3) <=. Lit 12)` with a bunch of nested function symbols, with just 1 variable 'x'
---  toCtx builds the Ctx:  CtxApp <=. ((CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3)) :-+ 12)
---  working our way from outside in, we first propagate (<=.), then (+.), then (size_).
---  Now call:  propagateSpec spec (CtxApp <=. ((CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3)) :-+ 12))
---  Working our way from outside in, replacing nested Ctx with hole, we call
---  propagate <=. (CtxApp <=. (Hole :-+ 12)) spec --> spec2
---  then recursively call propagateSpec to the nested Ctx on the new spec2
---  propagateSpec spec2 (CtxApp +. ((CtxApp size_ (Unary CtxHole)) :-+ 3))
---  propgate  +. (CtxHole :-+ 3) spec2 --> spec3
---  propagateSpec spec3 (CtxApp size_ (Unary CtxHole))
---  propagate size_ (Unary CtxHole) --> spec4
+--    `(toCtx x term)` builds a context, with exactly one `CtxHole`, replacing the variable `x`
+--    `CtxApp <=. (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3) :<| 12)`
+--    Working our way from outside in, we first propagate (<=.), then (+.), then (size_). This reduces in several steps
+--    1) propagateSpec (CtxApp <=. (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3) :<| 12)) $  spec
+--    2) propagateSpec (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3)) $  (propagate <=. (HOLE:<| 12))
+--    3) propagateSpec (CtxApp size_ (Unary CtxHole)) $ (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12)))
+--    4) propagateSpec CtxHole $ (propagate size_ Hole (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12))))
+--    5) propagate size_ Hole (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12)))
+--    Note the pattern in the code below. The recursize call to 'propagateSpec' is on the pattern variable `ctx` which is the
+--    part of the context pointed to by the arrows (:<|) and (:|>), and this recurive call to `propagateSpec` is
+--    applied to a new spec computed by 'propagate', where the variable `ctx` is replaced by HOLE.
+--    we end up on line 5), with three nested calls to `propagate`
 propagateSpec ::
   forall v a.
   HasSpec v =>
-  Spec a ->
   Ctx v a ->
+  Spec a ->
   Spec v
-propagateSpec spec = \case
+propagateSpec context spec = case context of
   CtxHole -> spec
-  CtxApp f (Unary ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (Unary HOLE) spec) ctx
-  CtxApp f (ctx :-+ v) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (HOLE :-+ v) spec) ctx
-  CtxApp f (v :+- ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec (propagate f (v :+- HOLE) spec) ctx
+  CtxApp f (Unary ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec ctx (propagate f (Unary HOLE) spec)
+  CtxApp f (ctx :<| v) | Evidence <- ctxHasSpec ctx -> propagateSpec ctx (propagate f (HOLE :<| v) spec)
+  CtxApp f (v :|> ctx) | Evidence <- ctxHasSpec ctx -> propagateSpec ctx (propagate f (v :|> HOLE) spec)
 
--- Construct a Ctx for a variable 'v', whish should occur exactly once in the given Term.
+-- Construct a Ctx for a variable 'v', which should occur exactly once in the given Term.
 toCtx ::
   forall m v a.
   (Typeable v, Show v, MonadGenError m, HasCallStack) =>
@@ -303,9 +327,9 @@ toCtx v = go
       | otherwise =
           fatalErrorNE $
             NE.fromList
-              [ "A context is always constructed from an (App f xs) term with a single target variable, or"
-              , "just the target variable we are searching for: " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
-              , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
+              [ "A context is always constructed from an (App f xs) term with a single target variable"
+              , "which in this case is: " ++ show v ++ " :: (" ++ show (typeOf v) ++ ")"
+              , "Instead we found an unknown variable: " ++ show v' ++ " :: (" ++ show (typeOf v') ++ ")"
               ]
 
 toCtxList ::
@@ -323,20 +347,17 @@ toCtxList termName v (V v' :> Nil)
           , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
           , "in an application: " ++ termName
           ]
-toCtxList _ v (Lit i :> t :> Nil) = do
-  hole <- toCtx v t
-  pure $ (i :+- hole)
-toCtxList _ v (t :> Lit i :> Nil) = do
-  hole <- toCtx v t
-  pure $ (hole :-+ i)
-toCtxList termName v (_ :> _ :> Nil) =
-  fatalErrorNE $
-    "toCtx applied to an App with 2 parameters."
-      :| [ "The target variable we are searching for is " ++ show v
-         , "One of these parameters must be a literal, which is not the case."
-         , termName
-         , "If both are non-literals, then term could have two variables, which is not allowed."
-         ]
+toCtxList termName v (x :> y :> Nil)
+  | Just i <- reducesToLit x = do hole <- toCtx v y; pure $ (i :|> hole)
+  | Just i <- reducesToLit y = do hole <- toCtx v x; pure $ (hole :<| i)
+  | otherwise =
+      fatalErrorNE $
+        "toCtx applied to an App with 2 parameters."
+          :| [ termName
+             , "The target variable we are searching for is " ++ show v
+             , "One of these parameters must reduce to a literal, which is not the case."
+             , "If both are non-literals, then term could have two variables, which is not allowed."
+             ]
 toCtxList termName v xs =
   fatalErrorNE $
     NE.fromList
@@ -404,7 +425,7 @@ showType = show (typeRep (Proxy @t))
 -- ==========================================================================
 
 -- ------------ Term -----------------
-instance Show a => Pretty (WithPrec (Term a)) where
+instance Pretty (WithPrec (Term a)) where
   pretty (WithPrec p t) = case t of
     Lit n -> fromString $ showsPrec p n ""
     V x -> viaShow x
@@ -415,10 +436,10 @@ instance Show a => Pretty (WithPrec (Term a)) where
           parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
       | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
 
-instance Show a => Pretty (Term a) where
+instance Pretty (Term a) where
   pretty = prettyPrec 0
 
-instance Show a => Show (Term a) where
+instance Show (Term a) where
   showsPrec p t = shows $ pretty (WithPrec p t)
 
 -- ------------ Pred -----------------
@@ -448,6 +469,12 @@ instance Pretty Pred where
     -- GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
+    Match terms (Binds vars p) -> align $ sep ["Match " <+> brackets (vsep' binds) <+> "in", pretty p]
+      where
+        termdocs = toList viaShow terms
+        vardocs = toList viaShow vars
+        ppPair x prd = x <+> "->" <+> prd
+        binds = zipWith ppPair vardocs termdocs
 
 -- Monitor {} -> "monitor"
 -- Explain es p -> "Explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p

@@ -89,18 +89,18 @@ instance Logic IntegerSym where
     (_, _, TrueSpec) -> TrueSpec
     (_, _, ErrorSpec xs) -> ErrorSpec xs
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
-    (LessOrEqW, HOLE :-+ l, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
-    (LessOrEqW, l :+- HOLE, bspec) -> caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
-    (GreaterOrEqW, HOLE :-+ x, spec1) -> propagate LessOrEqW (x :+- HOLE) spec1
-    (GreaterOrEqW, x :+- HOLE, spec2) -> propagate LessOrEqW (HOLE :-+ x) spec2
-    (PlusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
-    (PlusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (PlusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
-    (PlusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (MinusW, HOLE :-+ n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (MinusW, HOLE :-+ n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
-    (MinusW, n :+- HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
-    (MinusW, n :+- HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (LessOrEqW, HOLE :<| l, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
+    (LessOrEqW, l :|> HOLE, bspec) -> caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
+    (GreaterOrEqW, HOLE :<| x, spec1) -> propagate LessOrEqW (x :|> HOLE) spec1
+    (GreaterOrEqW, x :|> HOLE, spec2) -> propagate LessOrEqW (HOLE :<| x) spec2
+    (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (PlusW, HOLE :<| n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (PlusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (PlusW, n :|> HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (MinusW, HOLE :<| n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
+    (MinusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
+    (MinusW, n :|> HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
 
 negateRange :: Range -> Range
 negateRange (Interval ml mu) = Interval (negate <$> mu) (negate <$> ml)
@@ -254,16 +254,16 @@ instance Logic SetSym where
     (_, _, TrueSpec) -> TrueSpec
     (_, _, ErrorSpec es) -> ErrorSpec es
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
-    (MemberW, HOLE :-+ (s :: Set a), spec1) ->
+    (MemberW, HOLE :<| (s :: Set a), spec1) ->
       caseBoolSpec spec1 $ \case
         True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
         False -> notMemberSpec s
-    (MemberW, e :+- HOLE, spec2) ->
+    (MemberW, e :|> HOLE, spec2) ->
       caseBoolSpec spec2 $ \case
         True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
         False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
     (SizeW, Unary HOLE, spec3) -> typeSpec (SetSpec mempty mempty spec3)
-    (SubsetW, HOLE :-+ big, spec4) -> caseBoolSpec spec4 $ \case
+    (SubsetW, HOLE :<| big, spec4) -> caseBoolSpec spec4 $ \case
       True -> constrained $ \small ->
         And
           [ Assert $ size_ small <=. Lit (setSize big)
@@ -276,7 +276,7 @@ instance Logic SetSym where
               Assert $ not_ $ member_ e (Lit big)
             , Assert $ member_ e small
             ]
-    (SubsetW, small :+- HOLE, spec5) -> caseBoolSpec spec5 $ \case
+    (SubsetW, small :|> HOLE, spec5) -> caseBoolSpec spec5 $ \case
       True -> typeSpec $ SetSpec small TrueSpec mempty
       False -> constrained $ \big ->
         exists (\eval -> headGE $ Set.difference (eval big) small) $ \e ->
@@ -459,14 +459,14 @@ instance Semantics PairSym where
 instance Logic PairSym where
   propagateTypeSpec FstW (Unary HOLE) ts cant = typeSpec $ Cartesian (TypeSpec ts cant) TrueSpec
   propagateTypeSpec SndW (Unary HOLE) ts cant = typeSpec $ Cartesian TrueSpec (TypeSpec ts cant)
-  propagateTypeSpec PairW (a :+- HOLE) sc@(Cartesian sa sb) cant
+  propagateTypeSpec PairW (a :|> HOLE) sc@(Cartesian sa sb) cant
     | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
     | otherwise =
         ErrorSpec
           ( NE.fromList
               ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
           )
-  propagateTypeSpec PairW (HOLE :-+ b) sc@(Cartesian sa sb) cant
+  propagateTypeSpec PairW (HOLE :<| b) sc@(Cartesian sa sb) cant
     | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
     | otherwise =
         ErrorSpec
@@ -476,7 +476,7 @@ instance Logic PairSym where
 
   propagateMemberSpec FstW (Unary HOLE) es = typeSpec $ Cartesian (MemberSpec es) TrueSpec
   propagateMemberSpec SndW (Unary HOLE) es = typeSpec $ Cartesian TrueSpec (MemberSpec es)
-  propagateMemberSpec PairW (a :+- HOLE) es =
+  propagateMemberSpec PairW (a :|> HOLE) es =
     case (nub (sameFst a (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
@@ -485,7 +485,7 @@ instance Logic PairSym where
             [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
             , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
             ]
-  propagateMemberSpec PairW (HOLE :-+ b) es =
+  propagateMemberSpec PairW (HOLE :<| b) es =
     case (nub (sameSnd b (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
@@ -517,11 +517,13 @@ data PairSpec a b = Cartesian (Spec a) (Spec b)
 instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
   show (Cartesian l r) = "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
 
+instance (HasSpec a, HasSpec b) => Semigroup (PairSpec a b) where
+  (Cartesian x y) <> (Cartesian a b) = Cartesian (x <> a) (y <> b)
+
+instance (HasSpec a, HasSpec b) => Monoid (PairSpec a b) where mempty = Cartesian mempty mempty
+
 guardPair :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (a, b)
-guardPair (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
-guardPair (ErrorSpec es) _ = ErrorSpec (NE.cons "pair error on left" es)
-guardPair _ (ErrorSpec es) = ErrorSpec (NE.cons "pair error on right" es)
-guardPair s s' = typeSpec $ Cartesian s s'
+guardPair specA specB = handleErrors specA specB (\s t -> typeSpec (Cartesian s t))
 
 instance (HasSpec a, HasSpec b) => HasSpec (a, b) where
   type TypeSpec (a, b) = PairSpec a b
@@ -889,6 +891,7 @@ aggressiveInlining pred0
             tell $ Any True
             pure $ unBind a (x :-> p)
         | otherwise -> Let t . (x :->) <$> go (underBinder fvs x p) (x := t : sub) p
+      Match terms (Binds vars p) -> undefined terms vars p
       Exists k b -> Exists k <$> goBinder fvs sub b
       And ps -> Foldable.fold <$> mapM (go fvs sub) ps
       Assert t
@@ -924,15 +927,24 @@ aggressiveInlining pred0
 
 -- ==================================================================================
 
+-- | Lifts 'propagateSpec' to take a Monadic 'Ctx'
+propagateSpecM ::
+  forall v a m.
+  (Monad m, HasSpec v) =>
+  Spec a ->
+  m (Ctx v a) ->
+  m (Spec v)
+propagateSpecM spec ctxM = do ctx <- ctxM; pure $ propagateSpec ctx spec
+
 -- | Precondition: the `Pred` defines the `Var a`
 -- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Spec a)
 computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
-  ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
-  ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
+  ElemPred True t xs -> propagateSpecM (MemberSpec xs) (toCtx x t)
+  ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (emptySpec @b) (NE.toList xs)) (toCtx x t)
   -- Monitor {} -> pure mempty
-  -- GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t
+  -- GenHint h t -> propagateSpecM (giveHint h) (toCtx x t)
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
@@ -942,22 +954,23 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   Let t b -> pure $ SuspendedSpec x (Let t b)
+  Match terms (Binds vars p) -> undefined terms vars p
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError (show pred3)
   -- Elem was a pattern
   -- Assert (Elem _ (Lit [])) -> pure (ErrorSpec (NE.fromList ["Empty list in ElemPat", show pred3]))
-  -- Assert (Elem t (Lit (y : ys))) -> propagateSpec (MemberSpec (y :| ys)) <$> toCtx x t
-  Assert t -> propagateSpec (equalSpec True) <$> toCtx x t
+  -- Assert (Elem t (Lit (y : ys))) -> propagateSpecM (MemberSpec (y :| ys)) (toCtx x t)
+  Assert t -> propagateSpecM (equalSpec True) (toCtx x t)
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
-    propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
+    propagateSpecM (fromForAllSpec bSpec) (toCtx x t)
   Case (Lit val) as bs -> runCaseOn val as bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
   Case t as bs -> do
     simpAs <- computeSpecBinderSimplified as
     simpBs <- computeSpecBinderSimplified bs
-    propagateSpec (typeSpec (SumSpec simpAs simpBs)) <$> toCtx x t
+    propagateSpecM (typeSpec (SumSpec simpAs simpBs)) (toCtx x t)
   where
     -- When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
     -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
@@ -968,7 +981,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
           pure $
             ErrorSpec (NE.fromList ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a])
     Reifies t' (Lit val) f ->
-      propagateSpec (equalSpec (f val)) <$> toCtx x t'
+      propagateSpecM (equalSpec (f val)) (toCtx x t')
     Reifies Lit {} _ _ ->
       fatalErrorNE $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show pred3]
     Explain es p -> do
@@ -1252,6 +1265,7 @@ computeDependencies = \case
   And ps -> foldMap computeDependencies ps
   Exists _ b -> computeBinderDependencies b
   Let t b -> noDependencies t <> computeBinderDependencies b
+  Match terms (Binds vars p) -> undefined terms vars p
 
 -- GenHint _ t -> noDependencies t
 -- Explain _ p -> computeDependencies p
@@ -1301,7 +1315,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
           , Result ctx <- toCtx y t =
-              [SolverStage y [] (propagateSpec specx ctx)]
+              [SolverStage y [] (propagateSpec ctx specx)]
         termVarEqCases _ _ _ = []
 
 spec9 :: Spec (Set Integer)
