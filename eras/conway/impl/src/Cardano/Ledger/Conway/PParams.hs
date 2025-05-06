@@ -8,6 +8,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -99,6 +100,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (ProtVer),
   UnitInterval,
   integralToBounded,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -131,8 +133,11 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default (Default (def))
+import Data.Foldable (foldlM)
 import Data.Functor.Identity (Identity)
+import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy
 import Data.Set (Set)
@@ -160,6 +165,30 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdMinFeeRefScriptCostPerByteL ::
     HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
+
+instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
+  toPlutusData ppu = P.Map $ mapMaybe ppToData (eraPParams @era)
+    where
+      ppToData PParam' {ppUpdate} = do
+        PParamUpdate {ppuTag, ppuLens} <- ppUpdate
+        t <- strictMaybeToMaybe $ ppu ^. ppuLens
+        pure (P.I (toInteger @Word ppuTag), toPlutusData t)
+
+  fromPlutusData (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
+    where
+      accum acc (dataKey, dataVal) = do
+        tag <- fromPlutusData @Word dataKey
+        PParam' {ppUpdate} <-
+          IntMap.lookup (fromIntegral tag) ppMap
+        PParamUpdate {ppuLens} <- ppUpdate
+        plutusData <- fromPlutusData dataVal
+        pure $ set ppuLens (SJust plutusData) acc
+      ppMap =
+        IntMap.fromList
+          [ (fromIntegral ppuTag, pp)
+          | pp@PParam' {ppUpdate = Just PParamUpdate {ppuTag}} <- eraPParams @era
+          ]
+  fromPlutusData _ = Nothing
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds

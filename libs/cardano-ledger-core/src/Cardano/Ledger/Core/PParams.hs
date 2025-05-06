@@ -630,7 +630,7 @@ makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
 -- | Represents a single protocol parameter and the data required to serialize it.
 data PParam' era where
   PParam' ::
-    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t, ToPlutusData t) =>
     { ppName :: Text
     -- ^ Used as JSON key
     , ppLens :: Lens' (PParams era) t
