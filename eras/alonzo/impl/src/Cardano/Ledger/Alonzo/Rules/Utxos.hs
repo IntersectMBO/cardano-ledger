@@ -314,7 +314,7 @@ alonzoEvalScriptsTxInvalid = do
   pure $!
     utxos
       { utxosUtxo = UTxO utxoKeep
-      , utxosFees = fees <> coinBalance (UTxO utxoDel)
+      , utxosFees = fees <> sumAllCoin utxoDel
       , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
       }
 

@@ -1710,7 +1710,7 @@ showConwayTxBalance pp certState utxo tx =
     ]
   where
     txBody = tx ^. bodyTxL
-    inputs = balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+    inputs = sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
     refunds =
       getTotalRefundsTxBody
         pp

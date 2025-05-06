@@ -138,7 +138,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
 
     reserves :: Coin
     reserves =
-      word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> coinBalance utxoShelley
+      word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> sumCoinUTxO utxoShelley
 
     epochState :: EpochState ShelleyEra
     epochState =

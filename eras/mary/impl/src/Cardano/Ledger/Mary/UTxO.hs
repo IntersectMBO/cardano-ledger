@@ -28,7 +28,7 @@ import Cardano.Ledger.State (
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO,
-  balance,
+  sumUTxO,
   txInsFilter,
  )
 import Cardano.Ledger.Val (inject)
@@ -78,7 +78,7 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     mintedMultiAsset = filterMultiAsset (\_ _ -> (> 0)) $ txBody ^. mintTxBodyL
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
     consumedValue =
-      balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+      sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL

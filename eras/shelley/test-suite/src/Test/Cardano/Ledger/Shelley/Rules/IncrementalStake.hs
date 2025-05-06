@@ -133,7 +133,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           )
           $ utxoBalanace === fromCompact instantStakeBalanace
         where
-          utxoBalanace = coinBalance u'
+          utxoBalanace = sumCoinUTxO u'
           instantStakeBalanace = fold (sisCredentialStake is') <> fold (sisPtrStake is')
           ptrs = ptrsMap $ dp ^. certDStateL
           ptrs' = ptrsMap $ dp' ^. certDStateL

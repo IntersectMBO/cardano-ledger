@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Replace export from `Cardano.Ledger.Shelley.UTxO` of deprecated `balance` and `coinBalance` with `sumUTxO` and `sumCoinUTxO` respectively
 * Remove `ShelleyTxBody`
 * Removed `era` parameter from `ShelleyTxBodyRaw`
 * Remove `HeapWords` instances for: #5001

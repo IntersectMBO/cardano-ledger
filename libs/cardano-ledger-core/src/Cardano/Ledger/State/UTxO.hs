@@ -30,6 +30,8 @@ module Cardano.Ledger.State.UTxO (
   txinLookup,
   txInsFilter,
   txouts,
+  sumUTxO,
+  sumCoinUTxO,
   balance,
   coinBalance,
   sumAllValue,
@@ -176,24 +178,36 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 {-# INLINE verifyWitVKey #-}
 
 -- | Determine the total balance contained in the UTxO.
+sumUTxO :: EraTxOut era => UTxO era -> Value era
+sumUTxO = sumAllValue . unUTxO
+{-# INLINE sumUTxO #-}
+
 balance :: EraTxOut era => UTxO era -> Value era
-balance = sumAllValue . unUTxO
-{-# INLINE balance #-}
+balance = sumUTxO
+{-# DEPRECATED balance "In favor of `sumUTxO`" #-}
 
 -- | Determine the total Ada only balance contained in the UTxO. This is
--- equivalent to `coin . balance`, but it will be more efficient
+-- equivalent to `coin` . `sumUTxO`, but it will be more efficient.
+--
+-- /Warning/ - This function cannot be applied to an untrusted `UTxO`, since it is susceptible to
+-- overflow
+sumCoinUTxO :: EraTxOut era => UTxO era -> Coin
+sumCoinUTxO = sumAllCoin . unUTxO
+{-# INLINE sumCoinUTxO #-}
+
 coinBalance :: EraTxOut era => UTxO era -> Coin
-coinBalance = sumAllCoin . unUTxO
-{-# INLINE coinBalance #-}
+coinBalance = sumCoinUTxO
+{-# DEPRECATED coinBalance "In favor of `sumCoinUTxO`" #-}
 
 -- | Sum all the value in any Foldable with 'TxOut's
 sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
 sumAllValue = foldMap' (^. valueTxOutL)
 {-# INLINE sumAllValue #-}
 
--- | Sum all the 'Coin's in any Foldable with with 'TxOut's. Care should be
--- taken since it is susceptible to integer overflow, therefore make sure this
--- function is not applied to unvalidated 'TxOut's
+-- | Sum all the 'Coin's in any Foldable with with 'TxOut's.
+--
+-- /Warning/ - Care should be taken since it is susceptible to integer overflow, therefore make sure
+-- this function is not applied to unvalidated 'TxOut's
 sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
 sumAllCoin = fromCompact . CompactCoin . getSum . foldMap' getCoinWord64
   where
