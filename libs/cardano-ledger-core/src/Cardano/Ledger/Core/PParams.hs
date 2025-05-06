@@ -10,6 +10,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -87,10 +88,11 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   StrictMaybe (..),
   UnitInterval,
+  maybeToStrictMaybe,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
+import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
@@ -98,13 +100,14 @@ import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
+import qualified Data.Foldable as F (foldMap', foldl')
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, (^.))
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -134,14 +137,18 @@ deriving newtype instance
 deriving newtype instance
   FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+instance EraPParams era => EncCBOR (PParams era) where
+  encCBOR pp =
+    encodeListLen (fromIntegral (length (eraPParams @era)))
+      <> F.foldMap' toEnc (eraPParams @era)
+    where
+      toEnc PParam' {ppLens} = encCBOR $ pp ^. ppLens
 
 deriving newtype instance
   (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD Identity era)) => ToCBOR (PParams era)
+instance EraPParams era => ToCBOR (PParams era) where
+  toCBOR = toEraCBOR @era
 
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
@@ -169,14 +176,24 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+instance EraPParams era => EncCBOR (PParamsUpdate era) where
+  encCBOR pp = encodeMapLen count <> enc
+    where
+      !(!count, !enc) = countAndConcat (eraPParams @era)
+      encodeField PParam' {ppUpdate} = do
+        PParamUpdate {ppuTag, ppuLens} <- maybeToStrictMaybe ppUpdate
+        (encodeWord ppuTag <>) . encCBOR <$> pp ^. ppuLens
+      countAndConcat = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case encodeField x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
 
 deriving newtype instance
   (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD StrictMaybe era)) => ToCBOR (PParamsUpdate era)
+instance EraPParams era => ToCBOR (PParamsUpdate era) where
+  toCBOR = toEraCBOR @era
 
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
@@ -235,9 +252,7 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , EncCBOR (PParamsHKD Identity era)
   , DecCBOR (PParamsHKD Identity era)
-  , ToCBOR (PParamsHKD Identity era)
   , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
@@ -246,9 +261,7 @@ class
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , EncCBOR (PParamsHKD StrictMaybe era)
   , DecCBOR (PParamsHKD StrictMaybe era)
-  , ToCBOR (PParamsHKD StrictMaybe era)
   , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   , ToJSON (PParamsHKD StrictMaybe era)
