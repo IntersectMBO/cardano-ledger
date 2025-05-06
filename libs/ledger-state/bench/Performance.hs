@@ -129,8 +129,8 @@ main = do
     , env (pure utxo) $ \utxo' ->
         bgroup
           "UTxO"
-          [ bench "balance" $ nf balance utxo'
-          , bench "coinBalance" $ nf coinBalance utxo'
+          [ bench "sumUTxO" $ nf sumUTxO utxo'
+          , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
           , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
             -- from short circuiting and producing results that are way better
             -- than the worst case

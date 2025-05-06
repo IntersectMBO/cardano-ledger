@@ -76,8 +76,8 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.State (
   EraUTxO (..),
   UTxO (..),
-  coinBalance,
   getScriptsNeeded,
+  sumCoinUTxO,
   txInsFilter,
  )
 import Cardano.Ledger.TxIn (TxIn)
@@ -543,7 +543,7 @@ instance EraGen AlonzoEra where
 
 sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx era -> UTxO era -> Coin
 sumCollateral tx utxo =
-  coinBalance $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
+  sumCoinUTxO $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
 storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL

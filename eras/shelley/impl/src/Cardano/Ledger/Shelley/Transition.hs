@@ -300,7 +300,7 @@ createInitialState tc =
     initialUtxo :: UTxO era
     initialUtxo = mempty
     reserves :: Coin
-    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
+    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> sumCoinUTxO initialUtxo
 
 -- | Register the initial staking information in the 'NewEpochState'.
 --
@@ -447,7 +447,7 @@ registerInitialFunds tc nes =
     -- Update the reserves
     accountState' =
       accountState
-        { casReserves = casReserves accountState <-> coin (balance initialFundsUtxo)
+        { casReserves = casReserves accountState <-> sumCoinUTxO initialFundsUtxo
         }
 
     ledgerState' =
