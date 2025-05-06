@@ -12,10 +12,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
+  ConwayEraPlutusTxInfo (..),
   transTxBodyWithdrawals,
   transTxCert,
   transDRepCred,
@@ -77,9 +79,6 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
   VotingProcedures (..),
   unGovActionIx,
- )
-import Cardano.Ledger.Conway.Plutus.Context (
-  ConwayEraPlutusTxInfo (toPlutusChangedParameters),
  )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Conway.Tx ()
@@ -720,6 +719,14 @@ scriptPurposeToScriptInfo sp maybeSpendingData =
     PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
     PV3.Voting voter -> PV3.VotingScript voter
     PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
+
+-- | A class to compute the changed parameters in the TxInfo
+-- given a ToPlutusData instance for PParamsUpdate
+class
+  EraPlutusTxInfo l era =>
+  ConwayEraPlutusTxInfo (l :: Language) era
+  where
+  toPlutusChangedParameters :: proxy l -> PParamsUpdate era -> PV3.ChangedParameters
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
