@@ -64,7 +64,6 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   invalidKey,
-  strictMaybeToMaybe,
   succVersion,
  )
 import Cardano.Ledger.Binary (
@@ -76,8 +75,6 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   decodeWord,
   encodeListLen,
-  encodeMapLen,
-  encodeWord,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -101,12 +98,10 @@ import Data.Aeson (
   (.=),
  )
 import qualified Data.Aeson as Aeson
-import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Proxy
 import Data.Void
 import Data.Word (Word16, Word32)
@@ -212,28 +207,6 @@ instance EraPParams ShelleyEra where
 
   pparams = shelleyPParams
 
-instance Era era => EncCBOR (ShelleyPParams Identity era) where
-  encCBOR
-    ShelleyPParams {..} =
-      encodeListLen 17
-        <> encCBOR sppMinFeeA
-        <> encCBOR sppMinFeeB
-        <> encCBOR sppMaxBBSize
-        <> encCBOR sppMaxTxSize
-        <> encCBOR sppMaxBHSize
-        <> encCBOR sppKeyDeposit
-        <> encCBOR sppPoolDeposit
-        <> encCBOR sppEMax
-        <> encCBOR sppNOpt
-        <> encCBOR sppA0
-        <> encCBOR sppRho
-        <> encCBOR sppTau
-        <> encCBOR sppD
-        <> encCBOR sppExtraEntropy
-        <> encCBOR sppProtocolVersion
-        <> encCBOR sppMinUTxOValue
-        <> encCBOR sppMinPoolCost
-
 instance Era era => DecCBOR (ShelleyPParams Identity era) where
   decCBOR = do
     decodeRecordNamed "ShelleyPParams" (const 17) $
@@ -255,9 +228,6 @@ instance Era era => DecCBOR (ShelleyPParams Identity era) where
         <*> decCBOR -- sppProtocolVersion :: ProtVer
         <*> decCBOR -- sppMinUTxOValue    :: Natural
         <*> decCBOR -- sppMinPoolCost     :: Natural
-
-instance Era era => ToCBOR (ShelleyPParams Identity era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ShelleyPParams Identity era) where
   fromCBOR = fromEraCBOR @era
@@ -378,35 +348,6 @@ data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
 instance NoThunks PPUpdateEnv
 
 {-# DEPRECATED PPUpdateEnv "As unused" #-}
-
-instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
-  encCBOR ppup =
-    let l =
-          mapMaybe
-            strictMaybeToMaybe
-            [ encodeMapElement 0 encCBOR =<< sppMinFeeA ppup
-            , encodeMapElement 1 encCBOR =<< sppMinFeeB ppup
-            , encodeMapElement 2 encCBOR =<< sppMaxBBSize ppup
-            , encodeMapElement 3 encCBOR =<< sppMaxTxSize ppup
-            , encodeMapElement 4 encCBOR =<< sppMaxBHSize ppup
-            , encodeMapElement 5 encCBOR =<< sppKeyDeposit ppup
-            , encodeMapElement 6 encCBOR =<< sppPoolDeposit ppup
-            , encodeMapElement 7 encCBOR =<< sppEMax ppup
-            , encodeMapElement 8 encCBOR =<< sppNOpt ppup
-            , encodeMapElement 9 encCBOR =<< sppA0 ppup
-            , encodeMapElement 10 encCBOR =<< sppRho ppup
-            , encodeMapElement 11 encCBOR =<< sppTau ppup
-            , encodeMapElement 12 encCBOR =<< sppD ppup
-            , encodeMapElement 13 encCBOR =<< sppExtraEntropy ppup
-            , encodeMapElement 14 encCBOR =<< sppProtocolVersion ppup
-            , encodeMapElement 15 encCBOR =<< sppMinUTxOValue ppup
-            , encodeMapElement 16 encCBOR =<< sppMinPoolCost ppup
-            ]
-        n = fromIntegral $ length l
-     in encodeMapLen n <> fold l
-    where
-      encodeMapElement i encoder x = SJust (encodeWord i <> encoder x)
-
 instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
   decCBOR = do
     mapParts <-
@@ -435,9 +376,6 @@ instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
       (nub fields == fields)
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
-
-instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
