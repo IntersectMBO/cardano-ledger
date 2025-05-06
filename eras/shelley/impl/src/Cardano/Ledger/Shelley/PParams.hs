@@ -31,9 +31,6 @@ module Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
   shelleyPParams,
 
-  -- * JSON helpers
-  shelleyCommonPParamsHKDPairs,
-
   -- * PParam
   ppA0,
   ppD,
@@ -73,7 +70,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Hashes (GenDelegs)
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -81,14 +78,11 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
-  Key,
   ToJSON (..),
  )
-import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy
 import Data.Void
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
@@ -266,29 +260,6 @@ data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
 instance NoThunks PPUpdateEnv
 
 {-# DEPRECATED PPUpdateEnv "As unused" #-}
-
--- | These are the fields that are common across all eras
-shelleyCommonPParamsHKDPairs ::
-  forall f era.
-  (HKDFunctor f, EraPParams era) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-shelleyCommonPParamsHKDPairs px pp =
-  [ ("txFeePerByte", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
-  , ("txFeeFixed", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
-  , ("maxBlockBodySize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxBBSizeL @era @f))
-  , ("maxTxSize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxTxSizeL @era @f))
-  , ("maxBlockHeaderSize", hkdMap px (toJSON @Word16) (pp ^. hkdMaxBHSizeL @era @f))
-  , ("stakeAddressDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
-  , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
-  , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
-  , ("stakePoolTargetNum", hkdMap px (toJSON @Word16) (pp ^. hkdNOptL @era @f))
-  , ("poolPledgeInfluence", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
-  , ("monetaryExpansion", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
-  , ("treasuryCut", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
-  , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
-  ]
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era

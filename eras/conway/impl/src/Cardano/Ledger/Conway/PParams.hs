@@ -906,56 +906,6 @@ instance ConwayEraPParams ConwayEra where
   hkdMinFeeRefScriptCostPerByteL =
     lens (unTHKD . cppMinFeeRefScriptCostPerByte) $ \pp x -> pp {cppMinFeeRefScriptCostPerByte = THKD x}
 
-instance ToJSON (ConwayPParams Identity ConwayEra) where
-  toJSON = object . conwayPParamsPairs
-  toEncoding = pairs . mconcat . conwayPParamsPairs
-
-conwayPParamsPairs ::
-  forall era a e.
-  (ConwayEraPParams era, KeyValue e a) =>
-  PParamsHKD Identity era ->
-  [a]
-conwayPParamsPairs pp =
-  uncurry (.=)
-    <$> conwayPParamsHKDPairs (Proxy @Identity) pp
-      <> [("protocolVersion", toJSON $ PParams pp ^. ppProtocolVersionL)]
-
-instance Era era => FromJSON (ConwayPParams Identity era) where
-  parseJSON =
-    withObject "ProtocolParameters" $ \obj ->
-      ConwayPParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "utxoCostPerByte"
-        <*> obj .: "costModels"
-        <*> obj .: "executionUnitPrices"
-        <*> obj .: "maxTxExecutionUnits"
-        <*> obj .: "maxBlockExecutionUnits"
-        <*> obj .: "maxValueSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-        <*> obj .: "poolVotingThresholds"
-        <*> obj .: "dRepVotingThresholds"
-        <*> obj .: "committeeMinSize"
-        <*> obj .: "committeeMaxTermLength"
-        <*> obj .: "govActionLifetime"
-        <*> obj .: "govActionDeposit"
-        <*> obj .: "dRepDeposit"
-        <*> obj .: "dRepActivity"
-        <*> obj .: "minFeeRefScriptCostPerByte"
-
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
 emptyConwayPParams =
@@ -1030,65 +980,6 @@ emptyConwayPParamsUpdate =
     , cppDRepActivity = THKD SNothing
     , cppMinFeeRefScriptCostPerByte = THKD SNothing
     }
-
-instance
-  ( ConwayEraPParams era
-  , PParamsHKD StrictMaybe era ~ ConwayPParams StrictMaybe era
-  ) =>
-  ToJSON (ConwayPParams StrictMaybe era)
-  where
-  toJSON = object . conwayPParamsUpdatePairs
-  toEncoding = pairs . mconcat . conwayPParamsUpdatePairs
-
-conwayPParamsUpdatePairs ::
-  forall era a e.
-  (ConwayEraPParams era, KeyValue e a) =>
-  PParamsHKD StrictMaybe era ->
-  [a]
-conwayPParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- conwayPParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-conwayPParamsHKDPairs ::
-  forall era f.
-  (ConwayEraPParams era, HKDFunctor f) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-conwayPParamsHKDPairs px pp =
-  babbageCommonPParamsHKDPairs px pp
-    <> conwayUpgradePParamsHKDPairs px pp
-
-conwayUpgradePParamsHKDPairs ::
-  forall era f.
-  (ConwayEraPParams era, HKDFunctor f) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-conwayUpgradePParamsHKDPairs px pp =
-  [
-    ( "poolVotingThresholds"
-    , hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f)
-    )
-  ,
-    ( "dRepVotingThresholds"
-    , hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f)
-    )
-  , ("committeeMinSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
-  ,
-    ( "committeeMaxTermLength"
-    , hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f)
-    )
-  , ("govActionLifetime", hkdMap px (toJSON @EpochInterval) (pp ^. hkdGovActionLifetimeL @era @f))
-  , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
-  , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
-  , ("dRepActivity", hkdMap px (toJSON @EpochInterval) (pp ^. hkdDRepActivityL @era @f))
-  ,
-    ( "minFeeRefScriptCostPerByte"
-    , hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdMinFeeRefScriptCostPerByteL @era @f)
-    )
-  ]
 
 instance ToJSON (UpgradeConwayPParams Identity) where
   toJSON = object . toUpgradeConwayPParamsUpdatePairs
