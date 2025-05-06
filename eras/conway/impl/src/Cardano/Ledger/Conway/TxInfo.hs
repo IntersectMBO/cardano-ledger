@@ -81,9 +81,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Plutus.Context (
   ConwayEraPlutusTxInfo (toPlutusChangedParameters),
-  conwayPParamMap,
-  pparamUpdateFromData,
-  pparamUpdateToData,
  )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Conway.Tx ()
@@ -729,13 +726,6 @@ scriptPurposeToScriptInfo sp maybeSpendingData =
     PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
     PV3.Voting voter -> PV3.VotingScript voter
     PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
-
--- ==========================
--- Instances
-
-instance ToPlutusData (PParamsUpdate ConwayEra) where
-  toPlutusData = pparamUpdateToData conwayPParamMap
-  fromPlutusData = pparamUpdateFromData conwayPParamMap
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))

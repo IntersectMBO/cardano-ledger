@@ -145,9 +145,7 @@ conwayPParam =
 -- given a ToPlutusData instance for PParamsUpdate
 
 class
-  ( ToPlutusData (PParamsUpdate era)
-  , EraPlutusTxInfo l era
-  ) =>
+  EraPlutusTxInfo l era =>
   ConwayEraPlutusTxInfo (l :: Language) era
   where
   toPlutusChangedParameters :: proxy l -> PParamsUpdate era -> PV3.ChangedParameters
