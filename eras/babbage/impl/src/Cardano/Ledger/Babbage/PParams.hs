@@ -62,15 +62,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
-  decodeRecordNamed,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Field (..),
-  decode,
-  field,
-  invalidField,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
@@ -283,36 +274,6 @@ instance EraGov BabbageEra where
 
   obligationGovState = const mempty
 
-instance Era era => DecCBOR (BabbagePParams Identity era) where
-  decCBOR =
-    decodeRecordNamed "PParams" (const 22) $ do
-      bppMinFeeA <- decCBOR
-      bppMinFeeB <- decCBOR
-      bppMaxBBSize <- decCBOR
-      bppMaxTxSize <- decCBOR
-      bppMaxBHSize <- decCBOR
-      bppKeyDeposit <- decCBOR
-      bppPoolDeposit <- decCBOR
-      bppEMax <- decCBOR
-      bppNOpt <- decCBOR
-      bppA0 <- decCBOR
-      bppRho <- decCBOR
-      bppTau <- decCBOR
-      bppProtocolVersion <- decCBOR
-      bppMinPoolCost <- decCBOR
-      bppCoinsPerUTxOByte <- decCBOR
-      bppCostModels <- decCBOR
-      bppPrices <- decCBOR
-      bppMaxTxExUnits <- decCBOR
-      bppMaxBlockExUnits <- decCBOR
-      bppMaxValSize <- decCBOR
-      bppCollateralPercentage <- decCBOR
-      bppMaxCollateralInputs <- decCBOR
-      pure BabbagePParams {..}
-
-instance Era era => FromCBOR (BabbagePParams Identity era) where
-  fromCBOR = fromEraCBOR @era
-
 instance
   (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era, ProtVerAtMost era 8) =>
   ToJSON (BabbagePParams Identity era)
@@ -409,39 +370,6 @@ emptyBabbagePParamsUpdate =
     , bppCollateralPercentage = SNothing
     , bppMaxCollateralInputs = SNothing
     }
-
-updateField :: Word -> Field (BabbagePParams StrictMaybe era)
-updateField 0 = field (\x up -> up {bppMinFeeA = SJust x}) From
-updateField 1 = field (\x up -> up {bppMinFeeB = SJust x}) From
-updateField 2 = field (\x up -> up {bppMaxBBSize = SJust x}) From
-updateField 3 = field (\x up -> up {bppMaxTxSize = SJust x}) From
-updateField 4 = field (\x up -> up {bppMaxBHSize = SJust x}) From
-updateField 5 = field (\x up -> up {bppKeyDeposit = SJust x}) From
-updateField 6 = field (\x up -> up {bppPoolDeposit = SJust x}) From
-updateField 7 = field (\x up -> up {bppEMax = SJust x}) From
-updateField 8 = field (\x up -> up {bppNOpt = SJust x}) From
-updateField 9 = field (\x up -> up {bppA0 = SJust x}) From
-updateField 10 = field (\x up -> up {bppRho = SJust x}) From
-updateField 11 = field (\x up -> up {bppTau = SJust x}) From
-updateField 14 = field (\x up -> up {bppProtocolVersion = SJust x}) From
-updateField 16 = field (\x up -> up {bppMinPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {bppCoinsPerUTxOByte = SJust x}) From
-updateField 18 = field (\x up -> up {bppCostModels = SJust x}) From
-updateField 19 = field (\x up -> up {bppPrices = SJust x}) From
-updateField 20 = field (\x up -> up {bppMaxTxExUnits = SJust x}) From
-updateField 21 = field (\x up -> up {bppMaxBlockExUnits = SJust x}) From
-updateField 22 = field (\x up -> up {bppMaxValSize = SJust x}) From
-updateField 23 = field (\x up -> up {bppCollateralPercentage = SJust x}) From
-updateField 24 = field (\x up -> up {bppMaxCollateralInputs = SJust x}) From
-updateField k = invalidField k
-
-instance Era era => DecCBOR (BabbagePParams StrictMaybe era) where
-  decCBOR =
-    decode
-      (SparseKeyed "PParamsUpdate" emptyBabbagePParamsUpdate updateField [])
-
-instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
 
 instance
   ( PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era
