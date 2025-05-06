@@ -35,7 +35,6 @@ module Cardano.Ledger.Babbage.PParams (
   encodeLangViews,
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
-  babbagePParamsHKDPairs,
   babbageCommonPParamsHKDPairs,
   ppCoinsPerUTxOByte,
 )
@@ -73,13 +72,8 @@ import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
   Key,
-  KeyValue ((.=)),
   ToJSON (..),
   Value,
-  object,
-  pairs,
-  withObject,
-  (.:),
  )
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
@@ -274,48 +268,6 @@ instance EraGov BabbageEra where
 
   obligationGovState = const mempty
 
-instance
-  (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era, ProtVerAtMost era 8) =>
-  ToJSON (BabbagePParams Identity era)
-  where
-  toJSON = object . babbagePParamsPairs
-  toEncoding = pairs . mconcat . babbagePParamsPairs
-
-babbagePParamsPairs ::
-  forall era a e.
-  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
-  PParamsHKD Identity era ->
-  [a]
-babbagePParamsPairs pp =
-  uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
-
-instance FromJSON (BabbagePParams Identity era) where
-  parseJSON =
-    withObject "PParams" $ \obj ->
-      BabbagePParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost"
-        <*> obj .: "utxoCostPerByte"
-        <*> obj .: "costModels"
-        <*> obj .: "executionUnitPrices"
-        <*> obj .: "maxTxExecutionUnits"
-        <*> obj .: "maxBlockExecutionUnits"
-        <*> obj .: "maxValueSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
@@ -370,36 +322,6 @@ emptyBabbagePParamsUpdate =
     , bppCollateralPercentage = SNothing
     , bppMaxCollateralInputs = SNothing
     }
-
-instance
-  ( PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era
-  , BabbageEraPParams era
-  , ProtVerAtMost era 8
-  ) =>
-  ToJSON (BabbagePParams StrictMaybe era)
-  where
-  toJSON = object . babbagePParamsUpdatePairs
-  toEncoding = pairs . mconcat . babbagePParamsUpdatePairs
-
-babbagePParamsUpdatePairs ::
-  forall era a e.
-  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
-  PParamsHKD StrictMaybe era ->
-  [a]
-babbagePParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- babbagePParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-babbagePParamsHKDPairs ::
-  forall era f.
-  (BabbageEraPParams era, HKDFunctor f, ProtVerAtMost era 8) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-babbagePParamsHKDPairs px pp =
-  babbageCommonPParamsHKDPairs px pp
-    <> shelleyCommonPParamsHKDPairsV8 px pp -- for "protocolVersion"
 
 -- | These are the fields that are common across all eras starting with Babbage.
 babbageCommonPParamsHKDPairs ::
