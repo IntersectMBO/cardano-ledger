@@ -12,7 +12,6 @@ import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as GoldenTranslat
 import qualified Test.Cardano.Ledger.Babbage.Imp as Imp
 import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Core.EraPParamsSpec as EraPParams
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 main :: IO ()
@@ -30,4 +29,3 @@ main =
         CostModelsSpec.spec @BabbageEra
       describe "TxWits" $ do
         TxWitsSpec.spec @BabbageEra
-      EraPParams.spec @BabbageEra

@@ -27,7 +27,6 @@ import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
 import qualified Test.Cardano.Ledger.Conway.Spec as Spec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
-import qualified Test.Cardano.Ledger.Core.EraPParamsSpec as EraPParams
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 main :: IO ()
@@ -56,7 +55,6 @@ main =
         PlutusSpec.spec
       Regression.spec @ConwayEra
       TxInfo.spec
-      EraPParams.spec @ConwayEra
       eraPParamsPlutusDataSpec
 
 eraPParamsPlutusDataSpec :: HasCallStack => Spec
