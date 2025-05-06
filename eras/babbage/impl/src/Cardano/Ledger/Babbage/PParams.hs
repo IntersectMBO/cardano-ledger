@@ -58,28 +58,19 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
-  isSNothing,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  Encoding,
   FromCBOR (..),
-  ToCBOR (..),
   decodeRecordNamed,
-  encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
-  Density (..),
-  Encode (..),
   Field (..),
-  Wrapped (..),
   decode,
-  encode,
   field,
   invalidField,
-  (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
@@ -292,35 +283,6 @@ instance EraGov BabbageEra where
 
   obligationGovState = const mempty
 
-instance Era era => EncCBOR (BabbagePParams Identity era) where
-  encCBOR BabbagePParams {..} =
-    encodeListLen 22
-      <> encCBOR bppMinFeeA
-      <> encCBOR bppMinFeeB
-      <> encCBOR bppMaxBBSize
-      <> encCBOR bppMaxTxSize
-      <> encCBOR bppMaxBHSize
-      <> encCBOR bppKeyDeposit
-      <> encCBOR bppPoolDeposit
-      <> encCBOR bppEMax
-      <> encCBOR bppNOpt
-      <> encCBOR bppA0
-      <> encCBOR bppRho
-      <> encCBOR bppTau
-      <> encCBOR bppProtocolVersion
-      <> encCBOR bppMinPoolCost
-      <> encCBOR bppCoinsPerUTxOByte
-      <> encCBOR bppCostModels
-      <> encCBOR bppPrices
-      <> encCBOR bppMaxTxExUnits
-      <> encCBOR bppMaxBlockExUnits
-      <> encCBOR bppMaxValSize
-      <> encCBOR bppCollateralPercentage
-      <> encCBOR bppMaxCollateralInputs
-
-instance Era era => ToCBOR (BabbagePParams Identity era) where
-  toCBOR = toEraCBOR @era
-
 instance Era era => DecCBOR (BabbagePParams Identity era) where
   decCBOR =
     decodeRecordNamed "PParams" (const 22) $ do
@@ -448,50 +410,6 @@ emptyBabbagePParamsUpdate =
     , bppMaxCollateralInputs = SNothing
     }
 
--- =======================================================
--- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
--- writing only those fields where the field is (SJust x), that is the role of
--- the local function (omitStrictMaybe key x)
-
-encodePParamsUpdate ::
-  BabbagePParams StrictMaybe era ->
-  Encode ('Closed 'Sparse) (BabbagePParams StrictMaybe era)
-encodePParamsUpdate ppup =
-  Keyed BabbagePParams
-    !> omitStrictMaybe 0 (bppMinFeeA ppup) encCBOR
-    !> omitStrictMaybe 1 (bppMinFeeB ppup) encCBOR
-    !> omitStrictMaybe 2 (bppMaxBBSize ppup) encCBOR
-    !> omitStrictMaybe 3 (bppMaxTxSize ppup) encCBOR
-    !> omitStrictMaybe 4 (bppMaxBHSize ppup) encCBOR
-    !> omitStrictMaybe 5 (bppKeyDeposit ppup) encCBOR
-    !> omitStrictMaybe 6 (bppPoolDeposit ppup) encCBOR
-    !> omitStrictMaybe 7 (bppEMax ppup) encCBOR
-    !> omitStrictMaybe 8 (bppNOpt ppup) encCBOR
-    !> omitStrictMaybe 9 (bppA0 ppup) encCBOR
-    !> omitStrictMaybe 10 (bppRho ppup) encCBOR
-    !> omitStrictMaybe 11 (bppTau ppup) encCBOR
-    !> omitStrictMaybe 14 (bppProtocolVersion ppup) encCBOR
-    !> omitStrictMaybe 16 (bppMinPoolCost ppup) encCBOR
-    !> omitStrictMaybe 17 (bppCoinsPerUTxOByte ppup) encCBOR
-    !> omitStrictMaybe 18 (bppCostModels ppup) encCBOR
-    !> omitStrictMaybe 19 (bppPrices ppup) encCBOR
-    !> omitStrictMaybe 20 (bppMaxTxExUnits ppup) encCBOR
-    !> omitStrictMaybe 21 (bppMaxBlockExUnits ppup) encCBOR
-    !> omitStrictMaybe 22 (bppMaxValSize ppup) encCBOR
-    !> omitStrictMaybe 23 (bppCollateralPercentage ppup) encCBOR
-    !> omitStrictMaybe 24 (bppMaxCollateralInputs ppup) encCBOR
-  where
-    omitStrictMaybe ::
-      Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
-    omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
-
-    fromSJust :: StrictMaybe a -> a
-    fromSJust (SJust x) = x
-    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-instance Era era => EncCBOR (BabbagePParams StrictMaybe era) where
-  encCBOR ppup = encode (encodePParamsUpdate ppup)
-
 updateField :: Word -> Field (BabbagePParams StrictMaybe era)
 updateField 0 = field (\x up -> up {bppMinFeeA = SJust x}) From
 updateField 1 = field (\x up -> up {bppMinFeeB = SJust x}) From
@@ -521,9 +439,6 @@ instance Era era => DecCBOR (BabbagePParams StrictMaybe era) where
   decCBOR =
     decode
       (SparseKeyed "PParamsUpdate" emptyBabbagePParamsUpdate updateField [])
-
-instance Era era => ToCBOR (BabbagePParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
