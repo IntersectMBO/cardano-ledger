@@ -103,9 +103,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  Encoding,
   FromCBOR (..),
-  ToCBOR (..),
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders
@@ -136,7 +134,7 @@ import qualified Data.Aeson as Aeson
 import Data.Default (Default (def))
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -889,46 +887,6 @@ instance ConwayEraPParams ConwayEra where
   hkdMinFeeRefScriptCostPerByteL =
     lens (unTHKD . cppMinFeeRefScriptCostPerByte) $ \pp x -> pp {cppMinFeeRefScriptCostPerByte = THKD x}
 
-instance Era era => EncCBOR (ConwayPParams Identity era) where
-  encCBOR ConwayPParams {..} =
-    encode $
-      Rec (ConwayPParams @Identity)
-        !> To cppMinFeeA
-        !> To cppMinFeeB
-        !> To cppMaxBBSize
-        !> To cppMaxTxSize
-        !> To cppMaxBHSize
-        !> To cppKeyDeposit
-        !> To cppPoolDeposit
-        !> To cppEMax
-        !> To cppNOpt
-        !> To cppA0
-        !> To cppRho
-        !> To cppTau
-        !> To cppProtocolVersion
-        !> To cppMinPoolCost
-        !> To cppCoinsPerUTxOByte
-        !> To cppCostModels
-        !> To cppPrices
-        !> To cppMaxTxExUnits
-        !> To cppMaxBlockExUnits
-        !> To cppMaxValSize
-        !> To cppCollateralPercentage
-        !> To cppMaxCollateralInputs
-        -- New for Conway
-        !> To cppPoolVotingThresholds
-        !> To cppDRepVotingThresholds
-        !> To cppCommitteeMinSize
-        !> To cppCommitteeMaxTermLength
-        !> To cppGovActionLifetime
-        !> To cppGovActionDeposit
-        !> To cppDRepDeposit
-        !> To cppDRepActivity
-        !> To cppMinFeeRefScriptCostPerByte
-
-instance Era era => ToCBOR (ConwayPParams Identity era) where
-  toCBOR = toEraCBOR @era
-
 instance Era era => DecCBOR (ConwayPParams Identity era) where
   decCBOR =
     decode $
@@ -1094,60 +1052,6 @@ emptyConwayPParamsUpdate =
     , cppMinFeeRefScriptCostPerByte = THKD SNothing
     }
 
-encodePParamsUpdate ::
-  ConwayPParams StrictMaybe era ->
-  Encode ('Closed 'Sparse) (ConwayPParams StrictMaybe era)
-encodePParamsUpdate ppu =
-  Keyed ConwayPParams
-    !> omitStrictMaybe 0 (cppMinFeeA ppu) encCBOR
-    !> omitStrictMaybe 1 (cppMinFeeB ppu) encCBOR
-    !> omitStrictMaybe 2 (cppMaxBBSize ppu) encCBOR
-    !> omitStrictMaybe 3 (cppMaxTxSize ppu) encCBOR
-    !> omitStrictMaybe 4 (cppMaxBHSize ppu) encCBOR
-    !> omitStrictMaybe 5 (cppKeyDeposit ppu) encCBOR
-    !> omitStrictMaybe 6 (cppPoolDeposit ppu) encCBOR
-    !> omitStrictMaybe 7 (cppEMax ppu) encCBOR
-    !> omitStrictMaybe 8 (cppNOpt ppu) encCBOR
-    !> omitStrictMaybe 9 (cppA0 ppu) encCBOR
-    !> omitStrictMaybe 10 (cppRho ppu) encCBOR
-    !> omitStrictMaybe 11 (cppTau ppu) encCBOR
-    !> OmitC NoUpdate
-    !> omitStrictMaybe 16 (cppMinPoolCost ppu) encCBOR
-    !> omitStrictMaybe 17 (cppCoinsPerUTxOByte ppu) encCBOR
-    !> omitStrictMaybe 18 (cppCostModels ppu) encCBOR
-    !> omitStrictMaybe 19 (cppPrices ppu) encCBOR
-    !> omitStrictMaybe 20 (cppMaxTxExUnits ppu) encCBOR
-    !> omitStrictMaybe 21 (cppMaxBlockExUnits ppu) encCBOR
-    !> omitStrictMaybe 22 (cppMaxValSize ppu) encCBOR
-    !> omitStrictMaybe 23 (cppCollateralPercentage ppu) encCBOR
-    !> omitStrictMaybe 24 (cppMaxCollateralInputs ppu) encCBOR
-    -- New for Conway
-    !> omitStrictMaybe 25 (cppPoolVotingThresholds ppu) encCBOR
-    !> omitStrictMaybe 26 (cppDRepVotingThresholds ppu) encCBOR
-    !> omitStrictMaybe 27 (cppCommitteeMinSize ppu) encCBOR
-    !> omitStrictMaybe 28 (cppCommitteeMaxTermLength ppu) encCBOR
-    !> omitStrictMaybe 29 (cppGovActionLifetime ppu) encCBOR
-    !> omitStrictMaybe 30 (cppGovActionDeposit ppu) encCBOR
-    !> omitStrictMaybe 31 (cppDRepDeposit ppu) encCBOR
-    !> omitStrictMaybe 32 (cppDRepActivity ppu) encCBOR
-    !> omitStrictMaybe 33 (cppMinFeeRefScriptCostPerByte ppu) encCBOR
-  where
-    omitStrictMaybe ::
-      Word ->
-      THKD t StrictMaybe a ->
-      (a -> Encoding) ->
-      Encode ('Closed 'Sparse) (THKD t StrictMaybe a)
-    omitStrictMaybe key x enc =
-      Omit (isSNothing . unTHKD) (Key key (E (enc . fromSJust . unTHKD) x))
-
-    fromSJust :: StrictMaybe a -> a
-    fromSJust (SJust x) = x
-    fromSJust SNothing =
-      error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-instance Era era => EncCBOR (ConwayPParams StrictMaybe era) where
-  encCBOR ppup = encode (encodePParamsUpdate ppup)
-
 updateField :: Word -> Field (ConwayPParams StrictMaybe era)
 updateField = \case
   0 -> field (\x up -> up {cppMinFeeA = THKD (SJust x)}) From
@@ -1185,9 +1089,6 @@ updateField = \case
 
 instance Era era => DecCBOR (ConwayPParams StrictMaybe era) where
   decCBOR = decode (SparseKeyed "PParamsUpdate" emptyConwayPParamsUpdate updateField [])
-
-instance Era era => ToCBOR (ConwayPParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ConwayPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
