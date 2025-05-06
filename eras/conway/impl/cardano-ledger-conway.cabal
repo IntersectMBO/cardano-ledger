@@ -36,7 +36,6 @@ library
     Cardano.Ledger.Conway.Governance
     Cardano.Ledger.Conway.Governance.DRepPulser
     Cardano.Ledger.Conway.PParams
-    Cardano.Ledger.Conway.Plutus.Context
     Cardano.Ledger.Conway.Rules
     Cardano.Ledger.Conway.Scripts
     Cardano.Ledger.Conway.State
