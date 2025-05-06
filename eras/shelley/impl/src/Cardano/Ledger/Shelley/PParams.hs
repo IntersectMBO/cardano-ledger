@@ -63,7 +63,6 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
-  invalidKey,
   succVersion,
  )
 import Cardano.Ledger.Binary (
@@ -71,9 +70,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  decodeMapContents,
-  decodeRecordNamed,
-  decodeWord,
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
@@ -86,7 +82,6 @@ import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
 import Data.Aeson (
   FromJSON (..),
   Key,
@@ -99,7 +94,6 @@ import Data.Aeson (
  )
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
-import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -206,31 +200,6 @@ instance EraPParams ShelleyEra where
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
   pparams = shelleyPParams
-
-instance Era era => DecCBOR (ShelleyPParams Identity era) where
-  decCBOR = do
-    decodeRecordNamed "ShelleyPParams" (const 17) $
-      ShelleyPParams @Identity
-        <$> decCBOR -- sppMinFeeA         :: Integer
-        <*> decCBOR -- sppMinFeeB         :: Natural
-        <*> decCBOR -- sppMaxBBSize       :: Natural
-        <*> decCBOR -- sppMaxTxSize       :: Natural
-        <*> decCBOR -- sppMaxBHSize       :: Natural
-        <*> decCBOR -- sppKeyDeposit      :: Coin
-        <*> decCBOR -- sppPoolDeposit     :: Coin
-        <*> decCBOR -- sppEMax            :: EpochNo
-        <*> decCBOR -- sppNOpt            :: Natural
-        <*> decCBOR -- sppA0              :: NonNegativeInterval
-        <*> decCBOR -- sppRho             :: UnitInterval
-        <*> decCBOR -- sppTau             :: UnitInterval
-        <*> decCBOR -- sppD               :: UnitInterval
-        <*> decCBOR -- sppExtraEntropy    :: Nonce
-        <*> decCBOR -- sppProtocolVersion :: ProtVer
-        <*> decCBOR -- sppMinUTxOValue    :: Natural
-        <*> decCBOR -- sppMinPoolCost     :: Natural
-
-instance Era era => FromCBOR (ShelleyPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
 
 instance
   ( EraPParams era
@@ -348,37 +317,6 @@ data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
 instance NoThunks PPUpdateEnv
 
 {-# DEPRECATED PPUpdateEnv "As unused" #-}
-instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
-  decCBOR = do
-    mapParts <-
-      decodeMapContents $
-        decodeWord >>= \case
-          0 -> decCBOR >>= \x -> pure (0, \up -> up {sppMinFeeA = SJust x})
-          1 -> decCBOR >>= \x -> pure (1, \up -> up {sppMinFeeB = SJust x})
-          2 -> decCBOR >>= \x -> pure (2, \up -> up {sppMaxBBSize = SJust x})
-          3 -> decCBOR >>= \x -> pure (3, \up -> up {sppMaxTxSize = SJust x})
-          4 -> decCBOR >>= \x -> pure (4, \up -> up {sppMaxBHSize = SJust x})
-          5 -> decCBOR >>= \x -> pure (5, \up -> up {sppKeyDeposit = SJust x})
-          6 -> decCBOR >>= \x -> pure (6, \up -> up {sppPoolDeposit = SJust x})
-          7 -> decCBOR >>= \x -> pure (7, \up -> up {sppEMax = SJust x})
-          8 -> decCBOR >>= \x -> pure (8, \up -> up {sppNOpt = SJust x})
-          9 -> decCBOR >>= \x -> pure (9, \up -> up {sppA0 = SJust x})
-          10 -> decCBOR >>= \x -> pure (10, \up -> up {sppRho = SJust x})
-          11 -> decCBOR >>= \x -> pure (11, \up -> up {sppTau = SJust x})
-          12 -> decCBOR >>= \x -> pure (12, \up -> up {sppD = SJust x})
-          13 -> decCBOR >>= \x -> pure (13, \up -> up {sppExtraEntropy = SJust x})
-          14 -> decCBOR >>= \x -> pure (14, \up -> up {sppProtocolVersion = SJust x})
-          15 -> decCBOR >>= \x -> pure (15, \up -> up {sppMinUTxOValue = SJust x})
-          16 -> decCBOR >>= \x -> pure (16, \up -> up {sppMinPoolCost = SJust x})
-          k -> invalidKey k
-    let fields = fst <$> mapParts :: [Int]
-    unless
-      (nub fields == fields)
-      (fail $ "duplicate keys: " <> show fields)
-    pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
-
-instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
 
 instance
   ( EraPParams era
