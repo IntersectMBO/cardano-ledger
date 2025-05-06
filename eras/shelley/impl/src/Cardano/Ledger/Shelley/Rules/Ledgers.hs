@@ -74,12 +74,7 @@ deriving instance Show (PParamsHKD Identity era) => Show (ShelleyLedgersEnv era)
 
 instance NFData (PParamsHKD Identity era) => NFData (ShelleyLedgersEnv era)
 
-instance
-  ( Era era
-  , EncCBOR (PParamsHKD Identity era)
-  ) =>
-  EncCBOR (ShelleyLedgersEnv era)
-  where
+instance EraPParams era => EncCBOR (ShelleyLedgersEnv era) where
   encCBOR x@(LedgersEnv _ _ _ _) =
     let LedgersEnv {..} = x
      in encode $

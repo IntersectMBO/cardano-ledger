@@ -92,7 +92,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
+import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
@@ -146,14 +146,18 @@ deriving newtype instance
 deriving newtype instance
   FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+instance EraPParams era => EncCBOR (PParams era) where
+  encCBOR pp =
+    encodeListLen (fromIntegral (length (pparams @era)))
+      <> F.foldMap' toEnc (pparams @era)
+    where
+      toEnc PParam' {ppLens'} = encCBOR $ pp ^. ppLens'
 
 deriving newtype instance
   (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD Identity era)) => ToCBOR (PParams era)
+instance EraPParams era => ToCBOR (PParams era) where
+  toCBOR = toEraCBOR @era
 
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
@@ -181,14 +185,23 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+instance EraPParams era => EncCBOR (PParamsUpdate era) where
+  encCBOR pp = encodeMapLen count <> enc
+    where
+      (!count, !enc) = countAndConcat encodeField pparams
+      encodeField PParam' {ppTag, ppUpdateLens} =
+        (encodeWord ppTag <>) . encCBOR <$> pp ^. ppUpdateLens
+      countAndConcat f = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case f x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
 
 deriving newtype instance
   (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD StrictMaybe era)) => ToCBOR (PParamsUpdate era)
+instance EraPParams era => ToCBOR (PParamsUpdate era) where
+  toCBOR = toEraCBOR @era
 
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
@@ -247,9 +260,7 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , EncCBOR (PParamsHKD Identity era)
   , DecCBOR (PParamsHKD Identity era)
-  , ToCBOR (PParamsHKD Identity era)
   , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
@@ -258,9 +269,7 @@ class
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , EncCBOR (PParamsHKD StrictMaybe era)
   , DecCBOR (PParamsHKD StrictMaybe era)
-  , ToCBOR (PParamsHKD StrictMaybe era)
   , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   , ToJSON (PParamsHKD StrictMaybe era)
@@ -376,25 +385,6 @@ class
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   pparams :: [PParam' era]
-
-  encCBORPParams :: PParams era -> Encoding
-  encCBORPParams pp =
-    encodeListLen (fromIntegral (length (pparams @era)))
-      <> F.foldMap' toEnc (pparams @era)
-    where
-      toEnc PParam' {ppLens'} = encCBOR $ pp ^. ppLens'
-
-  encCBORPParamsUpdate :: PParamsUpdate era -> Encoding
-  encCBORPParamsUpdate pp = encodeMapLen count <> enc
-    where
-      (!count, !enc) = countAndConcat encodeField pparams
-      encodeField PParam' {ppTag, ppUpdateLens} =
-        (encodeWord ppTag <>) . encCBOR <$> pp ^. ppUpdateLens
-      countAndConcat f = F.foldl' accum (0, mempty)
-        where
-          accum (!n, !acc) x = case f x of
-            SJust y -> (n + 1, acc <> y)
-            SNothing -> (n, acc)
 
   decCBORPParams :: Decoder s (PParams era)
   decCBORPParams =
