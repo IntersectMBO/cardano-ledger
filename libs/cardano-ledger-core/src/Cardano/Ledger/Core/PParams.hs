@@ -98,8 +98,8 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON (..), object, pairs, (.=))
-import qualified Data.Aeson as Aeson (KeyValue)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
+import qualified Data.Aeson as Aeson (KeyValue, withObject)
 import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldlM)
@@ -142,8 +142,12 @@ instance EraPParams era => ToJSON (PParams era) where
   toJSON = object . jsonPairsPParams
   toEncoding = pairs . mconcat . jsonPairsPParams
 
-deriving newtype instance
-  FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
+instance EraPParams era => FromJSON (PParams era) where
+  parseJSON =
+    Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+      let accum acc PParam' {ppName, ppLens} =
+            set ppLens <$> obj .: Aeson.fromText ppName <*> pure acc
+       in F.foldlM accum (emptyPParams @era) (eraPParams @era)
 
 instance EraPParams era => EncCBOR (PParams era) where
   encCBOR pp =
@@ -235,9 +239,6 @@ instance EraPParams era => ToJSON (PParamsUpdate era) where
   toJSON = object . jsonPairsPParamsUpdate
   toEncoding = pairs . mconcat . jsonPairsPParamsUpdate
 
-deriving newtype instance
-  FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
-
 deriving instance Generic (PParamsUpdate era)
 
 -- Generic derivation of `applyPPUpdates`
@@ -287,7 +288,6 @@ class
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
-  , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
