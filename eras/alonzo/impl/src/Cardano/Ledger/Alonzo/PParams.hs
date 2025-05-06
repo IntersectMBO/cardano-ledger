@@ -83,21 +83,12 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  decodeRecordNamed,
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
   serialize',
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Field (..),
-  decode,
-  field,
-  invalidField,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
@@ -408,39 +399,6 @@ instance EraGov AlonzoEra where
 
   obligationGovState = const mempty
 
-instance Era era => DecCBOR (AlonzoPParams Identity era) where
-  decCBOR =
-    decodeRecordNamed "PParams" (const 24) $ do
-      appMinFeeA <- decCBOR
-      appMinFeeB <- decCBOR
-      appMaxBBSize <- decCBOR
-      appMaxTxSize <- decCBOR
-      appMaxBHSize <- decCBOR
-      appKeyDeposit <- decCBOR
-      appPoolDeposit <- decCBOR
-      appEMax <- decCBOR
-      appNOpt <- decCBOR
-      appA0 <- decCBOR
-      appRho <- decCBOR
-      appTau <- decCBOR
-      appD <- decCBOR
-      appExtraEntropy <- decCBOR
-      appProtocolVersion <- decCBOR
-      appMinPoolCost <- decCBOR
-      -- new/updated for alonzo
-      appCoinsPerUTxOWord <- decCBOR
-      appCostModels <- decCBOR
-      appPrices <- decCBOR
-      appMaxTxExUnits <- decCBOR
-      appMaxBlockExUnits <- decCBOR
-      appMaxValSize <- decCBOR
-      appCollateralPercentage <- decCBOR
-      appMaxCollateralInputs <- decCBOR
-      pure AlonzoPParams {..}
-
-instance Era era => FromCBOR (AlonzoPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
-
 instance ToJSON (AlonzoPParams Identity AlonzoEra) where
   toJSON = object . alonzoPParamsPairs
   toEncoding = pairs . mconcat . alonzoPParamsPairs
@@ -605,41 +563,6 @@ emptyAlonzoPParamsUpdate =
     , appCollateralPercentage = SNothing
     , appMaxCollateralInputs = SNothing
     }
-
-updateField :: Word -> Field (AlonzoPParams StrictMaybe era)
-updateField = \case
-  0 -> field (\x up -> up {appMinFeeA = SJust x}) From
-  1 -> field (\x up -> up {appMinFeeB = SJust x}) From
-  2 -> field (\x up -> up {appMaxBBSize = SJust x}) From
-  3 -> field (\x up -> up {appMaxTxSize = SJust x}) From
-  4 -> field (\x up -> up {appMaxBHSize = SJust x}) From
-  5 -> field (\x up -> up {appKeyDeposit = SJust x}) From
-  6 -> field (\x up -> up {appPoolDeposit = SJust x}) From
-  7 -> field (\x up -> up {appEMax = SJust x}) From
-  8 -> field (\x up -> up {appNOpt = SJust x}) From
-  9 -> field (\x up -> up {appA0 = SJust x}) From
-  10 -> field (\x up -> up {appRho = SJust x}) From
-  11 -> field (\x up -> up {appTau = SJust x}) From
-  12 -> field (\x up -> up {appD = SJust x}) From
-  13 -> field (\x up -> up {appExtraEntropy = SJust x}) From
-  14 -> field (\x up -> up {appProtocolVersion = SJust x}) From
-  16 -> field (\x up -> up {appMinPoolCost = SJust x}) From
-  17 -> field (\x up -> up {appCoinsPerUTxOWord = SJust x}) From
-  18 -> field (\x up -> up {appCostModels = SJust x}) From
-  19 -> field (\x up -> up {appPrices = SJust x}) From
-  20 -> field (\x up -> up {appMaxTxExUnits = SJust x}) From
-  21 -> field (\x up -> up {appMaxBlockExUnits = SJust x}) From
-  22 -> field (\x up -> up {appMaxValSize = SJust x}) From
-  23 -> field (\x up -> up {appCollateralPercentage = SJust x}) From
-  24 -> field (\x up -> up {appMaxCollateralInputs = SJust x}) From
-  k -> invalidField k
-
-instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
-  decCBOR =
-    decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
-
-instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
 
 instance ToJSON (AlonzoPParams StrictMaybe AlonzoEra) where
   toJSON = object . alonzoPParamsUpdatePairs
