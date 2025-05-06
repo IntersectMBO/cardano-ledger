@@ -97,7 +97,9 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (..), object, pairs, (.=))
+import qualified Data.Aeson as Aeson (KeyValue)
+import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldr')
 import Data.IntMap (IntMap)
@@ -136,8 +138,9 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
-deriving newtype instance
-  ToJSON (PParamsHKD Identity era) => ToJSON (PParams era)
+instance EraPParams era => ToJSON (PParams era) where
+  toJSON = object . jsonPairsPParams
+  toEncoding = pairs . mconcat . jsonPairsPParams
 
 deriving newtype instance
   FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
@@ -231,8 +234,9 @@ instance EraPParams era => ToCBOR (PParamsUpdate era) where
 instance EraPParams era => FromCBOR (PParamsUpdate era) where
   fromCBOR = fromEraCBOR @era
 
-deriving newtype instance
-  ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
+instance EraPParams era => ToJSON (PParamsUpdate era) where
+  toJSON = object . jsonPairsPParamsUpdate
+  toEncoding = pairs . mconcat . jsonPairsPParamsUpdate
 
 deriving newtype instance
   FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
@@ -286,14 +290,12 @@ class
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
-  , ToJSON (PParamsHKD Identity era)
   , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
-  , ToJSON (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where
@@ -406,6 +408,19 @@ class
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   pparams :: [PParam' era]
+
+  jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
+  jsonPairsPParams pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens')
+    | PParam' {ppName, ppLens'} <- pparams @era
+    ]
+
+  jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
+  jsonPairsPParamsUpdate ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam' {ppName, ppUpdateLens} <- pparams @era
+    , SJust v <- [ppu ^. ppUpdateLens]
+    ]
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
