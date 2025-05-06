@@ -85,12 +85,8 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
   Key,
-  KeyValue,
   ToJSON (..),
-  object,
-  pairs,
   (.:),
-  (.=),
  )
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -201,27 +197,6 @@ instance EraPParams ShelleyEra where
 
   pparams = shelleyPParams
 
-instance
-  ( EraPParams era
-  , PParamsHKD Identity era ~ ShelleyPParams Identity era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
-  , ProtVerAtMost era 8
-  ) =>
-  ToJSON (ShelleyPParams Identity era)
-  where
-  toJSON = object . shelleyPParamsPairs
-  toEncoding = pairs . mconcat . shelleyPParamsPairs
-
-shelleyPParamsPairs ::
-  forall era a e.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue e a) =>
-  PParamsHKD Identity era ->
-  [a]
-shelleyPParamsPairs pp =
-  uncurry (.=)
-    <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
-
 instance FromJSON (ShelleyPParams Identity era) where
   parseJSON =
     Aeson.withObject "ShelleyPParams" $ \obj -> do
@@ -317,40 +292,6 @@ data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
 instance NoThunks PPUpdateEnv
 
 {-# DEPRECATED PPUpdateEnv "As unused" #-}
-
-instance
-  ( EraPParams era
-  , PParamsHKD StrictMaybe era ~ ShelleyPParams StrictMaybe era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
-  , ProtVerAtMost era 8
-  ) =>
-  ToJSON (ShelleyPParams StrictMaybe era)
-  where
-  toJSON = object . shelleyPParamsUpdatePairs
-  toEncoding = pairs . mconcat . shelleyPParamsUpdatePairs
-
-shelleyPParamsUpdatePairs ::
-  forall era a e.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue e a) =>
-  PParamsHKD StrictMaybe era ->
-  [a]
-shelleyPParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- shelleyPParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-shelleyPParamsHKDPairs ::
-  forall f era.
-  (HKDFunctor f, EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-shelleyPParamsHKDPairs px pp =
-  shelleyCommonPParamsHKDPairs px pp
-    ++ shelleyCommonPParamsHKDPairsV6 px pp
-    ++ shelleyCommonPParamsHKDPairsV8 px pp
-    ++ [("minUTxOValue", hkdMap px (toJSON @Coin) (pp ^. hkdMinUTxOValueL @era @f))]
 
 -- | These are the fields that are common only up to major protocol version 6
 shelleyCommonPParamsHKDPairsV6 ::
