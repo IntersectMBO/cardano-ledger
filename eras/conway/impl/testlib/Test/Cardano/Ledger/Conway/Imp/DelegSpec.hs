@@ -28,7 +28,6 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
-import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -648,7 +647,8 @@ spec = do
             case Map.lookup drepCred dreps of
               Nothing ->
                 whenPostBootstrap $
-                  assertFailure $ "Expected DRep: " <> show drepCred <> " to be registered"
+                  assertFailure $
+                    "Expected DRep: " <> show drepCred <> " to be registered"
               Just drepState ->
                 assertBool
                   "Expected DRep delegations to contain the stake credential"

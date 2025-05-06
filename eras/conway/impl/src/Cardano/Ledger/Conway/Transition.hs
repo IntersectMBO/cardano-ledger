@@ -120,7 +120,7 @@ instance FromJSON (TransitionConfig ConwayEra) where
     pure $ mkTransitionConfig pc ag
 
 conwayRegisterInitialFundsThenStaking ::
-  (ConwayEraTransition era) =>
+  ConwayEraTransition era =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era

@@ -238,7 +238,7 @@ conwayGovCertTransition = do
         certState' =
           certState & certVStateL . vsDRepsL %~ Map.delete cred
         clearDRepDelegations delegs accountsMap =
-          foldr (Map.adjust (dRepDelegationAccountStateL .~ Nothing))  accountsMap delegs
+          foldr (Map.adjust (dRepDelegationAccountStateL .~ Nothing)) accountsMap delegs
       pure $
         case mDRepState of
           Nothing -> certState'
