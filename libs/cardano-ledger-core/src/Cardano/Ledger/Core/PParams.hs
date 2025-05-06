@@ -97,7 +97,7 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON (..), (.:), (.=))
+import Data.Aeson (FromJSON, ToJSON (..), object, pairs, (.:), (.=))
 import qualified Data.Aeson as Aeson (KeyValue, Value, withObject)
 import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson (Parser)
@@ -139,8 +139,9 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
-deriving newtype instance
-  ToJSON (PParamsHKD Identity era) => ToJSON (PParams era)
+instance EraPParams era => ToJSON (PParams era) where
+  toJSON = object . jsonPairsPParams
+  toEncoding = pairs . mconcat . jsonPairsPParams
 
 deriving newtype instance
   FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
@@ -234,8 +235,9 @@ instance EraPParams era => ToCBOR (PParamsUpdate era) where
 instance EraPParams era => FromCBOR (PParamsUpdate era) where
   fromCBOR = fromEraCBOR @era
 
-deriving newtype instance
-  ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
+instance EraPParams era => ToJSON (PParamsUpdate era) where
+  toJSON = object . jsonPairsPParamsUpdate
+  toEncoding = pairs . mconcat . jsonPairsPParamsUpdate
 
 deriving newtype instance
   FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
@@ -289,14 +291,12 @@ class
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
-  , ToJSON (PParamsHKD Identity era)
   , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
-  , ToJSON (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where
