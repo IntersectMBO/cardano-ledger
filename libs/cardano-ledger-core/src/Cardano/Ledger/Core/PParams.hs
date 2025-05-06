@@ -92,7 +92,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, toEraCBOR)
+import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
@@ -101,7 +101,6 @@ import Data.Aeson (FromJSON, ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson (KeyValue, Value, withObject)
 import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson (Parser)
-import Data.Data (Typeable)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldr')
 import Data.IntMap (IntMap)
@@ -153,14 +152,24 @@ instance EraPParams era => EncCBOR (PParams era) where
     where
       toEnc PParam' {ppLens'} = encCBOR $ pp ^. ppLens'
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
+instance EraPParams era => DecCBOR (PParams era) where
+  decCBOR =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (pparams @era))))
+      $ F.foldr'
+        accum
+        (pure (emptyPParams @era))
+        (pparams @era)
+    where
+      accum PParam' {ppLens'} acc =
+        set ppLens' <$> decCBOR <*> acc
 
 instance EraPParams era => ToCBOR (PParams era) where
   toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
+instance EraPParams era => FromCBOR (PParams era) where
+  fromCBOR = fromEraCBOR @era
 
 deriving instance Generic (PParams era)
 
@@ -197,14 +206,33 @@ instance EraPParams era => EncCBOR (PParamsUpdate era) where
             SJust y -> (n + 1, acc <> y)
             SNothing -> (n, acc)
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
+instance EraPParams era => DecCBOR (PParamsUpdate era) where
+  decCBOR =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          (updateFieldMap pparams)
+      updateFieldMap :: [PParam' era] -> IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          . map
+            ( \PParam' {ppTag, ppUpdateLens} ->
+                (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
+            )
 
 instance EraPParams era => ToCBOR (PParamsUpdate era) where
   toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
+instance EraPParams era => FromCBOR (PParamsUpdate era) where
+  fromCBOR = fromEraCBOR @era
 
 deriving newtype instance
   ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
@@ -260,8 +288,6 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , DecCBOR (PParamsHKD Identity era)
-  , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
   , FromJSON (PParamsHKD Identity era)
@@ -269,8 +295,6 @@ class
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , DecCBOR (PParamsHKD StrictMaybe era)
-  , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   , ToJSON (PParamsHKD StrictMaybe era)
   ) =>
@@ -386,40 +410,6 @@ class
 
   pparams :: [PParam' era]
 
-  decCBORPParams :: Decoder s (PParams era)
-  decCBORPParams =
-    decodeRecordNamed
-      (T.pack . show . typeRep $ Proxy @(PParams era))
-      (const (fromIntegral (length (pparams @era))))
-      $ F.foldr'
-        accum
-        (pure (emptyPParams @era))
-        (pparams @era)
-    where
-      accum PParam' {ppLens'} acc =
-        set ppLens' <$> decCBOR <*> acc
-
-  decCBORPParamsUpdate :: Decoder s (PParamsUpdate era)
-  decCBORPParamsUpdate =
-    decode $
-      SparseKeyed
-        (show . typeRep $ Proxy @(PParamsUpdate era))
-        emptyPParamsUpdate
-        updateField
-        []
-    where
-      updateField k =
-        IntMap.findWithDefault
-          (invalidField k)
-          (fromIntegral k)
-          (updateFieldMap pparams)
-      updateFieldMap :: [PParam' era] -> IntMap (Field (PParamsUpdate era))
-      updateFieldMap =
-        IntMap.fromList
-          . map
-            ( \PParam' {ppTag, ppUpdateLens} ->
-                (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
-            )
   jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
   jsonPairsPParams pp =
     [ Aeson.fromText ppName .= toJSON (pp ^. ppLens')
