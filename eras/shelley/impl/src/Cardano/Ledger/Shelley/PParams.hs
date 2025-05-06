@@ -33,7 +33,6 @@ module Cardano.Ledger.Shelley.PParams (
 
   -- * JSON helpers
   shelleyCommonPParamsHKDPairs,
-  shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
 
   -- * PParam
@@ -268,18 +267,6 @@ data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
 instance NoThunks PPUpdateEnv
 
 {-# DEPRECATED PPUpdateEnv "As unused" #-}
-
--- | These are the fields that are common only up to major protocol version 6
-shelleyCommonPParamsHKDPairsV6 ::
-  forall f era.
-  (HKDFunctor f, EraPParams era, ProtVerAtMost era 6) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-shelleyCommonPParamsHKDPairsV6 px pp =
-  [ ("decentralization", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
-  , ("extraPraosEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
-  ]
 
 shelleyCommonPParamsHKDPairsV8 ::
   forall f era.
