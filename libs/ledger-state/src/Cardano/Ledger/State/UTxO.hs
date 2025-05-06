@@ -32,12 +32,16 @@ import qualified Cardano.Ledger.UMap as UM (ptrMap)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
+import Control.Monad ((<=<))
 import Control.SetAlgebra (range)
+import Data.Bifunctor (first)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable as F
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
 import Lens.Micro
@@ -57,11 +61,20 @@ readEpochState ::
   IO (EpochState CurrentEra)
 readEpochState = readDecCBOR
 
+readHexUTxO ::
+  FilePath ->
+  IO (UTxO CurrentEra)
+readHexUTxO = readDecCBORHex
+
 readDecCBOR :: FromCBOR a => FilePath -> IO a
-readDecCBOR fp =
-  LBS.readFile fp <&> Plain.decodeFull >>= \case
-    Left exc -> throwIO exc
-    Right res -> pure res
+readDecCBOR = either throwIO pure . Plain.decodeFull <=< LBS.readFile
+
+readDecCBORHex :: FromCBOR a => FilePath -> IO a
+readDecCBORHex = either throwIO pure . decodeFullHex <=< LBS.readFile
+  where
+    decodeFullHex =
+      Plain.decodeFull
+        <=< first (DecoderErrorCustom "Invalid Hex encoding:" . T.pack) . Base16.decode
 
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
 writeEpochState fp = LBS.writeFile fp . Plain.serialize

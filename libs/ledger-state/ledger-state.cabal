@@ -36,6 +36,7 @@ library
 
   build-depends:
     base >=4.14 && <5,
+    base16-bytestring,
     bytestring,
     cardano-crypto-class,
     cardano-ledger-alonzo,
@@ -124,6 +125,7 @@ benchmark performance
     cardano-data,
     cardano-ledger-api:{cardano-ledger-api, testlib},
     cardano-ledger-binary,
+    cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley,
     cardano-slotting,
