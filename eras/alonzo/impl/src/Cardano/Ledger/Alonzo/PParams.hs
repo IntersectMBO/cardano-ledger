@@ -56,9 +56,6 @@ module Cardano.Ledger.Alonzo.PParams (
   OrdExUnits (..),
   CoinPerWord (..),
 
-  -- * JSON helpers
-  alonzoCommonPParamsHKDPairs,
-
   -- * PParam
   ppCollateralPercentage,
   ppCostModels,
@@ -111,10 +108,8 @@ import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON,
-  Key,
   ToJSON (..),
  )
-import qualified Data.Aeson.Types as Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -515,24 +510,6 @@ emptyAlonzoPParamsUpdate =
     , appCollateralPercentage = SNothing
     , appMaxCollateralInputs = SNothing
     }
-
--- | These are the fields that are common across all eras starting with Alonzo.
-alonzoCommonPParamsHKDPairs ::
-  forall f era.
-  (HKDFunctor f, AlonzoEraPParams era) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-alonzoCommonPParamsHKDPairs px pp =
-  shelleyCommonPParamsHKDPairs px pp
-    ++ [ ("costModels", hkdMap px (toJSON @CostModels) (pp ^. hkdCostModelsL @era @f))
-       , ("executionUnitPrices", hkdMap px (toJSON @Prices) (pp ^. hkdPricesL @era @f))
-       , ("maxTxExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxTxExUnitsL @era @f))
-       , ("maxBlockExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxBlockExUnitsL @era @f))
-       , ("maxValueSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxValSizeL @era @f))
-       , ("collateralPercentage", hkdMap px (toJSON @Natural) (pp ^. hkdCollateralPercentageL @era @f))
-       , ("maxCollateralInputs", hkdMap px (toJSON @Natural) (pp ^. hkdMaxCollateralInputsL @era @f))
-       ]
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"

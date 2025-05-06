@@ -35,7 +35,6 @@ module Cardano.Ledger.Babbage.PParams (
   encodeLangViews,
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
-  babbageCommonPParamsHKDPairs,
   ppCoinsPerUTxOByte,
 ) where
 
@@ -70,9 +69,7 @@ import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
-  Key,
   ToJSON (..),
-  Value,
  )
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
@@ -321,17 +318,6 @@ emptyBabbagePParamsUpdate =
     , bppCollateralPercentage = SNothing
     , bppMaxCollateralInputs = SNothing
     }
-
--- | These are the fields that are common across all eras starting with Babbage.
-babbageCommonPParamsHKDPairs ::
-  forall era f.
-  (BabbageEraPParams era, HKDFunctor f) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-babbageCommonPParamsHKDPairs px pp =
-  alonzoCommonPParamsHKDPairs px pp
-    <> [("utxoCostPerByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
   forall f.
