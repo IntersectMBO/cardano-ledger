@@ -83,10 +83,8 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
-  FromJSON (..),
   Key,
   ToJSON (..),
-  (.:),
  )
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -196,28 +194,6 @@ instance EraPParams ShelleyEra where
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
   pparams = shelleyPParams
-
-instance FromJSON (ShelleyPParams Identity era) where
-  parseJSON =
-    Aeson.withObject "ShelleyPParams" $ \obj -> do
-      ShelleyPParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "decentralization"
-        <*> obj .: "extraPraosEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minUTxOValue"
-        <*> obj .: "minPoolCost"
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
