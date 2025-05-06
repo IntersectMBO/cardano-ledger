@@ -76,7 +76,6 @@ import Cardano.Ledger.BaseTypes (
   Nonce (NeutralNonce),
   StrictMaybe (..),
   UnitInterval,
-  isSNothing,
  )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
@@ -84,11 +83,9 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   FromCBOR (..),
-  ToCBOR (..),
   decodeRecordNamed,
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
-  encodeListLen,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
@@ -96,15 +93,10 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
-  Density (..),
-  Encode (..),
   Field (..),
-  Wrapped (..),
   decode,
-  encode,
   field,
   invalidField,
-  (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
@@ -414,35 +406,6 @@ instance EraGov AlonzoEra where
 
   obligationGovState = const mempty
 
-instance Era era => EncCBOR (AlonzoPParams Identity era) where
-  encCBOR AlonzoPParams {..} =
-    encodeListLen 24
-      <> encCBOR appMinFeeA
-      <> encCBOR appMinFeeB
-      <> encCBOR appMaxBBSize
-      <> encCBOR appMaxTxSize
-      <> encCBOR appMaxBHSize
-      <> encCBOR appKeyDeposit
-      <> encCBOR appPoolDeposit
-      <> encCBOR appEMax
-      <> encCBOR appNOpt
-      <> encCBOR appA0
-      <> encCBOR appRho
-      <> encCBOR appTau
-      <> encCBOR appD
-      <> encCBOR appExtraEntropy
-      <> encCBOR appProtocolVersion
-      <> encCBOR appMinPoolCost
-      -- new/updated for alonzo
-      <> encCBOR appCoinsPerUTxOWord
-      <> encCBOR appCostModels
-      <> encCBOR appPrices
-      <> encCBOR appMaxTxExUnits
-      <> encCBOR appMaxBlockExUnits
-      <> encCBOR appMaxValSize
-      <> encCBOR appCollateralPercentage
-      <> encCBOR appMaxCollateralInputs
-
 instance Era era => DecCBOR (AlonzoPParams Identity era) where
   decCBOR =
     decodeRecordNamed "PParams" (const 24) $ do
@@ -472,9 +435,6 @@ instance Era era => DecCBOR (AlonzoPParams Identity era) where
       appCollateralPercentage <- decCBOR
       appMaxCollateralInputs <- decCBOR
       pure AlonzoPParams {..}
-
-instance Era era => ToCBOR (AlonzoPParams Identity era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
   fromCBOR = fromEraCBOR @era
@@ -644,52 +604,6 @@ emptyAlonzoPParamsUpdate =
     , appMaxCollateralInputs = SNothing
     }
 
--- =======================================================
--- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
--- writing only those fields where the field is (SJust x), that is the role of
--- the local function (omitStrictMaybe key x)
-
-encodePParamsUpdate ::
-  AlonzoPParams StrictMaybe era ->
-  Encode ('Closed 'Sparse) (AlonzoPParams StrictMaybe era)
-encodePParamsUpdate ppup =
-  Keyed AlonzoPParams
-    !> omitStrictMaybe 0 (appMinFeeA ppup) encCBOR
-    !> omitStrictMaybe 1 (appMinFeeB ppup) encCBOR
-    !> omitStrictMaybe 2 (appMaxBBSize ppup) encCBOR
-    !> omitStrictMaybe 3 (appMaxTxSize ppup) encCBOR
-    !> omitStrictMaybe 4 (appMaxBHSize ppup) encCBOR
-    !> omitStrictMaybe 5 (appKeyDeposit ppup) encCBOR
-    !> omitStrictMaybe 6 (appPoolDeposit ppup) encCBOR
-    !> omitStrictMaybe 7 (appEMax ppup) encCBOR
-    !> omitStrictMaybe 8 (appNOpt ppup) encCBOR
-    !> omitStrictMaybe 9 (appA0 ppup) encCBOR
-    !> omitStrictMaybe 10 (appRho ppup) encCBOR
-    !> omitStrictMaybe 11 (appTau ppup) encCBOR
-    !> omitStrictMaybe 12 (appD ppup) encCBOR
-    !> omitStrictMaybe 13 (appExtraEntropy ppup) encCBOR
-    !> omitStrictMaybe 14 (appProtocolVersion ppup) encCBOR
-    !> omitStrictMaybe 16 (appMinPoolCost ppup) encCBOR
-    !> omitStrictMaybe 17 (appCoinsPerUTxOWord ppup) encCBOR
-    !> omitStrictMaybe 18 (appCostModels ppup) encCBOR
-    !> omitStrictMaybe 19 (appPrices ppup) encCBOR
-    !> omitStrictMaybe 20 (appMaxTxExUnits ppup) encCBOR
-    !> omitStrictMaybe 21 (appMaxBlockExUnits ppup) encCBOR
-    !> omitStrictMaybe 22 (appMaxValSize ppup) encCBOR
-    !> omitStrictMaybe 23 (appCollateralPercentage ppup) encCBOR
-    !> omitStrictMaybe 24 (appMaxCollateralInputs ppup) encCBOR
-  where
-    omitStrictMaybe ::
-      Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
-    omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
-
-    fromSJust :: StrictMaybe a -> a
-    fromSJust (SJust x) = x
-    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
-  encCBOR ppup = encode (encodePParamsUpdate ppup)
-
 updateField :: Word -> Field (AlonzoPParams StrictMaybe era)
 updateField = \case
   0 -> field (\x up -> up {appMinFeeA = SJust x}) From
@@ -721,9 +635,6 @@ updateField = \case
 instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
   decCBOR =
     decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
-
-instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
