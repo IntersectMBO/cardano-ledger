@@ -59,6 +59,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impShelleyExpectTxSuccess,
   modifyNES,
   getProtVer,
+  setProtVer,
   getsNES,
   getUTxO,
   impAddNativeScript,
@@ -1428,6 +1429,10 @@ getUTxO = getsNES utxoL
 
 getProtVer :: EraGov era => ImpTestM era ProtVer
 getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+
+setProtVer :: EraGov era => ProtVer -> ImpTestM era ()
+setProtVer pv = modifyNES $
+  nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ pv
 
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>
