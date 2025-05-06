@@ -156,8 +156,8 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdMinFeeRefScriptCostPerByteL ::
     HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
 
-  toPlutusDataPParamsUpdate :: PParamsUpdate era -> P.Data
-  toPlutusDataPParamsUpdate ppu =
+instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
+  toPlutusData ppu =
     P.Map (foldr' accum ([] :: [(P.Data, P.Data)]) (pparams @era))
     where
       accum PParam' {ppTag, ppUpdateLens, ppToPlutusData} acc =
@@ -167,8 +167,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
               pure (P.I (toInteger @Word ppTag), toPlutusDataF t)
          in maybe acc (: acc) mbData
 
-  fromPlutusDataPParamsUpdate :: P.Data -> Maybe (PParamsUpdate era)
-  fromPlutusDataPParamsUpdate (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
+  fromPlutusData (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
     where
       accum acc (dataKey, dataVal) = do
         tag <- fromPlutusData @Word dataKey
@@ -183,7 +182,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
                 (fromIntegral ppTag, pp)
             )
           $ pparams @era
-  fromPlutusDataPParamsUpdate _ = Nothing
+  fromPlutusData _ = Nothing
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds

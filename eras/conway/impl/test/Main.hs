@@ -4,10 +4,7 @@
 module Main where
 
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.TxInfo ()
-import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import Test.Cardano.Ledger.Common
@@ -55,14 +52,3 @@ main =
         PlutusSpec.spec
       Regression.spec @ConwayEra
       TxInfo.spec
-      eraPParamsPlutusDataSpec
-
-eraPParamsPlutusDataSpec :: HasCallStack => Spec
-eraPParamsPlutusDataSpec = describe "EraPParams PlutusData" $ do
-  prop "PParams toPlutusData equivalence" $ \(ppu :: PParamsUpdate ConwayEra) -> do
-    let pd1 = toPlutusData ppu
-    let pd2 = toPlutusDataPParamsUpdate @ConwayEra ppu
-    pd1 `shouldBe` pd2
-
-    let deserialized = fromPlutusDataPParamsUpdate pd1
-    deserialized `shouldBe` Just ppu
