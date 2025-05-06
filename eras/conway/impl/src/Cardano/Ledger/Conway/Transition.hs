@@ -129,9 +129,8 @@ conwayRegisterInitialFundsThenStaking cfg =
   -- information depends on it.
   resetStakeDistribution
     . registerDRepsThenDelegs cfg
-    . registerInitialDReps cfg
-    . conwayRegisterInitialAccounts cfg
-    . registerInitialStakePools cfg
+    . conwayRegisterInitialAccounts (cfg ^. tcInitialStakingL)
+    . registerInitialStakePools (cfg ^. tcInitialStakingL)
     . registerInitialFunds cfg
 
 -- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
@@ -139,10 +138,10 @@ conwayRegisterInitialFundsThenStaking cfg =
 conwayRegisterInitialAccounts ::
   forall era.
   (HasCallStack, EraTransition era, ConwayEraAccounts era) =>
-  TransitionConfig era ->
+  ShelleyGenesisStaking ->
   NewEpochState era ->
   NewEpochState era
-conwayRegisterInitialAccounts tc nes =
+conwayRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
       foldr registerAndDelegate initAccounts $ ListMap.toList sgsStake
@@ -159,7 +158,6 @@ conwayRegisterInitialAccounts tc nes =
               ++ " to an unregistered stake pool "
               ++ show stakePool
               ++ " is being violated."
-    ShelleyGenesisStaking {sgsStake} = tc ^. tcInitialStakingL
 
 registerInitialDReps ::
   ConwayEraTransition era =>

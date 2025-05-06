@@ -27,6 +27,7 @@ module Cardano.Ledger.Shelley.Transition (
   mkShelleyTransitionConfig,
   createInitialState,
   shelleyRegisterInitialFundsThenStaking,
+  shelleyRegisterInitialAccounts,
   registerInitialStakePools,
   registerInitialFunds,
   resetStakeDistribution,
@@ -159,8 +160,8 @@ shelleyRegisterInitialFundsThenStaking cfg =
   -- We must first register the initial funds, because the stake
   -- information depends on it.
   resetStakeDistribution
-    . shelleyRegisterInitialAccounts cfg
-    . registerInitialStakePools cfg
+    . shelleyRegisterInitialAccounts (cfg ^. tcInitialStakingL)
+    . registerInitialStakePools (cfg ^. tcInitialStakingL)
     . registerInitialFunds cfg
 
 instance EraTransition ShelleyEra where
@@ -319,26 +320,24 @@ createInitialState tc =
 
 registerInitialStakePools ::
   forall era.
-  (HasCallStack, EraTransition era) =>
-  TransitionConfig era ->
+  EraCertState era =>
+  ShelleyGenesisStaking ->
   NewEpochState era ->
   NewEpochState era
-registerInitialStakePools tc nes =
+registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
       .~ ListMap.toMap sgsPools
-  where
-    ShelleyGenesisStaking {sgsPools} = tc ^. tcInitialStakingL
 
 -- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.
 shelleyRegisterInitialAccounts ::
   forall era.
-  (HasCallStack, EraTransition era, ShelleyEraAccounts era) =>
-  TransitionConfig era ->
+  (HasCallStack, ShelleyEraAccounts era, EraCertState era, EraGov era) =>
+  ShelleyGenesisStaking ->
   NewEpochState era ->
   NewEpochState era
-shelleyRegisterInitialAccounts tc nes =
+shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
       foldr registerAndDelegate initAccounts $ zip (ListMap.toList sgsStake) ptrs
@@ -358,11 +357,13 @@ shelleyRegisterInitialAccounts tc nes =
     ptrs =
       [ Ptr minBound txIx certIx | txIx <- [minBound .. maxBound], certIx <- [minBound .. maxBound]
       ]
-    ShelleyGenesisStaking {sgsStake} = tc ^. tcInitialStakingL
 
 -- | Having initial funds, stake pools and accounts with delegations, we need to reset the stake
 -- distribution, otherwise those initial stake pools will not be able to produce blocks
-resetStakeDistribution :: EraTransition era => NewEpochState era -> NewEpochState era
+resetStakeDistribution ::
+  (EraCertState era, EraStake era) =>
+  NewEpochState era ->
+  NewEpochState era
 resetStakeDistribution nes =
   nes
     & nesEsL . esSnapshotsL . ssStakeMarkL .~ initSnapShot

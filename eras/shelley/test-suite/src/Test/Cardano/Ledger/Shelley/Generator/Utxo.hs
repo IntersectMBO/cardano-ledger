@@ -18,10 +18,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
 )
 where
 
-import Cardano.Ledger.Address (
-  Addr (..),
-  RewardAccount (..),
- )
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   inject,
@@ -29,27 +26,15 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
-  LedgerState (..),
-  UTxOState (..),
-  ptrsMap,
-  rewards,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
-import Cardano.Ledger.State (
-  EraCertState (..),
-  EraUTxO,
-  UTxO (..),
-  getMinFeeTxUtxo,
-  sumAllValue,
- )
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (when)
@@ -68,6 +53,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import Lens.Micro
+import Lens.Micro.Extras
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (tracedDiscard)
@@ -124,6 +110,7 @@ genTx ::
   forall era c.
   ( EraGen era
   , EraUTxO era
+  , ShelleyEraAccounts era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
@@ -167,7 +154,9 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards) $ dpState ^. certDStateL)
+          ( Map.map (fromCompact . view balanceAccountStateL) $
+              dpState ^. certDStateL . accountsL . accountsMapL
+          )
       (update, updateWits) <-
         genUpdate
           constants
@@ -861,9 +850,9 @@ genRecipients nRecipients' keys scripts = do
 
   return (zipWith mkAddr payCreds stakeCreds)
 
-genPtrAddrs :: DState era -> [Addr] -> Gen [Addr]
+genPtrAddrs :: ShelleyEraAccounts era => DState era -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
-  let pointers = ptrsMap ds
+  let pointers = ds ^. accountsL . accountsPtrsMapL
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
   pointerList <- map fst <$> pickRandomFromMap n pointers
 
