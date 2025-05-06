@@ -103,7 +103,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders
@@ -887,46 +886,6 @@ instance ConwayEraPParams ConwayEra where
   hkdMinFeeRefScriptCostPerByteL =
     lens (unTHKD . cppMinFeeRefScriptCostPerByte) $ \pp x -> pp {cppMinFeeRefScriptCostPerByte = THKD x}
 
-instance Era era => DecCBOR (ConwayPParams Identity era) where
-  decCBOR =
-    decode $
-      RecD (ConwayPParams @Identity)
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        --  -- New for Conway
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance Era era => FromCBOR (ConwayPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
-
 instance ToJSON (ConwayPParams Identity ConwayEra) where
   toJSON = object . conwayPParamsPairs
   toEncoding = pairs . mconcat . conwayPParamsPairs
@@ -1051,47 +1010,6 @@ emptyConwayPParamsUpdate =
     , cppDRepActivity = THKD SNothing
     , cppMinFeeRefScriptCostPerByte = THKD SNothing
     }
-
-updateField :: Word -> Field (ConwayPParams StrictMaybe era)
-updateField = \case
-  0 -> field (\x up -> up {cppMinFeeA = THKD (SJust x)}) From
-  1 -> field (\x up -> up {cppMinFeeB = THKD (SJust x)}) From
-  2 -> field (\x up -> up {cppMaxBBSize = THKD (SJust x)}) From
-  3 -> field (\x up -> up {cppMaxTxSize = THKD (SJust x)}) From
-  4 -> field (\x up -> up {cppMaxBHSize = THKD (SJust x)}) From
-  5 -> field (\x up -> up {cppKeyDeposit = THKD (SJust x)}) From
-  6 -> field (\x up -> up {cppPoolDeposit = THKD (SJust x)}) From
-  7 -> field (\x up -> up {cppEMax = THKD (SJust x)}) From
-  8 -> field (\x up -> up {cppNOpt = THKD (SJust x)}) From
-  9 -> field (\x up -> up {cppA0 = THKD (SJust x)}) From
-  10 -> field (\x up -> up {cppRho = THKD (SJust x)}) From
-  11 -> field (\x up -> up {cppTau = THKD (SJust x)}) From
-  16 -> field (\x up -> up {cppMinPoolCost = THKD (SJust x)}) From
-  17 -> field (\x up -> up {cppCoinsPerUTxOByte = THKD (SJust x)}) From
-  18 -> field (\x up -> up {cppCostModels = THKD (SJust x)}) From
-  19 -> field (\x up -> up {cppPrices = THKD (SJust x)}) From
-  20 -> field (\x up -> up {cppMaxTxExUnits = THKD (SJust x)}) From
-  21 -> field (\x up -> up {cppMaxBlockExUnits = THKD (SJust x)}) From
-  22 -> field (\x up -> up {cppMaxValSize = THKD (SJust x)}) From
-  23 -> field (\x up -> up {cppCollateralPercentage = THKD (SJust x)}) From
-  24 -> field (\x up -> up {cppMaxCollateralInputs = THKD (SJust x)}) From
-  -- New for Conway
-  25 -> field (\x up -> up {cppPoolVotingThresholds = THKD (SJust x)}) From
-  26 -> field (\x up -> up {cppDRepVotingThresholds = THKD (SJust x)}) From
-  27 -> field (\x up -> up {cppCommitteeMinSize = THKD (SJust x)}) From
-  28 -> field (\x up -> up {cppCommitteeMaxTermLength = THKD (SJust x)}) From
-  29 -> field (\x up -> up {cppGovActionLifetime = THKD (SJust x)}) From
-  30 -> field (\x up -> up {cppGovActionDeposit = THKD (SJust x)}) From
-  31 -> field (\x up -> up {cppDRepDeposit = THKD (SJust x)}) From
-  32 -> field (\x up -> up {cppDRepActivity = THKD (SJust x)}) From
-  33 -> field (\x up -> up {cppMinFeeRefScriptCostPerByte = THKD (SJust x)}) From
-  k -> invalidField k
-
-instance Era era => DecCBOR (ConwayPParams StrictMaybe era) where
-  decCBOR = decode (SparseKeyed "PParamsUpdate" emptyConwayPParamsUpdate updateField [])
-
-instance Era era => FromCBOR (ConwayPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
 
 instance
   ( ConwayEraPParams era
