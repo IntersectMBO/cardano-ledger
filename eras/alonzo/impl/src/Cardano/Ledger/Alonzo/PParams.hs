@@ -628,9 +628,9 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppMinPoolCost = appMinPoolCost
     }
 
-ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam' era
+ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam era
 ppCoinsPerUTxOWord =
-  PParam'
+  PParam
     { ppName = "utxoCostPerByte"
     , ppTag = 17
     , ppLens' = ppCoinsPerUTxOWordL
@@ -639,9 +639,9 @@ ppCoinsPerUTxOWord =
     , ppFromPlutusData = Nothing
     }
 
-ppCollateralPercentage :: AlonzoEraPParams era => PParam' era
+ppCollateralPercentage :: AlonzoEraPParams era => PParam era
 ppCollateralPercentage =
-  PParam'
+  PParam
     { ppName = "collateralPercentage"
     , ppTag = 23
     , ppLens' = ppCollateralPercentageL
@@ -650,9 +650,9 @@ ppCollateralPercentage =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppCostModels :: AlonzoEraPParams era => PParam' era
+ppCostModels :: AlonzoEraPParams era => PParam era
 ppCostModels =
-  PParam'
+  PParam
     { ppName = "costModels"
     , ppTag = 18
     , ppLens' = ppCostModelsL
@@ -661,9 +661,9 @@ ppCostModels =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppMaxBlockExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxBlockExUnits :: AlonzoEraPParams era => PParam era
 ppMaxBlockExUnits =
-  PParam'
+  PParam
     { ppName = "maxBlockExecutionUnits"
     , ppTag = 21
     , ppLens' = ppMaxBlockExUnitsL
@@ -672,9 +672,9 @@ ppMaxBlockExUnits =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppMaxCollateralInputs :: AlonzoEraPParams era => PParam' era
+ppMaxCollateralInputs :: AlonzoEraPParams era => PParam era
 ppMaxCollateralInputs =
-  PParam'
+  PParam
     { ppName = "maxCollateralInputs"
     , ppTag = 24
     , ppLens' = ppMaxCollateralInputsL
@@ -683,9 +683,9 @@ ppMaxCollateralInputs =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppMaxTxExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxTxExUnits :: AlonzoEraPParams era => PParam era
 ppMaxTxExUnits =
-  PParam'
+  PParam
     { ppName = "maxTxExecutionUnits"
     , ppTag = 20
     , ppLens' = ppMaxTxExUnitsL
@@ -694,9 +694,9 @@ ppMaxTxExUnits =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppMaxValSize :: AlonzoEraPParams era => PParam' era
+ppMaxValSize :: AlonzoEraPParams era => PParam era
 ppMaxValSize =
-  PParam'
+  PParam
     { ppName = "maxValueSize"
     , ppTag = 22
     , ppLens' = ppMaxValSizeL
@@ -705,9 +705,9 @@ ppMaxValSize =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppPrices :: AlonzoEraPParams era => PParam' era
+ppPrices :: AlonzoEraPParams era => PParam era
 ppPrices =
-  PParam'
+  PParam
     { ppName = "executionUnitPrices"
     , ppTag = 19
     , ppLens' = ppPricesL

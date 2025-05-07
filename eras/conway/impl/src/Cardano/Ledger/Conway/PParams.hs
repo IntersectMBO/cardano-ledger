@@ -170,7 +170,7 @@ instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
   toPlutusData ppu =
     P.Map (foldr' accum ([] :: [(P.Data, P.Data)]) (pparams @era))
     where
-      accum PParam' {ppTag, ppUpdateLens, ppToPlutusData} acc =
+      accum PParam {ppTag, ppUpdateLens, ppToPlutusData} acc =
         let mbData = do
               toPlutusDataF <- ppToPlutusData
               t <- strictMaybeToMaybe $ ppu ^. ppUpdateLens
@@ -181,14 +181,14 @@ instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
     where
       accum acc (dataKey, dataVal) = do
         tag <- fromPlutusData @Word dataKey
-        PParam' {ppUpdateLens, ppFromPlutusData} <-
+        PParam {ppUpdateLens, ppFromPlutusData} <-
           IntMap.lookup (fromIntegral tag) ppMap
         plutusData <- ppFromPlutusData >>= ($ dataVal)
         pure $ set ppUpdateLens (SJust plutusData) acc
       ppMap =
         IntMap.fromList
           . map
-            ( \pp@PParam' {ppTag} ->
+            ( \pp@PParam {ppTag} ->
                 (fromIntegral ppTag, pp)
             )
           $ pparams @era
@@ -1261,9 +1261,9 @@ asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
           <> show (toInteger (maxBound @b))
           <> "]"
 
-ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam' era
+ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam era
 ppCommitteeMaxTermLength =
-  PParam'
+  PParam
     { ppName = "committeeMaxTermLength"
     , ppTag = 28
     , ppLens' = ppCommitteeMaxTermLengthL
@@ -1272,9 +1272,9 @@ ppCommitteeMaxTermLength =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppCommitteeMinSize :: ConwayEraPParams era => PParam' era
+ppCommitteeMinSize :: ConwayEraPParams era => PParam era
 ppCommitteeMinSize =
-  PParam'
+  PParam
     { ppName = "committeeMinSize"
     , ppTag = 27
     , ppLens' = ppCommitteeMinSizeL
@@ -1283,9 +1283,9 @@ ppCommitteeMinSize =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppDRepActivity :: ConwayEraPParams era => PParam' era
+ppDRepActivity :: ConwayEraPParams era => PParam era
 ppDRepActivity =
-  PParam'
+  PParam
     { ppName = "dRepActivity"
     , ppTag = 32
     , ppLens' = ppDRepActivityL
@@ -1294,9 +1294,9 @@ ppDRepActivity =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppDRepDeposit :: ConwayEraPParams era => PParam' era
+ppDRepDeposit :: ConwayEraPParams era => PParam era
 ppDRepDeposit =
-  PParam'
+  PParam
     { ppName = "dRepDeposit"
     , ppTag = 31
     , ppLens' = ppDRepDepositL
@@ -1305,9 +1305,9 @@ ppDRepDeposit =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppDRepVotingThresholds :: ConwayEraPParams era => PParam' era
+ppDRepVotingThresholds :: ConwayEraPParams era => PParam era
 ppDRepVotingThresholds =
-  PParam'
+  PParam
     { ppName = "dRepVotingThresholds"
     , ppTag = 26
     , ppLens' = ppDRepVotingThresholdsL
@@ -1316,9 +1316,9 @@ ppDRepVotingThresholds =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppGovActionDeposit :: ConwayEraPParams era => PParam' era
+ppGovActionDeposit :: ConwayEraPParams era => PParam era
 ppGovActionDeposit =
-  PParam'
+  PParam
     { ppName = "govActionDeposit"
     , ppTag = 30
     , ppLens' = ppGovActionDepositL
@@ -1327,9 +1327,9 @@ ppGovActionDeposit =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppGovActionLifetime :: ConwayEraPParams era => PParam' era
+ppGovActionLifetime :: ConwayEraPParams era => PParam era
 ppGovActionLifetime =
-  PParam'
+  PParam
     { ppName = "govActionLifetime"
     , ppTag = 29
     , ppLens' = ppGovActionLifetimeL
@@ -1343,9 +1343,9 @@ ppGovProtocolVersion ::
   ( ConwayEraPParams era
   , PParamsHKD StrictMaybe era ~ ConwayPParams StrictMaybe era
   ) =>
-  PParam' era
+  PParam era
 ppGovProtocolVersion =
-  PParam'
+  PParam
     { ppName = "protocolVersion"
     , ppTag = 14
     , ppLens' = ppProtocolVersionL
@@ -1355,9 +1355,9 @@ ppGovProtocolVersion =
     , ppFromPlutusData = Nothing
     }
 
-ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam' era
+ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam era
 ppMinFeeRefScriptCostPerByte =
-  PParam'
+  PParam
     { ppName = "minFeeRefScriptCostPerByte"
     , ppTag = 33
     , ppLens' = ppMinFeeRefScriptCostPerByteL
@@ -1366,9 +1366,9 @@ ppMinFeeRefScriptCostPerByte =
     , ppFromPlutusData = Just fromPlutusData
     }
 
-ppPoolVotingThresholds :: ConwayEraPParams era => PParam' era
+ppPoolVotingThresholds :: ConwayEraPParams era => PParam era
 ppPoolVotingThresholds =
-  PParam'
+  PParam
     { ppName = "poolVotingThresholds"
     , ppTag = 25
     , ppLens' = ppPoolVotingThresholdsL

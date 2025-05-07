@@ -409,9 +409,9 @@ coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (Coin c)) = CoinPerWord $ Coin $
 coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
 coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ Coin c
 
-ppCoinsPerUTxOByte :: BabbageEraPParams era => PParam' era
+ppCoinsPerUTxOByte :: BabbageEraPParams era => PParam era
 ppCoinsPerUTxOByte =
-  PParam'
+  PParam
     { ppName = "utxoCostPerByte"
     , ppTag = 17
     , ppLens' = ppCoinsPerUTxOByteL
