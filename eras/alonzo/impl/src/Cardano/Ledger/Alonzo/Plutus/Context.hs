@@ -8,7 +8,10 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 -- Recursive definition constraints of `EraPlutusContext` and `EraPlutusTxInfo` lead to a wrongful
--- redundant constraint warning in the definition of `lookupTxInfoResult`
+-- redundant constraint warning in the definition of `lookupTxInfoResult`.
+--
+-- Also `mkSupportedPlutusScript` has a constraint that is not required by the type system, but is
+-- necessary for the safety of the function.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
@@ -17,6 +20,11 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   toPlutusWithContext,
   lookupTxInfoResultImpossible,
+  SupportedLanguage (..),
+  mkSupportedLanguageM,
+  supportedLanguages,
+  mkSupportedPlutusScript,
+  mkSupportedBinaryPlutusScript,
 
   -- * Language dependent translation
   PlutusTxInfo,
@@ -27,7 +35,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
 where
 
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
+  AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsIxItem (..),
   PlutusPurpose,
   PlutusScript (..),
@@ -43,21 +51,26 @@ import Cardano.Ledger.Plutus (
   Data,
   ExUnits,
   Language (..),
-  Plutus,
+  Plutus (..),
   PlutusArgs,
+  PlutusBinary,
   PlutusLanguage,
   PlutusRunnable,
   PlutusScriptContext,
   PlutusWithContext (..),
   SLanguage (..),
+  asSLanguage,
   isLanguage,
+  plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Text (Text)
 import GHC.Stack
 import NoThunks.Class (NoThunks)
@@ -119,6 +132,8 @@ class
   -- be shared between execution of different scripts with the same language version.
   data TxInfoResult era :: Type
 
+  mkSupportedLanguage :: Language -> Maybe (SupportedLanguage era)
+
   -- | Construct `PlutusTxInfo` for all supported languages in this era.
   mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
 
@@ -129,7 +144,9 @@ class
   -- unsupported plutus language version.
   lookupTxInfoResult ::
     EraPlutusTxInfo l era =>
-    SLanguage l -> TxInfoResult era -> Either (ContextError era) (PlutusTxInfo l)
+    SLanguage l ->
+    TxInfoResult era ->
+    Either (ContextError era) (PlutusTxInfo l)
 
   mkPlutusWithContext ::
     PlutusScript era ->
@@ -193,3 +210,78 @@ type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
+
+-- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
+-- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus
+-- versions.
+mkSupportedPlutusScript ::
+  forall l era.
+  (HasCallStack, EraPlutusTxInfo l era) =>
+  Plutus l ->
+  PlutusScript era
+mkSupportedPlutusScript plutus =
+  case mkPlutusScript plutus of
+    Nothing ->
+      error $
+        "Impossible: "
+          ++ show plutus
+          ++ " language version should be supported by the "
+          ++ eraName @era
+    Just plutusScript -> plutusScript
+
+-- | This is just like `mkBinaryPlutusScript`, except it is guaranteed to be total through the enforcement
+-- of support by the type system and `EraPlutusTxInfo` type class instances (via calling `mkSupportedPlutusScript) for supported plutus
+-- versions.
+mkSupportedBinaryPlutusScript ::
+  forall era.
+  (HasCallStack, AlonzoEraScript era) =>
+  SupportedLanguage era ->
+  PlutusBinary ->
+  PlutusScript era
+mkSupportedBinaryPlutusScript supportedLanguage plutus =
+  case supportedLanguage of
+    SupportedLanguage sLang ->
+      mkSupportedPlutusScript (asSLanguage sLang (Plutus plutus))
+
+data SupportedLanguage era where
+  SupportedLanguage :: EraPlutusTxInfo l era => SLanguage l -> SupportedLanguage era
+
+instance Show (SupportedLanguage era) where
+  show (SupportedLanguage sLang) = "(SupportedLanguage (" ++ show sLang ++ "))"
+
+instance Eq (SupportedLanguage era) where
+  SupportedLanguage sLang1 == SupportedLanguage sLang2 =
+    plutusLanguage sLang1 == plutusLanguage sLang2
+
+instance Ord (SupportedLanguage era) where
+  compare (SupportedLanguage sLang1) (SupportedLanguage sLang2) =
+    compare (plutusLanguage sLang1) (plutusLanguage sLang2)
+
+instance Era era => EncCBOR (SupportedLanguage era) where
+  encCBOR (SupportedLanguage sLang) = encCBOR sLang
+
+instance EraPlutusContext era => DecCBOR (SupportedLanguage era) where
+  decCBOR = decCBOR >>= mkSupportedLanguageM
+
+supportedLanguages ::
+  forall era.
+  (HasCallStack, EraPlutusContext era) =>
+  NonEmpty (SupportedLanguage era)
+supportedLanguages =
+  let langs =
+        [ errorFail (mkSupportedLanguageM lang)
+        | lang <- [minBound .. eraMaxLanguage @era]
+        ]
+   in case nonEmpty langs of
+        Nothing -> error "Impossible: there are no supported languages"
+        Just neLangs -> neLangs
+
+mkSupportedLanguageM ::
+  forall era m.
+  (EraPlutusContext era, MonadFail m) =>
+  Language ->
+  m (SupportedLanguage era)
+mkSupportedLanguageM lang =
+  case mkSupportedLanguage lang of
+    Nothing -> fail $ show lang ++ " language is not supported in " ++ eraName @era
+    Just supportedLanguage -> pure supportedLanguage

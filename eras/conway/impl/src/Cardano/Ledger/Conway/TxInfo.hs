@@ -37,6 +37,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusTxCert,
   PlutusTxInfo,
+  SupportedLanguage (..),
   toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
@@ -136,6 +137,11 @@ instance EraPlutusContext ConwayEra where
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV1))
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV2))
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV3))
+
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    PlutusV2 -> Just $ SupportedLanguage SPlutusV2
+    PlutusV3 -> Just $ SupportedLanguage SPlutusV3
 
   mkTxInfoResult lti =
     ConwayTxInfoResult

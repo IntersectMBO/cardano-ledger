@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add `supportedLanguages` to `EraPlutusContext`
+* Add `SupportedLanguage`, `mkSupportedBinaryPlutusScript` and `mkSupportedPlutusScript`.
 * Deprecate `inputs'`, `collateral'`, `outputs'`, `certs'`, `withdrawals'`, `txfee'`,
   `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`,
   and `txnetworkid'`
@@ -16,6 +18,9 @@
 
 ### `testlib`
 
+* Deprecated `mkPlutusScript'`
+* Change type signature of `genPlutusScript`, `genNativeScript`, `genAlonzoScript`, `alwaysSucceedsLang` and `alwaysFailsLang`.
+* Remove `TxInfoLanguage` and `mkTxInfoLanguage`
 * Added `Era` module with `AlonzoEraTest` class
 
 ## 1.13.0.0

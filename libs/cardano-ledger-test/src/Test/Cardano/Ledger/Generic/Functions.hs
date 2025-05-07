@@ -12,6 +12,7 @@
 module Test.Cardano.Ledger.Generic.Functions where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, mkSupportedLanguageM)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
@@ -48,6 +49,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Default (Default (def))
 import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
@@ -300,12 +302,20 @@ primaryLanguage Alonzo = Just PlutusV1
 primaryLanguage _ = Nothing
 {-# NOINLINE primaryLanguage #-}
 
+alwaysSucceedsLang' :: forall era. EraPlutusContext era => Language -> Natural -> Script era
+alwaysSucceedsLang' l =
+  fromPlutusScript . alwaysSucceedsLang (errorFail (mkSupportedLanguageM @era l))
+
+alwaysFailsLang' :: forall era. EraPlutusContext era => Language -> Natural -> Script era
+alwaysFailsLang' l =
+  fromPlutusScript . alwaysFailsLang (errorFail (mkSupportedLanguageM @era l))
+
 alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysTrue Conway (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue Conway (Just l) n = alwaysSucceedsLang' @era l n
 alwaysTrue p@Conway Nothing _ = fromNativeScript $ Scriptic.allOf [] p
-alwaysTrue Babbage (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue Babbage (Just l) n = alwaysSucceedsLang' @era l n
 alwaysTrue p@Babbage Nothing _ = fromNativeScript $ Scriptic.allOf [] p
-alwaysTrue Alonzo (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue Alonzo (Just l) n = alwaysSucceedsLang' @era l n
 alwaysTrue p@Alonzo Nothing _ = fromNativeScript $ Scriptic.allOf [] p
 alwaysTrue p@Mary _ n = always n p
 alwaysTrue p@Allegra _ n = always n p
@@ -313,11 +323,11 @@ alwaysTrue p@Shelley _ n = always n p
 {-# NOINLINE alwaysTrue #-}
 
 alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysFalse Conway (Just l) n = alwaysFailsLang @era l n
+alwaysFalse Conway (Just l) n = alwaysFailsLang' @era l n
 alwaysFalse p@Conway Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
-alwaysFalse Babbage (Just l) n = alwaysFailsLang @era l n
+alwaysFalse Babbage (Just l) n = alwaysFailsLang' @era l n
 alwaysFalse p@Babbage Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
-alwaysFalse Alonzo (Just l) n = alwaysFailsLang @era l n
+alwaysFalse Alonzo (Just l) n = alwaysFailsLang' @era l n
 alwaysFalse p@Alonzo Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
 alwaysFalse p@Mary _ n = never n p
 alwaysFalse p@Allegra _ n = never n p

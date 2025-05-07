@@ -10,7 +10,7 @@
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusTxInfo, mkSupportedPlutusScript)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -28,7 +28,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
@@ -36,11 +35,12 @@ import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo 'PlutusV2 era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
-  , BabbageEraTxBody era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
@@ -55,7 +55,7 @@ spec = describe "UTXOW" $ do
       ]
 
   it "MalformedReferenceScripts" $ do
-    let script = mkPlutusScript' @era (malformedPlutus @'PlutusV2)
+    let script = fromPlutusScript (mkSupportedPlutusScript (malformedPlutus @'PlutusV2))
     let scriptHash = hashScript script
     addr <- freshKeyAddr_
     let tx =

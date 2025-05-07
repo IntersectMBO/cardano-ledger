@@ -165,6 +165,10 @@ instance EraPlutusContext AlonzoEra where
   newtype TxInfoResult AlonzoEra
     = AlonzoTxInfoResult (Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1))
 
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    _lang -> Nothing
+
   mkTxInfoResult = AlonzoTxInfoResult . toPlutusTxInfo SPlutusV1
 
   lookupTxInfoResult SPlutusV1 (AlonzoTxInfoResult tirPlutusV1) = tirPlutusV1

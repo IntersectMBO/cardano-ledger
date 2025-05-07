@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
@@ -22,7 +23,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (BabbageTxBody))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Map.Strict as Map
@@ -31,10 +32,7 @@ import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genScripts)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
-  TranslatableGen (..),
-  TxInfoLanguage (..),
- )
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (
@@ -53,10 +51,6 @@ instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
   tgTx l = genTx @BabbageEra (genTxBody l)
   tgUtxo = utxoWithTx @BabbageEra
-  mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
-  mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
-  mkTxInfoLanguage lang =
-    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @BabbageEra
 
 utxoWithTx ::
   forall era.
@@ -65,7 +59,7 @@ utxoWithTx ::
   , Arbitrary (Script era)
   , TxOut era ~ BabbageTxOut era
   ) =>
-  Language ->
+  SupportedLanguage era ->
   Tx era ->
   Gen (UTxO era)
 utxoWithTx l tx = do
@@ -77,8 +71,6 @@ genTx ::
   forall era.
   ( TranslatableGen era
   , Arbitrary (TxAuxData era)
-  , Arbitrary (Script era)
-  , AlonzoEraScript era
   , AlonzoTxWits era ~ TxWits era
   ) =>
   Gen (TxBody era) ->
@@ -96,28 +88,28 @@ genTxOut ::
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   ) =>
-  Language ->
+  SupportedLanguage era ->
   Gen (BabbageTxOut era)
-genTxOut l = do
+genTxOut (SupportedLanguage slang) = do
   addr <- genNonByronAddr
   value <- scale (`div` 15) arbitrary
-  script <- case l of
-    PlutusV1 -> pure SNothing
+  script <- case slang of
+    SPlutusV1 -> pure SNothing
     _ -> arbitrary
-  datum <- case l of
-    PlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen DataHash)]
+  datum <- case slang of
+    SPlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen DataHash)]
     _ -> arbitrary
   pure $ BabbageTxOut addr value datum script
 
-genTxBody :: Language -> Gen (TxBody BabbageEra)
-genTxBody l = do
+genTxBody :: SupportedLanguage BabbageEra -> Gen (TxBody BabbageEra)
+genTxBody l@(SupportedLanguage slang) = do
   let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
   BabbageTxBody
     <$> genTxIns
     <*> arbitrary
-    <*> ( case l of -- refinputs
-            PlutusV1 -> pure Set.empty
+    <*> ( case slang of -- refinputs
+            SPlutusV1 -> pure Set.empty
             _ -> arbitrary
         )
     <*> genTxOuts
@@ -145,10 +137,7 @@ genNonByronAddr =
       ]
 
 genTxWits ::
-  ( TranslatableGen era
-  , Arbitrary (Script era)
-  , AlonzoEraScript era
-  ) =>
+  TranslatableGen era =>
   Gen (AlonzoTxWits era)
 genTxWits =
   AlonzoTxWits

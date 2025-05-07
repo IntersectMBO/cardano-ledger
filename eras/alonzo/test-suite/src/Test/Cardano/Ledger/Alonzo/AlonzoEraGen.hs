@@ -25,6 +25,7 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   AlonzoPlutusPurpose (..),
@@ -98,11 +99,11 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
+import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus, zeroTestingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -128,63 +129,98 @@ import Test.QuickCheck hiding ((><))
 vKeyLockedAdaOnly :: TxOut AlonzoEra -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
-phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
+phase2scripts3Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
-  [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
+  [ mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (redeemerSameAsDatum SPlutusV1))
+      (mkSupportedPlutusScript (redeemerSameAsDatum SPlutusV1))
       (P.I 9)
       (P.I 9, bigMem, bigStep)
       True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (evenDatum SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (purposeIsWellformedWithDatum SPlutusV1))
+      (mkSupportedPlutusScript (evenDatum SPlutusV1))
+      (P.I 8)
+      (P.I 8, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (alwaysFailsPlutus @'PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      False
+  , mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (purposeIsWellformedWithDatum SPlutusV1))
       (P.I 3)
       (P.I 4, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (datumIsWellformed SPlutusV1))
+      (mkSupportedPlutusScript (datumIsWellformed SPlutusV1))
       (P.I 5)
       (P.I 6, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
+      (mkSupportedPlutusScript (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
       (P.I 7)
       (P.I 9, bigMem, bigStep)
       True
   ]
   where
-    mkTwoPhase3ArgInfo script = TwoPhase3ArgInfo script (hashScript @era script)
+    mkTwoPhase3ArgInfo plutusScript =
+      let script = fromPlutusScript plutusScript
+       in TwoPhase3ArgInfo script (hashScript script)
 
-phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
+phase2scripts2Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
-  [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemerNoDatum SPlutusV1)) (P.I 14, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
+  [ mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 2))
+      (P.I 1, bigMem, bigStep)
+      True
   , mkTwoPhase2ArgInfo
-      (mkPlutusScript' (purposeIsWellformedNoDatum SPlutusV1))
+      (mkSupportedPlutusScript (evenRedeemerNoDatum SPlutusV1))
       (P.I 14, bigMem, bigStep)
       True
   , mkTwoPhase2ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
+      (mkSupportedPlutusScript (alwaysFailsPlutus @'PlutusV1 2))
+      (P.I 1, bigMem, bigStep)
+      False
+  , mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (purposeIsWellformedNoDatum SPlutusV1))
+      (P.I 14, bigMem, bigStep)
+      True
+  , mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
       (P.I 15, bigMem, bigStep)
       True
   ]
   where
-    mkTwoPhase2ArgInfo script = TwoPhase2ArgInfo script (hashScript @era script)
+    mkTwoPhase2ArgInfo plutusScript =
+      let script = fromPlutusScript plutusScript
+       in TwoPhase2ArgInfo script (hashScript script)
 
-phase2scripts3ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
+phase2scripts3ArgSucceeds ::
+  forall era.
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Script era ->
+  Bool
 phase2scripts3ArgSucceeds script =
   maybe True getSucceeds3 $
     List.find (\info -> getScript3 info == script) phase2scripts3Arg
 
-phase2scripts2ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
+phase2scripts2ArgSucceeds ::
+  forall era.
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Script era ->
+  Bool
 phase2scripts2ArgSucceeds script =
   maybe True getSucceeds2 $
     List.find (\info -> getScript2 info == script) phase2scripts2Arg
 
-genPlutus2Arg :: AlonzoEraScript era => Gen (Maybe (TwoPhase2ArgInfo era))
+genPlutus2Arg ::
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Gen (Maybe (TwoPhase2ArgInfo era))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript

@@ -7,6 +7,7 @@
 
 module Test.Cardano.Ledger.Conway.Translation.TranslatableGen where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx (..), PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
@@ -16,16 +17,13 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (TxBody (ConwayTxBody))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), plutusLanguage)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
 import Test.Cardano.Data.Arbitrary (genOSet)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
-  TranslatableGen (..),
-  TxInfoLanguage (..),
- )
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as BabbageTranslatableGen (
   genTx,
   genTxOut,
@@ -36,22 +34,20 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance TranslatableGen ConwayEra where
   tgRedeemers = genRedeemers
-  tgTx l = BabbageTranslatableGen.genTx @ConwayEra (genTxBody l)
+  tgTx = BabbageTranslatableGen.genTx @ConwayEra . genTxBody
   tgUtxo = BabbageTranslatableGen.utxoWithTx @ConwayEra
-  mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
-  mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
-  mkTxInfoLanguage PlutusV3 = TxInfoLanguage SPlutusV3
 
-genTxBody :: Language -> Gen (TxBody ConwayEra)
-genTxBody l = do
-  let genTxOuts =
+genTxBody :: SupportedLanguage ConwayEra -> Gen (TxBody ConwayEra)
+genTxBody l@(SupportedLanguage slang) = do
+  let lang = plutusLanguage slang
+      genTxOuts =
         fromList
           <$> listOf1
             ( mkSized (eraProtVerLow @ConwayEra)
                 <$> BabbageTranslatableGen.genTxOut @ConwayEra l
             )
-  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
-      offPrePlutusV3 freq = if l >= PlutusV3 then freq else 0
+      genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
+      offPrePlutusV3 freq = if lang >= PlutusV3 then freq else 0
       genDelegatee =
         frequency
           [ (33, DelegStake <$> arbitrary)
@@ -74,7 +70,7 @@ genTxBody l = do
             ]
       genForPlutusV3 :: Arbitrary a => a -> Gen a
       genForPlutusV3 d =
-        case l of
+        case lang of
           PlutusV3 -> arbitrary
           _ -> pure d
   ConwayTxBody

@@ -38,7 +38,13 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (ContextError),
+  EraPlutusTxInfo,
+  SupportedLanguage (..),
+  mkSupportedPlutusScript,
+  supportedLanguages,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.Rules (
@@ -78,11 +84,11 @@ import Cardano.Ledger.Plutus.Language (
   PlutusLanguage,
   asSLanguage,
   plutusLanguage,
-  withSLanguage,
  )
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
@@ -196,41 +202,39 @@ instance
 genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
 genEraLanguage = choose (minBound, eraMaxLanguage @era)
 
+instance EraPlutusContext era => Arbitrary (SupportedLanguage era) where
+  arbitrary = elements $ NE.toList (supportedLanguages @era)
+
 instance
-  ( AlonzoEraScript era
+  ( EraPlutusContext era
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
   Arbitrary (AlonzoScript era)
   where
-  arbitrary = genEraLanguage @era >>= genAlonzoScript
+  arbitrary = arbitrary >>= genAlonzoScript
 
 genAlonzoScript ::
-  ( AlonzoEraScript era
+  ( EraPlutusContext era
   , Script era ~ AlonzoScript era
   , NativeScript era ~ Timelock era
   ) =>
-  Language ->
+  SupportedLanguage era ->
   Gen (AlonzoScript era)
 genAlonzoScript lang =
   frequency
-    [ (2, genPlutusScript lang)
-    , (8, genNativeScript)
+    [ (2, fromPlutusScript <$> genPlutusScript lang)
+    , (8, fromNativeScript <$> genNativeScript)
     ]
 
 genNativeScript ::
-  ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
-  Gen (AlonzoScript era)
-genNativeScript = TimelockScript <$> arbitrary
+  Arbitrary (NativeScript era) =>
+  Gen (NativeScript era)
+genNativeScript = arbitrary
 
 genPlutusScript ::
-  ( AlonzoEraScript era
-  , Script era ~ AlonzoScript era
-  ) =>
-  Language ->
-  Gen (AlonzoScript era)
+  SupportedLanguage era ->
+  Gen (PlutusScript era)
 genPlutusScript lang =
   frequency
     [ (5, alwaysSucceedsLang lang <$> elements [1, 2, 3])
@@ -436,25 +440,33 @@ instance Arbitrary AlonzoGenesis where
 
 alwaysSucceeds ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysSucceeds n = mkPlutusScript' (alwaysSucceedsPlutus @l n)
+alwaysSucceeds = fromPlutusScript . mkSupportedPlutusScript . alwaysSucceedsPlutus @l
 
 alwaysFails ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysFails n = mkPlutusScript' (alwaysFailsPlutus @l n)
+alwaysFails = fromPlutusScript . mkSupportedPlutusScript . alwaysFailsPlutus @l
 
-alwaysSucceedsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
-alwaysSucceedsLang lang n =
-  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysSucceedsPlutus n)
+alwaysSucceedsLang ::
+  SupportedLanguage era ->
+  Natural ->
+  PlutusScript era
+alwaysSucceedsLang supportedLanguage n =
+  case supportedLanguage of
+    SupportedLanguage slang -> mkSupportedPlutusScript $ asSLanguage slang (alwaysSucceedsPlutus n)
 
-alwaysFailsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
-alwaysFailsLang lang n =
-  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysFailsPlutus n)
+alwaysFailsLang ::
+  SupportedLanguage era ->
+  Natural ->
+  PlutusScript era
+alwaysFailsLang supportedLanguage n =
+  case supportedLanguage of
+    SupportedLanguage slang -> mkSupportedPlutusScript $ asSLanguage slang (alwaysFailsPlutus n)
 
 -- | Partial version of `mkPlutusScript`
 mkPlutusScript' ::
@@ -468,3 +480,4 @@ mkPlutusScript' plutus =
       error $
         "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
     Just plutusScript -> fromPlutusScript plutusScript
+{-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}

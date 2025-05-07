@@ -93,7 +93,7 @@ inlineDatumOutput =
   mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
     & datumTxOutL .~ datumEx
 
-refScriptOutput :: BabbageEraTxOut era => TxOut era
+refScriptOutput :: (BabbageEraTxOut era, EraPlutusTxInfo 'PlutusV2 era) => TxOut era
 refScriptOutput =
   mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
     & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
@@ -111,6 +111,7 @@ inputWithRefScript = mkTxInPartial genesisId 4
 
 utxo ::
   ( BabbageEraTxOut era
+  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   UTxO era
@@ -173,6 +174,7 @@ successfulTranslation ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
+  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
@@ -196,6 +198,7 @@ expectTranslationError ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
+  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
@@ -218,6 +221,7 @@ expectTranslationError slang tx expected =
 expectV1TranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   Tx era ->
@@ -237,8 +241,8 @@ errorTranslate exampleName =
 translatedInputEx1 ::
   forall era.
   ( BabbageEraTxOut era
-  , Show (ContextError era)
   , Value era ~ MaryValue
+  , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -249,8 +253,8 @@ translatedInputEx1 _ =
 translatedInputEx2 ::
   forall era.
   ( BabbageEraTxOut era
-  , Show (ContextError era)
   , Value era ~ MaryValue
+  , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -274,7 +278,7 @@ translatedOutputEx1 _ =
 translatedOutputEx2 ::
   forall era.
   ( BabbageEraTxOut era
-  , Show (ContextError era)
+  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
@@ -290,6 +294,7 @@ txInfoTestsV1 ::
   , BabbageEraTxBody era
   , Value era ~ MaryValue
   , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -339,6 +344,7 @@ txInfoTestsV2 ::
   forall era l.
   ( EraTx era
   , EraPlutusTxInfo l era
+  , EraPlutusTxInfo 'PlutusV2 era
   , BabbageEraTxBody era
   , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)

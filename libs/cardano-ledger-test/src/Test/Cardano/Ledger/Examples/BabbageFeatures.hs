@@ -25,6 +25,7 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   TxOutSource (TxOutFromInput, TxOutFromOutput),
@@ -59,7 +60,6 @@ import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
   PlutusBinary (..),
-  PlutusLanguage,
  )
 import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
@@ -79,7 +79,6 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
@@ -142,9 +141,9 @@ evenData3ArgsScript proof =
     Conway -> evenData3ArgsLang @'PlutusV2
   where
     unsupported = "Plutus scripts are not supported in:" ++ show proof
-    evenData3ArgsLang :: forall l era'. (PlutusLanguage l, AlonzoEraScript era') => Script era'
+    evenData3ArgsLang :: forall l era'. EraPlutusTxInfo l era' => Script era'
     evenData3ArgsLang =
-      mkPlutusScript' . Plutus @l . PlutusBinary . SBS.pack $
+      fromPlutusScript . mkSupportedPlutusScript . Plutus @l . PlutusBinary . SBS.pack $
         concat
           [ [88, 65, 1, 0, 0, 51, 50, 34, 51, 34, 34, 37, 51, 83, 0]
           , [99, 50, 35, 51, 87, 52, 102, 225, 192, 8, 0, 64, 40, 2, 76]
