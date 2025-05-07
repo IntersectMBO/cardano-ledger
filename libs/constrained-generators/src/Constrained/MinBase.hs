@@ -135,12 +135,12 @@ data Pred where
   And :: [Pred] -> Pred
   Exists :: ((forall b. Term b -> b) -> GE a) -> Binder a -> Pred
   ForAll :: (Container t a, HasSpec t, HasSpec a) => Term t -> Binder a -> Pred
+  DependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
   Assert :: Term Bool -> Pred
   TruePred :: Pred
   FalsePred :: NonEmpty String -> Pred
   Case :: HasSpec (Either a b) => Term (Either a b) -> Binder a -> Binder b -> Pred
   Let :: Term a -> Binder a -> Pred
-  Match :: (List Term as) -> Binders as -> Pred
   Subst :: HasSpec a => Var a -> Term a -> Pred -> Pred
 
 data Binder a where
@@ -191,9 +191,6 @@ bind bodyf = newv :-> bodyPred
     boundBinder :: Binder a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
-    boundBinders :: Binders as -> Int
-    boundBinders (Binds xs p) = max (maximum (toList nameOf xs)) (bound p)
-
     bound (ElemPred _ _ _) = -1
     bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (And ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
@@ -204,7 +201,7 @@ bind bodyf = newv :-> bodyPred
     bound Assert {} = -1
     bound TruePred = -1
     bound FalsePred {} = -1
-    bound (Match _ bs) = boundBinders bs
+    bound DependsOn {} = -1
 
 -- ========================================
 -- HasSpec
@@ -449,10 +446,11 @@ instance Pretty Pred where
     ElemPred True term vs ->
       align $
         sep
-          [ "memberPred"
-          , pretty term
-          , "(" <> viaShow (length vs) <> " items)"
-          , brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
+          [ "MemberPred"
+          , parens (pretty term)
+          , if length vs <= 2
+              then brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
+              else "(" <> viaShow (length vs) <> " items)"
           ]
     ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
     -- Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
@@ -461,7 +459,7 @@ instance Pretty Pred where
     Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
     Assert t -> "assert $" <+> pretty t
     -- Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
-    -- DependsOn a b -> pretty a <+> "<-" /> pretty b
+    DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t as bs -> "case" <+> pretty t <+> "of" /> vsep' [pretty as, pretty bs]
     -- When b p -> "whenTrue" <+> pretty (WithPrec 11 b) <+> "$" /> pretty p
@@ -469,12 +467,6 @@ instance Pretty Pred where
     -- GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
-    Match terms (Binds vars p) -> align $ sep ["Match " <+> brackets (vsep' binds) <+> "in", pretty p]
-      where
-        termdocs = toList viaShow terms
-        vardocs = toList viaShow vars
-        ppPair x prd = x <+> "->" <+> prd
-        binds = zipWith ppPair vardocs termdocs
 
 -- Monitor {} -> "monitor"
 -- Explain es p -> "Explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p

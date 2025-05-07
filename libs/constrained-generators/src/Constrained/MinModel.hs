@@ -733,29 +733,6 @@ debugSpec spec = do
     GenError xs -> mapM_ f xs
     Result x -> print spec >> print (simplifySpec spec) >> print x >> ok x
 
-{-
--- |  ChooseSpec is one of the ways we can 'Or' two Specs together
---    This works for any kind of type that has a HasSpec instance.
---    If your type is a Sum type. One can use CaseOn which is much easier.
-frequencySpec ::
-  HasSpec a =>
-  (Int, Spec a) ->
-  (Int, Spec a) ->
-  Spec a
-frequencySpec (w, s) (w', s') =
-  constrained $ \x ->
-    exists (\eval -> pure $ eval x `conformsToSpec` s) $ \b ->
-      [ ifElse
-          b
-          (x `satisfies` s)
-          (x `satisfies` s')
-      , caseOn
-          b
-          (branchW w' $ \_ -> True)
-          (branchW w $ \_ -> True)
-      ]
--}
-
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: forall m. MonadGenError m => Env -> Pred -> GenT m Env
@@ -770,9 +747,8 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
   where
     go :: Env -> SolverPlan -> GenT m Env
     go env plan | isEmptyPlan plan = pure env
-    go env plan = do
-      (env', plan') <-
-        explain (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan env plan
+    go env plan = explain (show $ "Stepping the plan:" /> vsep [pretty env, pretty (substPlan env plan)]) $ do
+      (env', plan') <- stepPlan env plan
       go env' plan'
 
 -- =============================================================
@@ -891,7 +867,6 @@ aggressiveInlining pred0
             tell $ Any True
             pure $ unBind a (x :-> p)
         | otherwise -> Let t . (x :->) <$> go (underBinder fvs x p) (x := t : sub) p
-      Match terms (Binds vars p) -> undefined terms vars p
       Exists k b -> Exists k <$> goBinder fvs sub b
       And ps -> Foldable.fold <$> mapM (go fvs sub) ps
       Assert t
@@ -908,6 +883,7 @@ aggressiveInlining pred0
             tell $ Any True
             pure TruePred
         | otherwise -> pure pred2
+      -}
       DependsOn t t'
         | not (isLit t)
         , Lit {} <- substituteAndSimplifyTerm sub t -> do
@@ -918,7 +894,6 @@ aggressiveInlining pred0
             tell $ Any True
             pure $ TruePred
         | otherwise -> pure pred2
-      -}
       TruePred -> pure pred2
       FalsePred {} -> pure pred2
 
@@ -954,7 +929,6 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   Let t b -> pure $ SuspendedSpec x (Let t b)
-  Match terms (Binds vars p) -> undefined terms vars p
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError (show pred3)
@@ -971,6 +945,14 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
     simpAs <- computeSpecBinderSimplified as
     simpBs <- computeSpecBinderSimplified bs
     propagateSpecM (typeSpec (SumSpec simpAs simpBs)) (toCtx x t)
+  -- Impossible cases that should be ruled out by the dependency analysis and linearizer
+  DependsOn {} ->
+    fatalErrorNE $
+      NE.fromList
+        [ "The impossible happened in computeSpec: DependsOn"
+        , "  " ++ show x
+        , show $ indent 2 (pretty pred3)
+        ]
   where
     -- When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
     -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
@@ -1069,8 +1051,8 @@ solvableFrom x s g =
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
 computeHints :: [Pred] -> Hints
-computeHints _ps =
-  Graph.transitiveClosure $ fold [] -- [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
+computeHints ps =
+  Graph.transitiveClosure $ fold [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
 
 saturatePred :: Pred -> [Pred]
 saturatePred p = [p]
@@ -1139,7 +1121,7 @@ linearize preds graph = do
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
     isRelevantPred TruePred = False
-    -- isRelevantPred DependsOn {} = False
+    isRelevantPred DependsOn {} = False
     isRelevantPred (Assert (Lit True)) = False
     isRelevantPred _ = True
 
@@ -1254,7 +1236,7 @@ computeDependencies = \case
   ForAll set b ->
     let innerG = computeBinderDependencies b
      in innerG <> set `irreflexiveDependencyOn` Graph.nodes innerG
-  -- x `DependsOn` y -> x `irreflexiveDependencyOn` y
+  x `DependsOn` y -> x `irreflexiveDependencyOn` y
   Case t as bs -> noDependencies t <> computeBinderDependencies as <> computeBinderDependencies bs
   {- When b p ->
     let pG = computeDependencies p
@@ -1265,7 +1247,6 @@ computeDependencies = \case
   And ps -> foldMap computeDependencies ps
   Exists _ b -> computeBinderDependencies b
   Let t b -> noDependencies t <> computeBinderDependencies b
-  Match terms (Binds vars p) -> undefined terms vars p
 
 -- GenHint _ t -> noDependencies t
 -- Explain _ p -> computeDependencies p

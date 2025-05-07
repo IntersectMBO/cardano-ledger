@@ -191,7 +191,7 @@ checkPredE env msgs = \case
   Let t (x :-> p) -> case runTermE env t of
     Right val -> checkPredE (extendEnv x val env) msgs p
     Left es -> Just (msgs <> pure "checkPredE: Let fails" <> es)
-  Match terms (Binds vars p) -> undefined terms vars p
+  DependsOn {} -> Nothing
   TruePred -> Nothing
   FalsePred es -> Just (msgs <> pure "checkPredE: FalsePred" <> es)
   And ps ->
@@ -334,7 +334,7 @@ instance Rename Pred where
         And ps -> And (rename v v' ps)
         Exists k b -> Exists (\eval -> k $ eval . rename v v') (rename v v' b)
         Let t b -> Let (rename v v' t) (rename v v' b)
-        Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
+        DependsOn x y -> DependsOn (rename v v' x) (rename v v' y)
         Assert t -> Assert (rename v v' t)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
         Case t a b -> Case (rename v v' t) (rename v v' a) (rename v v' b)
@@ -439,11 +439,10 @@ instance HasVariables Pred where
     And ps -> foldMap freeVars ps
     Exists _ b -> freeVars b
     Let t b -> freeVars t <> freeVars b
-    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     -- Exists _ b -> freeVars b
     Assert t -> freeVars t
     -- Reifies t' t _ -> freeVars t' <> freeVars t
-    -- DependsOn x y -> freeVars x <> freeVars y
+    DependsOn x y -> freeVars x <> freeVars y
     ForAll set b -> freeVars set <> freeVars b
     Case t as bs -> freeVars t <> freeVars as <> freeVars bs
     -- When b p -> freeVars b <> freeVars p
@@ -459,11 +458,10 @@ instance HasVariables Pred where
     And ps -> foldMap freeVarSet ps
     Exists _ b -> freeVarSet b
     Let t b -> freeVarSet t <> freeVarSet b
-    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     -- Exists _ b -> freeVarSet b
     Assert t -> freeVarSet t
     -- Reifies t' t _ -> freeVarSet t' <> freeVarSet t
-    -- DependsOn x y -> freeVarSet x <> freeVarSet y
+    DependsOn x y -> freeVarSet x <> freeVarSet y
     ForAll set b -> freeVarSet set <> freeVarSet b
     Case t a b -> freeVarSet t <> freeVarSet a <> freeVarSet b
     -- When b p -> freeVarSet b <> freeVarSet p
@@ -480,11 +478,10 @@ instance HasVariables Pred where
       | otherwise -> countOf n t + countOf n p
     And ps -> sum $ map (countOf n) ps
     Let t b -> countOf n t + countOf n b
-    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     Exists _ b -> countOf n b
     Assert t -> countOf n t
     -- Reifies t' t _ -> countOf n t' + countOf n t
-    -- DependsOn x y -> countOf n x + countOf n y
+    DependsOn x y -> countOf n x + countOf n y
     ForAll set b -> countOf n set + countOf n b
     Case t a b -> countOf n t + countOf n a + countOf n b
     -- When b p -> countOf n b + countOf n p
@@ -501,11 +498,10 @@ instance HasVariables Pred where
       | otherwise -> appearsIn n t || appearsIn n p
     And ps -> any (appearsIn n) ps
     Let t b -> appearsIn n t || appearsIn n b
-    Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
     Exists _ b -> appearsIn n b
     Assert t -> appearsIn n t
     -- Reifies t' t _ -> appearsIn n t' || appearsIn n t
-    -- DependsOn x y -> appearsIn n x || appearsIn n y
+    DependsOn x y -> appearsIn n x || appearsIn n y
     ForAll set b -> appearsIn n set || appearsIn n b
     Case t a b -> appearsIn n t || appearsIn n a || appearsIn n b
     -- When b p -> appearsIn n b || appearsIn n p
@@ -637,12 +633,11 @@ substitutePred x tm = \case
   And ps -> Foldable.fold (substitutePred x tm <$> ps)
   Exists k b -> Exists (\eval -> k (eval . substituteTerm [x := tm])) (substituteBinder x tm b)
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
-  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t as bs -> Case (substituteTerm [x := tm] t) (substituteBinder x tm as) (substituteBinder x tm bs)
   -- When b p -> When (substituteTerm [x := tm] b) (substitutePred x tm p)
   -- Reifies t' t f -> Reifies (substituteTerm [x := tm] t') (substituteTerm [x := tm] t) f
-  -- DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
+  DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
   FalsePred es -> FalsePred es
 
@@ -677,13 +672,22 @@ substPred env = \case
   ForAll set b -> ForAll (substTerm env set) (substBinder env b)
   Case t as bs -> Case (substTerm env t) (substBinder env as) (substBinder env bs)
   -- When b p -> When (substTerm env b) (substPred env p)
-  -- DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
+  DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
   And ps -> Foldable.fold (substPred env <$> ps)
   Exists k b -> Exists (\eval -> k $ eval . substTerm env) (substBinder env b)
   Let t b -> Let (substTerm env t) (substBinder env b)
-  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
+
+substSpec :: Env -> Spec a -> Spec a
+substSpec env (SuspendedSpec v p) = SuspendedSpec v (substPred env p)
+substSpec _ spec = spec
+
+substSolverStage :: Env -> SolverStage -> SolverStage
+substSolverStage env (SolverStage var preds spec) = SolverStage var (map (substPred env) preds) (substSpec env spec)
+
+substPlan :: Env -> SolverPlan -> SolverPlan
+substPlan env (SolverPlan stages deps) = SolverPlan (map (substSolverStage env) stages) deps
 
 -- Monitor m -> Monitor m
 -- Explain es p -> Explain es $ substPred env p
@@ -713,12 +717,12 @@ regularizeNamesPred pred0 = case pred0 of
   Exists k b -> Exists k (regularizeBinder b)
   Subst v t p -> regularizeNamesPred (substitutePred v t p)
   Let t b -> Let t (regularizeBinder b)
-  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   Assert {} -> pred0
   ForAll t b -> ForAll t (regularizeBinder b)
   Case t as bs -> Case t (regularizeBinder as) (regularizeBinder bs)
   TruePred {} -> pred0
   FalsePred {} -> pred0
+  DependsOn {} -> pred0
 
 -- Explain es p' -> Explain es (regularizeNamesPred p')
 
@@ -778,13 +782,15 @@ simplifyPred = \case
     t'@App {} -> Let t' (simplifyBinder b)
     -- Variable or literal
     t' | x :-> p <- b -> simplifyPred $ substitutePred x t' p
-  Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
   Exists k b -> case simplifyBinder b of
     _ :-> TruePred -> TruePred
     -- This is to get rid of exisentials like:
     -- `constrained $ \ x -> exists $ \ y -> [x ==. y, y + 2 <. 10]`
     x :-> p | Just t <- pinnedBy x p -> simplifyPred $ substitutePred x t p
     b' -> Exists k b'
+  DependsOn _ Lit {} -> TruePred
+  DependsOn Lit {} _ -> TruePred
+  DependsOn x y -> DependsOn x y
 
 mkCase ::
   HasSpec (Either a b) => Term (Either a b) -> Binder a -> Binder b -> Pred
@@ -840,13 +846,13 @@ letFloating = Foldable.fold . go []
       And ps0 -> goBlock ctx (map letFloating ps0)
       Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
       Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
-      Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
       Subst x t p -> go ctx (substitutePred x t p)
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
       Case t (x :-> px) (y :-> py) -> Case t (x :-> letFloating px) (y :-> letFloating py) : ctx
       Assert t -> Assert t : ctx
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
+      DependsOn t t' -> DependsOn t t' : ctx
 
     goExists :: HasSpec a => [Pred] -> (Binder a -> Pred) -> Var a -> Pred -> [Pred]
     goExists ctx ex x (Let t (y :-> p))
@@ -879,13 +885,13 @@ letSubexpressionElimination = go []
         where
           t' = backwardsSubstitution sub t
           sub' = adjustSub x sub
-      Match _termlist (Binds _varlist p) -> undefined _termlist _varlist p
       Subst x t p -> go sub (substitutePred x t p)
       Assert t -> Assert (backwardsSubstitution sub t)
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
       Case t as bs -> Case (backwardsSubstitution sub t) (goBinder sub as) (goBinder sub bs)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
+      DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
 
 -- ===============================================================================
 -- Syntax for Solving : stages and plans
@@ -902,13 +908,12 @@ data SolverStage where
 
 instance Pretty SolverStage where
   pretty SolverStage {..} =
-    viaShow stageVar
-      <+> "<-"
-        /> vsep'
-          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
-              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
-              ++ map pretty stagePreds
-          )
+    (viaShow stageVar <+> "<-")
+      /> vsep'
+        ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+            ++ (map pretty stagePreds)
+            ++ ["---"]
+        )
 
 data SolverPlan = SolverPlan
   { solverPlan :: [SolverStage]
