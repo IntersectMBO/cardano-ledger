@@ -128,8 +128,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   getBlockNonce,
   maxLLSupply,
   runShelleyBase,
-  testGlobals,
-  unsafeBoundRational,
  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))

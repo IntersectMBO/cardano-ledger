@@ -86,7 +86,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   mkKeyPair',
   mkVRFKeyPair,
   runShelleyBase,
-  unsafeBoundRational,
  )
 
 -- =========================================================

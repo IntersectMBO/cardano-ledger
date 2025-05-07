@@ -66,7 +66,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   maxKESIterations,
   runShelleyBase,
   slotFromEpoch,
-  testGlobals,
  )
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (sigGen)

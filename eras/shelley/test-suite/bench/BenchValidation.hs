@@ -60,7 +60,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader MockCrypto) era)

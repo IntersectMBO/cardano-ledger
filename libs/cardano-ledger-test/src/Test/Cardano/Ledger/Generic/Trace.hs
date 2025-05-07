@@ -127,7 +127,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Test.QuickCheck

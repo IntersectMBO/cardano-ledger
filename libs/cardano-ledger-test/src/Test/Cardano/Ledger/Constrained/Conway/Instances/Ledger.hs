@@ -166,7 +166,6 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Slotting.Numeric ()

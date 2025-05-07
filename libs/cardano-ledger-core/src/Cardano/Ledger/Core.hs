@@ -53,6 +53,10 @@ module Cardano.Ledger.Core (
   RewardType (..),
   Reward (..),
 
+  -- * Test utils
+  unsafeBoundRational,
+  testGlobals,
+
   -- * Re-exports
   module Cardano.Ledger.Hashes,
   module Cardano.Ledger.Core.TxCert,
@@ -71,7 +75,16 @@ import Cardano.Ledger.Address (
   decompactAddr,
   isBootstrapCompactAddr,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (
+  BoundedRational,
+  EpochSize (..),
+  Globals (..),
+  Network (..),
+  ProtVer (..),
+  boundRational,
+  knownNonZeroBounded,
+  mkActiveSlotCoeff,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR,
   DecShareCBOR (Share),
@@ -99,6 +112,8 @@ import Cardano.Ledger.Metadata
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
@@ -108,9 +123,12 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Maybe.Strict (StrictMaybe, strictMaybe)
 import Data.MemPack
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Typeable (Typeable, typeRep)
 import Data.Void (Void)
 import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
@@ -633,3 +651,24 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
 txIdTxBody :: EraTxBody era => TxBody era -> TxId
 txIdTxBody = TxId . hashAnnotated
+
+testGlobals :: Globals
+testGlobals =
+  Globals
+    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
+    , slotsPerKESPeriod = 20
+    , stabilityWindow = 33
+    , randomnessStabilisationWindow = 33
+    , securityParameter = knownNonZeroBounded @10
+    , maxKESEvo = 10
+    , quorum = 5
+    , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000
+    , activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9
+    , networkId = Testnet
+    , systemStart = SystemStart $ posixSecondsToUTCTime 0
+    }
+
+unsafeBoundRational :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
+unsafeBoundRational x = fromMaybe (error errMessage) $ boundRational x
+  where
+    errMessage = show (typeRep (Proxy :: Proxy r)) <> " is out of bounds: " <> show x

@@ -67,7 +67,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 

@@ -2,7 +2,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Core.Rational where
+module Test.Cardano.Ledger.Core.Rational (
+  module Test.Cardano.Ledger.Core.Rational,
+  unsafeBoundRational,
+) where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
@@ -10,18 +13,11 @@ import Cardano.Ledger.BaseTypes (
   PositiveInterval,
   PositiveUnitInterval,
   UnitInterval,
-  boundRational,
  )
-import Data.Maybe (fromMaybe)
-import Data.Proxy (Proxy (..))
+import Cardano.Ledger.Core (unsafeBoundRational)
 import qualified Data.Ratio
-import Data.Typeable (Typeable, typeRep)
+import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
-
-unsafeBoundRational :: forall r. (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
-unsafeBoundRational x = fromMaybe (error errMessage) $ boundRational x
-  where
-    errMessage = show (typeRep (Proxy :: Proxy r)) <> " is out of bounds: " <> show x
 
 -- | polymorphic rationals that agree with the Show instances of UnitInterval
 -- and friends.

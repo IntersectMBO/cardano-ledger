@@ -91,7 +91,6 @@ import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
 ------------------------------------------------------------------------------------------

@@ -53,9 +53,10 @@ import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Exception (assert)
+import Control.Monad.Reader (runReaderT)
 import Control.State.Transition
 import Data.Default (Default (..))
+import Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Void (Void)
@@ -131,6 +132,24 @@ instance
           def
     ]
 
+  assertions =
+    [ let checkRewardsBalanced es (RewardUpdate dt dr rs_ df _) =
+            Val.isZero $
+              dt <> dr <> toDeltaCoin (sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_) <> df
+       in PostCondition
+            "Reward updates balance out"
+            ( \(TRC (_, NewEpochState eL _bPrev _bCur es ru _pd _avvm, eNo)) _newState ->
+                if eNo /= succ eL
+                  then True
+                  else case ru of
+                    SNothing -> True
+                    SJust p@(Pulsing _ _) ->
+                      let (ru', _event) = runIdentity $ runReaderT (completeRupd p) testGlobals
+                       in checkRewardsBalanced es ru'
+                    SJust (Complete ru') -> checkRewardsBalanced es ru'
+            )
+    ]
+
   transitionRules = [newEpochTransition]
 
 newEpochTransition ::
@@ -204,9 +223,7 @@ updateRewards ::
   EpochNo ->
   RewardUpdate ->
   Rule (ConwayNEWEPOCH era) 'Transition (EpochState era)
-updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
-  let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
-   in assert (Val.isZero (dt <> dr <> toDeltaCoin totRs <> df)) (pure ())
+updateRewards es e ru' = do
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the
