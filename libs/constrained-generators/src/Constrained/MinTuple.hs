@@ -132,7 +132,8 @@ anyHead specBC = typeSpec @(a, b, c) (mempty @(Spec a), specBC)
 anyTail :: forall a b c. (HasSpec a, HasSpec b, HasSpec c) => Spec a -> Spec (a, b, c)
 anyTail specA = typeSpec (specA, mempty @(Spec (b, c)))
 
-anyLeft :: forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec (c, d) -> Spec (a, b, c, d)
+anyLeft ::
+  forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec (c, d) -> Spec (a, b, c, d)
 anyLeft specCD = typeSpec (mempty @(Spec (a, b)), specCD)
 
 anyRight ::
@@ -224,3 +225,58 @@ spec3 = constrained $ \x ->
 spec4 :: Spec (Integer, Integer, Integer, Integer)
 spec4 = constrained $ \x ->
   match x $ \a b c d -> And [Assert $ a <=. b, Assert $ b <=. c, Assert $ c <=. d]
+
+{-
+class TypeList ts where
+  uncurryList :: FunTy (MapList f ts) r -> List f ts -> r
+  uncurryList_ :: (forall a. f a -> a)
+                  -> FunTy ts r -> List f ts -> r
+  curryList :: (List f ts -> r) -> FunTy (MapList f ts) r
+  curryList_ :: (forall a. a -> f a)
+                -> (List f ts -> r) -> FunTy ts r
+  unfoldList :: (forall a (as :: [*]). List f as -> f a) -> List f ts
+-}
+
+args1 :: List Term '[Int, Bool, String]
+args1 = Lit 5 :> Lit True :> Lit "abc" :> Nil
+
+getTermsize :: Term Int -> Term Bool -> Term String -> Maybe Int
+getTermsize (Lit n) (Lit b) (Lit s) = Just $ if b then n else length s
+getTermsize _ _ _ = Nothing
+
+-- | Fold over a (List Term ts) with 'getTermsize' which consumes a Term component for each element of the list
+ex1 :: Maybe Int
+ex1 = uncurryList getTermsize args1
+  where
+    args1 :: List Term '[Int, Bool, String]
+    args1 = Lit 5 :> Lit True :> Lit "abc" :> Nil
+    getTermsize :: Term Int -> Term Bool -> Term String -> Maybe Int
+    getTermsize (Lit n) (Lit b) (Lit s) = Just $ if b then n else length s
+    getTermsize _ _ _ = Nothing
+
+-- Fold over a list with two parts 'unLit' and 'getSize'
+ex2 :: Int
+ex2 = uncurryList_ unLit getsize args2
+  where
+    unLit :: forall a. Term a -> a
+    unLit (Lit n) = n
+    getsize :: Int -> Bool -> String -> Int
+    getsize n b s = if b then n else length s
+    args2 :: List Term '[Int, Bool, String]
+    args2 = Lit 5 :> Lit True :> Lit "abc" :> Nil
+
+-- Construct a function from a List and function on that list.
+ex3 :: Term a -> Term b -> Term c -> String
+ex3 = curryList crush
+  where
+    crush :: (List Term '[a, b, c] -> String)
+    crush (a :> b :> c :> Nil) = show a ++ show b ++ show c
+
+-- Construct a function over from a
+ex4 :: Int -> Bool -> String -> Int
+ex4 = curryList_ one totalLength
+  where
+    totalLength :: List [] '[Int, Bool, String] -> Int
+    totalLength (n :> b :> s :> Nil) = length n + length b + length s
+    one :: a -> [a]
+    one x = [x]

@@ -36,7 +36,8 @@ import qualified Constrained.Graph as Graph
 import Constrained.List hiding (ListCtx)
 import Constrained.MinBase
 import Constrained.MinSyntax
-import Control.Applicative ((<|>))
+
+-- import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable (fold)
@@ -53,6 +54,8 @@ import Data.Typeable
 import GHC.Stack
 import Prettyprinter
 import Test.QuickCheck hiding (forAll)
+
+-- import Test.QuickCheck.Gen(getSize)
 
 -- ====================================================
 -- Now some concrete examples
@@ -88,25 +91,37 @@ instance Logic IntegerSym where
   propagate tag ctx spec = case (tag, ctx, spec) of
     (_, _, TrueSpec) -> TrueSpec
     (_, _, ErrorSpec xs) -> ErrorSpec xs
-    (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
-    (LessOrEqW, HOLE :<| l, bspec) -> caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
-    (LessOrEqW, l :|> HOLE, bspec) -> caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
-    (GreaterOrEqW, HOLE :<| x, spec1) -> propagate LessOrEqW (x :|> HOLE) spec1
-    (GreaterOrEqW, x :|> HOLE, spec2) -> propagate LessOrEqW (HOLE :<| x) spec2
-    (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
-    (PlusW, HOLE :<| n, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (PlusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (f, context, SuspendedSpec v ps) ->
+      constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
+    (LessOrEqW, HOLE :<| l, bspec) ->
+      caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
+    (LessOrEqW, l :|> HOLE, bspec) ->
+      caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
+    (GreaterOrEqW, HOLE :<| x, spec1) ->
+      propagate LessOrEqW (x :|> HOLE) spec1
+    (GreaterOrEqW, x :|> HOLE, spec2) ->
+      propagate LessOrEqW (HOLE :<| x) spec2
+    (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
+      TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
+    (PlusW, HOLE :<| n, MemberSpec xs) ->
+      MemberSpec (fmap (minus n) xs)
+    (PlusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) ->
+      TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
     (PlusW, n :|> HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (MinusW, HOLE :<| n, MemberSpec xs) -> MemberSpec (fmap (+ n) xs)
-    (MinusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
-    (MinusW, n :|> HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
+    (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
+      TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
+    (MinusW, HOLE :<| n, MemberSpec xs) ->
+      MemberSpec (fmap (+ n) xs)
+    (MinusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) ->
+      TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
+    (MinusW, n :|> HOLE, MemberSpec xs) ->
+      MemberSpec (fmap (minus n) xs)
 
 negateRange :: Range -> Range
 negateRange (Interval ml mu) = Interval (negate <$> mu) (negate <$> ml)
 
 minus :: Integer -> Integer -> Integer
-minus n x = x - n
+minus n x = n - x
 
 geqSpec :: Integer -> Spec Integer
 geqSpec n = typeSpec (Interval (Just n) Nothing)
@@ -149,10 +164,13 @@ instance Monoid Range where
 instance HasSpec Integer where
   type TypeSpec Integer = Range
 
+  -- \| From -∞ to +∞
   emptySpec = Interval Nothing Nothing
 
+  -- \| Catch inconsistencies after using Monoid operation of the two Ranges.
   combineSpec s s' = guardTypeSpec (s <> s')
 
+  -- \| In Interval where the lo bound is greater than the hi bound is inconsistent
   guardTypeSpec r@(Interval (Just n) (Just m))
     | n > m = ErrorSpec (pure ("lower bound greater than upper bound\n" ++ show r))
     | otherwise = typeSpec r
@@ -160,7 +178,7 @@ instance HasSpec Integer where
 
   genFromTypeSpec (Interval ml mu) = do
     n <- sizeT
-    chooseT =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
+    chooseT =<< constrainInterval ml mu (fromIntegral n)
 
   conformsTo i (Interval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
@@ -168,6 +186,33 @@ instance HasSpec Integer where
     Foldable.fold $
       [Assert $ Lit l <=. v | l <- maybeToList ml]
         ++ [Assert $ v <=. Lit u | u <- maybeToList mu]
+
+constrainInterval ::
+  MonadGenError m => Maybe Integer -> Maybe Integer -> Integer -> m (Integer, Integer)
+constrainInterval ml mu qcSize =
+  case (ml, mu) of
+    (Nothing, Nothing) -> pure (-qcSize', qcSize')
+    (Just l, Nothing)
+      | l < 0 -> pure (max l (negate qcSize'), qcSize')
+      | otherwise -> pure (l, l + 2 * qcSize')
+    (Nothing, Just u)
+      | u > 0 -> pure (negate qcSize', min u qcSize')
+      | otherwise -> pure (u - qcSize' - qcSize', u)
+    (Just l, Just u)
+      | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
+      | u < 0 -> pure (safeSub l (safeSub l u qcSize') qcSize', u)
+      | l >= 0 -> pure (l, safeAdd u (safeAdd u l qcSize') qcSize')
+      -- TODO: this is a bit suspect if the bounds are lopsided
+      | otherwise -> pure (max l (-qcSize'), min u qcSize')
+  where
+    qcSize' = abs $ fromInteger qcSize
+    -- FIX THIS TO WORK just on Integer, Should be much simpler, as Integer has no undeflow or overflow.
+    safeSub l a b
+      | a - b > a = l
+      | otherwise = max l (a - b)
+    safeAdd u a b
+      | a + b < a = u
+      | otherwise = min u (a + b)
 
 -- ========== Bool example ==================
 
@@ -202,7 +247,7 @@ not_ x = App NotW (x :> Nil)
 instance HasSpec Bool where
   type TypeSpec Bool = Set Bool
 
-  emptySpec = Set.fromList [True, False]
+  emptySpec = Set.fromList [False, True]
 
   combineSpec s s' = typeSpec (Set.union s s')
 
@@ -326,7 +371,7 @@ knownUpperBound TrueSpec = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
 knownUpperBound ErrorSpec {} = Nothing
 knownUpperBound SuspendedSpec {} = Nothing
-knownUpperBound (TypeSpec (Interval lo hi) cant) = upper (lo <|> lowerBound) (hi <|> upperBound)
+knownUpperBound (TypeSpec (Interval lo hi) cant) = upper lo hi
   where
     upper _ Nothing = Nothing
     upper Nothing (Just b) = listToMaybe $ [b, b - 1 ..] \\ cant
@@ -633,43 +678,6 @@ instance Syntax ListSym where
 instance Semantics ListSym where
   semantics ElemW = elem
   semantics LengthW = toInteger . length
-
--- ======================================
--- Operations on Range
-
-class MaybeBounded a where
-  lowerBound :: Maybe a
-  upperBound :: Maybe a
-
-instance MaybeBounded Integer where
-  lowerBound = Nothing
-  upperBound = Nothing
-
-constrainInterval ::
-  (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
-constrainInterval ml mu r =
-  case (ml, mu) of
-    (Nothing, Nothing) -> pure (-r', r')
-    (Just l, Nothing)
-      | l < 0 -> pure (max l (negate r'), r')
-      | otherwise -> pure (l, l + 2 * r')
-    (Nothing, Just u)
-      | u > 0 -> pure (negate r', min u r')
-      | otherwise -> pure (u - r' - r', u)
-    (Just l, Just u)
-      | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
-      | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
-      | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
-      -- TODO: this is a bit suspect if the bounds are lopsided
-      | otherwise -> pure (max l (-r'), min u r')
-  where
-    r' = abs $ fromInteger r
-    safeSub l a b
-      | a - b > a = l
-      | otherwise = max l (a - b)
-    safeAdd u a b
-      | a + b < a = u
-      | otherwise = min u (a + b)
 
 -- =========================================================================
 -- User Facing functions
