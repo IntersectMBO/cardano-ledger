@@ -24,6 +24,7 @@ import Data.Foldable (fold)
 import Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -49,6 +50,7 @@ import Test.QuickCheck (
   Testable (..),
   conjoin,
   counterexample,
+  (===),
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
@@ -75,7 +77,7 @@ tests =
         [ keyRegistration delegSst
         , keyDeRegistration delegSst
         , keyDelegation delegSst
-        , rewardsSumInvariant delegSst
+        , balancesSumInvariant delegSst
         , checkInstantaneousRewards denv delegSst
         ]
     chainProp :: SourceSignalTarget (CHAIN era) -> Property
@@ -137,28 +139,29 @@ keyDelegation
               (eval (to ∈ fromImage) :: Bool)
           , counterexample
               "a registered stake credential should be uniquely delegated"
-              (Set.size fromImage == 1)
+              (Set.size fromImage === 1)
           ]
 keyDelegation _ = property ()
 
--- | Check that the sum of rewards does not change and that each element
+-- | Check that the sum of balances does not change and that each element
 -- that is either removed or added has a zero balance.
-rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
-rewardsSumInvariant
+balancesSumInvariant :: EraAccounts era => SourceSignalTarget (ShelleyDELEG era) -> Property
+balancesSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = UM.compactRewardMap (dsUnified source)
-        targetRewards = UM.compactRewardMap (dsUnified target)
-        rewardsSum = F.foldl' (<>) mempty
+    let accountsBalances ds = Map.map (^. balanceAccountStateL) (ds ^. accountsL . accountsMapL)
+        sourceBalances = accountsBalances source
+        targetBalances = accountsBalances target
+        balancesSum = F.foldl' (<>) mempty
      in conjoin
           [ counterexample
-              "sum of rewards should not change"
-              (rewardsSum sourceRewards == rewardsSum targetRewards)
+              "sum of balances should not change"
+              (balancesSum sourceBalances === balancesSum targetBalances)
           , counterexample
               "dropped elements have a zero reward balance"
-              (null (Map.filter (/= UM.CompactCoin 0) $ sourceRewards `Map.difference` targetRewards))
+              (null (Map.filter (/= mempty) $ sourceBalances `Map.difference` targetBalances))
           , counterexample
               "added elements have a zero reward balance"
-              (null (Map.filter (/= UM.CompactCoin 0) $ targetRewards `Map.difference` sourceRewards))
+              (null (Map.filter (/= mempty) $ targetBalances `Map.difference` sourceBalances))
           ]
 
 checkInstantaneousRewards ::
