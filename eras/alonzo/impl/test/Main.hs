@@ -12,7 +12,6 @@ import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslati
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Core.EraPParamsSpec as EraPParams
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 main :: IO ()
@@ -30,4 +29,3 @@ main =
         CostModelsSpec.spec @AlonzoEra
       describe "TxWits" $ do
         TxWitsSpec.spec @AlonzoEra
-      EraPParams.spec @AlonzoEra

@@ -4,7 +4,6 @@ module Main where
 
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Core.EraPParamsSpec as EraPParams
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Shelley.BinarySpec as Binary
@@ -18,4 +17,3 @@ main =
       Cddl.spec
       Imp.spec @ShelleyEra
       roundTripJsonEraSpec @ShelleyEra
-      EraPParams.spec @ShelleyEra
