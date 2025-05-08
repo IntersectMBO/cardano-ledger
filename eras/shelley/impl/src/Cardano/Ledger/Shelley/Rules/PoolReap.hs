@@ -22,7 +22,7 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.PoolParams (ppRewardAccount)
@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
+import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.DeepSeq (NFData)
@@ -49,6 +49,7 @@ import Control.State.Transition (
   judgmentContext,
   tellEvent,
  )
+import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
@@ -74,9 +75,9 @@ instance NFData (ShelleyPoolreapPredFailure era)
 
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
+      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) (CompactForm Coin))
   , unclaimedPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
+      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) (CompactForm Coin))
   , epochNo :: EpochNo
   }
   deriving (Generic)
@@ -136,18 +137,19 @@ poolReapTransition = do
     retired :: Set (KeyHash 'StakePool)
     retired = eval (dom (psRetiring ps ▷ setSingleton e))
     -- The Map of pools (retiring this epoch) to their deposits
-    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) Coin
+    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) (CompactForm Coin)
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     rewardAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
     rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
     rewardAccounts_ ::
-      Map.Map (KeyHash 'StakePool) (RewardAccount, Coin)
+      Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
     rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
     rewardAccounts' :: Map.Map RewardAccount Coin
     rewardAccounts' =
       Map.fromListWith (<+>)
         . Map.elems
+        . fmap (second fromCompact)
         $ rewardAccounts_
     refunds :: Map.Map (Credential 'Staking) Coin
     mRefunds :: Map.Map (Credential 'Staking) Coin
@@ -187,7 +189,7 @@ poolReapTransition = do
           & certPStateL . psStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psFutureStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psRetiringL %~ (eval . (retired ⋪))
-          & certPStateL . psDepositsL .~ remainingDeposits
+          & certPStateL . psDepositsCompactL .~ remainingDeposits
       )
 
 renderPoolReapViolation ::

@@ -16,7 +16,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Plutus
 import Data.Map.Strict (Map)
 import Data.Word
@@ -38,6 +38,7 @@ spec = do
     roundTripPlutusDataSpec @[Word8]
     roundTripPlutusDataSpec @(Map Word Version)
     roundTripPlutusDataSpec @Coin
+    roundTripPlutusDataSpec @(CompactForm Coin)
     roundTripPlutusDataSpec @ExUnits
     roundTripPlutusDataSpec @Prices
     roundTripPlutusDataSpec @Natural

@@ -86,7 +86,7 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   serialize',
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
@@ -237,7 +237,7 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Maximal block header size
   , appKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit
-  , appPoolDeposit :: !(HKD f Coin)
+  , appPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , appEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -319,7 +319,7 @@ instance EraPParams AlonzoEra where
   hkdMaxTxSizeL = lens appMaxTxSize $ \pp x -> pp {appMaxTxSize = x}
   hkdMaxBHSizeL = lens appMaxBHSize $ \pp x -> pp {appMaxBHSize = x}
   hkdKeyDepositL = lens appKeyDeposit $ \pp x -> pp {appKeyDeposit = x}
-  hkdPoolDepositL = lens appPoolDeposit $ \pp x -> pp {appPoolDeposit = x}
+  hkdPoolDepositCompactL = lens appPoolDeposit $ \pp x -> pp {appPoolDeposit = x}
   hkdEMaxL = lens appEMax $ \pp x -> pp {appEMax = x}
   hkdNOptL = lens appNOpt $ \pp x -> pp {appNOpt = x}
   hkdA0L = lens appA0 $ \pp x -> pp {appA0 = x}
@@ -465,7 +465,7 @@ emptyAlonzoPParams =
     , appMaxTxSize = 2048
     , appMaxBHSize = 0
     , appKeyDeposit = Coin 0
-    , appPoolDeposit = Coin 0
+    , appPoolDeposit = CompactCoin 0
     , appEMax = EpochInterval 0
     , appNOpt = 100
     , appA0 = minBound

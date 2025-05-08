@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,6 +21,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary.Version (Version, getVersion, mkVersion)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModels,
   flattenCostModels,
@@ -98,6 +100,11 @@ instance ToPlutusData Prices where
   fromPlutusData _ = Nothing
 
 deriving instance ToPlutusData Coin
+
+instance ToPlutusData (CompactForm Coin) where
+  toPlutusData = toPlutusData . fromCompact
+  fromPlutusData (I i) = toCompact (Coin i)
+  fromPlutusData _ = Nothing
 
 instance ToPlutusData Word32 where
   toPlutusData w32 = I (toInteger @Word32 w32)

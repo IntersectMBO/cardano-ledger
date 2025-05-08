@@ -26,6 +26,7 @@ module Cardano.Ledger.Coin (
   compactCoinOrError,
   addCompactCoin,
   sumCompactCoin,
+  partialCompactCoinL,
   -- NonZero helpers
   toCompactCoinNonZero,
   unCoinNonZero,
@@ -63,6 +64,7 @@ import Data.Primitive.Types
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import System.Random.Stateful (Uniform (..), UniformRange (..))
@@ -122,7 +124,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON)
+    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, Generic)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -218,3 +220,6 @@ toCoinNonZero = unsafeNonZero . Coin . toInteger . unNonZero
 
 compactCoinNonZero :: NonZero Word64 -> NonZero (CompactForm Coin)
 compactCoinNonZero = unsafeNonZero . CompactCoin . unNonZero
+
+partialCompactCoinL :: HasCallStack => Lens' (CompactForm Coin) Coin
+partialCompactCoinL = lens fromCompact $ const compactCoinOrError

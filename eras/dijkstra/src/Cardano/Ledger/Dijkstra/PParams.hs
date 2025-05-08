@@ -45,7 +45,7 @@ instance EraPParams DijkstraEra where
   hkdMaxTxSizeL = lens (unTHKD . cppMaxTxSize) $ \pp x -> pp {cppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . cppMaxBHSize) $ \pp x -> pp {cppMaxBHSize = THKD x}
   hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
-  hkdPoolDepositL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
+  hkdPoolDepositCompactL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
   hkdNOptL = lens (unTHKD . cppNOpt) $ \pp x -> pp {cppNOpt = THKD x}
   hkdA0L = lens (unTHKD . cppA0) $ \pp x -> pp {cppA0 = THKD x}
@@ -139,7 +139,7 @@ instance ConwayEraPParams DijkstraEra where
       , isValid (/= EpochInterval 0) ppuCommitteeMaxTermLengthL
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
-        isValid (/= zero) ppuPoolDepositL
+        isValid (/= mempty) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
       , isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
