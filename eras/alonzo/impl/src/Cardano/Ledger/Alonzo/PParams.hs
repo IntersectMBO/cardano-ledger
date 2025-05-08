@@ -393,6 +393,10 @@ newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
 
+instance ToPlutusData CoinPerWord where
+  toPlutusData = error "unsupported"
+  fromPlutusData = error "unsupported"
+
 -- | This is a helper type that allows us to define an `Ord` instance for executions units
 -- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`
 -- for PParams. This is just a helper type and should not be used directly. Both lenses
