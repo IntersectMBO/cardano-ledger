@@ -1,0 +1,172 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Cardano.Ledger.Dijkstra.Translation () where
+
+import Cardano.Ledger.Alonzo.Core (
+  AlonzoEraTx (..),
+  EraTx (mkBasicTx),
+  FuturePParams (..),
+ )
+import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Governance (
+  ConwayGovState,
+  mkEnactState,
+  rsEnactStateL,
+  setCompleteDRepPulsingState,
+ )
+import Cardano.Ledger.Conway.State (ConwayInstantStake (..), EraCertState (..))
+import Cardano.Ledger.Core (
+  EraTx (auxDataTxL, bodyTxL, witsTxL),
+  EraTxOut (..),
+  PParams,
+  TranslateEra (..),
+  TranslationContext,
+  translateEra',
+  translateEraThroughCBOR,
+  upgradePParams,
+ )
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Governance ()
+import Cardano.Ledger.Dijkstra.State.CertState ()
+import Cardano.Ledger.Dijkstra.Tx ()
+import Cardano.Ledger.Dijkstra.TxAuxData ()
+import Cardano.Ledger.Dijkstra.TxBody ()
+import Cardano.Ledger.Dijkstra.TxWits ()
+import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.LedgerState (
+  DState (..),
+  EpochState (..),
+  NewEpochState (..),
+  PState (..),
+  UTxOState (..),
+  epochStateGovStateL,
+  lsCertStateL,
+  lsUTxOStateL,
+ )
+import qualified Cardano.Ledger.UMap as UM
+import Data.Default (Default (..))
+import qualified Data.Map.Strict as Map
+import Lens.Micro ((&), (.~), (^.))
+
+type instance TranslationContext DijkstraEra = ()
+
+newtype Tx era = Tx (Core.Tx era)
+
+instance TranslateEra DijkstraEra Tx where
+  type TranslationError DijkstraEra Tx = DecoderError
+  translateEra _ctxt (Tx tx) = do
+    -- Note that this does not preserve the hidden bytes field of the transaction.
+    -- This is under the premise that this is irrelevant for TxInBlocks, which are
+    -- not transmitted as contiguous chunks.
+    txBody <- translateEraThroughCBOR $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR $ tx ^. witsTxL
+    auxData <- mapM translateEraThroughCBOR (tx ^. auxDataTxL)
+    let isValidTx = tx ^. isValidTxL
+        newTx =
+          mkBasicTx txBody
+            & witsTxL .~ txWits
+            & isValidTxL .~ isValidTx
+            & auxDataTxL .~ auxData
+    pure $ Tx newTx
+
+instance TranslateEra DijkstraEra NewEpochState where
+  translateEra ctxt nes = do
+    let es = translateEra' ctxt $ nesEs nes
+        -- We need to ensure that we have the same initial EnactState in the pulser as
+        -- well as in the current EnactState, otherwise in the very first EPOCH rule call
+        -- the pulser will reset it.
+        ratifyState =
+          def
+            & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
+    pure $
+      NewEpochState
+        { nesEL = nesEL nes
+        , nesBprev = nesBprev nes
+        , nesBcur = nesBcur nes
+        , nesEs = setCompleteDRepPulsingState def ratifyState es
+        , nesRu = nesRu nes
+        , nesPd = nesPd nes
+        , stashedAVVMAddresses = ()
+        }
+
+--------------------------------------------------------------------------------
+-- Auxiliary instances and functions
+--------------------------------------------------------------------------------
+
+instance TranslateEra DijkstraEra PParams where
+  translateEra _ = pure . upgradePParams ()
+
+instance TranslateEra DijkstraEra FuturePParams where
+  translateEra ctxt = \case
+    NoPParamsUpdate -> pure NoPParamsUpdate
+    DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+    PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
+
+instance TranslateEra DijkstraEra EpochState where
+  translateEra ctxt es =
+    pure $
+      EpochState
+        { esChainAccountState = esChainAccountState es
+        , esSnapshots = esSnapshots es
+        , esLState = translateEra' ctxt $ esLState es
+        , esNonMyopic = esNonMyopic es
+        }
+
+instance TranslateEra DijkstraEra DState where
+  translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
+    where
+      umap' =
+        umap
+          { UM.umElems =
+              Map.map (\(UM.UMElem rd _ poolId drep) -> UM.UMElem rd mempty poolId drep) (UM.umElems umap)
+          , UM.umPtrs = mempty
+          }
+
+instance TranslateEra DijkstraEra PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance TranslateEra DijkstraEra API.LedgerState where
+  translateEra conwayGenesis ls =
+    pure
+      API.LedgerState
+        { API.lsUTxOState = translateEra' conwayGenesis $ ls ^. lsUTxOStateL
+        , API.lsCertState = translateCertState conwayGenesis $ ls ^. lsCertStateL
+        }
+
+translateCertState ::
+  TranslationContext DijkstraEra ->
+  API.CertState ConwayEra ->
+  API.CertState DijkstraEra
+translateCertState ctx scert =
+  def
+    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
+    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
+
+instance TranslateEra DijkstraEra ConwayGovState where
+  translateEra _ _ = undefined
+
+instance TranslateEra DijkstraEra ConwayInstantStake where
+  translateEra _ _ = undefined
+
+instance TranslateEra DijkstraEra UTxOState where
+  translateEra ctxt us =
+    pure
+      UTxOState
+        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        , API.utxosDeposited = API.utxosDeposited us
+        , API.utxosFees = API.utxosFees us
+        , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
+        , API.utxosInstantStake = translateEra' ctxt $ API.utxosInstantStake us
+        , API.utxosDonation = API.utxosDonation us
+        }
+
+instance TranslateEra DijkstraEra API.UTxO where
+  translateEra _ctxt utxo =
+    pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
