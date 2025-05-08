@@ -104,6 +104,7 @@ import Cardano.Ledger.Plutus.ExUnits (
   zipSemiExUnits,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
@@ -390,6 +391,10 @@ instance EraGov AlonzoEra where
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+instance ToPlutusData CoinPerWord where
+  toPlutusData = error "unsupported"
+  fromPlutusData = error "unsupported"
 
 -- | This is a helper type that allows us to define an `Ord` instance for executions units
 -- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`

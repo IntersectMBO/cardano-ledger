@@ -12,6 +12,7 @@ import Cardano.Ledger.BaseTypes (
   HasZero,
   NonNegativeInterval,
   NonZero (..),
+  Nonce,
   ProtVer (..),
   UnitInterval,
   nonZero,
@@ -135,3 +136,7 @@ instance ToPlutusData Word where
 instance (ToPlutusData a, HasZero a) => ToPlutusData (NonZero a) where
   toPlutusData = toPlutusData . unNonZero
   fromPlutusData x = nonZero =<< fromPlutusData x
+
+instance ToPlutusData Nonce where
+  toPlutusData = error "unsupported"
+  fromPlutusData = error "unsupported"
