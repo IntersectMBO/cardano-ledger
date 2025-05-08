@@ -639,8 +639,6 @@ ppCoinsPerUTxOWord =
     , ppTag = 17
     , ppLens' = ppCoinsPerUTxOWordL
     , ppUpdateLens = ppuCoinsPerUTxOWordL
-    , ppToPlutusData = Nothing
-    , ppFromPlutusData = Nothing
     }
 
 ppCollateralPercentage :: AlonzoEraPParams era => PParam era
@@ -650,8 +648,6 @@ ppCollateralPercentage =
     , ppTag = 23
     , ppLens' = ppCollateralPercentageL
     , ppUpdateLens = ppuCollateralPercentageL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppCostModels :: AlonzoEraPParams era => PParam era
@@ -661,8 +657,6 @@ ppCostModels =
     , ppTag = 18
     , ppLens' = ppCostModelsL
     , ppUpdateLens = ppuCostModelsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppMaxBlockExUnits :: AlonzoEraPParams era => PParam era
@@ -672,8 +666,6 @@ ppMaxBlockExUnits =
     , ppTag = 21
     , ppLens' = ppMaxBlockExUnitsL
     , ppUpdateLens = ppuMaxBlockExUnitsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppMaxCollateralInputs :: AlonzoEraPParams era => PParam era
@@ -683,8 +675,6 @@ ppMaxCollateralInputs =
     , ppTag = 24
     , ppLens' = ppMaxCollateralInputsL
     , ppUpdateLens = ppuMaxCollateralInputsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppMaxTxExUnits :: AlonzoEraPParams era => PParam era
@@ -694,8 +684,6 @@ ppMaxTxExUnits =
     , ppTag = 20
     , ppLens' = ppMaxTxExUnitsL
     , ppUpdateLens = ppuMaxTxExUnitsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppMaxValSize :: AlonzoEraPParams era => PParam era
@@ -705,8 +693,6 @@ ppMaxValSize =
     , ppTag = 22
     , ppLens' = ppMaxValSizeL
     , ppUpdateLens = ppuMaxValSizeL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppPrices :: AlonzoEraPParams era => PParam era
@@ -716,6 +702,4 @@ ppPrices =
     , ppTag = 19
     , ppLens' = ppPricesL
     , ppUpdateLens = ppuPricesL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }

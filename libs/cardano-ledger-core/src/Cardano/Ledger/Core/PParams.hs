@@ -90,6 +90,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData)
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
@@ -108,7 +109,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
-import qualified PlutusLedgerApi.Common as P (Data (..))
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
@@ -611,12 +611,10 @@ downgradePParamsUpdate args (PParamsUpdate pphkd) =
 
 data PParam era where
   PParam ::
-    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t, ToPlutusData t) =>
     { ppName :: Text
     , ppTag :: Word
     , ppLens' :: Lens' (PParams era) t
     , ppUpdateLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
-    , ppToPlutusData :: Maybe (t -> P.Data)
-    , ppFromPlutusData :: Maybe (P.Data -> Maybe t)
     } ->
     PParam era

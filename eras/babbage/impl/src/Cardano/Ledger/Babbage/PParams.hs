@@ -416,6 +416,4 @@ ppCoinsPerUTxOByte =
     , ppTag = 17
     , ppLens' = ppCoinsPerUTxOByteL
     , ppUpdateLens = ppuCoinsPerUTxOByteL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }

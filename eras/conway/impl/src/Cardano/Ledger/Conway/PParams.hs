@@ -170,20 +170,19 @@ instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
   toPlutusData ppu =
     P.Map (foldr' accum ([] :: [(P.Data, P.Data)]) (pparams @era))
     where
-      accum PParam {ppTag, ppUpdateLens, ppToPlutusData} acc =
+      accum PParam {ppTag, ppUpdateLens} acc =
         let mbData = do
-              toPlutusDataF <- ppToPlutusData
               t <- strictMaybeToMaybe $ ppu ^. ppUpdateLens
-              pure (P.I (toInteger @Word ppTag), toPlutusDataF t)
+              pure (P.I (toInteger @Word ppTag), toPlutusData t)
          in maybe acc (: acc) mbData
 
   fromPlutusData (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
     where
       accum acc (dataKey, dataVal) = do
         tag <- fromPlutusData @Word dataKey
-        PParam {ppUpdateLens, ppFromPlutusData} <-
+        PParam {ppUpdateLens} <-
           IntMap.lookup (fromIntegral tag) ppMap
-        plutusData <- ppFromPlutusData >>= ($ dataVal)
+        plutusData <- fromPlutusData dataVal
         pure $ set ppUpdateLens (SJust plutusData) acc
       ppMap =
         IntMap.fromList
@@ -1268,8 +1267,6 @@ ppCommitteeMaxTermLength =
     , ppTag = 28
     , ppLens' = ppCommitteeMaxTermLengthL
     , ppUpdateLens = ppuCommitteeMaxTermLengthL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppCommitteeMinSize :: ConwayEraPParams era => PParam era
@@ -1279,8 +1276,6 @@ ppCommitteeMinSize =
     , ppTag = 27
     , ppLens' = ppCommitteeMinSizeL
     , ppUpdateLens = ppuCommitteeMinSizeL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppDRepActivity :: ConwayEraPParams era => PParam era
@@ -1290,8 +1285,6 @@ ppDRepActivity =
     , ppTag = 32
     , ppLens' = ppDRepActivityL
     , ppUpdateLens = ppuDRepActivityL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppDRepDeposit :: ConwayEraPParams era => PParam era
@@ -1301,8 +1294,6 @@ ppDRepDeposit =
     , ppTag = 31
     , ppLens' = ppDRepDepositL
     , ppUpdateLens = ppuDRepDepositL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppDRepVotingThresholds :: ConwayEraPParams era => PParam era
@@ -1312,8 +1303,6 @@ ppDRepVotingThresholds =
     , ppTag = 26
     , ppLens' = ppDRepVotingThresholdsL
     , ppUpdateLens = ppuDRepVotingThresholdsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppGovActionDeposit :: ConwayEraPParams era => PParam era
@@ -1323,8 +1312,6 @@ ppGovActionDeposit =
     , ppTag = 30
     , ppLens' = ppGovActionDepositL
     , ppUpdateLens = ppuGovActionDepositL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppGovActionLifetime :: ConwayEraPParams era => PParam era
@@ -1334,8 +1321,6 @@ ppGovActionLifetime =
     , ppTag = 29
     , ppLens' = ppGovActionLifetimeL
     , ppUpdateLens = ppuGovActionLifetimeL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppGovProtocolVersion ::
@@ -1351,8 +1336,6 @@ ppGovProtocolVersion =
     , ppLens' = ppProtocolVersionL
     , ppUpdateLens =
         ppuLens . lens (fromNoUpdate @StrictMaybe @ProtVer . cppProtocolVersion) const
-    , ppToPlutusData = Nothing
-    , ppFromPlutusData = Nothing
     }
 
 ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam era
@@ -1362,8 +1345,6 @@ ppMinFeeRefScriptCostPerByte =
     , ppTag = 33
     , ppLens' = ppMinFeeRefScriptCostPerByteL
     , ppUpdateLens = ppuMinFeeRefScriptCostPerByteL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
 
 ppPoolVotingThresholds :: ConwayEraPParams era => PParam era
@@ -1373,6 +1354,4 @@ ppPoolVotingThresholds =
     , ppTag = 25
     , ppLens' = ppPoolVotingThresholdsL
     , ppUpdateLens = ppuPoolVotingThresholdsL
-    , ppToPlutusData = Just toPlutusData
-    , ppFromPlutusData = Just fromPlutusData
     }
