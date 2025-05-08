@@ -67,6 +67,7 @@ import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import System.Random.Stateful (Uniform (..), UniformRange (..))
+import Data.Typeable (Typeable)
 
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin {unCoin :: Integer}
@@ -123,7 +124,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON)
+    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON, Generic, Typeable)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c

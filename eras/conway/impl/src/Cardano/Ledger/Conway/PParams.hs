@@ -100,7 +100,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin (Coin), CompactForm (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
@@ -569,7 +569,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Maximal block header size
   , cppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
   -- ^ The amount of a key registration deposit
-  , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , cppEMax :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -806,7 +806,7 @@ instance ConwayEraPParams ConwayEra where
       , isValid (/= EpochInterval 0) ppuCommitteeMaxTermLengthL
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
-        isValid (/= zero) ppuPoolDepositL
+        isValid (/= CompactCoin 0) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
       , bootstrapPhase pv
@@ -982,7 +982,7 @@ emptyConwayPParams =
     , cppMaxTxSize = THKD 2048
     , cppMaxBHSize = THKD 0
     , cppKeyDeposit = THKD (Coin 0)
-    , cppPoolDeposit = THKD (Coin 0)
+    , cppPoolDeposit = THKD (CompactCoin 0)
     , cppEMax = THKD (EpochInterval 0)
     , cppNOpt = THKD 100
     , cppA0 = THKD minBound

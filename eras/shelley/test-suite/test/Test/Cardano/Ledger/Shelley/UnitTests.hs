@@ -140,7 +140,7 @@ pp =
     & ppMinFeeAL .~ Coin 1
     & ppMinFeeBL .~ Coin 1
     & ppKeyDepositL .~ Coin 100
-    & ppPoolDepositL .~ Coin 250
+    & ppPoolDepositL .~ CompactCoin 250
     & ppMaxTxSizeL .~ 1024
     & ppEMaxL .~ EpochInterval 10
     & ppMinUTxOValueL .~ Coin 100

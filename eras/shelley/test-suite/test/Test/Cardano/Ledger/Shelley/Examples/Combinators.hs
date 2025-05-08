@@ -182,7 +182,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
         { utxosDeposited =
             utxosDeposited utxoSt
               <+> (length stakes <×> ppEx ^. ppKeyDepositL)
-              <+> (newcount <×> ppEx ^. ppPoolDepositL)
+              <+> (newcount <×> fromCompact (ppEx ^. ppPoolDepositL))
         , utxosFees = utxosFees utxoSt <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
@@ -474,18 +474,18 @@ reapPool pool cs = cs {chainNes = nes'}
         Just (UM.RDPair ccoin dep) ->
           ( UM.insert'
               rewardAddr
-              (UM.RDPair (addCompactCoin ccoin (compactCoinOrError (pp ^. ppPoolDepositL))) dep)
+              (UM.RDPair (addCompactCoin ccoin (pp ^. ppPoolDepositL)) dep)
               (rewards ds)
-          , Coin 0
+          , CompactCoin 0
           )
     -- FIXME shouldn't we look up the pooldeposit here?
     umap1 = unUView rewards'
     umap2 = UM.SPoolUView umap1 UM.⋫ Set.singleton kh
     ds' = ds {dsUnified = umap2}
     chainAccountState = esChainAccountState es
-    chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> unclaimed}
+    chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> fromCompact unclaimed}
     utxoSt = lsUTxOState ls
-    utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> (pp ^. ppPoolDepositL)}
+    utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> fromCompact (pp ^. ppPoolDepositL)}
     dps' =
       dps
         & certPStateL .~ ps'

@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
 import Cardano.Ledger.Alonzo.PParams (ppuMaxValSizeL)
 import Cardano.Ledger.Babbage.PParams (ppuCoinsPerUTxOByteL)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
@@ -120,7 +120,7 @@ ledgerStatePreds _usize p =
            )
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
-      (Right (Coin 1))
+      (Right (CompactCoin 1))
       deposits
       EQL
       ( case whichCertState p of

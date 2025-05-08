@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -88,7 +87,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -315,7 +314,7 @@ class
   hkdKeyDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | The amount of a pool registration deposit
-  hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | epoch bound on pool retirement
   hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
@@ -400,7 +399,7 @@ ppKeyDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppKeyDepositL = ppLens . hkdKeyDepositL @era @Identity
 
 -- | The amount of a pool registration deposit
-ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
+ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
 ppPoolDepositL = ppLens . hkdPoolDepositL @era @Identity
 
 -- | epoch bound on pool retirement
@@ -466,7 +465,7 @@ ppuKeyDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Stric
 ppuKeyDepositL = ppuLens . hkdKeyDepositL @era @StrictMaybe
 
 -- | The amount of a pool registration deposit
-ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
 ppuPoolDepositL = ppuLens . hkdPoolDepositL @era @StrictMaybe
 
 -- | epoch bound on pool retirement

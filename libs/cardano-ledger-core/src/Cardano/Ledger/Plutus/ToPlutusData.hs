@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Ledger.Plutus.ToPlutusData where
 
@@ -31,6 +32,7 @@ import Data.Word
 import GHC.Real (Ratio ((:%)))
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.Common (Data (..))
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- ===============================================================
 
@@ -97,6 +99,9 @@ instance ToPlutusData Prices where
   fromPlutusData _ = Nothing
 
 deriving instance ToPlutusData Coin
+
+instance ToPlutusData (CompactForm Coin) where
+  toPlutusData = toPlutusData . fromCompact
 
 instance ToPlutusData Word32 where
   toPlutusData w32 = I (toInteger @Word32 w32)

@@ -10,6 +10,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
@@ -17,7 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (AsIx, AsIxItem, PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
@@ -244,6 +247,8 @@ instance Adds ExUnits where
     | runOrdCondition LTE x y = x
     | runOrdCondition GTE x y = y
     | otherwise = errorMess "ExUnits are incomparable, can't choose the 'smallerOf'" [show x, show y]
+
+deriving newtype instance Adds (CompactForm Coin)
 
 -- ================
 instance Adds Word64 where

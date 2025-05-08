@@ -113,6 +113,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.Compactible (Compactible(..))
 
 instance EraTxCert ShelleyEra where
   type TxCert ShelleyEra = ShelleyTxCert ShelleyEra
@@ -565,7 +566,7 @@ shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
   numKeys
     <×> (pp ^. ppKeyDepositL)
     <+> numNewRegPoolCerts
-    <×> (pp ^. ppPoolDepositL)
+    <×> fromCompact (pp ^. ppPoolDepositL)
   where
     numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (F.foldl' addNewPoolIds Set.empty certs)

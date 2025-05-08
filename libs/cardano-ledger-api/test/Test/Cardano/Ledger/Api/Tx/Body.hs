@@ -26,6 +26,7 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 totalTxDeposits ::
+  forall era.
   (EraTxBody era, EraCertState era) =>
   PParams era ->
   CertState era ->
@@ -41,7 +42,7 @@ totalTxDeposits pp dpstate txb =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
         then (pools, ans)
-        else (Map.insert (ppId poolparam) poolparam pools, ans <+> pp ^. ppPoolDepositL)
+        else (Map.insert (ppId poolparam) poolparam pools, ans <+> fromCompact (pp ^. ppPoolDepositL))
     accum ans _ = ans
 
 keyTxRefunds ::

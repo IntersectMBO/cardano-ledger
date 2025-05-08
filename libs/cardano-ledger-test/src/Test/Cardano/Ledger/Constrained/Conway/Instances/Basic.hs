@@ -252,7 +252,7 @@ data SimplePParams era = SimplePParams
   , maxTxSize :: Word32
   , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
   , keyDeposit :: Coin
-  , poolDeposit :: Coin
+  , poolDeposit :: CompactForm Coin
   , eMax :: EpochInterval
   , nOpt :: Word16
   , a0 :: NonNegativeInterval
@@ -288,6 +288,9 @@ data SimplePParams era = SimplePParams
 
 instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
   show x = show (subsetToPP @era x)
+
+instance HasSimpleRep (CompactForm Coin)
+instance HasSpec (CompactForm Coin)
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)

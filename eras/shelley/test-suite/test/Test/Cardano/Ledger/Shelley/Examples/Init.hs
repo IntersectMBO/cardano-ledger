@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Init (
 where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.State
@@ -53,7 +53,7 @@ ppEx =
     & ppMaxTxSizeL .~ 10000
     & ppEMaxL .~ EpochInterval 10000
     & ppKeyDepositL .~ Coin 7
-    & ppPoolDepositL .~ Coin 250
+    & ppPoolDepositL .~ CompactCoin 250
     & ppDL .~ unsafeBoundRational 0.5
     & ppTauL .~ unsafeBoundRational 0.2
     & ppRhoL .~ unsafeBoundRational 0.0021

@@ -25,6 +25,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -71,7 +72,7 @@ shelleyObligationCertState certState =
   Obligations
     { oblStake =
         UM.fromCompact (UM.sumDepositUView (UM.RewDepUView (certState ^. certDStateL . dsUnifiedL)))
-    , oblPool = F.foldl' (<>) (Coin 0) (certState ^. certPStateL . psDepositsL)
+    , oblPool = F.foldl' (<>) (Coin 0) (fmap fromCompact $ certState ^. certPStateL . psDepositsL)
     , oblDRep = Coin 0
     , oblProposal = Coin 0
     }

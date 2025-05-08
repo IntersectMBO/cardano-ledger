@@ -31,6 +31,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
+import Cardano.Ledger.Compactible (Compactible(..))
 
 spec ::
   forall era.
@@ -661,7 +662,7 @@ votingSpec =
         it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
           let govActionLifetime = 5
               govActionDeposit = Coin 1_000_000
-              poolDeposit = Coin 858_000
+              poolDeposit = CompactCoin 858_000
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
@@ -695,7 +696,7 @@ votingSpec =
           -- Increase the rewards of the delegator to this DRep
           -- to barely make the threshold (65 %! 100)
           registerAndRetirePoolToMakeReward $ KeyHashObj stakingKH1
-          getReward (KeyHashObj stakingKH1) `shouldReturn` poolDeposit <> govActionDeposit
+          getReward (KeyHashObj stakingKH1) `shouldReturn` fromCompact poolDeposit <> govActionDeposit
           isDRepAccepted addCCGaid `shouldReturn` True
           -- The same vote should now successfully ratify the proposal
           passEpoch
@@ -972,7 +973,7 @@ votingSpec =
           whenPostBootstrap $ do
             let govActionLifetime = 5
                 govActionDeposit = Coin 1_000_000
-                poolDeposit = Coin 200_000
+                poolDeposit = CompactCoin 200_000
             -- Only modify the applicable thresholds
             modifyPParams $ \pp ->
               pp
@@ -1017,7 +1018,7 @@ votingSpec =
             -- Add to the rewards of the delegator to this SPO
             -- to barely make the threshold (51 %! 100)
             registerAndRetirePoolToMakeReward delegatorCStaking1
-            getReward delegatorCStaking1 `shouldReturn` poolDeposit <> govActionDeposit
+            getReward delegatorCStaking1 `shouldReturn` fromCompact poolDeposit <> govActionDeposit
             -- The same vote should now successfully ratify the proposal
             -- NOTE: It takes 2 epochs for SPO votes as opposed to 1 epoch
             -- for DRep votes to ratify a proposal.

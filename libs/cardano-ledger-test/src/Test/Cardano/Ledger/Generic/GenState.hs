@@ -93,7 +93,7 @@ import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
@@ -184,6 +184,7 @@ import Test.Tasty.QuickCheck (
   frequency,
   generate,
  )
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- =================================================
 
@@ -745,7 +746,7 @@ genGenEnv proof gsize = do
           , MaxCollateralInputs maxCollateralInputs
           , CollateralPercentage collateralPercentage
           , ProtocolVersion $ protocolVersion proof
-          , PoolDeposit $ Coin 5
+          , PoolDeposit $ CompactCoin 5
           , KeyDeposit $ Coin 2
           , EMax $ EpochInterval 5
           ]
@@ -1170,7 +1171,7 @@ initStableFields = do
     modifyGenStateInitialPoolParams (Map.insert kh poolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
     modifyModelPoolParams (Map.insert kh poolParams)
-    modifyModelKeyDeposits kh (pp ^. ppPoolDepositL)
+    modifyModelKeyDeposits kh (fromCompact $ pp ^. ppPoolDepositL)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
