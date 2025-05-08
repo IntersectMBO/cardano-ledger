@@ -139,7 +139,7 @@ instance ConwayEraPParams DijkstraEra where
       , isValid (/= EpochInterval 0) ppuCommitteeMaxTermLengthL
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
-        isValid (/= zero) ppuPoolDepositL
+        isValid (/= mempty) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
       , isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL

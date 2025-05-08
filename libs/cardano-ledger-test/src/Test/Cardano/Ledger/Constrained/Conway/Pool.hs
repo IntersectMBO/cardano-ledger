@@ -55,8 +55,8 @@ pStateSpec univ = constrained $ \ps ->
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
         dom_ deposits ==. dom_ stakePoolParams
-    , forAll (rng_ deposits) $ \ [var|dep|] ->
-        assertExplain (pure "all deposits are greater then (Coin 0)") $ dep >=. lit (Coin 0)
+    , forAll' (rng_ deposits) $ \ [var|dep|] ->
+        assertExplain (pure "all deposits are greater then (Coin 0)") $ dep >=. lit 0
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     ]

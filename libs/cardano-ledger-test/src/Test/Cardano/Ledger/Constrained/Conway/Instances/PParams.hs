@@ -422,7 +422,7 @@ maxBHSize_ simplepp = sel @4 simplepp
 keyDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 keyDeposit_ simplepp = sel @5 simplepp
 
-poolDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
+poolDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term (CompactForm Coin)
 poolDeposit_ simplepp = sel @6 simplepp
 
 eMax_ ::

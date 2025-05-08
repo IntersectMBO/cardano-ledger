@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
-import Cardano.Ledger.UMap (depositMap)
+import Cardano.Ledger.UMap (depositMap, fromCompact)
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
@@ -214,7 +214,7 @@ depositsMap ::
 depositsMap certState props =
   Map.unions
     [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)
-    , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
+    , Map.mapKeys PoolDeposit . fmap fromCompact $ certState ^. certPStateL . psDepositsL
     , fmap drepDeposit . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
     , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
     ]
