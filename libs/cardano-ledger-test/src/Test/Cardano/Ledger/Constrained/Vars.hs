@@ -121,7 +121,7 @@ import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
+import Cardano.Ledger.UMap (compactCoinOrError, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (first)
 import Data.Default (Default (def))
@@ -354,10 +354,10 @@ retiring = Var $ V "retiring" (MapR PoolHashR EpochR) (Yes NewEpochStateR retiri
 retiringL :: EraCertState era => NELens era (Map (KeyHash 'StakePool) EpochNo)
 retiringL = nesEsL . esLStateL . lsCertStateL . certPStateL . psRetiringL
 
-poolDeposits :: EraCertState era => Term era (Map (KeyHash 'StakePool) Coin)
-poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR poolDepositsL)
+poolDeposits :: EraCertState era => Term era (Map (KeyHash 'StakePool) (CompactForm Coin))
+poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CompactCoinR) (Yes NewEpochStateR poolDepositsL)
 
-poolDepositsL :: EraCertState era => NELens era (Map (KeyHash 'StakePool) Coin)
+poolDepositsL :: EraCertState era => NELens era (Map (KeyHash 'StakePool) (CompactForm Coin))
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
 
 committeeState ::
@@ -1291,13 +1291,13 @@ maxBHSize p =
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL . word16NaturalL)))
     )
 
-poolDepAmt :: Era era => Proof era -> Term era Coin
+poolDepAmt :: Era era => Proof era -> Term era (CompactForm Coin)
 poolDepAmt p =
   Var $
     pV
       p
       "poolDepAmt"
-      CoinR
+      CompactCoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppPoolDepositL)))
 
 keyDepAmt :: Era era => Proof era -> Term era Coin

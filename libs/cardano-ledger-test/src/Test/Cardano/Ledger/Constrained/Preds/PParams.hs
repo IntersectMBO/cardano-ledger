@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   boundRational,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Control.Monad (when)
 import GHC.Num (Natural)
 import Lens.Micro ((^.))
@@ -90,7 +90,7 @@ genPParams proof tx bb bh = do
           , MaxCollateralInputs maxCollateralInputs
           , CollateralPercentage collateralPercentage2
           , ProtocolVersion $ protocolVersion proof
-          , PoolDeposit $ Coin 5
+          , PoolDeposit $ CompactCoin 5
           , KeyDeposit $ Coin 2
           , DRepDeposit $ Coin 7
           , GovActionDeposit $ Coin 13

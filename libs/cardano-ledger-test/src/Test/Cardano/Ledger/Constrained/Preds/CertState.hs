@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), CompactForm (..))
 import Cardano.Ledger.Conway.State (ConwayEraCertState, EraCertState)
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
@@ -163,7 +163,7 @@ pstateCheckPreds :: EraCertState era => Proof era -> [Pred era]
 pstateCheckPreds _ =
   [ Subset (Dom retiring) (Dom regPools) -- Note regPools must be bigger than retiring
   , Dom regPools :=: Dom poolDeposits
-  , NotMember (Lit CoinR (Coin 0)) (Rng poolDeposits)
+  , NotMember (Lit CompactCoinR (CompactCoin 0)) (Rng poolDeposits)
   , Disjoint (Dom regPools) (Dom futureRegPools)
   ]
 

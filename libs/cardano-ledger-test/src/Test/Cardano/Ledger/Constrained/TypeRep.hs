@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), CompactForm)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -246,6 +246,7 @@ infixr 0 :->
 
 data Rep era t where
   RationalR :: Rep era Rational
+  CompactCoinR :: Rep era (CompactForm Coin)
   CoinR :: Rep era Coin
   EpochR :: Rep era EpochNo
   EpochIntervalR :: Rep era EpochInterval
@@ -400,6 +401,7 @@ typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
 
 repHasInstances :: Rep era t -> HasInstances t
 repHasInstances r = case r of
+  CompactCoinR -> IsOrd
   TxIdR -> IsOrd
   VStateR -> IsEq
   EnactStateR -> IsEq
@@ -703,6 +705,7 @@ synopsis EnactStateR x = show (pcEnactState reify x)
 synopsis DRepPulserR x = show (pcDRepPulser x)
 synopsis DelegateeR x = show (pcDelegatee x)
 synopsis VoteR v = show v
+synopsis CompactCoinR v = show v
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -988,6 +991,7 @@ genSizedRep n DelegateeR =
     , DelegStakeVote <$> genSizedRep n (PoolHashR @era) <*> genSizedRep n (DRepR @era)
     ]
 genSizedRep _ VoteR = arbitrary
+genSizedRep _ CompactCoinR = arbitrary
 
 genRep ::
   forall era b.
@@ -1037,6 +1041,7 @@ shrinkRep PoolHashR t = shrink t
 shrinkRep WitHashR t = shrink t
 shrinkRep GenHashR t = shrink t
 shrinkRep GenDelegHashR t = shrink t
+shrinkRep CompactCoinR t = shrink t
 shrinkRep PoolParamsR t = shrink t
 shrinkRep EpochR t = shrink t
 shrinkRep EpochIntervalR t = shrink t
