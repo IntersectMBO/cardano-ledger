@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -53,7 +52,7 @@ instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
   liftMemberSpec xs = case NE.nonEmpty (nubOrd xs) of
-    Nothing -> ErrorSpec (pure ("In liftMemberSpec for the (Sized Map) instance, xs is the empty list"))
+    Nothing -> ErrorSpec (pure "In liftMemberSpec for the (Sized Map) instance, xs is the empty list")
     Just ys -> typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec ys}
   sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
     geqSpec (sizeOf mustk)
@@ -226,7 +225,7 @@ instance
     !mustMap <- explain "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
       v <- explain (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
-      pure $ (k, v)
+      pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = simplifySpec $ constrained $ \sz ->
@@ -282,7 +281,7 @@ instance
   shrinkWithTypeSpec (MapSpec _ _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
   toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
-    toPred $
+    toPred
       [ Assert $ Lit mustKeys `subset_` dom_ m
       , forAll (Lit mustVals) $ \val ->
           val `elem_` rng_ m
@@ -394,7 +393,7 @@ instance Logic MapW where
           )
 
   mapTypeSpec DomW (MapSpec _ mustSet _ sz kvSpec _) = typeSpec $ SetSpec mustSet (fstSpec kvSpec) sz
-  mapTypeSpec RngW (MapSpec _ _ mustList sz kvSpec foldSpec) = typeSpec $ (ListSpec Nothing mustList sz (sndSpec kvSpec) foldSpec)
+  mapTypeSpec RngW (MapSpec _ _ mustList sz kvSpec foldSpec) = typeSpec $ ListSpec Nothing mustList sz (sndSpec kvSpec) foldSpec
 
 ------------------------------------------------------------------------
 -- Syntax

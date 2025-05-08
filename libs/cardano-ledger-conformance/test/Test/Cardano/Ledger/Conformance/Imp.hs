@@ -47,10 +47,8 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
--- TODO remove this once we get rid of the CPP directives
-{- FOURMOLU_DISABLE -}
 testImpConformance ::
-  forall era.
+  forall era t.
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
@@ -74,7 +72,7 @@ testImpConformance ::
   ExecEnvironment "LEDGER" era ->
   ExecState "LEDGER" era ->
   ExecSignal "LEDGER" era ->
-  BaseImpM ()
+  ImpM t ()
 testImpConformance _globals impRuleResult env state signal = do
   let ctx =
         ConwayLedgerExecContext
@@ -113,7 +111,6 @@ testImpConformance _globals impRuleResult env state signal = do
           (toTestRep . inject @_ @(ExecState "LEDGER" era) . fst)
           impRuleResult
 
-#if __GLASGOW_HASKELL__ >= 906
   logString "implEnv"
   logToExpr env
   logString "implState"
@@ -136,10 +133,8 @@ testImpConformance _globals impRuleResult env state signal = do
       signal
       (first showOpaqueErrorString impRuleResult)
   logDoc $ diffConformance impResponse agdaResponse
-#endif
   when (impResponse /= agdaResponse) $
     assertFailure "Conformance failure"
-{- FOURMOLU_ENABLE -}
 
 spec :: Spec
 spec =
