@@ -20,7 +20,7 @@
     "poolPledgeInfluence": 6.790200579626650307,
     "poolRetireMaxEpoch": 1676560372,
     "stakeAddressDeposit": 664860,
-    "stakePoolDeposit": 763288,
+    "stakePoolDeposit": 1.7453986152646146491e19,
     "stakePoolTargetNum": 40749,
     "treasuryCut": 0.34109,
     "txFeeFixed": 321937

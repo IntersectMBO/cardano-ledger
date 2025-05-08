@@ -715,7 +715,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
     pools = gsInitialPoolParams gstate
     pp = mPParams (gsModel gstate)
     keyDeposit = pp ^. ppKeyDepositL
-    !poolDeposit = pp ^. ppPoolDepositL
+    !poolDeposit = pp ^. ppPoolDepositCompactL
     rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keyDeposit)
 
 -- =============================================

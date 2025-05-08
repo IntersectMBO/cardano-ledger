@@ -143,16 +143,16 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
       pstate = certState ^. certPStateL
       dstate = certState ^. certDStateL
       allDeposits = utxosDeposited utxost
-      sumCoin m = Map.foldl' (<+>) (Coin 0) m
+      sumCoin = Map.foldl' (<+>) (Coin 0)
       keyDeposits = fromCompact $ sumDepositUView (RewDepUView (dsUnified dstate))
-      poolDeposits = sumCoin (psDeposits pstate)
+      poolDeposits = sumCoin $ fromCompact <$> psDeposits pstate
    in counterexample
         ( ansiDocToString . Pretty.vsep $
             [ "Deposit invariant fails:"
             , Pretty.indent 2 . Pretty.vsep . map Pretty.pretty $
                 [ "All deposits = " ++ show allDeposits
                 , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
-                , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+                , "Pool deposits = " ++ synopsisCoinMap (Just (fromCompact <$> psDeposits pstate))
                 ]
             ]
         )

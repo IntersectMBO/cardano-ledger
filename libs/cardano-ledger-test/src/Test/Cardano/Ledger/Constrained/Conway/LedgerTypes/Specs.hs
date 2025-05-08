@@ -340,7 +340,7 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
         dom_ pooldeposits ==. dom_ stakePoolParams
     , assertExplain (pure "no deposit is 0") $
         not_ $
-          lit (Coin 0) `elem_` rng_ pooldeposits
+          lit (CompactCoin 0) `elem_` rng_ pooldeposits
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assertExplain (pure "retiring after current epoch") $
