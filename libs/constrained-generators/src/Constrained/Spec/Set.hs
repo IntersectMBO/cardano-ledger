@@ -2,7 +2,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -16,18 +15,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-name-shadowing #-}
-
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-#endif
 
 module Constrained.Spec.Set where
 
@@ -84,7 +75,7 @@ instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size
   liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
   liftMemberSpec xs = case NE.nonEmpty xs of
-    Nothing -> ErrorSpec (pure ("In liftMemberSpec for the (Sized Set) instance, xs is the empty list"))
+    Nothing -> ErrorSpec (pure "In liftMemberSpec for the (Sized Set) instance, xs is the empty list")
     Just zs -> typeSpec (SetSpec mempty TrueSpec (MemberSpec zs))
   sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
 
@@ -132,7 +123,7 @@ guardSetSpec es (SetSpec must elemS ((<> geqSpec 0) -> size))
   | isErrorLike (maxSpec (cardinality elemS) <> size) =
       ErrorSpec $
         NE.fromList $
-          [ "Cardinality of SetSpec elemSpec (" ++ show (elemS) ++ ") = " ++ show (maxSpec (cardinality elemS))
+          [ "Cardinality of SetSpec elemSpec (" ++ show elemS ++ ") = " ++ show (maxSpec (cardinality elemS))
           , "   This is inconsistent with SetSpec size (" ++ show size ++ ")"
           ]
             ++ es
@@ -179,7 +170,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
     let additions = Set.fromList $ take (size - Set.size must) choices
     pure (Set.union must additions)
   genFromTypeSpec (SetSpec must elemS szSpec) = do
-    let szSpec' = (szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS))
+    let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS)
     count <-
       explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'

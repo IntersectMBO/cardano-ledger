@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -18,17 +17,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE ViewPatterns #-}
 -- Random Natural, Arbitrary Natural, Uniform Natural
 {-# OPTIONS_GHC -Wno-orphans #-}
-
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}  -- Somehow in GHC 8.10.7, Natural can only be imported from GHC.Natural
-#endif
 
 module Constrained.NumSpec where
 

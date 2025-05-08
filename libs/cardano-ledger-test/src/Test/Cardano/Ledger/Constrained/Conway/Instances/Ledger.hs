@@ -19,16 +19,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- GHC9.2.8 needs this
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
-
--- RecordWildCards cause name shadowing warnings in ghc-8.10.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -O0 #-}
-#endif
 
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
@@ -993,7 +986,7 @@ instance (Era era, EraSpecPParams era) => HasSpec (GovActionState era)
 
 gasId_ ::
   Term (GovActionState ConwayEra) ->
-  Term (GovActionId)
+  Term GovActionId
 gasId_ = sel @0
 
 gasCommitteeVotes_ ::

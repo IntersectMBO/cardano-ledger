@@ -48,9 +48,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.TypeLits
 import NoThunks.Class (NoThunks)
-#if __GLASGOW_HASKELL__ < 900
-import Numeric.Natural (Natural)
-#endif
 
 class KnownBounds a where
   type MinBound a :: Nat
