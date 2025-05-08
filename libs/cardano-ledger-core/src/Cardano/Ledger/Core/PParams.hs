@@ -10,6 +10,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,6 +23,7 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
+  PParam (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
@@ -72,10 +74,6 @@ module Cardano.Ledger.Core.PParams (
   downgradePParams,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
-
-  -- * PParamsUpdate to Data
-  PParam (..),
-  makePParamMap,
 )
 where
 
@@ -87,22 +85,29 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
+import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
-import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData)
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Data (Typeable)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
+import qualified Data.Aeson as Aeson (KeyValue, withObject)
+import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
+import qualified Data.Foldable as F (foldMap', foldl', foldr')
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -126,23 +131,42 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
-deriving newtype instance
-  ToJSON (PParamsHKD Identity era) => ToJSON (PParams era)
+instance EraPParams era => ToJSON (PParams era) where
+  toJSON = object . jsonPairsPParams
+  toEncoding = pairs . mconcat . jsonPairsPParams
 
-deriving newtype instance
-  FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
+instance EraPParams era => FromJSON (PParams era) where
+  parseJSON =
+    Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+      let accum acc PParam {ppName, ppLens'} =
+            set ppLens' <$> obj .: Aeson.fromText ppName <*> acc
+       in F.foldl' accum (pure $ emptyPParams @era) (pparams @era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+instance EraPParams era => EncCBOR (PParams era) where
+  encCBOR pp =
+    encodeListLen (fromIntegral (length (pparams @era)))
+      <> F.foldMap' toEnc (pparams @era)
+    where
+      toEnc PParam {ppLens'} = encCBOR $ pp ^. ppLens'
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
+instance EraPParams era => DecCBOR (PParams era) where
+  decCBOR =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (pparams @era))))
+      $ F.foldr'
+        accum
+        (pure (emptyPParams @era))
+        (pparams @era)
+    where
+      accum PParam {ppLens'} acc =
+        set ppLens' <$> decCBOR <*> acc
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD Identity era)) => ToCBOR (PParams era)
+instance EraPParams era => ToCBOR (PParams era) where
+  toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
+instance EraPParams era => FromCBOR (PParams era) where
+  fromCBOR = fromEraCBOR @era
 
 deriving instance Generic (PParams era)
 
@@ -167,23 +191,49 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+instance EraPParams era => EncCBOR (PParamsUpdate era) where
+  encCBOR pp = encodeMapLen count <> enc
+    where
+      (!count, !enc) = countAndConcat encodeField pparams
+      encodeField PParam {ppTag, ppUpdateLens} =
+        (encodeWord ppTag <>) . encCBOR <$> pp ^. ppUpdateLens
+      countAndConcat f = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case f x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
+instance EraPParams era => DecCBOR (PParamsUpdate era) where
+  decCBOR =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          (updateFieldMap pparams)
+      updateFieldMap :: [PParam era] -> IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          . map
+            ( \PParam {ppTag, ppUpdateLens} ->
+                (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
+            )
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD StrictMaybe era)) => ToCBOR (PParamsUpdate era)
+instance EraPParams era => ToCBOR (PParamsUpdate era) where
+  toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
+instance EraPParams era => FromCBOR (PParamsUpdate era) where
+  fromCBOR = fromEraCBOR @era
 
-deriving newtype instance
-  ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
-
-deriving newtype instance
-  FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
+instance EraPParams era => ToJSON (PParamsUpdate era) where
+  toJSON = object . jsonPairsPParamsUpdate
+  toEncoding = pairs . mconcat . jsonPairsPParamsUpdate
 
 deriving instance Generic (PParamsUpdate era)
 
@@ -233,23 +283,12 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , EncCBOR (PParamsHKD Identity era)
-  , DecCBOR (PParamsHKD Identity era)
-  , ToCBOR (PParamsHKD Identity era)
-  , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
-  , ToJSON (PParamsHKD Identity era)
-  , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , EncCBOR (PParamsHKD StrictMaybe era)
-  , DecCBOR (PParamsHKD StrictMaybe era)
-  , ToCBOR (PParamsHKD StrictMaybe era)
-  , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
-  , ToJSON (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where
@@ -360,6 +399,21 @@ class
 
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+
+  pparams :: [PParam era]
+
+  jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
+  jsonPairsPParams pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens')
+    | PParam {ppName, ppLens'} <- pparams @era
+    ]
+
+  jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
+  jsonPairsPParamsUpdate ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam {ppName, ppUpdateLens} <- pparams @era
+    , SJust v <- [ppu ^. ppUpdateLens]
+    ]
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
@@ -555,13 +609,12 @@ downgradePParamsUpdate ::
 downgradePParamsUpdate args (PParamsUpdate pphkd) =
   PParamsUpdate (downgradePParamsHKD @_ @StrictMaybe args pphkd)
 
--- =====================================================================================
--- Tools for building ToPlutusData instances for (PParamUpdates era).
-
--- | Pair the tag, and exisitenially hide the type of the lens for the field with that Lens'
 data PParam era where
-  PParam :: ToPlutusData t => Word -> Lens' (PParamsUpdate era) (StrictMaybe t) -> PParam era
-
--- | Turn a list into a Map, this assures we have no duplicates.
-makePParamMap :: [PParam era] -> Map Word (PParam era)
-makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+  PParam ::
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t, ToPlutusData t) =>
+    { ppName :: Text
+    , ppTag :: Word
+    , ppLens' :: Lens' (PParams era) t
+    , ppUpdateLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+    } ->
+    PParam era

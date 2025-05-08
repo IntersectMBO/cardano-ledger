@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Added to `PParams`: `shelleyPParams`, `ppA0`,`ppD`,`ppEMax`,`ppExtraEntropy`,`ppMaxBBSize`,`ppKeyDeposit`,`ppMinFeeA`,`ppMinFeeB`,`ppMinPoolCost` `ppMaxBHSize`,`ppMaxTxSize`,`ppNOpt`,`ppProtocolVersion`,`ppPoolDeposit`,`ppRho`,`ppTau`
+* Removed from `PParams`: `shelleyCommonPParamsHKDPairs`,`shelleyCommonPParamsHKDPairsV6`,`shelleyCommonPParamsHKDPairsV8`
 * Remove `ShelleyTxBody`
 * Removed `era` parameter from `ShelleyTxBodyRaw`
 * Remove `HeapWords` instances for: #5001
