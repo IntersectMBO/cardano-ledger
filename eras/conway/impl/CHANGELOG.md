@@ -2,6 +2,10 @@
 
 ## 1.20.0.0
 
+* Added to `PParams`: `ppCommitteeMaxTermLength`,`ppCommitteeMinSize`,`ppDRepActivity`,`ppDRepDeposit`,`ppDRepVotingThresholds`,`ppGovActionDeposit`,`ppGovActionLifetime`,`ppGovProtocolVersion`,`ppMinFeeRefScriptCostPerByte`,`ppPoolVotingThresholds`
+* Moved `ConwayEraPlutusTxInfo` class from `Context` module to `TxInfo`
+* Removed `Cardano.Ledger.Conway.Plutus.Context` module
+* Moved orphan `ToPlutusData` instance for `PParamsUpdate` from `TxInfo` to `PParams`
 * Bump `ProtVerHigh ConwayEra` to `11`
 * Remove `ConwayTxBody`
 * Removed `era` parameter from `ConwayTxBodyRaw`
