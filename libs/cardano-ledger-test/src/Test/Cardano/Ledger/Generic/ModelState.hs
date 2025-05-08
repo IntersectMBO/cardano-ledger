@@ -107,6 +107,7 @@ import Test.Cardano.Ledger.Generic.Proof (
   whichCertState,
  )
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- =============================================
 
@@ -377,7 +378,7 @@ abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpoch
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
-    , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
+    , mPoolDeposits = (fmap fromCompact . psDeposits . certPState . lsCertState . esLState . nesEs) x
     , mRewards = (UM.rewardMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mDelegations = (UM.sPoolMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x

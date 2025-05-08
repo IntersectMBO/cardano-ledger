@@ -88,7 +88,7 @@ import Cardano.Ledger.Binary.Coders (
   invalidField,
   (!>),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
@@ -148,7 +148,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ Maximal block header size
   , bppKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit
-  , bppPoolDeposit :: !(HKD f Coin)
+  , bppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , bppEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -385,7 +385,7 @@ emptyBabbagePParams =
     , bppMaxTxSize = 2048
     , bppMaxBHSize = 0
     , bppKeyDeposit = Coin 0
-    , bppPoolDeposit = Coin 0
+    , bppPoolDeposit = CompactCoin 0
     , bppEMax = EpochInterval 0
     , bppNOpt = 100
     , bppA0 = minBound

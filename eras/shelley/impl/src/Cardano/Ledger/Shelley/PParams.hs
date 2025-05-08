@@ -61,7 +61,7 @@ import Cardano.Ledger.Binary (
   encodeWord,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Hashes (GenDelegs)
@@ -93,6 +93,7 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (lens, (^.))
 import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- ====================================================================
 
@@ -110,7 +111,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ Maximal block header size
   , sppKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit
-  , sppPoolDeposit :: !(HKD f Coin)
+  , sppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , sppEMax :: !(HKD f EpochInterval)
   -- ^ epoch bound on pool retirement
@@ -292,7 +293,7 @@ emptyShelleyPParams =
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0
     , sppKeyDeposit = Coin 0
-    , sppPoolDeposit = Coin 0
+    , sppPoolDeposit = CompactCoin 0
     , sppEMax = EpochInterval 0
     , sppNOpt = 100
     , sppA0 = minBound
@@ -490,7 +491,7 @@ shelleyCommonPParamsHKDPairs px pp =
   , ("maxTxSize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxTxSizeL @era @f))
   , ("maxBlockHeaderSize", hkdMap px (toJSON @Word16) (pp ^. hkdMaxBHSizeL @era @f))
   , ("stakeAddressDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
-  , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
+  , ("stakePoolDeposit", hkdMap px (toJSON @(CompactForm Coin)) (pp ^. hkdPoolDepositL @era @f))
   , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
   , ("stakePoolTargetNum", hkdMap px (toJSON @Word16) (pp ^. hkdNOptL @era @f))
   , ("poolPledgeInfluence", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))

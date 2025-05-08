@@ -1134,7 +1134,7 @@ pcPParamsField x = case x of
   MaxTxSize natural -> [("maxTxsize", ppWord32 natural)]
   MaxBHSize natural -> [("maxBHsize", ppWord16 natural)]
   KeyDeposit coin -> [("keydeposit", pcCoin coin)]
-  PoolDeposit coin -> [("pooldeposit", pcCoin coin)]
+  PoolDeposit coin -> [("pooldeposit", pcCoin $ fromCompact coin)]
   EMax n -> [("emax", ppEpochInterval n)]
   NOpt n -> [("NOpt", ppWord16 n)]
   A0 i -> [("A0", viaShow i)]
@@ -3286,7 +3286,7 @@ pcPParamsSynopsis p x = withEraPParams p help
         [ ("maxBBSize", ppWord32 (x ^. Core.ppMaxBBSizeL))
         , ("maxBHSize", ppWord16 (x ^. Core.ppMaxBHSizeL))
         , ("maxTxSize", ppWord32 (x ^. Core.ppMaxTxSizeL))
-        , ("poolDeposit", pcCoin (x ^. Core.ppPoolDepositL))
+        , ("poolDeposit", (pcCoin . fromCompact) (x ^. Core.ppPoolDepositL))
         , ("keyDeposit", pcCoin (x ^. Core.ppKeyDepositL))
         , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
         ]
@@ -3404,7 +3404,7 @@ pcPState (PState regP fregP ret dep) =
     [ ("regPools", ppMap pcKeyHash pcPoolParams regP)
     , ("futureRegPools", ppMap pcKeyHash pcPoolParams fregP)
     , ("retiring", ppMap pcKeyHash ppEpochNo ret)
-    , ("poolDeposits", ppMap pcKeyHash pcCoin dep)
+    , ("poolDeposits", ppMap pcKeyHash (pcCoin . fromCompact) dep)
     ]
 
 instance PrettyA (PState era) where

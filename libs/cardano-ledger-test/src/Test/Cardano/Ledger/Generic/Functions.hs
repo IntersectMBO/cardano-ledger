@@ -69,6 +69,7 @@ import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- ====================================================================
 -- Era agnostic actions on (PParams era) (TxOut era) and
@@ -118,7 +119,7 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c
-    accum ans (RegPoolTxCert _) = pp ^. ppPoolDepositL <+> ans
+    accum ans (RegPoolTxCert _) = fromCompact (pp ^. ppPoolDepositL) <+> ans
     accum ans (RetirePoolTxCert _ _) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
 
@@ -426,7 +427,7 @@ instance TotalAda (DState era) where
       <> (UM.fromCompact $ UM.sumDepositUView (UM.RewDepUView (dsUnified dstate)))
 
 instance TotalAda (PState era) where
-  totalAda pstate = Fold.fold (psDeposits pstate)
+  totalAda pstate = Fold.fold (fromCompact <$> psDeposits pstate)
 
 instance TotalAda (VState era) where
   totalAda _ = mempty

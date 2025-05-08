@@ -37,7 +37,7 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   unsafeNonZero,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -162,11 +162,11 @@ hi = 200000
 -- NOTE: we need to keep these deposits small, otherwise
 -- when we generate sequences of transactions we will bleed too
 -- much funds into the deposit pool (i.e. funds not available as utxo)
-genPoolDeposit :: HasCallStack => Gen Coin
+genPoolDeposit :: HasCallStack => Gen (CompactForm Coin)
 genPoolDeposit =
   increasingProbabilityAt
-    (Coin <$> genInteger 0 100)
-    (Coin 0, Coin 100)
+    (CompactCoin <$> genWord64 0 100)
+    (CompactCoin 0, CompactCoin 100)
 
 -- Generates a Neutral or actual Nonces with equal frequency
 genExtraEntropy :: HasCallStack => Gen Nonce

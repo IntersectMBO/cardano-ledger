@@ -189,6 +189,7 @@ import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils (testGlobals)
 import Type.Reflection (Typeable, typeRep)
+import Cardano.Ledger.Compactible (Compactible(..))
 
 -- =======================
 
