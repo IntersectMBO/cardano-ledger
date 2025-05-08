@@ -107,6 +107,7 @@ deriving instance ToPlutusData Coin
 
 instance ToPlutusData (CompactForm Coin) where
   toPlutusData = toPlutusData . fromCompact
+
   fromPlutusData (I i) = toCompact (Coin i)
   fromPlutusData _ = Nothing
 
