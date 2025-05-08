@@ -109,7 +109,7 @@ import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
 
 -- ======================================================
 

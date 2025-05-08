@@ -73,7 +73,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
   mkVRFKeyPair,
-  unsafeBoundRational,
  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))

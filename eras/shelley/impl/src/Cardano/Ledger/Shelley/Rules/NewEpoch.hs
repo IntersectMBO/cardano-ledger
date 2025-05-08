@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -21,6 +22,7 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch (
   updateRewards,
   calculatePoolDistr,
   calculatePoolDistr',
+  assertRewardUpdatesBalanceOut,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -42,8 +44,10 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
+import Control.Monad.Reader (runReaderT)
 import Control.State.Transition
 import Data.Default (Default, def)
+import Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
@@ -52,8 +56,6 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
-  | CorruptRewardUpdate
-      RewardUpdate -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -112,6 +114,7 @@ instance
 type instance EraRuleEvent "NEWEPOCH" ShelleyEra = ShelleyNewEpochEvent ShelleyEra
 
 instance
+  forall era.
   ( EraTxOut era
   , EraGov era
   , EraStake era
@@ -154,7 +157,25 @@ instance
           def
     ]
 
+  assertions = [PostCondition "Reward updates balance out" assertRewardUpdatesBalanceOut]
+
   transitionRules = [newEpochTransition]
+
+assertRewardUpdatesBalanceOut ::
+  EraGov era => TRC (ShelleyNEWEPOCH era) -> State (ShelleyNEWEPOCH era) -> Bool
+assertRewardUpdatesBalanceOut (TRC (_, NewEpochState eL _bPrev _bCur es ru _pd _avvm, eNo)) _newState =
+  if eNo /= succ eL
+    then True
+    else case ru of
+      SNothing -> True
+      SJust p@(Pulsing _ _) ->
+        let (ru', _event) = runIdentity $ runReaderT (completeRupd p) testGlobals
+         in checkRewardsBalanced ru'
+      SJust (Complete ru') -> checkRewardsBalanced ru'
+  where
+    checkRewardsBalanced (RewardUpdate dt dr rs_ df _) =
+      Val.isZero $
+        dt <> dr <> toDeltaCoin (sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_) <> df
 
 newEpochTransition ::
   forall era.
@@ -263,9 +284,7 @@ updateRewards ::
   EpochNo ->
   RewardUpdate ->
   Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
-updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
-  let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
-  Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
+updateRewards es e ru' = do
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the

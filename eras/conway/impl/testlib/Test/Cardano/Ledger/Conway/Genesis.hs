@@ -25,7 +25,6 @@ import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Ratio ((%))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV3)
 
 credMember :: Credential 'ColdCommitteeRole

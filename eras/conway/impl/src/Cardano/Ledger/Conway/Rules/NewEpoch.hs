@@ -17,7 +17,6 @@
 
 module Cardano.Ledger.Conway.Rules.NewEpoch (
   ConwayNEWEPOCH,
-  ConwayNewEpochPredFailure (..),
   ConwayNewEpochEvent (..),
 ) where
 
@@ -54,27 +53,15 @@ import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
+import Control.Monad.Reader (runReaderT)
 import Control.State.Transition
 import Data.Default (Default (..))
+import Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (^.))
-
-newtype ConwayNewEpochPredFailure era
-  = CorruptRewardUpdate
-      RewardUpdate -- The reward update which violates an invariant
-  deriving (Generic)
-
-deriving instance Eq (ConwayNewEpochPredFailure era)
-
-deriving instance
-  ( Show (PredicateFailure (EraRule "EPOCH" era))
-  , Show (PredicateFailure (EraRule "RATIFY" era))
-  ) =>
-  Show (ConwayNewEpochPredFailure era)
-
-instance NFData (ConwayNewEpochPredFailure era)
 
 data ConwayNewEpochEvent era
   = DeltaRewardEvent !(Event (EraRule "RUPD" era))
@@ -121,6 +108,8 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , Eq (PredicateFailure (ConwayNEWEPOCH era))
+  , Show (PredicateFailure (ConwayNEWEPOCH era))
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -128,7 +117,7 @@ instance
   type Signal (ConwayNEWEPOCH era) = EpochNo
   type Environment (ConwayNEWEPOCH era) = ()
   type BaseM (ConwayNEWEPOCH era) = ShelleyBase
-  type PredicateFailure (ConwayNEWEPOCH era) = ConwayNewEpochPredFailure era
+  type PredicateFailure (ConwayNEWEPOCH era) = Void
   type Event (ConwayNEWEPOCH era) = ConwayNewEpochEvent era
 
   initialRules =
@@ -141,6 +130,24 @@ instance
           SNothing
           (PoolDistr Map.empty mempty)
           def
+    ]
+
+  assertions =
+    [ let checkRewardsBalanced es (RewardUpdate dt dr rs_ df _) =
+            Val.isZero $
+              dt <> dr <> toDeltaCoin (sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_) <> df
+       in PostCondition
+            "Reward updates balance out"
+            ( \(TRC (_, NewEpochState eL _bPrev _bCur es ru _pd _avvm, eNo)) _newState ->
+                if eNo /= succ eL
+                  then True
+                  else case ru of
+                    SNothing -> True
+                    SJust p@(Pulsing _ _) ->
+                      let (ru', _event) = runIdentity $ runReaderT (completeRupd p) testGlobals
+                       in checkRewardsBalanced es ru'
+                    SJust (Complete ru') -> checkRewardsBalanced es ru'
+            )
     ]
 
   transitionRules = [newEpochTransition]
@@ -162,6 +169,8 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , Eq (PredicateFailure (ConwayNEWEPOCH era))
+  , Show (PredicateFailure (ConwayNEWEPOCH era))
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do
@@ -214,9 +223,7 @@ updateRewards ::
   EpochNo ->
   RewardUpdate ->
   Rule (ConwayNEWEPOCH era) 'Transition (EpochState era)
-updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
-  let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
-  Val.isZero (dt <> dr <> toDeltaCoin totRs <> df) ?! CorruptRewardUpdate ru'
+updateRewards es e ru' = do
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the
@@ -226,8 +233,8 @@ updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
 
 instance
   ( STS (ConwayNEWEPOCH era)
-  , PredicateFailure (EraRule "NEWEPOCH" era) ~ ConwayNewEpochPredFailure era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , PredicateFailure (EraRule "NEWEPOCH" era) ~ PredicateFailure (ConwayNEWEPOCH era)
   ) =>
   Embed (ConwayNEWEPOCH era) (ShelleyTICK era)
   where

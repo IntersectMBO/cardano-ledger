@@ -68,7 +68,6 @@ import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 -- ====================================================================
 -- Era agnostic actions on (PParams era) (TxOut era) and

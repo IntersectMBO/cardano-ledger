@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+- Remove `CorruptRewardUpdate` predicate failure and replace that check with an assertion. #5007
 * Remove `ShelleyTxBody`
 * Removed `era` parameter from `ShelleyTxBodyRaw`
 * Remove `HeapWords` instances for: #5001

@@ -120,7 +120,6 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (Quantifier (..), Scrip
 import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpdate)
 import qualified Test.Cardano.Ledger.Shelley.Generator.Update as Shelley (genPParams)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen)
-import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 import Test.QuickCheck hiding ((><))
 
 -- ============================================================

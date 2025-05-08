@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -121,8 +120,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   getBlockNonce,
   maxLLSupply,
   runShelleyBase,
-  testGlobals,
-  unsafeBoundRational,
  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)

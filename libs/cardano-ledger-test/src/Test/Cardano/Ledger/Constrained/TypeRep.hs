@@ -227,7 +227,6 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
 

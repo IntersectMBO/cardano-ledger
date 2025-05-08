@@ -223,7 +223,3 @@ instance
       <$> toSpecRep nesEL
       <*> toSpecRep nesEs
       <*> toSpecRep nesRu
-
-instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
-  type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . showOpaqueErrorString

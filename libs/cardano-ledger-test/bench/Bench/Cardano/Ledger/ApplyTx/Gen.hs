@@ -31,7 +31,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (signal, source),
   Trace (..),

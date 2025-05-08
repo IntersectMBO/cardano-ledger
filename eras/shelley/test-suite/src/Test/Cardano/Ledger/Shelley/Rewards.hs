@@ -129,11 +129,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, forEachEpochTrace)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils (
-  runShelleyBase,
-  testGlobals,
-  unsafeBoundRational,
- )
+import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
 import Test.Tasty (TestTree, defaultMain, testGroup)

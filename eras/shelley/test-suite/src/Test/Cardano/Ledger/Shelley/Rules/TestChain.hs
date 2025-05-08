@@ -77,7 +77,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   epochFromSlotNo,
   runShelleyBase,
-  testGlobals,
  )
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (..),

@@ -65,7 +65,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.TxCert (CertCred (..), genTxCert)
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Gen)

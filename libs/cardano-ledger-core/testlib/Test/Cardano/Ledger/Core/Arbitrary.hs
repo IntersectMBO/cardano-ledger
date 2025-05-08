@@ -133,7 +133,6 @@ import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
-import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
 

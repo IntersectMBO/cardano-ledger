@@ -93,7 +93,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (chooseIssuer)
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Control.State.Transition.Trace (
   Trace (..),
   TraceOrder (OldestFirst),

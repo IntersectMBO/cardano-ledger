@@ -43,7 +43,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
   ChainState (..),
   initialShelleyState,
  )
-import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash, unsafeBoundRational)
+import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash)
 
 -- | Initial Protocol Parameters
 ppEx :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
