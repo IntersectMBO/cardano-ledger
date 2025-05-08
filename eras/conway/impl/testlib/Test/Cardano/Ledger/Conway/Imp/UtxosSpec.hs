@@ -110,7 +110,7 @@ datumAndReferenceInputsSpec = do
               , mkTxInPartial producingTx 1
               ]
     (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
-  it "fails with same txIn in regular inputs and reference inputs" $ do
+  it "fails with same txIn in regular inputs and reference inputs (PlutusV1)" $ do
     producingTx <- setupRefTx SPlutusV1
     let
       consumingTx =
@@ -156,7 +156,7 @@ datumAndReferenceInputsSpec = do
             CollectErrors
               [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
         )
-  it "fails with same txIn in regular inputs and reference inputs" $ do
+  it "fails with same txIn in regular inputs and reference inputs (PlutusV3)" $ do
     producingTx <- setupRefTx SPlutusV3
     let
       consumingTx =
@@ -701,11 +701,11 @@ testPlutusV1V2Failure sh badField lenz errorField = do
 
 enactCostModels ::
   ConwayEraImp era =>
-  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
   Credential 'DRepRole ->
   NonEmpty (Credential 'HotCommitteeRole) ->
-  ImpTestM era (GovPurposeId 'PParamUpdatePurpose era)
+  ImpTestM era (GovPurposeId 'PParamUpdatePurpose)
 enactCostModels prevGovId cms dRep committeeMembers' = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   let pparamsUpdate = def & ppuCostModelsL .~ SJust cms

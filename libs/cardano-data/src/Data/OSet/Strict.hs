@@ -4,7 +4,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,6 +34,8 @@ module Data.OSet.Strict (
   (|><),
   (><|),
   filter,
+  mapL,
+  mapR,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -278,3 +279,13 @@ osetl ><| osetr = case osetl of
   ls :|>: l -> ls ><| (l <| osetr)
 
 infixr 5 ><|
+
+-- | Map over the elements, preferring the leftmost element in case there are
+-- duplicates
+mapR :: Ord b => (a -> b) -> OSet a -> OSet b
+mapR f = F.foldr' ((:<|:) . f) Empty
+
+-- | Map over the elements, preferring the rightmost element in case there are
+-- duplicates
+mapL :: Ord b => (a -> b) -> OSet a -> OSet b
+mapL f = F.foldl' (\x y -> x :|>: f y) Empty

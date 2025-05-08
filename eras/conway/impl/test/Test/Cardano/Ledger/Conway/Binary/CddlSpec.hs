@@ -1,4 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Binary.CddlSpec (spec) where
@@ -6,7 +10,6 @@ module Test.Cardano.Ledger.Conway.Binary.CddlSpec (spec) where
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
@@ -23,9 +26,10 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.Cddl (readConwayCddlFiles)
 import Test.Cardano.Ledger.Conway.CDDL (conwayCDDL)
+import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
 spec :: Spec
 spec = do

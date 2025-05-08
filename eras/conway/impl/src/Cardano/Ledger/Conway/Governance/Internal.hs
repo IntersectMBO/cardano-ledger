@@ -141,7 +141,7 @@ data EnactState era = EnactState
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking) Coin)
-  , ensPrevGovActionIds :: !(GovRelation StrictMaybe era)
+  , ensPrevGovActionIds :: !(GovRelation StrictMaybe)
   -- ^ Last enacted GovAction Ids
   }
   deriving (Generic)
@@ -167,23 +167,23 @@ ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
-ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe era)
+ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
 
 ensPrevPParamUpdateL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
 ensPrevPParamUpdateL = ensPrevGovActionIdsL . grPParamUpdateL
 
 ensPrevHardForkL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose))
 ensPrevHardForkL = ensPrevGovActionIdsL . grHardForkL
 
 ensPrevCommitteeL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose))
 ensPrevCommitteeL = ensPrevGovActionIdsL . grCommitteeL
 
 ensPrevConstitutionL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose))
 ensPrevConstitutionL = ensPrevGovActionIdsL . grConstitutionL
 
 instance EraPParams era => ToJSON (EnactState era) where

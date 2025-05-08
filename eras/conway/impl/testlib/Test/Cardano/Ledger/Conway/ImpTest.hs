@@ -132,6 +132,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   SubmitFailureExpectation (..),
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
+  getCommittee,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -871,7 +872,7 @@ getCommitteeMembers = do
   pure $ Map.keysSet $ foldMap' committeeMembers committee
 
 getLastEnactedCommittee ::
-  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose))
 getLastEnactedCommittee = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
@@ -882,19 +883,19 @@ getConstitution ::
 getConstitution = getsNES $ newEpochStateGovStateL . constitutionGovStateL
 
 getLastEnactedConstitution ::
-  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose))
 getLastEnactedConstitution = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grConstitutionL . prRootL
 
 getLastEnactedParameterChange ::
-  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
 getLastEnactedParameterChange = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grPParamUpdateL . prRootL
 
 getLastEnactedHardForkInitiation ::
-  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'HardForkPurpose))
 getLastEnactedHardForkInitiation = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grHardForkL . prRootL
@@ -904,8 +905,8 @@ getConstitutionProposals ::
   ImpTestM
     era
     ( Map.Map
-        (GovPurposeId 'ConstitutionPurpose era)
-        (PEdges (GovPurposeId 'ConstitutionPurpose era))
+        (GovPurposeId 'ConstitutionPurpose)
+        (PEdges (GovPurposeId 'ConstitutionPurpose))
     )
 getConstitutionProposals = do
   ps <- getProposals
@@ -916,8 +917,8 @@ getParameterChangeProposals ::
   ImpTestM
     era
     ( Map.Map
-        (GovPurposeId 'PParamUpdatePurpose era)
-        (PEdges (GovPurposeId 'PParamUpdatePurpose era))
+        (GovPurposeId 'PParamUpdatePurpose)
+        (PEdges (GovPurposeId 'PParamUpdatePurpose))
     )
 getParameterChangeProposals = do
   ps <- getProposals
@@ -1262,11 +1263,11 @@ electCommittee ::
   ( HasCallStack
   , ConwayEraImp era
   ) =>
-  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
+  StrictMaybe (GovPurposeId 'CommitteePurpose) ->
   Credential 'DRepRole ->
   Set.Set (Credential 'ColdCommitteeRole) ->
   Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
-  ImpTestM era (GovPurposeId 'CommitteePurpose era)
+  ImpTestM era (GovPurposeId 'CommitteePurpose)
 electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
   let
     committeeAction =
@@ -1288,7 +1289,7 @@ electBasicCommittee ::
     era
     ( Credential 'DRepRole
     , Credential 'HotCommitteeRole
-    , GovPurposeId 'CommitteePurpose era
+    , GovPurposeId 'CommitteePurpose
     )
 electBasicCommittee = do
   logString "Setting up a DRep"
@@ -1336,7 +1337,7 @@ logCurPParams = do
       , ""
       ]
 
-proposalsShowDebug :: Era era => Proposals era -> Bool -> Doc AnsiStyle
+proposalsShowDebug :: Proposals era -> Bool -> Doc AnsiStyle
 proposalsShowDebug ps showRoots =
   align . vsep $
     [ ""
@@ -1385,12 +1386,12 @@ getProposalsForest = do
     ]
   where
     mkRoot ::
-      Lens' (GovRelation PRoot era) (PRoot (GovPurposeId p era)) ->
+      Lens' (GovRelation PRoot) (PRoot (GovPurposeId p)) ->
       Proposals era ->
       StrictMaybe GovActionId
     mkRoot rootL ps = fmap unGovPurposeId $ ps ^. pRootsL . rootL . prRootL
     mkForest ::
-      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+      (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
       Proposals era ->
       Forest (StrictMaybe GovActionId)
     mkForest forestL ps =
@@ -1429,7 +1430,7 @@ enactConstitution ::
   ( ConwayEraImp era
   , HasCallStack
   ) =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   Constitution era ->
   Credential 'DRepRole ->
   NonEmpty (Credential 'HotCommitteeRole) ->
@@ -1454,7 +1455,7 @@ expectNumDormantEpochs expected = do
 
 mkConstitutionProposal ::
   ConwayEraImp era =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   ImpTestM era (ProposalProcedure era, Constitution era)
 mkConstitutionProposal prevGovId = do
   constitution <- arbitrary
@@ -1463,7 +1464,7 @@ mkConstitutionProposal prevGovId = do
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   ImpTestM era GovActionId
 submitConstitution prevGovId = do
   (proposal, _) <- mkConstitutionProposal prevGovId
@@ -1592,7 +1593,7 @@ submitYesVoteCCs_ committeeMembers govId =
 mkUpdateCommitteeProposal ::
   ConwayEraImp era =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
-  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose)) ->
   -- | CC members to remove
   Set.Set (Credential 'ColdCommitteeRole) ->
   -- | CC members to add
@@ -1612,7 +1613,7 @@ mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
 submitUpdateCommittee ::
   ConwayEraImp era =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
-  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose)) ->
   -- | CC members to remove
   Set.Set (Credential 'ColdCommitteeRole) ->
   -- | CC members to add
@@ -1798,3 +1799,6 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroRewardAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into ConwayEra"
+
+getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
+getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
