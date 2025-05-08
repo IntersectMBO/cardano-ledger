@@ -3,15 +3,12 @@
 
   inputs = {
 
-    # Remove this once we no longer need GHC 8.10.7.
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
     haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
-      url = "github:input-output-hk/haskell.nix/a0283c855a38ed70ba521f7a9290e78488ddf11b";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
 
@@ -201,7 +198,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc8107" "ghc9121"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc9121"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
@@ -282,7 +279,7 @@
             };
           in
             mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc8107`
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9121`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
