@@ -2,6 +2,9 @@
 
 ## 1.14.0.0
 
+* Added to `PParams`: `ppCollateralPercentage`,`ppCostModels`,`ppMaxBlockExUnits`,`ppMaxCollateralInputs`,`ppMaxTxExUnits`,`ppMaxValSize`,`ppPrices`
+* Removed `alonzoCommonPParamsHKDPairs` from `PParams`
+* Added error-throwing `ToPlutusData` instance for `CoinPerWord`
 * Add `supportedLanguages` to `EraPlutusContext`
 * Add `SupportedLanguage`, `mkSupportedBinaryPlutusScript` and `mkSupportedPlutusScript`.
 * Deprecate `inputs'`, `collateral'`, `outputs'`, `certs'`, `withdrawals'`, `txfee'`,

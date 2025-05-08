@@ -2,6 +2,11 @@
 
 ## 1.18.0.0
 
+* Removed constraints from `EraPParams` for both `PParamsHKD Identity era` and `PParamsHKD StrictMaybe era`: `EncCBOR`, `DecCBOR`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`
+* Added `pparams` to `EraPParams`
+* Added `jsonPairsPParams` and `jsonPairsPParamsUpdate` to `EraPParams` along with their implementation
+* Replaced positional `PParam` constructor with a record-style constructor and added constriants on t: `DecCBOR`, `EncCBOR`, `FromJSON`, `ToJSON`
+* Added error-throwing `ToPlutusData` instance for `Nonce`
 * Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping. #5004
 * Change `TxBody` to an associated `data` family
 * Remove `HeapWords` instances for: #5001

@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Added `ppCoinsPerUTxOByte` to `PParams`
+* Removed `babbagePParamsHKDPairs` and `babbageCommonPParamsHKDPairs` from `PParams`
 * Remove `BabbageTxBody`
 * Removed `era` parameter from `BabbageTxBodyRaw`
 * Move `Annotator` instances to `testlib`
