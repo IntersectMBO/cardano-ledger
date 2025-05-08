@@ -12,10 +12,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -O0 #-}
-#endif
-
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed where
 
 import Cardano.Ledger.Api
