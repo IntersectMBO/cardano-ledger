@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -223,7 +223,7 @@ pparamUpdateSpec =
       testMalformedProposal
         "ppuPoolDepositL cannot be 0"
         ppuPoolDepositL
-        zero
+        $ Coin 0
       testMalformedProposal
         "ppuGovActionDepositL cannot be 0"
         ppuGovActionDepositL
