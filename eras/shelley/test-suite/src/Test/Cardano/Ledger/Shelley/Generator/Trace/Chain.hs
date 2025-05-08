@@ -31,7 +31,6 @@ import Cardano.Ledger.Slot (
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -146,7 +145,7 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply <-> Val.coin (balance utxo0))
+      (maxLLSupply <-> sumCoinUTxO utxo0)
       delegs0
       pParams
       (hashHeaderToNonce (lastByronHeaderHash p))

@@ -140,7 +140,7 @@ returnRedeemAddrsToReserves es = es {esChainAccountState = acnt', esLState = ls'
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { casReserves = casReserves acnt <+> coinBalance utxoR
+        { casReserves = casReserves acnt <+> sumCoinUTxO utxoR
         }
     us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

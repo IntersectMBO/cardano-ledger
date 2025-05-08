@@ -43,7 +43,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..), sumCoinUTxO, unScriptsProvided)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
@@ -168,7 +168,7 @@ txInBalance ::
   Set TxIn ->
   MUtxo era ->
   Coin
-txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
+txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
 
 -- | Break a TxOut into its mandatory and optional parts
 txoutFields :: Proof era -> TxOut era -> (Addr, Value era, [TxOutField era])

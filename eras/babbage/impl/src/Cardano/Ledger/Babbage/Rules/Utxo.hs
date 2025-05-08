@@ -71,7 +71,7 @@ import Cardano.Ledger.Rules.ValidationMode (
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
@@ -306,7 +306,7 @@ validateCollateralContainsNonADA txBody utxoCollateral =
             then retTxOut ^. valueTxOutL
             else collateralBalance
     -- This is the balance that is provided by the collateral inputs
-    collateralBalance = balance $ UTxO utxoCollateral
+    collateralBalance = sumAllValue utxoCollateral
     -- This is the total amount that will be spent as collateral. This is where we account
     -- for the fact that we can remove Non-Ada assets from collateral inputs, by directing
     -- them to the return TxOut.

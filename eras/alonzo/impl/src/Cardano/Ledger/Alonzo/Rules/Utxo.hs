@@ -89,14 +89,7 @@ import Cardano.Ledger.Rules.ValidationMode (
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (
-  EraCertState,
-  EraUTxO (..),
-  UTxO (..),
-  areAllAdaOnly,
-  coinBalance,
-  sumAllValue,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
@@ -315,7 +308,7 @@ validateCollateral pp txb utxoCollateral =
       failureIf (null utxoCollateral) NoCollateralInputs
     ]
   where
-    bal = toDeltaCoin $ coinBalance (UTxO utxoCollateral)
+    bal = toDeltaCoin $ sumAllCoin utxoCollateral
 
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::

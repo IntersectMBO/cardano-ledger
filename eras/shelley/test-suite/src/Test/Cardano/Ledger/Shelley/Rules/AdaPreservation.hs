@@ -324,7 +324,7 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     us = lsUTxOState . esLState . nesEs . chainNes
     circulation chainSt =
       let UTxOState {utxosUtxo = u, utxosDeposited = d} = us chainSt
-       in coinBalance u <+> d
+       in sumCoinUTxO u <+> d
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger source signal
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
@@ -341,7 +341,7 @@ potsSumIncreaseWithdrawalsPerBlock SourceSignalTarget {source, signal, target} =
     potsSum chainSt =
       let UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} =
             lsUTxOState . esLState . nesEs . chainNes $ chainSt
-       in coinBalance u <+> d <+> f
+       in sumCoinUTxO u <+> d <+> f
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
@@ -368,8 +368,8 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
         , target = LedgerState UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'} _
         } =
         property (hasFailedScripts tx)
-          .||. (coinBalance u' <+> d' <+> f')
-            <-> (coinBalance u <+> d <+> f)
+          .||. (sumCoinUTxO u' <+> d' <+> f')
+            <-> (sumCoinUTxO u <+> d <+> f)
             === fold (unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
@@ -398,8 +398,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
             UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
             cState2
         } =
-        (coinBalance u' <+> d' <+> f')
-          <-> (coinBalance u <+> d <+> f)
+        (sumCoinUTxO u' <+> d' <+> f')
+          <-> (sumCoinUTxO u <+> d <+> f)
           === UM.fromCompact (sumRewardsUView (UM.RewDepUView (cState1 ^. certDStateL . dsUnifiedL)))
             <-> UM.fromCompact (sumRewardsUView (UM.RewDepUView (cState2 ^. certDStateL . dsUnifiedL)))
 
@@ -470,11 +470,11 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         LedgerState (UTxOState {utxosUtxo = u'}) _ = ledgerSt'
         txb = tx ^. bodyTxL
         created =
-          coinBalance u'
+          sumCoinUTxO u'
             <+> (txb ^. feeTxBodyL)
             <+> certsTotalDepositsTxBody pp_ certState txb
         consumed_ =
-          coinBalance u
+          sumCoinUTxO u
             <+> certsTotalRefundsTxBody pp_ certState txb
             <+> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
 
@@ -504,11 +504,11 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
         where
           txb = tx ^. bodyTxL
           inps =
-            coinBalance @era (txInsFilter utxo (txb ^. inputsTxBodyL))
+            sumCoinUTxO @era (txInsFilter utxo (txb ^. inputsTxBodyL))
               <> certsTotalRefundsTxBody pp_ certState txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =
-            coinBalance (txouts @era txb)
+            sumCoinUTxO (txouts @era txb)
               <> (txb ^. feeTxBodyL)
               <> certsTotalDepositsTxBody pp_ certState txb
 

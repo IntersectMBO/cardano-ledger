@@ -327,7 +327,7 @@ instance
     , PostCondition
         "Deposit pot must not be negative (post)"
         (\_ st' -> utxosDeposited st' >= mempty)
-    , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
+    , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> sumUTxO (utxosUtxo us)
           withdrawals :: TxBody era -> Value era
           withdrawals txb = Val.inject $ F.foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition

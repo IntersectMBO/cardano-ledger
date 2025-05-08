@@ -61,11 +61,11 @@ import Cardano.Ledger.State as UTxO (
   ScriptsProvided (..),
   UTxO (..),
   areAllAdaOnly,
-  balance,
-  coinBalance,
   getScriptHash,
   sumAllCoin,
   sumAllValue,
+  sumCoinUTxO,
+  sumUTxO,
   txInsFilter,
   txinLookup,
   txins,
@@ -165,7 +165,7 @@ getConsumedCoin ::
   Coin
 getConsumedCoin pp lookupRefund utxo txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
-  coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+  sumCoinUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
     <> refunds
     <> withdrawals
   where

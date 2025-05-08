@@ -71,7 +71,7 @@ totalAdaPotsES (EpochState (ChainAccountState {casTreasury, casReserves}) ls _ _
     UTxOState u _ fees_ _ _ _ = lsUTxOState ls
     certState = ls ^. lsCertStateL
     rewards_ = fromCompact $ sumRewardsUView (rewards $ certState ^. certDStateL)
-    coins = coinBalance u
+    coins = sumCoinUTxO u
     govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
 
 sumAdaPots :: AdaPots -> Coin
@@ -145,7 +145,7 @@ consumedTxBody ::
 consumedTxBody txBody pp dpstate utxo =
   Consumed
     { conInputs =
-        coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+        sumCoinUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
     , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
@@ -159,7 +159,7 @@ producedTxBody ::
   Produced
 producedTxBody txBody pp dpstate =
   Produced
-    { proOutputs = coinBalance (txouts txBody)
+    { proOutputs = sumCoinUTxO (txouts txBody)
     , proFees = txBody ^. feeTxBodyL
     , proDeposits = certsTotalDepositsTxBody pp dpstate txBody
     }

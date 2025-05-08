@@ -29,7 +29,6 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
   LastAppliedBlock (..),
@@ -98,7 +97,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply <-> Val.coin (balance utxo))
+    (maxLLSupply <-> sumCoinUTxO utxo)
     genDelegs
     (ppEx @era)
     nonce0
