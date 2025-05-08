@@ -28,7 +28,7 @@ instance EraPParams AllegraEra where
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
   hkdKeyDepositL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
-  hkdPoolDepositL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
+  hkdPoolDepositCompactL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
   hkdEMaxL = lens sppEMax $ \pp x -> pp {sppEMax = x}
   hkdNOptL = lens sppNOpt $ \pp x -> pp {sppNOpt = x}
   hkdA0L = lens sppA0 $ \pp x -> pp {sppA0 = x}

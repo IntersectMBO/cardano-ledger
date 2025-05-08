@@ -149,7 +149,7 @@ adaPreservationProps =
       , map feesNonDecreasing noEpochBoundarySsts
       ]
 
-infoRetire :: Map (KeyHash 'StakePool) Coin -> KeyHash 'StakePool -> String
+infoRetire :: Show a => Map (KeyHash 'StakePool) a -> KeyHash 'StakePool -> String
 infoRetire deposits keyhash = showKeyHash keyhash ++ extra
   where
     extra = case Map.lookup keyhash deposits of

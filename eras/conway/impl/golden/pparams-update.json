@@ -832,7 +832,7 @@
         "ppSecurityGroup": 0.4
     },
     "stakeAddressDeposit": 479647,
-    "stakePoolDeposit": 569,
+    "stakePoolDeposit": 1.2522864161500168761e19,
     "treasuryCut": 0.5,
     "txFeeFixed": 203771,
     "txFeePerByte": 379061,

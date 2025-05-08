@@ -37,6 +37,7 @@ module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.State (ConwayEraCertState (..), VState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (GenDelegs (..))
@@ -347,7 +348,7 @@ abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpoch
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
-    , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
+    , mPoolDeposits = (fmap fromCompact . psDeposits . certPState . lsCertState . esLState . nesEs) x
     , mRewards = (UM.rewardMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mDelegations = (UM.sPoolMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x

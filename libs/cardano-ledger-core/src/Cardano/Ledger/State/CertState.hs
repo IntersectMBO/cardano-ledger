@@ -47,6 +47,7 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psDepositsL,
+  psDepositsCompactL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -72,8 +73,8 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), compactCoinOrError)
+import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -229,7 +230,7 @@ data PState era = PState
   -- of the Shelley Ledger Specification for a sequence diagram.
   , psRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
-  , psDeposits :: !(Map (KeyHash 'StakePool) Coin)
+  , psDeposits :: !(Map (KeyHash 'StakePool) (CompactForm Coin))
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
@@ -419,12 +420,12 @@ payPoolDeposit ::
 payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
   where
     pool = psDeposits pstate
-    !deposit = pp ^. ppPoolDepositL
+    !deposit = pp ^. ppPoolDepositCompactL
     newpool
       | Map.notMember keyhash pool = Map.insert keyhash deposit pool
       | otherwise = pool
 
-refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (Coin, PState era)
+refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (CompactForm Coin, PState era)
 refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
   where
     pool = psDeposits pstate
@@ -500,4 +501,7 @@ psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
 
 psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
-psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
+psDepositsL = psDepositsCompactL . lens (fmap fromCompact) (\_ -> fmap compactCoinOrError)
+
+psDepositsCompactL :: Lens' (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
+psDepositsCompactL = lens psDeposits (\ds u -> ds {psDeposits = u})

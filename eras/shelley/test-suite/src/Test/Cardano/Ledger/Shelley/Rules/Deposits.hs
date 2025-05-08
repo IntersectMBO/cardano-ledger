@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.UMap (depositMap)
+import Cardano.Ledger.UMap (depositMap, fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import qualified Data.Map.Strict as Map
@@ -87,14 +87,14 @@ depositInvariant SourceSignalTarget {source = chainSt} =
       allDeposits = utxosDeposited utxost
       sumCoin = Map.foldl' (<+>) (Coin 0)
       keyDeposits = (UM.fromCompact . UM.sumDepositUView . UM.RewDepUView . dsUnified) dstate
-      poolDeposits = sumCoin (psDeposits pstate)
+      poolDeposits = sumCoin (fromCompact <$> psDeposits pstate)
    in counterexample
         ( ansiDocToString . Pretty.vsep $
             [ "Deposit invariant fails:"
             , Pretty.indent 2 . Pretty.vsep . map Pretty.pretty $
                 [ "All deposits = " ++ show allDeposits
                 , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
-                , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+                , "Pool deposits = " ++ synopsisCoinMap (Just (fromCompact <$> psDeposits pstate))
                 ]
             ]
         )

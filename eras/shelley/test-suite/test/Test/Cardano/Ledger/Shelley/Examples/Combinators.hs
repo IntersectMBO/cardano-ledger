@@ -191,10 +191,10 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
     newDeposits =
       Map.fromList (map (\cred -> (cred, compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
-    newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
+    newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositCompactL)) pools)
     dpstate' =
       mkShelleyCertState
-        (pstate & psDepositsL %~ Map.unionWith (\old _new -> old) newPools)
+        (pstate & psDepositsCompactL %~ Map.unionWith (\old _new -> old) newPools)
         (dstate & dsUnifiedL .~ UM.unionKeyDeposits (RewDepUView (dstate ^. dsUnifiedL)) newDeposits)
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -473,7 +473,7 @@ reapPool pool cs = cs {chainNes = nes'}
         Just (UM.RDPair ccoin dep) ->
           ( UM.insert'
               rewardAddr
-              (UM.RDPair (addCompactCoin ccoin (compactCoinOrError (pp ^. ppPoolDepositL))) dep)
+              (UM.RDPair (addCompactCoin ccoin (pp ^. ppPoolDepositCompactL)) dep)
               (rewards ds)
           , Coin 0
           )

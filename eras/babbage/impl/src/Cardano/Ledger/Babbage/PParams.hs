@@ -60,7 +60,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
@@ -113,7 +113,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ Maximal block header size
   , bppKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit
-  , bppPoolDeposit :: !(HKD f Coin)
+  , bppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , bppEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -192,7 +192,7 @@ instance EraPParams BabbageEra where
   hkdMaxTxSizeL = lens bppMaxTxSize $ \pp x -> pp {bppMaxTxSize = x}
   hkdMaxBHSizeL = lens bppMaxBHSize $ \pp x -> pp {bppMaxBHSize = x}
   hkdKeyDepositL = lens bppKeyDeposit $ \pp x -> pp {bppKeyDeposit = x}
-  hkdPoolDepositL = lens bppPoolDeposit $ \pp x -> pp {bppPoolDeposit = x}
+  hkdPoolDepositCompactL = lens bppPoolDeposit $ \pp x -> pp {bppPoolDeposit = x}
   hkdEMaxL = lens bppEMax $ \pp x -> pp {bppEMax = x}
   hkdNOptL = lens bppNOpt $ \pp x -> pp {bppNOpt = x}
   hkdA0L = lens bppA0 $ \pp x -> pp {bppA0 = x}
@@ -274,7 +274,7 @@ emptyBabbagePParams =
     , bppMaxTxSize = 2048
     , bppMaxBHSize = 0
     , bppKeyDeposit = Coin 0
-    , bppPoolDeposit = Coin 0
+    , bppPoolDeposit = CompactCoin 0
     , bppEMax = EpochInterval 0
     , bppNOpt = 100
     , bppA0 = minBound
