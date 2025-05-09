@@ -600,7 +600,13 @@ instance SpecTranslate ctx RewardAccount where
 instance SpecTranslate ctx PoolParams where
   type SpecRep PoolParams = Agda.PoolParams
 
-  toSpecRep PoolParams {..} = Agda.PoolParams <$> toSpecRep (KeyHashObj ppId)
+  toSpecRep PoolParams {..} =
+    Agda.PoolParams
+      <$> toSpecRep ppOwners
+      <*> toSpecRep ppCost
+      <*> toSpecRep ppMargin
+      <*> toSpecRep ppPledge
+      <*> toSpecRep (raCredential ppRewardAccount)
 
 instance SpecTranslate ctx DRep where
   type SpecRep DRep = Agda.VDeleg
