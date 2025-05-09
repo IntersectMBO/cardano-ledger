@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Remove `BabbageNonDisjointRefInputs` for protocol versions >10
 * Remove `BabbageTxBody`
 * Removed `era` parameter from `BabbageTxBodyRaw`
 * Move `Annotator` instances to `testlib`

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -121,6 +122,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getsPParams,
   currentProposalsShouldContain,
   ifBootstrap,
+  whenMajorVersion,
+  unlessMajorVersion,
   whenBootstrap,
   whenPostBootstrap,
   submitYesVoteCCs_,
@@ -142,6 +145,8 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  MaxVersion,
+  MinVersion,
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -149,6 +154,7 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   binOpEpochNo,
   inject,
+  natVersion,
   succVersion,
   textToUrl,
  )
@@ -220,6 +226,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
+import GHC.TypeLits (KnownNat, Natural, type (<=))
 import Lens.Micro
 import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
@@ -1591,15 +1598,35 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
 
-whenBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
-whenBootstrap a = do
+whenMajorVersion ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+whenMajorVersion a = do
   pv <- getProtVer
-  when (HardForks.bootstrapPhase pv) a
+  when (pvMajor pv == natVersion @v) a
+
+unlessMajorVersion ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () -> ImpTestM era ()
+unlessMajorVersion a = do
+  pv <- getProtVer
+  unless (pvMajor pv == natVersion @v) a
+
+whenBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
+whenBootstrap = whenMajorVersion @9
 
 whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
-whenPostBootstrap a = do
-  pv <- getProtVer
-  unless (HardForks.bootstrapPhase pv) a
+whenPostBootstrap = unlessMajorVersion @9
 
 ifBootstrap :: EraGov era => ImpTestM era a -> ImpTestM era a -> ImpTestM era a
 ifBootstrap inBootstrap outOfBootstrap = do

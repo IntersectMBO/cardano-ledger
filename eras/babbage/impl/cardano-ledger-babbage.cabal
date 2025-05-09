@@ -104,6 +104,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Imp
+    Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
     Test.Cardano.Ledger.Babbage.ImpTest
     Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
@@ -137,6 +138,7 @@ library testlib
     generic-random,
     heredoc,
     microlens,
+    plutus-ledger-api,
     small-steps >=1.1,
 
 executable huddle-cddl

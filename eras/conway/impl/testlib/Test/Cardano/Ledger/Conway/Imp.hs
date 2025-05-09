@@ -90,6 +90,7 @@ spec ::
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
+  , ContextError era ~ ConwayContextError era
   ) =>
   Spec
 spec = do
@@ -125,6 +126,7 @@ conwaySpec ::
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
+  , ContextError era ~ ConwayContextError era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwaySpec = do
