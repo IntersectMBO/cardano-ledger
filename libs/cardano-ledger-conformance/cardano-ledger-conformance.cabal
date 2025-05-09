@@ -97,9 +97,6 @@ library
     unliftio,
     vector-map,
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-incomplete-patterns
-
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 

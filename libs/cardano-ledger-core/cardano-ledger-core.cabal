@@ -145,9 +145,6 @@ library
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
-
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Common
@@ -221,9 +218,6 @@ library testlib
     tree-diff,
     unliftio,
     vector-map:{vector-map, testlib},
-
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
 
 executable plutus-debug
   main-is: PlutusDebug.hs
