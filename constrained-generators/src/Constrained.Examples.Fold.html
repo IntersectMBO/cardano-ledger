@@ -1,0 +1,760 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MonoLocalBinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Examples.Fold</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Examples.List.html"><span class="hs-identifier">Constrained.Examples.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.List.html#Numbery"><span class="hs-identifier">Numbery</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.GenT.html"><span class="hs-identifier">Constrained.GenT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#GE"><span class="hs-identifier">GE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.GenT.html#catMessages"><span class="hs-identifier">catMessages</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.GenT.html#genFromGenT"><span class="hs-identifier">genFromGenT</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.GenT.html#inspect"><span class="hs-identifier">inspect</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.SumList.html"><span class="hs-identifier">Constrained.SumList</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier">Prettyprinter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier">fillSep</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier">punctuate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier">space</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/random-1.2.1.3-7b5c0ffc4e8033e9fdf26ea59081f559a8b3e79abadac98758451ca48fbd68c1/share/doc/html/src"><span class="hs-identifier">System.Random</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/random-1.2.1.3-7b5c0ffc4e8033e9fdf26ea59081f559a8b3e79abadac98758451ca48fbd68c1/share/doc/html/src"><span class="hs-identifier">Random</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier">forAll</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier">total</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- ========================================================</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- Specifications we use in the examples and in the tests</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Constrained.Examples.Fold.html#oddSpec"><span class="hs-identifier hs-type">oddSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-25"></span><span id="oddSpec"><span class="annot"><span class="annottext">oddSpec :: Specification Int
+</span><a href="Constrained.Examples.Fold.html#oddSpec"><span class="hs-identifier hs-var hs-var">oddSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. [String] -&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Base.html#ExplainSpec"><span class="hs-identifier hs-var">ExplainSpec</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;odd via (y+y+1)&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|oddx|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">forall a p.
+(HasSpec a, IsPred p) =&gt;
+((forall b. Term b -&gt; b) -&gt; GE a) -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#exists"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-28"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679884185"><span class="annot"><span class="annottext">forall b. Term b -&gt; b
+</span><a href="#local-6989586621679884185"><span class="hs-identifier hs-var">eval</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">div</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall b. Term b -&gt; b
+</span><a href="#local-6989586621679884185"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884183"><span class="hs-identifier hs-var">oddx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|y|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+</span><a href="Constrained.Base.html#Assert"><span class="hs-identifier hs-var">Assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884183"><span class="hs-identifier hs-var">oddx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884180"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884180"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Constrained.Examples.Fold.html#evenSpec"><span class="hs-identifier hs-type">evenSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679884491"><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-type">TypeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#MaybeBounded"><span class="hs-identifier hs-type">MaybeBounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884491"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-35"></span><span id="evenSpec"><span class="annot"><span class="annottext">evenSpec :: forall n.
+(TypeSpec n ~ NumSpec n, Integral n, HasSpec n, MaybeBounded n) =&gt;
+Specification n
+</span><a href="Constrained.Examples.Fold.html#evenSpec"><span class="hs-identifier hs-var hs-var">evenSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. [String] -&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Base.html#ExplainSpec"><span class="hs-identifier hs-var">ExplainSpec</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;even via (x+x)&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term n
+</span><span class="">[var|evenx|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">forall a p.
+(HasSpec a, IsPred p) =&gt;
+((forall b. Term b -&gt; b) -&gt; GE a) -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#exists"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679884153"><span class="annot"><span class="annottext">forall b. Term b -&gt; b
+</span><a href="#local-6989586621679884153"><span class="hs-identifier hs-var">eval</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">div</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall b. Term b -&gt; b
+</span><a href="#local-6989586621679884153"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679884152"><span class="hs-identifier hs-var">evenx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term n
+</span><span class="">[var|somey|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+</span><a href="Constrained.Base.html#Assert"><span class="hs-identifier hs-var">Assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679884152"><span class="hs-identifier hs-var">evenx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679884151"><span class="hs-identifier hs-var">somey</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term n
+</span><a href="#local-6989586621679884151"><span class="hs-identifier hs-var">somey</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Constrained.Examples.Fold.html#sum3WithLength"><span class="hs-identifier hs-type">sum3WithLength</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span id="sum3WithLength"><span class="annot"><span class="annottext">sum3WithLength :: Integer -&gt; Specification ([Int], Int, Int, Int)
+</span><a href="Constrained.Examples.Fold.html#sum3WithLength"><span class="hs-identifier hs-var hs-var">sum3WithLength</span></a></span></span><span> </span><span id="local-6989586621679884149"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679884149"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term ([Int], Int, Int, Int)
+</span><span class="">[var|quad|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">forall p a.
+(HasSpec a, IsProductType a, IsPred p) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term ([Int], Int, Int, Int)
+</span><a href="#local-6989586621679884147"><span class="hs-identifier hs-var">quad</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><span class="">[var|l|]</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|n1|]</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|n2|]</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|n3|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+</span><a href="Constrained.Base.html#Assert"><span class="hs-identifier hs-var">Assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679884145"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679884149"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679884145"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="">[var|item|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884142"><span class="hs-identifier hs-var">item</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+</span><a href="Constrained.Base.html#Assert"><span class="hs-identifier hs-var">Assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Foldy a =&gt; Term [a] -&gt; Term a
+</span><a href="Constrained.TheKnot.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679884145"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884139"><span class="hs-identifier hs-var">n1</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884138"><span class="hs-identifier hs-var">n2</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884137"><span class="hs-identifier hs-var">n3</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+</span><a href="Constrained.Base.html#Assert"><span class="hs-identifier hs-var">Assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884139"><span class="hs-identifier hs-var">n1</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884138"><span class="hs-identifier hs-var">n2</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884137"><span class="hs-identifier hs-var">n3</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679884149"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Constrained.Examples.Fold.html#sum3"><span class="hs-identifier hs-type">sum3</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span id="sum3"><span class="annot"><span class="annottext">sum3 :: Specification [Int]
+</span><a href="Constrained.Examples.Fold.html#sum3"><span class="hs-identifier hs-var hs-var">sum3</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><span class="">[var|xs|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">forall a. Foldy a =&gt; Term [a] -&gt; Term a
+</span><a href="Constrained.TheKnot.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679884135"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">9</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679884135"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">5</span></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679884476"><span class="annot"><a href="Constrained.Examples.Fold.html#listSumPair"><span class="hs-identifier hs-type">listSumPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Examples.List.html#Numbery"><span class="hs-identifier hs-type">Numbery</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884476"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679884476"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-55"></span><span id="listSumPair"><span class="annot"><span class="annottext">listSumPair :: forall a. Numbery a =&gt; Specification [(a, Int)]
+</span><a href="Constrained.Examples.Fold.html#listSumPair"><span class="hs-identifier hs-var hs-var">listSumPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884093"><span class="annot"><span class="annottext">Term [(a, Int)]
+</span><a href="#local-6989586621679884093"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a b.
+(Foldy b, HasSpec a) =&gt;
+(Term a -&gt; Term b) -&gt; Term [a] -&gt; Term b
+</span><a href="Constrained.TheKnot.html#foldMap_"><span class="hs-identifier hs-var">foldMap_</span></a></span><span> </span><span class="annot"><span class="annottext">forall x y. (HasSpec x, HasSpec y) =&gt; Term (x, y) -&gt; Term x
+</span><a href="Constrained.Spec.SumProd.html#fst_"><span class="hs-identifier hs-var">fst_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [(a, Int)]
+</span><a href="#local-6989586621679884093"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec t,
+ HasSpec (SimpleRep a), HasSimpleRep a,
+ All HasSpec (Args (SimpleRep a)), IsPred p, IsProd (SimpleRep a),
+ HasSpec a) =&gt;
+Term t -&gt; FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="annot"><span class="annottext">Term [(a, Int)]
+</span><a href="#local-6989586621679884093"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884088"><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884088"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679884087"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884087"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884088"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884088"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">30</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679884087"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">100</span></span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679884451"><span class="annot"><a href="Constrained.Examples.Fold.html#listSumForall"><span class="hs-identifier hs-type">listSumForall</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Examples.List.html#Numbery"><span class="hs-identifier hs-type">Numbery</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884451"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679884451"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-61"></span><span id="listSumForall"><span class="annot"><span class="annottext">listSumForall :: forall a. Numbery a =&gt; Specification [a]
+</span><a href="Constrained.Examples.Fold.html#listSumForall"><span class="hs-identifier hs-var hs-var">listSumForall</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884066"><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884066"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884066"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884065"><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884065"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884065"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Foldy a =&gt; Term [a] -&gt; Term a
+</span><a href="Constrained.TheKnot.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884066"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- | Complicated, because if 'a' is too large, the spec is unsatisfiable.</span><span>
+</span><span id="line-67"></span><span id="local-6989586621679884449"><span class="annot"><a href="Constrained.Examples.Fold.html#listSumComplex"><span class="hs-identifier hs-type">listSumComplex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Examples.List.html#Numbery"><span class="hs-identifier hs-type">Numbery</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884449"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679884449"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679884449"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-68"></span><span id="listSumComplex"><span class="annot"><span class="annottext">listSumComplex :: forall a. Numbery a =&gt; a -&gt; Specification [a]
+</span><a href="Constrained.Examples.Fold.html#listSumComplex"><span class="hs-identifier hs-var hs-var">listSumComplex</span></a></span></span><span> </span><span id="local-6989586621679884027"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679884027"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884026"><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679884025"><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884025"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679884025"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Foldy a =&gt; Term [a] -&gt; Term a
+</span><a href="Constrained.TheKnot.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term a
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. (Sized [a], HasSpec a) =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#elem_"><span class="hs-identifier hs-var">elem_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679884027"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term [a]
+</span><a href="#local-6989586621679884026"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- ==============================================================</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- Tools for building properties that have good counterexamples</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">data</span><span> </span><span id="Outcome"><span class="annot"><a href="Constrained.Examples.Fold.html#Outcome"><span class="hs-identifier hs-var">Outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Succeed"><span class="annot"><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Fail"><span class="annot"><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679884446"><span class="annot"><a href="Constrained.Examples.Fold.html#propYes"><span class="hs-identifier hs-type">propYes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.SumList.html#Solution"><span class="hs-identifier hs-type">Solution</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884446"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-82"></span><span id="propYes"><span class="annot"><span class="annottext">propYes :: forall t. String -&gt; Solution t -&gt; Property
+</span><a href="Constrained.Examples.Fold.html#propYes"><span class="hs-identifier hs-var hs-var">propYes</span></a></span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.SumList.html#Yes"><span class="hs-identifier hs-type">Yes</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty [t]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Constrained.Examples.Fold.html#propYes"><span class="hs-identifier hs-var">propYes</span></a></span><span> </span><span id="local-6989586621679884013"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679884013"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.SumList.html#No"><span class="hs-identifier hs-type">No</span></a></span><span> </span><span id="local-6989586621679884011"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679884011"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679884013"><span class="hs-identifier hs-var">msg</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679884011"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621679884440"><span class="annot"><a href="Constrained.Examples.Fold.html#propNo"><span class="hs-identifier hs-type">propNo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679884440"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.SumList.html#Solution"><span class="hs-identifier hs-type">Solution</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884440"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-86"></span><span id="propNo"><span class="annot"><span class="annottext">propNo :: forall t. Show t =&gt; String -&gt; Solution t -&gt; Property
+</span><a href="Constrained.Examples.Fold.html#propNo"><span class="hs-identifier hs-var hs-var">propNo</span></a></span></span><span> </span><span id="local-6989586621679884001"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679884001"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.SumList.html#Yes"><span class="hs-identifier hs-type">Yes</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679884000"><span class="annot"><span class="annottext">[t]
+</span><a href="#local-6989586621679884000"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:|</span></span><span> </span><span class="annot"><span class="annottext">[[t]]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679884001"><span class="hs-identifier hs-var">msg</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Expected to fail, but succeeds with&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">[t]
+</span><a href="#local-6989586621679884000"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Constrained.Examples.Fold.html#propNo"><span class="hs-identifier hs-var">propNo</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.SumList.html#No"><span class="hs-identifier hs-type">No</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Constrained.Examples.Fold.html#parensList"><span class="hs-identifier hs-type">parensList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-90"></span><span id="parensList"><span class="annot"><span class="annottext">parensList :: [String] -&gt; String
+</span><a href="Constrained.Examples.Fold.html#parensList"><span class="hs-identifier hs-var hs-var">parensList</span></a></span></span><span> </span><span id="local-6989586621679883997"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679883997"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier hs-var">fillSep</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ann. Doc ann -&gt; [Doc ann] -&gt; [Doc ann]
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier hs-var">punctuate</span></a></span><span> </span><span class="annot"><span class="annottext">forall ann. Doc ann
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/prettyprinter-1.7.1-60fc2444dcacdd48cc73f93e5ef87c40fa69faa308b0e641b05323137692b85e/share/doc/html/src"><span class="hs-identifier hs-var">space</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">forall a. IsString a =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679883997"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- ===============================================================</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- Functions for building properties about the functions defined</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- in module Constrained.SumList(logish,pickAll)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Constrained.Examples.Fold.html#logishProp"><span class="hs-identifier hs-type">logishProp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-97"></span><span id="logishProp"><span class="annot"><span class="annottext">logishProp :: Gen Property
+</span><a href="Constrained.Examples.Fold.html#logishProp"><span class="hs-identifier hs-var hs-var">logishProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679883995"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883995"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">17</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">17</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Any bigger or smaller is out of the range of Int</span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679883993"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883993"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; (a, a)
+</span><a href="Constrained.SumList.html#logRange"><span class="hs-identifier hs-var">logRange</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883995"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Integral t =&gt; t -&gt; t
+</span><a href="Constrained.SumList.html#logish"><span class="hs-identifier hs-var">logish</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883993"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883995"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679884426"><span class="annot"><a href="Constrained.Examples.Fold.html#picktest"><span class="hs-identifier hs-type">picktest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Num</span></span><span> </span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679884426"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-103"></span><span id="picktest"><span class="annot"><span class="annottext">picktest :: forall a.
+(Ord a, Num a) =&gt;
+a -&gt; a -&gt; (a -&gt; Bool) -&gt; a -&gt; Int -&gt; [a] -&gt; Bool
+</span><a href="Constrained.Examples.Fold.html#picktest"><span class="hs-identifier hs-var hs-var">picktest</span></a></span></span><span> </span><span id="local-6989586621679883977"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883977"><span class="hs-identifier hs-var">smallest</span></a></span></span><span> </span><span id="local-6989586621679883976"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883976"><span class="hs-identifier hs-var">largest</span></a></span></span><span> </span><span id="local-6989586621679883975"><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679883975"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679883974"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883974"><span class="hs-identifier hs-var">total</span></a></span></span><span> </span><span id="local-6989586621679883973"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883973"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span id="local-6989586621679883972"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883972"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883977"><span class="hs-identifier hs-var">smallest</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883976"><span class="hs-identifier hs-var">largest</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679883974"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">sum</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883972"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883973"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883972"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679883975"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883972"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- | generate a different category of test, each time.</span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Constrained.Examples.Fold.html#pickProp"><span class="hs-identifier hs-type">pickProp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-111"></span><span id="pickProp"><span class="annot"><span class="annottext">pickProp :: Gen Property
+</span><a href="Constrained.Examples.Fold.html#pickProp"><span class="hs-identifier hs-var hs-var">pickProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679883965"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883965"><span class="hs-identifier hs-var">smallest</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; [a] -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">elements</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679883963"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883963"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679883962"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883965"><span class="hs-identifier hs-var">smallest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5477</span></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679883960"><span class="annot"><span class="annottext">largest :: Int
+</span><a href="#local-6989586621679883960"><span class="hs-identifier hs-var hs-var">largest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679883959"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883959"><span class="hs-identifier hs-var">nam</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679883958"><span class="annot"><span class="annottext">Int -&gt; Bool
+</span><a href="#local-6989586621679883958"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; [a] -&gt; Gen a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">elements</span></a></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">concat</span></span><span>
+</span><span id="line-119"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Bool
+</span><span class="hs-identifier hs-var">even</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;even&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Bool
+</span><span class="hs-identifier hs-var">even</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Bool
+</span><span class="hs-identifier hs-var">odd</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Bool
+</span><span class="hs-identifier hs-var">odd</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883963"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;odd&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Bool
+</span><span class="hs-identifier hs-var">odd</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(&gt;0)&quot;</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;true&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679883952"><span class="annot"><span class="annottext">Cost
+</span><a href="#local-6989586621679883952"><span class="hs-identifier hs-var">_cost</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679883951"><span class="annot"><span class="annottext">Solution Int
+</span><a href="#local-6989586621679883951"><span class="hs-identifier hs-var">ans</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall t.
+(Show t, Integral t, Random t) =&gt;
+t
+-&gt; t
+-&gt; (String, t -&gt; Bool)
+-&gt; t
+-&gt; Int
+-&gt; Cost
+-&gt; Gen (Cost, Solution t)
+</span><a href="Constrained.SumList.html#pickAll"><span class="hs-identifier hs-var">pickAll</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883965"><span class="hs-identifier hs-var">smallest</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883960"><span class="hs-identifier hs-var">largest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883959"><span class="hs-identifier hs-var">nam</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool
+</span><a href="#local-6989586621679883958"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883963"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Cost
+</span><a href="Constrained.SumList.html#Cost"><span class="hs-identifier hs-var">Cost</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Solution Int
+</span><a href="#local-6989586621679883951"><span class="hs-identifier hs-var">ans</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><a href="Constrained.SumList.html#Yes"><span class="hs-identifier hs-type">Yes</span></a></span><span> </span><span id="local-6989586621679883948"><span class="annot"><span class="annottext">NonEmpty [Int]
+</span><a href="#local-6989586621679883948"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+(Ord a, Num a) =&gt;
+a -&gt; a -&gt; (a -&gt; Bool) -&gt; a -&gt; Int -&gt; [a] -&gt; Bool
+</span><a href="Constrained.Examples.Fold.html#picktest"><span class="hs-identifier hs-var">picktest</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883965"><span class="hs-identifier hs-var">smallest</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883960"><span class="hs-identifier hs-var">largest</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool
+</span><a href="#local-6989586621679883958"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883962"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883963"><span class="hs-identifier hs-var">count</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NonEmpty [Int]
+</span><a href="#local-6989586621679883948"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><a href="Constrained.SumList.html#No"><span class="hs-identifier hs-type">No</span></a></span><span> </span><span id="local-6989586621679883947"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679883947"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;predicate &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883959"><span class="hs-identifier hs-var">nam</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679883947"><span class="hs-identifier hs-var">msgs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- | Build properties about calls to 'genListWithSize'</span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Constrained.Examples.Fold.html#testFoldSpec"><span class="hs-identifier hs-type">testFoldSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679884405"><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.TheKnot.html#Foldy"><span class="hs-identifier hs-type">Foldy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/random-1.2.1.3-7b5c0ffc4e8033e9fdf26ea59081f559a8b3e79abadac98758451ca48fbd68c1/share/doc/html/src"><span class="hs-identifier hs-type">Random</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-type">TypeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#NumSpec"><span class="hs-identifier hs-type">NumSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.NumSpec.html#MaybeBounded"><span class="hs-identifier hs-type">MaybeBounded</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884405"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="Constrained.Examples.Fold.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-138"></span><span id="testFoldSpec"><span class="annot"><span class="annottext">testFoldSpec :: forall a.
+(Foldy a, Random a, Integral a, TypeSpec a ~ NumSpec a,
+ Arbitrary a, MaybeBounded a) =&gt;
+Specification Integer
+-&gt; Specification a -&gt; Specification a -&gt; Outcome -&gt; Gen Property
+</span><a href="Constrained.Examples.Fold.html#testFoldSpec"><span class="hs-identifier hs-var hs-var">testFoldSpec</span></a></span></span><span> </span><span id="local-6989586621679883894"><span class="annot"><span class="annottext">Specification Integer
+</span><a href="#local-6989586621679883894"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span id="local-6989586621679883893"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883893"><span class="hs-identifier hs-var">elemSpec</span></a></span></span><span> </span><span id="local-6989586621679883892"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883892"><span class="hs-identifier hs-var">total</span></a></span></span><span> </span><span id="local-6989586621679883891"><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883891"><span class="hs-identifier hs-var">outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679883890"><span class="annot"><span class="annottext">GE [a]
+</span><a href="#local-6989586621679883890"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. GenT GE a -&gt; Gen a
+</span><a href="Constrained.GenT.html#genFromGenT"><span class="hs-identifier hs-var">genFromGenT</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) x.
+MonadGenError m =&gt;
+GenT GE x -&gt; GenT m (GE x)
+</span><a href="Constrained.GenT.html#inspect"><span class="hs-identifier hs-var">inspect</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(Complete a, TypeSpec a ~ NumSpec a, MonadGenError m, Random a,
+ Integral a, Arbitrary a, MaybeBounded a, Complete Integer,
+ TypeSpec Integer ~ NumSpec Integer) =&gt;
+Specification Integer
+-&gt; Specification a -&gt; Specification a -&gt; GenT m [a]
+</span><a href="Constrained.SumList.html#genListWithSize"><span class="hs-identifier hs-var">genListWithSize</span></a></span><span> </span><span class="annot"><span class="annottext">Specification Integer
+</span><a href="#local-6989586621679883894"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883893"><span class="hs-identifier hs-var">elemSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883892"><span class="hs-identifier hs-var">total</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679883888"><span class="annot"><span class="annottext">callString :: String
+</span><a href="#local-6989586621679883888"><span class="hs-identifier hs-var hs-var">callString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="Constrained.Examples.Fold.html#parensList"><span class="hs-identifier hs-var">parensList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GenListWithSize&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Specification Integer
+</span><a href="#local-6989586621679883894"><span class="hs-identifier hs-var">size</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Specification a -&gt; (String, a -&gt; Bool)
+</span><a href="Constrained.SumList.html#predSpecPair"><span class="hs-identifier hs-var">predSpecPair</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883893"><span class="hs-identifier hs-var">elemSpec</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679883892"><span class="hs-identifier hs-var">total</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-141"></span><span>      </span><span id="local-6989586621679883886"><span class="annot"><span class="annottext">fails :: [a] -&gt; String
+</span><a href="#local-6989586621679883886"><span class="hs-identifier hs-var hs-var">fails</span></a></span></span><span> </span><span id="local-6989586621679883885"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883885"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883888"><span class="hs-identifier hs-var">callString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Should fail, but it succeeds with&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883885"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-142"></span><span>      </span><span id="local-6989586621679883884"><span class="annot"><span class="annottext">succeeds :: NonEmpty (NonEmpty String) -&gt; String
+</span><a href="#local-6989586621679883884"><span class="hs-identifier hs-var hs-var">succeeds</span></a></span></span><span> </span><span id="local-6989586621679883883"><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883883"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883888"><span class="hs-identifier hs-var">callString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Should succeed, but it fails with&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String) -&gt; String
+</span><a href="Constrained.GenT.html#catMessages"><span class="hs-identifier hs-var">catMessages</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883883"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GE [a]
+</span><a href="#local-6989586621679883890"><span class="hs-identifier hs-var">ans</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883891"><span class="hs-identifier hs-var">outcome</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#Result"><span class="hs-identifier hs-type">Result</span></a></span><span> </span><span id="local-6989586621679883881"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883881"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a] -&gt; String
+</span><a href="#local-6989586621679883886"><span class="hs-identifier hs-var">fails</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679883881"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#FatalError"><span class="hs-identifier hs-type">FatalError</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#FatalError"><span class="hs-identifier hs-type">FatalError</span></a></span><span> </span><span id="local-6989586621679883879"><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883879"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String) -&gt; String
+</span><a href="#local-6989586621679883884"><span class="hs-identifier hs-var">succeeds</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883879"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#GenError"><span class="hs-identifier hs-type">GenError</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.GenT.html#GenError"><span class="hs-identifier hs-type">GenError</span></a></span><span> </span><span id="local-6989586621679883877"><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883877"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String) -&gt; String
+</span><a href="#local-6989586621679883884"><span class="hs-identifier hs-var">succeeds</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (NonEmpty String)
+</span><a href="#local-6989586621679883877"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- | Generate a property from a call to 'pickAll'. We can test for success or failure using 'outcome'</span><span>
+</span><span id="line-153"></span><span id="local-6989586621679884387"><span class="annot"><a href="Constrained.Examples.Fold.html#sumProp"><span class="hs-identifier hs-type">sumProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/random-1.2.1.3-7b5c0ffc4e8033e9fdf26ea59081f559a8b3e79abadac98758451ca48fbd68c1/share/doc/html/src"><span class="hs-identifier hs-type">Random</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><a href="#local-6989586621679884387"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><a href="Constrained.Examples.Fold.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-162"></span><span id="sumProp"><span class="annot"><span class="annottext">sumProp :: forall t.
+(Integral t, Random t, HasSpec t) =&gt;
+t -&gt; t -&gt; Specification t -&gt; t -&gt; Int -&gt; Outcome -&gt; Gen Property
+</span><a href="Constrained.Examples.Fold.html#sumProp"><span class="hs-identifier hs-var hs-var">sumProp</span></a></span></span><span> </span><span id="local-6989586621679883867"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883867"><span class="hs-identifier hs-var">smallest</span></a></span></span><span> </span><span id="local-6989586621679883866"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883866"><span class="hs-identifier hs-var">largest</span></a></span></span><span> </span><span id="local-6989586621679883865"><span class="annot"><span class="annottext">Specification t
+</span><a href="#local-6989586621679883865"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span id="local-6989586621679883864"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883864"><span class="hs-identifier hs-var">total</span></a></span></span><span> </span><span id="local-6989586621679883863"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883863"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span id="local-6989586621679883862"><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883862"><span class="hs-identifier hs-var">outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall t.
+(Show t, Integral t, Random t) =&gt;
+t
+-&gt; t -&gt; (String, t -&gt; Bool) -&gt; t -&gt; Int -&gt; Outcome -&gt; Gen Property
+</span><a href="Constrained.Examples.Fold.html#sumProp2"><span class="hs-identifier hs-var">sumProp2</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883867"><span class="hs-identifier hs-var">smallest</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883866"><span class="hs-identifier hs-var">largest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasSpec a =&gt; Specification a -&gt; (String, a -&gt; Bool)
+</span><a href="Constrained.SumList.html#predSpecPair"><span class="hs-identifier hs-var">predSpecPair</span></a></span><span> </span><span class="annot"><span class="annottext">Specification t
+</span><a href="#local-6989586621679883865"><span class="hs-identifier hs-var">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883864"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883863"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883862"><span class="hs-identifier hs-var">outcome</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- | Like SumProp, but instead of using a (Specification fn n) for the element predicate</span><span>
+</span><span id="line-165"></span><span class="hs-comment">--   It uses an explicit pair of a (String, n -&gt; Bool). This means we can test things</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--   using any Haskell function.</span><span>
+</span><span id="line-167"></span><span id="local-6989586621679884385"><span class="annot"><a href="Constrained.Examples.Fold.html#sumProp2"><span class="hs-identifier hs-type">sumProp2</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/random-1.2.1.3-7b5c0ffc4e8033e9fdf26ea59081f559a8b3e79abadac98758451ca48fbd68c1/share/doc/html/src"><span class="hs-identifier hs-type">Random</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="#local-6989586621679884385"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><a href="Constrained.Examples.Fold.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-176"></span><span id="sumProp2"><span class="annot"><span class="annottext">sumProp2 :: forall t.
+(Show t, Integral t, Random t) =&gt;
+t
+-&gt; t -&gt; (String, t -&gt; Bool) -&gt; t -&gt; Int -&gt; Outcome -&gt; Gen Property
+</span><a href="Constrained.Examples.Fold.html#sumProp2"><span class="hs-identifier hs-var hs-var">sumProp2</span></a></span></span><span> </span><span id="local-6989586621679883846"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883846"><span class="hs-identifier hs-var">smallest</span></a></span></span><span> </span><span id="local-6989586621679883845"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883845"><span class="hs-identifier hs-var">largest</span></a></span></span><span> </span><span id="local-6989586621679883844"><span class="annot"><span class="annottext">(String, t -&gt; Bool)
+</span><a href="#local-6989586621679883844"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span id="local-6989586621679883843"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883843"><span class="hs-identifier hs-var">total</span></a></span></span><span> </span><span id="local-6989586621679883842"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883842"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span id="local-6989586621679883841"><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883841"><span class="hs-identifier hs-var">outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Cost
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679883840"><span class="annot"><span class="annottext">Solution t
+</span><a href="#local-6989586621679883840"><span class="hs-identifier hs-var">ans</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall t.
+(Show t, Integral t, Random t) =&gt;
+t
+-&gt; t
+-&gt; (String, t -&gt; Bool)
+-&gt; t
+-&gt; Int
+-&gt; Cost
+-&gt; Gen (Cost, Solution t)
+</span><a href="Constrained.SumList.html#pickAll"><span class="hs-identifier hs-var">pickAll</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883846"><span class="hs-identifier hs-var">smallest</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883845"><span class="hs-identifier hs-var">largest</span></a></span><span> </span><span class="annot"><span class="annottext">(String, t -&gt; Bool)
+</span><a href="#local-6989586621679883844"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883843"><span class="hs-identifier hs-var">total</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883842"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Cost
+</span><a href="Constrained.SumList.html#Cost"><span class="hs-identifier hs-var">Cost</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679883839"><span class="annot"><span class="annottext">callString :: String
+</span><a href="#local-6989586621679883839"><span class="hs-identifier hs-var hs-var">callString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="Constrained.Examples.Fold.html#parensList"><span class="hs-identifier hs-var">parensList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pickAll&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883846"><span class="hs-identifier hs-var">smallest</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">(String, t -&gt; Bool)
+</span><a href="#local-6989586621679883844"><span class="hs-identifier hs-var">spec</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679883843"><span class="hs-identifier hs-var">total</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679883842"><span class="hs-identifier hs-var">count</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-179"></span><span>      </span><span id="local-6989586621679883838"><span class="annot"><span class="annottext">message :: Outcome -&gt; String
+</span><a href="#local-6989586621679883838"><span class="hs-identifier hs-var hs-var">message</span></a></span></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\nShould succeed, but it fails with&quot;</span></span><span>
+</span><span id="line-180"></span><span>      </span><span class="annot"><a href="#local-6989586621679883838"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\nShould fail, but it succeeds with &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Solution t
+</span><a href="#local-6989586621679883840"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883841"><span class="hs-identifier hs-var">outcome</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-183"></span><span>        </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Succeed"><span class="hs-identifier hs-var">Succeed</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall t. String -&gt; Solution t -&gt; Property
+</span><a href="Constrained.Examples.Fold.html#propYes"><span class="hs-identifier hs-var">propYes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883839"><span class="hs-identifier hs-var">callString</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Outcome -&gt; String
+</span><a href="#local-6989586621679883838"><span class="hs-identifier hs-var">message</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679883841"><span class="hs-identifier hs-var">outcome</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Solution t
+</span><a href="#local-6989586621679883840"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">Outcome
+</span><a href="Constrained.Examples.Fold.html#Fail"><span class="hs-identifier hs-var">Fail</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall t. Show t =&gt; String -&gt; Solution t -&gt; Property
+</span><a href="Constrained.Examples.Fold.html#propNo"><span class="hs-identifier hs-var">propNo</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679883839"><span class="hs-identifier hs-var">callString</span></a></span><span> </span><span class="annot"><span class="annottext">Solution t
+</span><a href="#local-6989586621679883840"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span></pre></body></html>
