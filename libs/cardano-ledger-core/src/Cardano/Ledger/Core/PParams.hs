@@ -64,8 +64,8 @@ module Cardano.Ledger.Core.PParams (
   ppuMinPoolCostL,
 
   -- * Utility
-  ppLens,
-  ppuLens,
+  ppLensHKD,
+  ppuLensHKD,
   mapPParams,
   mapPParamsUpdate,
   upgradePParams,
@@ -338,7 +338,7 @@ class
   -- | Decentralization parameter getter
   ppDG :: SimpleGetter (PParams era) UnitInterval
   default ppDG :: ProtVerAtMost era 6 => SimpleGetter (PParams era) UnitInterval
-  ppDG = ppLens . hkdDL @era @Identity
+  ppDG = ppLensHKD . hkdDL @era @Identity
 
   -- | Extra entropy
   hkdExtraEntropyL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f Nonce)
@@ -349,11 +349,11 @@ class
 
   ppProtocolVersionL :: Lens' (PParams era) ProtVer
   default ppProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParams era) ProtVer
-  ppProtocolVersionL = ppLens . hkdProtocolVersionL @era @Identity
+  ppProtocolVersionL = ppLensHKD . hkdProtocolVersionL @era @Identity
 
   -- | PParamsUpdate Protocol version
   ppuProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
-  ppuProtocolVersionL = ppuLens . hkdProtocolVersionL @era @StrictMaybe
+  ppuProtocolVersionL = ppuLensHKD . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value
   hkdMinUTxOValueL :: HKDFunctor f => ProtVerAtMost era 4 => Lens' (PParamsHKD f era) (HKD f Coin)
@@ -367,152 +367,152 @@ emptyPParams = PParams emptyPParamsIdentity
 emptyPParamsUpdate :: EraPParams era => PParamsUpdate era
 emptyPParamsUpdate = PParamsUpdate emptyPParamsStrictMaybe
 
-ppLens :: Lens' (PParams era) (PParamsHKD Identity era)
-ppLens = lens (\(PParams x) -> x) (\_ pp -> PParams pp)
+ppLensHKD :: Lens' (PParams era) (PParamsHKD Identity era)
+ppLensHKD = lens (\(PParams x) -> x) (\_ pp -> PParams pp)
 
-ppuLens :: Lens' (PParamsUpdate era) (PParamsHKD StrictMaybe era)
-ppuLens = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
+ppuLensHKD :: Lens' (PParamsUpdate era) (PParamsHKD StrictMaybe era)
+ppuLensHKD = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 
 -- PParams versions of lenses
 
 -- | The linear factor for the minimum fee calculation
 ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeAL = ppLens . hkdMinFeeAL @era @Identity
+ppMinFeeAL = ppLensHKD . hkdMinFeeAL @era @Identity
 
 -- | The constant factor for the minimum fee calculation
 ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeBL = ppLens . hkdMinFeeBL @era @Identity
+ppMinFeeBL = ppLensHKD . hkdMinFeeBL @era @Identity
 
 -- | Maximal block body size
 ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
-ppMaxBBSizeL = ppLens . hkdMaxBBSizeL @era @Identity
+ppMaxBBSizeL = ppLensHKD . hkdMaxBBSizeL @era @Identity
 
 -- | Maximal transaction size
 ppMaxTxSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
-ppMaxTxSizeL = ppLens . hkdMaxTxSizeL @era @Identity
+ppMaxTxSizeL = ppLensHKD . hkdMaxTxSizeL @era @Identity
 
 -- | Maximal block header size
 ppMaxBHSizeL :: forall era. EraPParams era => Lens' (PParams era) Word16
-ppMaxBHSizeL = ppLens . hkdMaxBHSizeL @era @Identity
+ppMaxBHSizeL = ppLensHKD . hkdMaxBHSizeL @era @Identity
 
 -- | The amount of a key registration deposit
 ppKeyDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppKeyDepositL = ppLens . hkdKeyDepositL @era @Identity
+ppKeyDepositL = ppLensHKD . hkdKeyDepositL @era @Identity
 
 -- | The amount of a pool registration deposit
 ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppPoolDepositL = ppLens . hkdPoolDepositL @era @Identity
+ppPoolDepositL = ppLensHKD . hkdPoolDepositL @era @Identity
 
 -- | epoch bound on pool retirement
 ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochInterval
-ppEMaxL = ppLens . hkdEMaxL @era @Identity
+ppEMaxL = ppLensHKD . hkdEMaxL @era @Identity
 
 -- | Desired number of pools
 ppNOptL :: forall era. EraPParams era => Lens' (PParams era) Word16
-ppNOptL = ppLens . hkdNOptL @era @Identity
+ppNOptL = ppLensHKD . hkdNOptL @era @Identity
 
 -- | Pool influence
 ppA0L :: forall era. EraPParams era => Lens' (PParams era) NonNegativeInterval
-ppA0L = ppLens . hkdA0L @era @Identity
+ppA0L = ppLensHKD . hkdA0L @era @Identity
 
 -- | Monetary expansion
 ppRhoL :: forall era. EraPParams era => Lens' (PParams era) UnitInterval
-ppRhoL = ppLens . hkdRhoL @era @Identity
+ppRhoL = ppLensHKD . hkdRhoL @era @Identity
 
 -- | Treasury expansion
 ppTauL :: forall era. EraPParams era => Lens' (PParams era) UnitInterval
-ppTauL = ppLens . hkdTauL @era @Identity
+ppTauL = ppLensHKD . hkdTauL @era @Identity
 
 -- | Decentralization parameter
 ppDL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) UnitInterval
-ppDL = ppLens . hkdDL @era @Identity
+ppDL = ppLensHKD . hkdDL @era @Identity
 
 -- | Extra entropy
 ppExtraEntropyL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) Nonce
-ppExtraEntropyL = ppLens . hkdExtraEntropyL @era @Identity
+ppExtraEntropyL = ppLensHKD . hkdExtraEntropyL @era @Identity
 
 -- | Minimum UTxO value
 ppMinUTxOValueL :: forall era. (EraPParams era, ProtVerAtMost era 4) => Lens' (PParams era) Coin
-ppMinUTxOValueL = ppLens . hkdMinUTxOValueL @era @Identity
+ppMinUTxOValueL = ppLensHKD . hkdMinUTxOValueL @era @Identity
 
 -- | Minimum Stake Pool Cost
 ppMinPoolCostL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinPoolCostL = ppLens . hkdMinPoolCostL @era @Identity
+ppMinPoolCostL = ppLensHKD . hkdMinPoolCostL @era @Identity
 
 -- PParamsUpdate versions of lenses
 
 -- | The linear factor for the minimum fee calculation
 ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeAL = ppuLens . hkdMinFeeAL @era @StrictMaybe
+ppuMinFeeAL = ppuLensHKD . hkdMinFeeAL @era @StrictMaybe
 
 -- | The constant factor for the minimum fee calculation
 ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeBL = ppuLens . hkdMinFeeBL @era @StrictMaybe
+ppuMinFeeBL = ppuLensHKD . hkdMinFeeBL @era @StrictMaybe
 
 -- | Maximal block body size
 ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxBBSizeL = ppuLens . hkdMaxBBSizeL @era @StrictMaybe
+ppuMaxBBSizeL = ppuLensHKD . hkdMaxBBSizeL @era @StrictMaybe
 
 -- | Maximal transaction size
 ppuMaxTxSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxTxSizeL = ppuLens . hkdMaxTxSizeL @era @StrictMaybe
+ppuMaxTxSizeL = ppuLensHKD . hkdMaxTxSizeL @era @StrictMaybe
 
 -- | Maximal block header size
 ppuMaxBHSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
-ppuMaxBHSizeL = ppuLens . hkdMaxBHSizeL @era @StrictMaybe
+ppuMaxBHSizeL = ppuLensHKD . hkdMaxBHSizeL @era @StrictMaybe
 
 -- | The amount of a key registration deposit
 ppuKeyDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuKeyDepositL = ppuLens . hkdKeyDepositL @era @StrictMaybe
+ppuKeyDepositL = ppuLensHKD . hkdKeyDepositL @era @StrictMaybe
 
 -- | The amount of a pool registration deposit
 ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuPoolDepositL = ppuLens . hkdPoolDepositL @era @StrictMaybe
+ppuPoolDepositL = ppuLensHKD . hkdPoolDepositL @era @StrictMaybe
 
 -- | epoch bound on pool retirement
 ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuEMaxL = ppuLens . hkdEMaxL @era @StrictMaybe
+ppuEMaxL = ppuLensHKD . hkdEMaxL @era @StrictMaybe
 
 -- | Desired number of pools
 ppuNOptL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
-ppuNOptL = ppuLens . hkdNOptL @era @StrictMaybe
+ppuNOptL = ppuLensHKD . hkdNOptL @era @StrictMaybe
 
 -- | Pool influence
 ppuA0L :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe NonNegativeInterval)
-ppuA0L = ppuLens . hkdA0L @era @StrictMaybe
+ppuA0L = ppuLensHKD . hkdA0L @era @StrictMaybe
 
 -- | Monetary expansion
 ppuRhoL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuRhoL = ppuLens . hkdRhoL @era @StrictMaybe
+ppuRhoL = ppuLensHKD . hkdRhoL @era @StrictMaybe
 
 -- | Treasury expansion
 ppuTauL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuTauL = ppuLens . hkdTauL @era @StrictMaybe
+ppuTauL = ppuLensHKD . hkdTauL @era @StrictMaybe
 
 -- | Decentralization parameter
 ppuDL ::
   forall era.
   (EraPParams era, ProtVerAtMost era 6) =>
   Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuDL = ppuLens . hkdDL @era @StrictMaybe
+ppuDL = ppuLensHKD . hkdDL @era @StrictMaybe
 
 -- | Extra entropy
 ppuExtraEntropyL ::
   forall era.
   (EraPParams era, ProtVerAtMost era 6) =>
   Lens' (PParamsUpdate era) (StrictMaybe Nonce)
-ppuExtraEntropyL = ppuLens . hkdExtraEntropyL @era @StrictMaybe
+ppuExtraEntropyL = ppuLensHKD . hkdExtraEntropyL @era @StrictMaybe
 
 -- | Minimum UTxO value
 ppuMinUTxOValueL ::
   forall era.
   (EraPParams era, ProtVerAtMost era 4) =>
   Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinUTxOValueL = ppuLens . hkdMinUTxOValueL @era @StrictMaybe
+ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueL @era @StrictMaybe
 
 -- | Minimum Stake Pool Cost
 ppuMinPoolCostL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinPoolCostL = ppuLens . hkdMinPoolCostL @era @StrictMaybe
+ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostL @era @StrictMaybe
 
 mapPParams :: (PParamsHKD Identity era1 -> PParamsHKD Identity era2) -> PParams era1 -> PParams era2
 mapPParams f (PParams pp) = PParams $ f pp

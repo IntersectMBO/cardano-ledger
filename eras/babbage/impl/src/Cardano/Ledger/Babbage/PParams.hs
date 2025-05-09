@@ -127,11 +127,11 @@ class AlonzoEraPParams era => BabbageEraPParams era where
 
 ppCoinsPerUTxOByteL ::
   forall era. BabbageEraPParams era => Lens' (PParams era) CoinPerByte
-ppCoinsPerUTxOByteL = ppLens . hkdCoinsPerUTxOByteL @era @Identity
+ppCoinsPerUTxOByteL = ppLensHKD . hkdCoinsPerUTxOByteL @era @Identity
 
 ppuCoinsPerUTxOByteL ::
   forall era. BabbageEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
-ppuCoinsPerUTxOByteL = ppuLens . hkdCoinsPerUTxOByteL @era @StrictMaybe
+ppuCoinsPerUTxOByteL = ppuLensHKD . hkdCoinsPerUTxOByteL @era @StrictMaybe
 
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@
