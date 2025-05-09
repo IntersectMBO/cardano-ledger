@@ -17,7 +17,6 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Mary.TxBody (
   MaryEraTxBody (..),
