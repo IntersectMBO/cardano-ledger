@@ -103,9 +103,6 @@ library
     transformers,
     validation-selective,
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
-
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Arbitrary

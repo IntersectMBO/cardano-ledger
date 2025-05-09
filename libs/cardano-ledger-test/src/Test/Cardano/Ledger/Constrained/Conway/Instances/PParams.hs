@@ -14,11 +14,6 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- RecordWildCards cause name shadowing warnings in ghc-8.10.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-#endif
-
 -- | This module provides the necessary instances of `HasSpec`
 --   and `HasSimpleRep` for the components of PParams. It hides
 --   the fact that (PParams era) can have different underlying 'data' types

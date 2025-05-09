@@ -16,12 +16,6 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- RecordWildCards cause name shadowing warnings in ghc-8.10.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -O0 #-}
-#endif
-
 -- | This module provides `HasSpec` and `HasSimpleRep` instances for
 --   Basic types. A type is 'Basic' if it is used to define PParams.
 --   See Test.Cardano.Ledger.Constrained.Conway.SimplePParams
