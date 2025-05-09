@@ -18,6 +18,12 @@ source-repository-package
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
   tag: da80e1780155482bc949605049ff0653edd4f2d2
 
+source-repository-package
+  --sha256: sha256-yRiEsKyNfJELf6C/l/RYkc/l6GS6J+hkhU3jMi1Oz2c=
+  type: git
+  location: https://github.com/input-output-hk/cuddle.git
+  tag: 809b3ff4df986c506732fc77e6bb9b3e6ec24835
+
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:

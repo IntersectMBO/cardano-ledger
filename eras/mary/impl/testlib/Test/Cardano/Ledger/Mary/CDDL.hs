@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Allegra.CDDL hiding (
  )
 
 maryCDDL :: Huddle
-maryCDDL = collectFrom [block, transaction]
+maryCDDL = collectFrom [HIRule block, HIRule transaction]
 
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset =
