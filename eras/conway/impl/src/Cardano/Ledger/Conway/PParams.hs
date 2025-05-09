@@ -157,69 +157,69 @@ class BabbageEraPParams era => ConwayEraPParams era where
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
-ppPoolVotingThresholdsL = ppLens . hkdPoolVotingThresholdsL @era @Identity
+ppPoolVotingThresholdsL = ppLensHKD . hkdPoolVotingThresholdsL @era @Identity
 
 ppDRepVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
-ppDRepVotingThresholdsL = ppLens . hkdDRepVotingThresholdsL @era @Identity
+ppDRepVotingThresholdsL = ppLensHKD . hkdDRepVotingThresholdsL @era @Identity
 
 ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
-ppCommitteeMinSizeL = ppLens . hkdCommitteeMinSizeL @era @Identity
+ppCommitteeMinSizeL = ppLensHKD . hkdCommitteeMinSizeL @era @Identity
 
 ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
-ppCommitteeMaxTermLengthL = ppLens . hkdCommitteeMaxTermLengthL @era @Identity
+ppCommitteeMaxTermLengthL = ppLensHKD . hkdCommitteeMaxTermLengthL @era @Identity
 
 ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
-ppGovActionLifetimeL = ppLens . hkdGovActionLifetimeL @era @Identity
+ppGovActionLifetimeL = ppLensHKD . hkdGovActionLifetimeL @era @Identity
 
 ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
-ppGovActionDepositL = ppLens . hkdGovActionDepositL @era @Identity
+ppGovActionDepositL = ppLensHKD . hkdGovActionDepositL @era @Identity
 
 ppDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
-ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
+ppDRepDepositL = ppLensHKD . hkdDRepDepositL @era @Identity
 
 ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
-ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
+ppDRepActivityL = ppLensHKD . hkdDRepActivityL @era @Identity
 
 ppMinFeeRefScriptCostPerByteL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) NonNegativeInterval
-ppMinFeeRefScriptCostPerByteL = ppLens . hkdMinFeeRefScriptCostPerByteL @era @Identity
+ppMinFeeRefScriptCostPerByteL = ppLensHKD . hkdMinFeeRefScriptCostPerByteL @era @Identity
 
 ppuPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PoolVotingThresholds)
-ppuPoolVotingThresholdsL = ppuLens . hkdPoolVotingThresholdsL @era @StrictMaybe
+ppuPoolVotingThresholdsL = ppuLensHKD . hkdPoolVotingThresholdsL @era @StrictMaybe
 
 ppuDRepVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe DRepVotingThresholds)
-ppuDRepVotingThresholdsL = ppuLens . hkdDRepVotingThresholdsL @era @StrictMaybe
+ppuDRepVotingThresholdsL = ppuLensHKD . hkdDRepVotingThresholdsL @era @StrictMaybe
 
 ppuCommitteeMinSizeL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
-ppuCommitteeMinSizeL = ppuLens . hkdCommitteeMinSizeL @era @StrictMaybe
+ppuCommitteeMinSizeL = ppuLensHKD . hkdCommitteeMinSizeL @era @StrictMaybe
 
 ppuCommitteeMaxTermLengthL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuCommitteeMaxTermLengthL = ppuLens . hkdCommitteeMaxTermLengthL @era @StrictMaybe
+ppuCommitteeMaxTermLengthL = ppuLensHKD . hkdCommitteeMaxTermLengthL @era @StrictMaybe
 
 ppuGovActionLifetimeL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuGovActionLifetimeL = ppuLens . hkdGovActionLifetimeL @era @StrictMaybe
+ppuGovActionLifetimeL = ppuLensHKD . hkdGovActionLifetimeL @era @StrictMaybe
 
 ppuGovActionDepositL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuGovActionDepositL = ppuLens . hkdGovActionDepositL @era @StrictMaybe
+ppuGovActionDepositL = ppuLensHKD . hkdGovActionDepositL @era @StrictMaybe
 
 ppuDRepDepositL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
+ppuDRepDepositL = ppuLensHKD . hkdDRepDepositL @era @StrictMaybe
 
 ppuDRepActivityL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
+ppuDRepActivityL = ppuLensHKD . hkdDRepActivityL @era @StrictMaybe
 
 ppuMinFeeRefScriptCostPerByteL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe NonNegativeInterval)
-ppuMinFeeRefScriptCostPerByteL = ppuLens . hkdMinFeeRefScriptCostPerByteL @era @StrictMaybe
+ppuMinFeeRefScriptCostPerByteL = ppuLensHKD . hkdMinFeeRefScriptCostPerByteL @era @StrictMaybe
 
 data PoolVotingThresholds = PoolVotingThresholds
   { pvtMotionNoConfidence :: !UnitInterval
@@ -753,7 +753,7 @@ instance EraPParams ConwayEra where
   hkdTauL = lens (unTHKD . cppTau) $ \pp x -> pp {cppTau = THKD x}
   hkdProtocolVersionL = notSupportedInThisEraL
   hkdMinPoolCostL = lens (unTHKD . cppMinPoolCost) $ \pp x -> pp {cppMinPoolCost = THKD x}
-  ppProtocolVersionL = ppLens . lens cppProtocolVersion (\pp x -> pp {cppProtocolVersion = x})
+  ppProtocolVersionL = ppLensHKD . lens cppProtocolVersion (\pp x -> pp {cppProtocolVersion = x})
 
   ppDG = to (const minBound)
   ppuProtocolVersionL = notSupportedInThisEraL

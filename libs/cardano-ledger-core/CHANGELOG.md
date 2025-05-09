@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Rename `ppLens` and `ppuLens` to `ppLensHKD` and `ppuLensHKD`, respectively
 * Add `sumUTxO` and `sumCoinUTxO`
 * Deprecate `balance` and `coinBalance` in favor of `sumUTxO` and `sumCoinUTxO`
 * Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping. #5004
