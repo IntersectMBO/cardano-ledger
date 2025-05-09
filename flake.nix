@@ -3,17 +3,21 @@
 
   inputs = {
 
-    # Remove this once we no longer need GHC 8.10.7.
+    ###########################################################################
+    # We pin the versions of haskell.nix and hackage.nix because
+    # - Cross compilation for windows is broken in newer versions.
+    # - plutus-preprocessor is a non-buildable package and it seems to be treated differently in newer versions.
+    # We should unpin this once we no longer need it by specifying only haskell.nix and let it use its own default hackage.nix
+    # haskellNix.url = "github:input-output-hk/haskell.nix";
     hackageNix = {
       url = "github:input-output-hk/hackage.nix?ref=for-stackage";
       flake = false;
     };
     haskellNix = {
-      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
-      # Unpin this once we no longer need GHC 8.10.7.
       url = "github:input-output-hk/haskell.nix/a0283c855a38ed70ba521f7a9290e78488ddf11b";
       inputs.hackage.follows = "hackageNix";
     };
+    ###########################################################################
 
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
@@ -201,7 +205,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc8107" "ghc9121"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc928" "ghc9121"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
@@ -282,7 +286,7 @@
             };
           in
             mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc8107`
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc9121`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
