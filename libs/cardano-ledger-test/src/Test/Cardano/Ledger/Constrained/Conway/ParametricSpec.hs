@@ -48,6 +48,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Constrained.API
+import Constrained.AbstractSyntax
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Word (Word64)

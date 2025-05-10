@@ -16,24 +16,22 @@
 
 module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
 
+import Constrained.AbstractSyntax
 import Constrained.Base (
-  Binder (..),
   Forallable (..),
   HOLE (..),
   HasGenHint (..),
   HasSpec (..),
   Logic (..),
-  Pred (..),
-  Semantics (..),
-  Specification (..),
-  Syntax (..),
-  Term (..),
+  Specification,
+  Term,
   appTerm,
   constrained,
   errorLikeMessage,
   explainSpec,
   isErrorLike,
   typeSpec,
+  pattern TypeSpec,
   pattern Unary,
  )
 import Constrained.Conformance (
@@ -43,6 +41,7 @@ import Constrained.Conformance (
 import Constrained.Core (
   unionWithMaybe,
  )
+import Constrained.FunctionSymbol
 import Constrained.GenT (
   oneofT,
  )
@@ -241,8 +240,7 @@ deriving instance Show (TreeW d r)
 instance Semantics TreeW where
   semantics RootLabelW = \(Node a _) -> a
 
-instance Syntax TreeW where
-  inFix _ = False
+instance Syntax TreeW
 
 instance Logic TreeW where
   propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s

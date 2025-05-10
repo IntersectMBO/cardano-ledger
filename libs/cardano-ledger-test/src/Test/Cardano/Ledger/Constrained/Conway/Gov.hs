@@ -22,6 +22,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Cardano.Ledger.UMap (umElems, umElemsL)
 import Constrained.API
+import Constrained.AbstractSyntax
 import Constrained.Base (IsPred (..))
 import Constrained.Spec.Tree (rootLabel_)
 import Data.Coerce
