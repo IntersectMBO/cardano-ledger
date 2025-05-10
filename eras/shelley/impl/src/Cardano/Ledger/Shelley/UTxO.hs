@@ -196,7 +196,7 @@ instance EraUTxO ShelleyEra where
 
 -- We don't consider the reference scripts in the calculation before Conway
 getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx era -> Coin
-getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
+getShelleyMinFeeTxUtxo pp tx = getMinFeeTx pp tx 0
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,

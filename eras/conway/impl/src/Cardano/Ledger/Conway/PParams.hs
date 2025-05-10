@@ -8,6 +8,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -73,7 +74,7 @@ module Cardano.Ledger.Conway.PParams (
 )
 where
 
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..), OrdExUnits (..))
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -90,6 +91,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (ProtVer),
   UnitInterval,
   integralToBounded,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -104,7 +106,6 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
-  HKD,
   HKDApplicative (hkdLiftA2),
   HKDFunctor (..),
   HKDNoUpdate,
@@ -120,12 +121,15 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default (Default (def))
+import Data.Foldable (foldlM, foldr')
 import Data.Functor.Identity (Identity)
+import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
 import Data.Proxy
@@ -154,6 +158,35 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdMinFeeRefScriptCostPerByteL ::
     HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
+
+  toPlutusDataPParamsUpdate :: PParamsUpdate era -> P.Data
+  toPlutusDataPParamsUpdate ppu =
+    P.Map (foldr' accum ([] :: [(P.Data, P.Data)]) (pparams @era))
+    where
+      accum PParam' {ppTag, ppUpdateLens, ppToPlutusData} acc =
+        let mbData = do
+              toPlutusDataF <- ppToPlutusData
+              t <- strictMaybeToMaybe $ ppu ^. ppUpdateLens
+              pure (P.I (toInteger @Word ppTag), toPlutusDataF t)
+         in maybe acc (: acc) mbData
+
+  fromPlutusDataPParamsUpdate :: P.Data -> Maybe (PParamsUpdate era)
+  fromPlutusDataPParamsUpdate (P.Map dataPairs) = foldlM accum emptyPParamsUpdate dataPairs
+    where
+      accum acc (dataKey, dataVal) = do
+        tag <- fromPlutusData @Word dataKey
+        PParam' {ppUpdateLens, ppFromPlutusData} <-
+          IntMap.lookup (fromIntegral tag) ppMap
+        plutusData <- ppFromPlutusData >>= ($ dataVal)
+        pure $ set ppUpdateLens (SJust plutusData) acc
+      ppMap =
+        IntMap.fromList
+          . map
+            ( \pp@PParam' {ppTag} ->
+                (fromIntegral ppTag, pp)
+            )
+          $ pparams @era
+  fromPlutusDataPParamsUpdate _ = Nothing
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
@@ -760,6 +793,40 @@ instance EraPParams ConwayEra where
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
+
+  pparams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppGovProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOByte
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    , ppPoolVotingThresholds
+    , ppDRepVotingThresholds
+    , ppCommitteeMinSize
+    , ppCommitteeMaxTermLength
+    , ppGovActionLifetime
+    , ppGovActionDeposit
+    , ppDRepDeposit
+    , ppDRepActivity
+    , ppMinFeeRefScriptCostPerByte
+    ]
 
 instance AlonzoEraPParams ConwayEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
@@ -1474,3 +1541,119 @@ asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
           <> ","
           <> show (toInteger (maxBound @b))
           <> "]"
+
+ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam' era
+ppCommitteeMaxTermLength =
+  PParam'
+    { ppName = "committeeMaxTermLength"
+    , ppTag = 28
+    , ppLens' = ppCommitteeMaxTermLengthL
+    , ppUpdateLens = ppuCommitteeMaxTermLengthL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppCommitteeMinSize :: ConwayEraPParams era => PParam' era
+ppCommitteeMinSize =
+  PParam'
+    { ppName = "committeeMinSize"
+    , ppTag = 27
+    , ppLens' = ppCommitteeMinSizeL
+    , ppUpdateLens = ppuCommitteeMinSizeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepActivity :: ConwayEraPParams era => PParam' era
+ppDRepActivity =
+  PParam'
+    { ppName = "dRepActivity"
+    , ppTag = 32
+    , ppLens' = ppDRepActivityL
+    , ppUpdateLens = ppuDRepActivityL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepDeposit :: ConwayEraPParams era => PParam' era
+ppDRepDeposit =
+  PParam'
+    { ppName = "dRepDeposit"
+    , ppTag = 31
+    , ppLens' = ppDRepDepositL
+    , ppUpdateLens = ppuDRepDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppDRepVotingThresholds :: ConwayEraPParams era => PParam' era
+ppDRepVotingThresholds =
+  PParam'
+    { ppName = "dRepVotingThresholds"
+    , ppTag = 26
+    , ppLens' = ppDRepVotingThresholdsL
+    , ppUpdateLens = ppuDRepVotingThresholdsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovActionDeposit :: ConwayEraPParams era => PParam' era
+ppGovActionDeposit =
+  PParam'
+    { ppName = "govActionDeposit"
+    , ppTag = 30
+    , ppLens' = ppGovActionDepositL
+    , ppUpdateLens = ppuGovActionDepositL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovActionLifetime :: ConwayEraPParams era => PParam' era
+ppGovActionLifetime =
+  PParam'
+    { ppName = "govActionLifetime"
+    , ppTag = 29
+    , ppLens' = ppGovActionLifetimeL
+    , ppUpdateLens = ppuGovActionLifetimeL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppGovProtocolVersion ::
+  forall era.
+  ( ConwayEraPParams era
+  , PParamsHKD StrictMaybe era ~ ConwayPParams StrictMaybe era
+  ) =>
+  PParam' era
+ppGovProtocolVersion =
+  PParam'
+    { ppName = "protocolVersion"
+    , ppTag = 14
+    , ppLens' = ppProtocolVersionL
+    , ppUpdateLens =
+        ppuLens . lens (fromNoUpdate @StrictMaybe @ProtVer . cppProtocolVersion) const
+    , ppToPlutusData = Nothing
+    , ppFromPlutusData = Nothing
+    }
+
+ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam' era
+ppMinFeeRefScriptCostPerByte =
+  PParam'
+    { ppName = "minFeeRefScriptCostPerByte"
+    , ppTag = 33
+    , ppLens' = ppMinFeeRefScriptCostPerByteL
+    , ppUpdateLens = ppuMinFeeRefScriptCostPerByteL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }
+
+ppPoolVotingThresholds :: ConwayEraPParams era => PParam' era
+ppPoolVotingThresholds =
+  PParam'
+    { ppName = "poolVotingThresholds"
+    , ppTag = 25
+    , ppLens' = ppPoolVotingThresholdsL
+    , ppUpdateLens = ppuPoolVotingThresholdsL
+    , ppToPlutusData = Just toPlutusData
+    , ppFromPlutusData = Just fromPlutusData
+    }

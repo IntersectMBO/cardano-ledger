@@ -8,6 +8,7 @@ import qualified Test.Cardano.Ledger.Allegra.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Allegra.Imp as Imp
 import Test.Cardano.Ledger.Allegra.ImpTest ()
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Core.EraPParamsSpec as EraPParams
 
 main :: IO ()
 main =
@@ -17,3 +18,4 @@ main =
       CddlSpec.spec
       describe "Imp" $ do
         Imp.spec @AllegraEra
+      EraPParams.spec @AllegraEra

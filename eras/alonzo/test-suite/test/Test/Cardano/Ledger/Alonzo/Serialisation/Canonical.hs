@@ -40,8 +40,8 @@ tests :: TestTree
 tests = testProperty "LangDepView encoding is canonical" canonicalLangDepView
 
 canonicalLangDepView :: PParams AlonzoEra -> Set Language -> Property
-canonicalLangDepView pparams langs =
-  let langViews = Set.fromList $ getLanguageView pparams <$> Set.toList langs
+canonicalLangDepView pp langs =
+  let langViews = Set.fromList $ getLanguageView pp <$> Set.toList langs
       encodedViews = serialize (eraProtVerHigh @AlonzoEra) $ encodeLangViews langViews
       base16String = show (B16.encode $ LBS.toStrict encodedViews)
    in counterexample base16String $ case isCanonical encodedViews of

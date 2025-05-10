@@ -96,9 +96,6 @@ defaultPPs =
   , CollateralPercentage 100
   ]
 
-pparams :: EraPParams era => Proof era -> PParams era
-pparams pf = newPParams pf defaultPPs
-
 hasValid :: [TxField era] -> Maybe Bool
 hasValid [] = Nothing
 hasValid (Valid (IsValid b) : _) = Just b
@@ -387,7 +384,8 @@ notValidatingTx pf =
         , Collateral' [mkGenesisTxIn 12]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
+        , WppHash (newScriptIntegrityHash pf pp [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
         ]
+    pp = newPParams pf defaultPPs
     redeemers =
       mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]

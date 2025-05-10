@@ -10,6 +10,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,6 +23,7 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
+  PParam' (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
@@ -87,23 +89,35 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson (KeyValue, Value, withObject)
+import qualified Data.Aeson.Key as Aeson (fromText)
+import qualified Data.Aeson.Types as Aeson (Parser)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
+import qualified Data.Foldable as F (foldMap', foldl', foldr')
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
+import qualified PlutusLedgerApi.Common as P (Data (..))
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
@@ -361,6 +375,81 @@ class
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
+  pparams :: [PParam' era]
+
+  encCBORPParams :: PParams era -> Encoding
+  encCBORPParams pp =
+    encodeListLen (fromIntegral (length (pparams @era)))
+      <> F.foldMap' toEnc (pparams @era)
+    where
+      toEnc PParam' {ppLens'} = encCBOR $ pp ^. ppLens'
+
+  encCBORPParamsUpdate :: PParamsUpdate era -> Encoding
+  encCBORPParamsUpdate pp = encodeMapLen count <> enc
+    where
+      (!count, !enc) = countAndConcat encodeField pparams
+      encodeField PParam' {ppTag, ppUpdateLens} =
+        (encodeWord ppTag <>) . encCBOR <$> pp ^. ppUpdateLens
+      countAndConcat f = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case f x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
+
+  decCBORPParams :: Decoder s (PParams era)
+  decCBORPParams =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (pparams @era))))
+      $ F.foldr'
+        accum
+        (pure (emptyPParams @era))
+        (pparams @era)
+    where
+      accum PParam' {ppLens'} acc =
+        set ppLens' <$> decCBOR <*> acc
+
+  decCBORPParamsUpdate :: Decoder s (PParamsUpdate era)
+  decCBORPParamsUpdate =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          (updateFieldMap pparams)
+      updateFieldMap :: [PParam' era] -> IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          . map
+            ( \PParam' {ppTag, ppUpdateLens} ->
+                (fromIntegral ppTag, field (set ppUpdateLens . SJust) From)
+            )
+  jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
+  jsonPairsPParams pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens')
+    | PParam' {ppName, ppLens'} <- pparams @era
+    ]
+
+  jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
+  jsonPairsPParamsUpdate ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam' {ppName, ppUpdateLens} <- pparams @era
+    , SJust v <- [ppu ^. ppUpdateLens]
+    ]
+
+  fromJsonPParams :: Aeson.Value -> Aeson.Parser (PParams era)
+  fromJsonPParams =
+    Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+      let accum acc PParam' {ppName, ppLens'} =
+            set ppLens' <$> obj .: Aeson.fromText ppName <*> acc
+       in F.foldl' accum (pure $ emptyPParams @era) (pparams @era)
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -565,3 +654,15 @@ data PParam era where
 -- | Turn a list into a Map, this assures we have no duplicates.
 makePParamMap :: [PParam era] -> Map Word (PParam era)
 makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+
+data PParam' era where
+  PParam' ::
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
+    { ppName :: Text
+    , ppTag :: Word
+    , ppLens' :: Lens' (PParams era) t
+    , ppUpdateLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+    , ppToPlutusData :: Maybe (t -> P.Data)
+    , ppFromPlutusData :: Maybe (P.Data -> Maybe t)
+    } ->
+    PParam' era
