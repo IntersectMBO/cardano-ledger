@@ -61,7 +61,6 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain)

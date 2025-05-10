@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.Shelley.UTxO
 import Test.Cardano.Ledger.TreeDiff
 
 -- PParams
@@ -153,6 +154,8 @@ instance
   ToExpr (UTxOState era)
 
 instance ToExpr (ShelleyInstantStake era)
+
+instance ToExpr (ShelleyScriptsNeeded era)
 
 -- Rules/Utxo
 instance

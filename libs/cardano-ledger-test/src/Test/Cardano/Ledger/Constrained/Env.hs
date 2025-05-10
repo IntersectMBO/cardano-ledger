@@ -40,6 +40,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Universe (Shape (..), Shaped (..))
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Generic.Proof (BabbageEra, ConwayEra)
@@ -117,7 +118,7 @@ data Field era s t where
 
 -- SubField :: String -> Rep era t -> Access era s t -> Field era t r -> Field era s t
 
-instance Show (Field era s t) where
+instance AlonzoEraTest era => Show (Field era s t) where
   show (Field n t s _) = intercalate " " ["Field", show n, show s, show t]
   show (FConst r t _ _) = "FConst " ++ synopsis r t
 
@@ -126,7 +127,7 @@ data AnyF era s where
   AnyF :: -- Eq t =>
     Field era s t -> AnyF era s
 
-instance Show (AnyF era s) where
+instance AlonzoEraTest era => Show (AnyF era s) where
   show (AnyF (Field n r t _)) = "Field " ++ n ++ " " ++ show t ++ " " ++ show r
   show (AnyF (FConst r t _ _)) = "FConst " ++ synopsis r t
 
@@ -153,7 +154,7 @@ data Payload era where
 
 newtype Env era = Env (Map String (Payload era))
 
-instance Show (Env era) where
+instance AlonzoEraTest era => Show (Env era) where
   show (Env m) = unlines (map f (Map.toList m))
     where
       f (nm, Payload rep t _) = nm ++ " -> " ++ synopsis rep t
@@ -189,7 +190,7 @@ restrictEnv names (Env env) = Env $ Map.filterWithKey (\x _ -> elem x xs) env
   where
     xs = [x | Name (V x _ _) <- names]
 
-otherFromEnv :: [String] -> Env era -> [String]
+otherFromEnv :: AlonzoEraTest era => [String] -> Env era -> [String]
 otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <- Map.toList m, not (elem n known)]
 
 -- ============================================
@@ -198,7 +199,7 @@ otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <-
 data P era where
   P :: V era t -> t -> P era
 
-instance Show (P era) where
+instance AlonzoEraTest era => Show (P era) where
   show (P (V nm rep _) t) = nm ++ " = " ++ synopsis rep t
   showList xs ans = unlines (ans : (map show xs))
 

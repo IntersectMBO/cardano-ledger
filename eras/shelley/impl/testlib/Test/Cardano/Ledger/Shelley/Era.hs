@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Shelley.Era (
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.State
 import Data.Default
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
@@ -25,6 +26,7 @@ class
   , NFData (StashedAVVMAddresses era)
   , Default (StashedAVVMAddresses era)
   , Arbitrary (StashedAVVMAddresses era)
+  , ToExpr (ScriptsNeeded era)
   ) =>
   ShelleyEraTest era
 

@@ -31,7 +31,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
-import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck hiding (witness)
 import Test.Tasty
@@ -70,10 +69,6 @@ stsPropertyV2 ::
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
   , BaseM (EraRule r era) ~ ReaderT Globals Identity
-  , PrettyA st
-  , PrettyA sig
-  , PrettyA env
-  , PrettyA fail
   , Testable p
   , HasSpec env
   , HasSpec st
@@ -95,10 +90,6 @@ stsPropertyV2' ::
   , PredicateFailure (EraRule r ConwayEra) ~ fail
   , STS (EraRule r ConwayEra)
   , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Identity
-  , PrettyA st
-  , PrettyA sig
-  , PrettyA env
-  , PrettyA fail
   , Testable p
   , HasSpec env
   , HasSpec st
