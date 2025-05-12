@@ -183,7 +183,7 @@ poolReapTransition = do
       ( cs
           & certDStateL . dsUnifiedL
             %~ ( \uni ->
-                  SPoolUView (RewDepUView uni UM.∪+ Map.map compactCoinOrError refunds) UM.⋫ retired
+                   SPoolUView (RewDepUView uni UM.∪+ Map.map compactCoinOrError refunds) UM.⋫ retired
                )
           & certPStateL . psStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psFutureStakePoolParamsL %~ (eval . (retired ⋪))

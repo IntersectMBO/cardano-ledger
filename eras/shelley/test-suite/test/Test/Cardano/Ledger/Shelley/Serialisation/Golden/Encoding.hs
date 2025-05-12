@@ -1021,8 +1021,8 @@ tests =
             mkBasicTx txb3
               & witsTxL @C
                 .~ ( mkBasicTxWits @C
-                      & scriptTxWitsL
-                        .~ Map.singleton (hashScript @C testScript) testScript
+                       & scriptTxWitsL
+                         .~ Map.singleton (hashScript @C testScript) testScript
                    )
           ss =
             Map.fromList

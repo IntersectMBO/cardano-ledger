@@ -534,10 +534,10 @@ instance HasSimpleRep BootstrapAddress where
   type
     TheSop BootstrapAddress =
       '[ "BootstrapAddress"
-          ::: '[ AbstractHash Blake2b_224 Address'
-               , NetworkMagic
-               , AddrType
-               ]
+           ::: '[ AbstractHash Blake2b_224 Address'
+                , NetworkMagic
+                , AddrType
+                ]
        ]
   toSimpleRep (BootstrapAddress (Address root (Attributes (AddrAttributes _ magic) _) typ)) =
     inject @"BootstrapAddress" @(TheSop BootstrapAddress)

@@ -337,7 +337,7 @@ type GenericallyInstantiated a =
           :<>: ShowType a
           :<>: Text ", likely in a HasSpec instance."
           :$$: Text
-                "However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep."
+                 "However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep."
       )
   , HasSimpleRep a
   , HasSpec (SimpleRep a)

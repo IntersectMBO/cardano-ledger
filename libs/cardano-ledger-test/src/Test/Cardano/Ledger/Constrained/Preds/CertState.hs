@@ -280,13 +280,13 @@ certStateGenPreds p =
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
   , mirAvailTreasury
       :<-: ( Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR)
-              :$ Mask accountStateT
-              :$ Mask instantaneousRewardsT
+               :$ Mask accountStateT
+               :$ Mask instantaneousRewardsT
            )
   , mirAvailReserves
       :<-: ( Constr "computeAvailReserves" (availableAfterMIR ReservesMIR)
-              :$ Mask accountStateT
-              :$ Mask instantaneousRewardsT
+               :$ Mask accountStateT
+               :$ Mask instantaneousRewardsT
            )
   , Dom drepDelegation :⊆: credsUniv
   , Rng drepDelegation :⊆: drepUniv

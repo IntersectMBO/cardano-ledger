@@ -601,11 +601,11 @@ universePreds size p =
       )
   , txoutUniv p
       :<-: ( Constr
-              "insert"
-              (\x y _z -> Set.insert x {- (Set.union z -} (Set.fromList y)) -- )
-              ^$ feeTxOut
-              ^$ preTxoutUniv
-              ^$ (colTxoutUniv p)
+               "insert"
+               (\x y _z -> Set.insert x {- (Set.union z -} (Set.fromList y)) -- )
+               ^$ feeTxOut
+               ^$ preTxoutUniv
+               ^$ (colTxoutUniv p)
            )
   , plutusUniv :<-: constTarget (Map.map (\(x, y) -> (x, ScriptF p y)) (allPlutusScripts p))
   , spendPlutusUniv :<-: constTarget (Map.map (\(x, y) -> (x, ScriptF p y)) (spendPlutusScripts p))

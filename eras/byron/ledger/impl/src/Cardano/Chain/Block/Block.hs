@@ -456,7 +456,7 @@ encCBORABoundaryBody :: ABoundaryBody a -> Encoding
 encCBORABoundaryBody _ =
   (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-          <> encCBOR (mempty :: Map Word8 LByteString)
+           <> encCBOR (mempty :: Map Word8 LByteString)
        )
 
 -- | For a boundary block, we keep the header, body, and an annotation for

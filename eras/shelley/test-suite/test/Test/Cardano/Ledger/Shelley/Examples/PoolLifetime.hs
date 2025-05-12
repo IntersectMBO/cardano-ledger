@@ -185,15 +185,15 @@ txbodyEx1 =
           , RegPoolTxCert Cast.alicePoolParams
           ]
             ++ [ ShelleyTxCertMir
-                  ( MIRCert
-                      ReservesMIR
-                      ( StakeAddressesMIR $
-                          Map.fromList
-                            [ (Cast.carlSHK, toDeltaCoin carlMIR)
-                            , (Cast.dariaSHK, toDeltaCoin dariaMIR)
-                            ]
-                      )
-                  )
+                   ( MIRCert
+                       ReservesMIR
+                       ( StakeAddressesMIR $
+                           Map.fromList
+                             [ (Cast.carlSHK, toDeltaCoin carlMIR)
+                             , (Cast.dariaSHK, toDeltaCoin dariaMIR)
+                             ]
+                       )
+                   )
                ]
         )
     )
@@ -215,12 +215,12 @@ txEx1 =
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ aikCold Cast.alicePoolKeys]
                 <> ( asWitness
-                      <$> [ aikCold (coreNodeIssuerKeys 0)
-                          , aikCold (coreNodeIssuerKeys 1)
-                          , aikCold (coreNodeIssuerKeys 2)
-                          , aikCold (coreNodeIssuerKeys 3)
-                          , aikCold (coreNodeIssuerKeys 4)
-                          ]
+                       <$> [ aikCold (coreNodeIssuerKeys 0)
+                           , aikCold (coreNodeIssuerKeys 1)
+                           , aikCold (coreNodeIssuerKeys 2)
+                           , aikCold (coreNodeIssuerKeys 3)
+                           , aikCold (coreNodeIssuerKeys 4)
+                           ]
                    )
             )
       }
