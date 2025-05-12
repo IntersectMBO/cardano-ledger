@@ -608,10 +608,13 @@ class ToGovActionPurpose (p :: GovActionPurpose) where
 
 instance ToGovActionPurpose 'PParamUpdatePurpose where
   toGovActionPurpose = PParamUpdatePurpose
+
 instance ToGovActionPurpose 'HardForkPurpose where
   toGovActionPurpose = HardForkPurpose
+
 instance ToGovActionPurpose 'CommitteePurpose where
   toGovActionPurpose = CommitteePurpose
+
 instance ToGovActionPurpose 'ConstitutionPurpose where
   toGovActionPurpose = ConstitutionPurpose
 
@@ -635,12 +638,18 @@ type role GovPurposeId nominal nominal
 
 deriving newtype instance
   (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance
   (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance Era era => NoThunks (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance Era era => NFData (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance Era era => ToJSONKey (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance Era era => ToJSON (GovPurposeId (p :: GovActionPurpose) era)
+
 deriving newtype instance Era era => Show (GovPurposeId (p :: GovActionPurpose) era)
 
 -- | Abstract data type for representing relationship of governance action with the same purpose

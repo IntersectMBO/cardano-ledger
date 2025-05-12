@@ -4,8 +4,7 @@
 
 module Test.Cardano.Chain.Common.Compact (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)
 import Cardano.HeapWords (HeapWords (..))

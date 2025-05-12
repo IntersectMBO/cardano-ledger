@@ -3,8 +3,7 @@
 
 module Test.Cardano.Crypto.Hashing (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto (decodeAbstractHash, hashHexF, serializeCborHash)
 import Cardano.Ledger.Binary (EncCBOR)

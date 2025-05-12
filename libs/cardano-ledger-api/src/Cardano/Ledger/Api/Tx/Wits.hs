@@ -37,8 +37,7 @@ module Cardano.Ledger.Api.Tx.Wits (
 
   -- ** Conway
   ConwayPlutusPurpose (..),
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),

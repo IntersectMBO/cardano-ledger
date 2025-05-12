@@ -2,8 +2,7 @@ module Cardano.Crypto.Signing.Safe.SafeSigner (
   SafeSigner (..),
   noPassSafeSigner,
   safeToVerification,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase, emptyPassphrase)
 import Cardano.Crypto.Signing.SigningKey (SigningKey (..), toVerification)

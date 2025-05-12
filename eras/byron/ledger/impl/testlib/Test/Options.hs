@@ -16,8 +16,7 @@ module Test.Options (
   concatTSGroups,
   tsGroupToTree,
   ShouldAssertNF (..),
-)
-where
+) where
 
 import Cardano.Prelude
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)

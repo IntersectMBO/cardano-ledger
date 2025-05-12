@@ -10,8 +10,7 @@
 
 module Test.Cardano.Ledger.Shelley.PropertyTests (
   commonTests,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core

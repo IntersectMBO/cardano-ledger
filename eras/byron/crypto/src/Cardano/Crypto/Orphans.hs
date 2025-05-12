@@ -64,14 +64,19 @@ instance ToJSON Ed25519.Signature where
 
 instance ToCBOR Ed25519.PublicKey where
   toCBOR = toByronCBOR
+
 instance FromCBOR Ed25519.PublicKey where
   fromCBOR = fromByronCBOR
+
 instance ToCBOR Ed25519.SecretKey where
   toCBOR = toByronCBOR
+
 instance FromCBOR Ed25519.SecretKey where
   fromCBOR = fromByronCBOR
+
 instance ToCBOR Ed25519.Signature where
   toCBOR = toByronCBOR
+
 instance FromCBOR Ed25519.Signature where
   fromCBOR = fromByronCBOR
 

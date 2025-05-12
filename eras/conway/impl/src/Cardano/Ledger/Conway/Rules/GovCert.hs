@@ -20,8 +20,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
   computeDRepExpiry,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochNo,

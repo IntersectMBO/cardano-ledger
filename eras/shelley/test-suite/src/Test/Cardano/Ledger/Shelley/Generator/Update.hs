@@ -17,8 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Update (
   genShelleyPParamsUpdate,
   genM,
   genDecentralisationParam,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational,

@@ -10,8 +10,7 @@ module Cardano.Chain.Update.ApplicationName (
   applicationNameMaxLength,
   ApplicationNameError (..),
   checkApplicationName,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   Case (..),

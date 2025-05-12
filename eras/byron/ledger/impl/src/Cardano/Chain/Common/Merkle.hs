@@ -24,8 +24,7 @@ module Cardano.Chain.Common.Merkle (
   mkBranch,
   mkLeaf,
   mkLeafDecoded,
-)
-where
+) where
 
 -- Cardano.Prelude has its own Rube Goldberg variant of 'Foldable' which we do not
 -- want. It would be great if we could write

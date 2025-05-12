@@ -7,8 +7,7 @@
 module Cardano.Chain.MempoolPayload (
   MempoolPayload,
   AMempoolPayload (..),
-)
-where
+) where
 
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)

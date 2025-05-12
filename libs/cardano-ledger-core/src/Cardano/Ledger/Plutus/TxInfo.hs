@@ -41,8 +41,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   transEpochNo,
   transEpochInterval,
   transDatum,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))

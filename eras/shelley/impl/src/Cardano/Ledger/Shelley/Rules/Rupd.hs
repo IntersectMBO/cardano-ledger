@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Rupd (
   lift,
   Identity (..),
   RupdEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade,

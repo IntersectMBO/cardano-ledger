@@ -1,7 +1,6 @@
 module Cardano.Chain.Slotting (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Slotting.EpochAndSlotCount as X
 import Cardano.Chain.Slotting.EpochNumber as X

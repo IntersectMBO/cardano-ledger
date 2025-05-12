@@ -9,8 +9,7 @@ module Test.Cardano.Chain.Slotting.Gen (
   genEpochAndSlotCount,
   genConsistentEpochAndSlotCountEpochSlots,
   feedPMEpochSlots,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (
   EpochAndSlotCount (..),

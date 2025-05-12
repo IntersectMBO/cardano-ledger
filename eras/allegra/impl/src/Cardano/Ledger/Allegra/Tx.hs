@@ -8,8 +8,7 @@
 
 module Cardano.Ledger.Allegra.Tx (
   validateTimelock,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()

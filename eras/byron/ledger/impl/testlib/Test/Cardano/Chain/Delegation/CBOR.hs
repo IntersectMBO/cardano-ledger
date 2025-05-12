@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Delegation.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Delegation (unsafePayload)
 import Cardano.Prelude

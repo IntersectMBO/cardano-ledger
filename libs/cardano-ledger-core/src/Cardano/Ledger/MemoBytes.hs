@@ -36,7 +36,6 @@ module Cardano.Ledger.MemoBytes (
 
   -- * Raw equality
   EqRaw (..),
-)
-where
+) where
 
 import Cardano.Ledger.MemoBytes.Internal

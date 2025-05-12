@@ -4,8 +4,7 @@
 
 module Test.Cardano.Chain.UTxO.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (AddrAttributes (..), Attributes (..), mkAttributes)
 import Cardano.Chain.UTxO (

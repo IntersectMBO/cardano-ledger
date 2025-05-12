@@ -25,8 +25,7 @@ module Cardano.Ledger.Binary.Encoding (
   -- * Tools
   runByteBuilder,
   encodeMemPack,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as C
 import Cardano.Ledger.Binary.Encoding.EncCBOR

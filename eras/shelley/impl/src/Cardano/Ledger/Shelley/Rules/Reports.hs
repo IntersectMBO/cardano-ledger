@@ -15,8 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
   showTxCerts,
   produceEqualsConsumed,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core

@@ -22,8 +22,7 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
   smartUTxOState,
   filterAllRewards,
   FilteredRewards (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (

@@ -26,8 +26,7 @@ module Cardano.Chain.Update.Validation.Interface (
   registerVote,
   registerEndorsement,
   registerEpoch,
-)
-where
+) where
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)

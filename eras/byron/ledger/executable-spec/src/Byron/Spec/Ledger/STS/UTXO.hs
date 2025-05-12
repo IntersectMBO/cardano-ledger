@@ -18,8 +18,7 @@ module Byron.Spec.Ledger.STS.UTXO (
   utxo0,
   pps,
   reserves,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
 import Byron.Spec.Ledger.GlobalParams (lovelaceCap)

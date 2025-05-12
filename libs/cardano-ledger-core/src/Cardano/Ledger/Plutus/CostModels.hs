@@ -44,8 +44,7 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelsValid,
   costModelsUnknown,
   flattenCostModels,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

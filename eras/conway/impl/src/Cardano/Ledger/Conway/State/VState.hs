@@ -16,8 +16,7 @@ module Cardano.Ledger.Conway.State.VState (
   vsNumDormantEpochsL,
   vsActualDRepExpiry,
   lookupDepositVState,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (binOpEpochNo)
 import Cardano.Ledger.Binary (

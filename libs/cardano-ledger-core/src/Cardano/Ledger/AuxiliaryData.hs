@@ -6,8 +6,7 @@ module Cardano.Ledger.AuxiliaryData
   AuxiliaryDataHash,
   pattern AuxiliaryDataHash,
   unsafeAuxiliaryDataHash,
-)
-where
+) where
 
 import Cardano.Ledger.Hashes
 

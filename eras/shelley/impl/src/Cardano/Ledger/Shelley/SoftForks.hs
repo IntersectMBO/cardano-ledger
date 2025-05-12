@@ -5,8 +5,7 @@
 module Cardano.Ledger.Shelley.SoftForks (
   validMetadata,
   restrictPoolMetadataHash,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 

@@ -20,13 +20,12 @@ import qualified Test.Cardano.Ledger.Shelley.RulesTests as RulesTests (
  )
 import qualified Test.Cardano.Ledger.Shelley.SafeHash as SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
+import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import qualified Test.Cardano.Ledger.Shelley.UnitTests as UnitTests (unitTests)
 import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
+import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
 import Test.Tasty.QuickCheck (QuickCheckMaxRatio (..))
-
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.QuickCheck (Args (maxSuccess), stdArgs)
 
 main :: IO ()
 main = do

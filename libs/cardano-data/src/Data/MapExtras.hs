@@ -28,8 +28,7 @@ module Data.MapExtras (
   extractKeysSmallSet,
   fromKeys,
   fromElems,
-)
-where
+) where
 
 import Data.Foldable (toList)
 import Data.Map.Internal (Map (..), balanceL, balanceR, glue, link, link2)

@@ -34,8 +34,7 @@ module Cardano.Ledger.Plutus.Data (
   Datum (..),
   datumDataHash,
   translateDatum,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (

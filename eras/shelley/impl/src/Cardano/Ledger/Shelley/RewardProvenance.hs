@@ -7,8 +7,7 @@ module Cardano.Ledger.Shelley.RewardProvenance (
   RewardProvenance (..),
   RewardProvenancePool (..),
   Desirability (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))

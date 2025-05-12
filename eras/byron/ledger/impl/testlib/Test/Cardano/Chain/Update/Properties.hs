@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.Update.Properties (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Update (
   ApplicationName (..),

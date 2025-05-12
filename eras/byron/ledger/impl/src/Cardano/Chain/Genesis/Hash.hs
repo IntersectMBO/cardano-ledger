@@ -5,8 +5,7 @@
 
 module Cardano.Chain.Genesis.Hash (
   GenesisHash (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hashing (Hash)
 import Cardano.Crypto.Raw (Raw)

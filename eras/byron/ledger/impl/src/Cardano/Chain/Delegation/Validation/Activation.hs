@@ -7,8 +7,7 @@ module Cardano.Chain.Delegation.Validation.Activation (
   -- * Activation
   State (..),
   activateDelegation,
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation

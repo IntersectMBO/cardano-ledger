@@ -16,8 +16,7 @@ module Cardano.Ledger.HKD (
   HKDFunctor (..),
   NoUpdate (..),
   HKDApplicative (..),
-)
-where
+) where
 #if __GLASGOW_HASKELL__ < 906
 import Control.Applicative (liftA2)
 #endif

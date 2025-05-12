@@ -23,8 +23,7 @@ module Cardano.Ledger.Plutus.ExUnits (
   ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
   ExUnits' (..),
   Prices (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),

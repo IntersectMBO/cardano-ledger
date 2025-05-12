@@ -89,8 +89,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeDouble,
   encodePreEncoded,
   encodeTerm,
-)
-where
+) where
 
 import qualified Cardano.Binary as C
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)

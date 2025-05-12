@@ -12,8 +12,7 @@ module Cardano.Chain.Common.LovelacePortion (
   LovelacePortion,
   rationalToLovelacePortion,
   lovelacePortionToRational,
-)
-where
+) where
 
 import Cardano.HeapWords (HeapWords)
 import Cardano.Ledger.Binary (

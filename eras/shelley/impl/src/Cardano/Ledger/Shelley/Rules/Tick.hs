@@ -30,8 +30,7 @@ module Cardano.Ledger.Shelley.Rules.Tick (
   validatingTickTransition,
   validatingTickTransitionFORECAST,
   solidifyNextEpochPParams,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Core

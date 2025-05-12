@@ -21,8 +21,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
   ConwayEPOCH,
   PredicateFailure,
   ConwayEpochEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)

@@ -3,8 +3,7 @@
 module Test.Cardano.Ledger.Shelley.Examples (
   CHAINExample (..),
   testCHAINExample,
-)
-where
+) where
 
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley ()

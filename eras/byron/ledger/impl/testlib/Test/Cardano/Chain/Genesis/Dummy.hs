@@ -19,8 +19,7 @@ module Test.Cardano.Chain.Genesis.Dummy (
   dummyProtocolParameters,
   dummyGenesisData,
   dummyGenesisHash,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   BlockCount (..),

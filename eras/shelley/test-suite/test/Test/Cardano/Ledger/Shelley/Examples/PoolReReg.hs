@@ -13,8 +13,7 @@
 -- when re-registratiing.
 module Test.Cardano.Ledger.Shelley.Examples.PoolReReg (
   poolReRegExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),

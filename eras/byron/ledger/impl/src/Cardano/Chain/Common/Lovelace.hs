@@ -46,8 +46,7 @@ module Cardano.Chain.Common.Lovelace (
   scaleLovelaceRationalUp,
   divLovelace,
   modLovelace,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

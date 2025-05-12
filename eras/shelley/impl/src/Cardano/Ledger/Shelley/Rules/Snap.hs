@@ -15,8 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   ShelleySnapPredFailure,
   SnapEvent (..),
   SnapEnv (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, CompactForm)

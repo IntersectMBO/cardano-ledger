@@ -14,10 +14,10 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerExecContext (..)) where
 
-import Data.Bifunctor (Bifunctor (..))
-import Data.Functor.Identity (Identity)
-
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
+import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraTx,
@@ -28,22 +28,9 @@ import Cardano.Ledger.Conway.Core (
   ScriptHash,
  )
 import Cardano.Ledger.Conway.Rules (EnactState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.State (EraCertState (..))
-
-import Test.Cardano.Ledger.Conformance (
-  ExecSpecRule (..),
-  FixupSpecRep (..),
-  checkConformance,
-  runSpecTransM,
-  showOpaqueErrorString,
-  toTestRep,
-  unComputationResult,
- )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
-import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..), utxoStateSpec)
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-
-import Cardano.Ledger.Conway (ConwayEra)
 import Constrained.API (
   assert,
   constrained,
@@ -53,19 +40,28 @@ import Constrained.API (
   satisfies,
   (==.),
  )
-
-import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
+import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
+import Data.Functor.Identity (Identity)
 import GHC.Generics (Generic)
 import Lens.Micro.Mtl (use)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), NFData, Testable (..), ToExpr, ansiExpr)
+import Test.Cardano.Ledger.Conformance (
+  ExecSpecRule (..),
+  FixupSpecRep (..),
+  checkConformance,
+  runSpecTransM,
+  showOpaqueErrorString,
+  toTestRep,
+  unComputationResult,
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (enactStateSpec)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..), utxoStateSpec)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, impGlobalsL, logDoc, tryRunImpRuleNoAssertions)
 import Test.Cardano.Ledger.Imp.Common (expectRightExpr)
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)

@@ -6,8 +6,7 @@ module Test.Cardano.Ledger.Api.State.Query (
   --
   -- These are useful for testing and benchmarking
   getFilteredDelegationsAndRewardAccounts,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)

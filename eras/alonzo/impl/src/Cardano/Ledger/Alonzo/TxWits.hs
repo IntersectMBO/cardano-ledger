@@ -64,8 +64,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   addScriptsTxWitsRaw,
   decodeAlonzoPlutusScript,
   asHashedScriptPair,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -151,8 +150,11 @@ newtype RedeemersRaw era = RedeemersRaw
   deriving (Generic)
 
 deriving newtype instance AlonzoEraScript era => Eq (RedeemersRaw era)
+
 deriving newtype instance AlonzoEraScript era => NFData (RedeemersRaw era)
+
 deriving newtype instance AlonzoEraScript era => NoThunks (RedeemersRaw era)
+
 deriving newtype instance AlonzoEraScript era => Show (RedeemersRaw era)
 
 instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
@@ -179,8 +181,11 @@ newtype Redeemers era = MkRedeemers (MemoBytes (RedeemersRaw era))
   deriving newtype (Generic, ToCBOR, SafeToHash, DecCBOR)
 
 deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
+
 deriving newtype instance AlonzoEraScript era => NFData (Redeemers era)
+
 deriving newtype instance AlonzoEraScript era => NoThunks (Redeemers era)
+
 deriving instance AlonzoEraScript era => Show (Redeemers era)
 
 instance AlonzoEraScript era => Semigroup (Redeemers era) where
@@ -325,6 +330,7 @@ pattern TxDats' :: Map DataHash (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
+
 {-# DEPRECATED TxDats' "In favor of `TxDats`" #-}
 
 pattern TxDats :: forall era. Era era => Map DataHash (Data era) -> TxDats era
@@ -417,11 +423,17 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
   (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs')
 
 {-# COMPLETE AlonzoTxWits' #-}
+
 {-# DEPRECATED AlonzoTxWits' "In favor of `AlonzoTxWits`" #-}
+
 {-# DEPRECATED txwitsVKey' "In favor of `txwitsVKey`" #-}
+
 {-# DEPRECATED txwitsBoot' "In favor of `txwitsBoot`" #-}
+
 {-# DEPRECATED txscripts' "In favor of `txscripts`" #-}
+
 {-# DEPRECATED txdats' "In favor of `txdats`" #-}
+
 {-# DEPRECATED txrdmrs' "In favor of `txrdmrs`" #-}
 
 pattern AlonzoTxWits ::

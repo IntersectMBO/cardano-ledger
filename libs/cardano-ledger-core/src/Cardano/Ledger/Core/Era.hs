@@ -47,8 +47,7 @@ module Cardano.Ledger.Core.Era (
   fromEraShareCBOR,
   eraDecoder,
   eraDecoderWithBytes,
-)
-where
+) where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -156,14 +155,23 @@ absurdEraRule a = case a of {}
 
 -- Rules that must never have a predicate failures
 type instance EraRuleFailure "EPOCH" era = VoidEraRule "EPOCH" era
+
 type instance EraRuleFailure "NEWEPOCH" era = VoidEraRule "NEWEPOCH" era
+
 type instance EraRuleFailure "MIR" era = VoidEraRule "MIR" era
+
 type instance EraRuleFailure "NEWPP" era = VoidEraRule "NEWPP" era
+
 type instance EraRuleFailure "SNAP" era = VoidEraRule "SNAP" era
+
 type instance EraRuleFailure "TICK" era = VoidEraRule "TICK" era
+
 type instance EraRuleFailure "TICKF" era = VoidEraRule "TICKF" era
+
 type instance EraRuleFailure "UPEC" era = VoidEraRule "UPEC" era
+
 type instance EraRuleFailure "RUPD" era = VoidEraRule "RUPD" era
+
 type instance EraRuleFailure "POOLREAP" era = VoidEraRule "POOLREAP" era
 
 class

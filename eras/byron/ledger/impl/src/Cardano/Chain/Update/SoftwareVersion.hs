@@ -11,8 +11,7 @@ module Cardano.Chain.Update.SoftwareVersion (
   SoftwareVersionError (..),
   NumSoftwareVersion,
   checkSoftwareVersion,
-)
-where
+) where
 
 import Cardano.Chain.Update.ApplicationName
 import Cardano.Ledger.Binary (

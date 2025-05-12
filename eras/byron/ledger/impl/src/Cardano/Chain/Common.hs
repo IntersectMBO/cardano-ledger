@@ -1,7 +1,6 @@
 module Cardano.Chain.Common (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Common.AddrAttributes as X
 import Cardano.Chain.Common.AddrSpendingData as X

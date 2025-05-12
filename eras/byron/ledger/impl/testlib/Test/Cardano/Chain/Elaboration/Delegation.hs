@@ -6,8 +6,7 @@ module Test.Cardano.Chain.Elaboration.Delegation (
   elaborateDCertAnnotated,
   elaborateDSEnv,
   tests,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   BlockCount (..),

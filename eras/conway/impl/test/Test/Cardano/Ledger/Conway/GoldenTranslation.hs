@@ -16,8 +16,7 @@
 -- cabal run cardano-ledger-<era>:gen-golden"
 module Test.Cardano.Ledger.Conway.GoldenTranslation (
   spec,
-)
-where
+) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Paths_cardano_ledger_conway (getDataFileName)

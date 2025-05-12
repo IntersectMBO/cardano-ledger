@@ -2,8 +2,7 @@
 
 module Test.Cardano.Crypto.Json (
   tests,
-)
-where
+) where
 
 import Cardano.Prelude
 import Hedgehog (Property)

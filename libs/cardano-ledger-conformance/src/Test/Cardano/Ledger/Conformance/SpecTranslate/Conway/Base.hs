@@ -1136,9 +1136,11 @@ instance
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
 
 instance ToExpr (EpochExecEnv era)
+
 instance Era era => NFData (EpochExecEnv era)
 
 instance HasSimpleRep (EpochExecEnv era)
+
 instance Era era => HasSpec (EpochExecEnv era)
 
 instance SpecTranslate ctx (EpochExecEnv era) where
@@ -1159,9 +1161,11 @@ instance Inject (ConwayExecEnactEnv era) () where
   inject _ = ()
 
 instance ToExpr (ConwayExecEnactEnv era)
+
 instance Era era => NFData (ConwayExecEnactEnv era)
 
 instance HasSimpleRep (ConwayExecEnactEnv era)
+
 instance Era era => HasSpec (ConwayExecEnactEnv era)
 
 instance SpecTranslate ctx (ConwayExecEnactEnv era) where

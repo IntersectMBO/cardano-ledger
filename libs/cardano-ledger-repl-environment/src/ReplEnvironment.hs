@@ -26,11 +26,9 @@ import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
 import Cardano.Ledger.Val
-import Test.Cardano.Ledger.Api.DebugTools
-
+import Constrained.API
 import Control.Monad
 import Control.Monad.IO.Class
-
 import qualified Data.ByteString as BS
 import Data.Default
 import Data.Foldable
@@ -41,20 +39,14 @@ import Data.Maybe
 import Data.Maybe.Strict
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-
 import Lens.Micro
-
 import System.IO
-
+import Test.Cardano.Ledger.Api.DebugTools
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
-
 import Test.ImpSpec
-
 import Test.QuickCheck
-
-import Constrained.API

@@ -19,8 +19,7 @@
 module Test.Cardano.Ledger.Shelley.Examples.TwoPools (
   twoPoolsExample,
   twoPoolsExampleExtended,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),

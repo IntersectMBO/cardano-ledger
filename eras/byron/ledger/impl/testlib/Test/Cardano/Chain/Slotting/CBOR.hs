@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Slotting.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (EpochSlots (..), SlotNumber)
 import Cardano.Prelude

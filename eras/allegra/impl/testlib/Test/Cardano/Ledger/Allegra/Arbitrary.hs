@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Allegra.Arbitrary (
   maxTimelockDepth,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -24,15 +25,13 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Shelley.Scripts (
-  pattern RequireSignature,
- )
-
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireSignature,
+ )
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedNativeScriptGens)

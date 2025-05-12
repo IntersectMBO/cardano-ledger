@@ -21,8 +21,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
   validateFailedBabbageScripts,
   validateScriptsWellFormed,
   babbageUtxowTransition,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (

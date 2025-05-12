@@ -25,8 +25,7 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
   withSlice,
   FullByteString (..),
   decodeAnnSet,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (

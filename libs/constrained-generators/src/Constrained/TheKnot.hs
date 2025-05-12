@@ -87,10 +87,6 @@ import Constrained.Base (
   pattern (:<:),
   pattern (:>:),
  )
-import Constrained.FunctionSymbol
-import Constrained.PrettyUtils
-import Constrained.SumList
-
 import Constrained.Conformance (
   checkPred,
   checkPredsE,
@@ -113,6 +109,7 @@ import Constrained.Env (
   lookupEnv,
   singletonEnv,
  )
+import Constrained.FunctionSymbol
 import Constrained.GenT (
   GE (..),
   GenT,
@@ -192,7 +189,8 @@ import Constrained.NumSpec (
   notInNumSpec,
   shrinkWithNumSpec,
  )
-
+import Constrained.PrettyUtils
+import Constrained.SumList
 -- TODO: some strange things here, why is SolverStage in here?!
 -- Because it is mutually recursive with something else in here.
 import Constrained.Syntax
@@ -605,6 +603,7 @@ instance Logic EqW where
   saturate _ _ = []
 
 infix 4 ==.
+
 (==.) :: HasSpec a => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
 
@@ -689,18 +688,22 @@ instance Logic NumOrdW where
     caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
 
 infixr 4 <=.
+
 (<=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
 (<=.) = appTerm LessOrEqualW
 
 infixr 4 <.
+
 (<.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
 (<.) = appTerm LessW
 
 infixr 4 >=.
+
 (>=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
 (>=.) = appTerm GreaterOrEqualW
 
 infixr 4 >.
+
 (>.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
 (>.) = appTerm GreaterW
 
@@ -1691,10 +1694,13 @@ data ProdW :: [Type] -> Type -> Type where
   ProdW :: (HasSpec a, HasSpec b) => ProdW '[a, b] (Prod a b)
   ProdFstW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] a
   ProdSndW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] b
+
 deriving instance Eq (ProdW as b)
+
 deriving instance Show (ProdW as b)
 
 instance Syntax ProdW
+
 instance Semantics ProdW where
   semantics ProdW = Prod
   semantics ProdFstW = prodFst
@@ -1893,6 +1899,7 @@ instance Logic ElemW where
   saturate _ _ = []
 
 infix 4 `elem_`
+
 elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool
 elem_ = appTerm ElemW
 
@@ -2647,6 +2654,7 @@ hasSize sz = liftSizeSpec sz []
 
 -- =================================================
 infix 4 +.
+
 (+.) :: NumLike a => Term a -> Term a -> Term a
 (+.) = addFn
 
@@ -2654,6 +2662,7 @@ negate_ :: NumLike a => Term a -> Term a
 negate_ = negateFn
 
 infix 4 -.
+
 (-.) :: Numeric n => Term n -> Term n -> Term n
 (-.) x y = addFn x (negateFn y)
 

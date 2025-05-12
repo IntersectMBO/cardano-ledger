@@ -88,8 +88,7 @@ module Control.State.Transition.Extended (
   -- * Random thing
   Threshold (..),
   sfor_,
-)
-where
+) where
 
 import Control.Exception (Exception (..), throw)
 import Control.Monad (when)

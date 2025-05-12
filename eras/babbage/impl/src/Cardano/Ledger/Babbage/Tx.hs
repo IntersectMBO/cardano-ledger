@@ -6,8 +6,7 @@ module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
   TxBody (..),
   module X,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx as X

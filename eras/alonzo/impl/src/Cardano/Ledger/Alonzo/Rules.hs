@@ -8,8 +8,7 @@ module Cardano.Ledger.Alonzo.Rules (
   module Cardano.Ledger.Alonzo.Rules.Utxo,
   module Cardano.Ledger.Alonzo.Rules.Utxos,
   module Cardano.Ledger.Alonzo.Rules.Utxow,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core (EraRuleEvent)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -27,4 +26,5 @@ import Cardano.Ledger.Alonzo.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerEvent, ShelleyTickEvent)
 
 type instance EraRuleEvent "LEDGER" AlonzoEra = ShelleyLedgerEvent AlonzoEra
+
 type instance EraRuleEvent "TICK" AlonzoEra = ShelleyTickEvent AlonzoEra

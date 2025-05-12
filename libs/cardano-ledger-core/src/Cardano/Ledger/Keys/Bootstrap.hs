@@ -19,8 +19,7 @@ module Cardano.Ledger.Keys.Bootstrap (
   unpackByronVKey,
   makeBootstrapWitness,
   verifyBootstrapWit,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (SignedDSIGN (..))
@@ -80,12 +79,14 @@ instance ToCBOR BootstrapWitness where
           <> C.encodeSignedDSIGN bwSignature
           <> toCBOR bwChainCode
           <> toCBOR bwAttributes
+
 instance EncCBOR BootstrapWitness
 
 instance FromCBOR BootstrapWitness where
   fromCBOR =
     decodeRecordNamed "BootstrapWitnessRaw" (const 4) $
       BootstrapWitness <$> fromCBOR <*> C.decodeSignedDSIGN <*> fromCBOR <*> fromCBOR
+
 instance DecCBOR BootstrapWitness
 
 instance Ord BootstrapWitness where

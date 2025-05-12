@@ -6,8 +6,7 @@
 
 module Test.Cardano.Chain.Common.Address (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (addrNetworkMagic, isRedeemAddress)
 import Cardano.Prelude

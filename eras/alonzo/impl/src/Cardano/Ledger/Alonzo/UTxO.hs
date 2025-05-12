@@ -30,8 +30,7 @@ module Cardano.Ledger.Alonzo.UTxO (
 
   -- * WitsVKey needed
   getAlonzoWitsVKeyNeeded,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -73,6 +72,7 @@ newtype AlonzoScriptsNeeded era
   deriving (Monoid, Semigroup)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
+
 deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where

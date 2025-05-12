@@ -16,8 +16,7 @@ module Cardano.Ledger.Conway.State.Stake (
   addConwayInstantStake,
   deleteConwayInstantStake,
   resolveConwayInstantStake,
-)
-where
+) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (

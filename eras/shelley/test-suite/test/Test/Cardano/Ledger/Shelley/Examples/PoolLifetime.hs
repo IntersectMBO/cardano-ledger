@@ -20,8 +20,7 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   makeCompletedPulser,
   poolLifetimeExample,
   mkStake,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),

@@ -1,7 +1,6 @@
 module Cardano.Ledger.Shelley.API.Types (
   module X,
-)
-where
+) where
 
 import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)

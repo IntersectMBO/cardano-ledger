@@ -9,8 +9,7 @@ module Test.Cardano.Ledger.TranslationTools (
   translateEraPartial,
   translateEraEncoding,
   translateEraEncCBOR,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (EncCBOR (..), toPlainEncoding)
 import qualified Cardano.Ledger.Binary.Plain as Plain

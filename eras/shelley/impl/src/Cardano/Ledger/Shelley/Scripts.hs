@@ -31,8 +31,7 @@ module Cardano.Ledger.Shelley.Scripts (
   nativeMultiSigTag,
   eqMultiSigRaw,
   MultiSigRaw (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

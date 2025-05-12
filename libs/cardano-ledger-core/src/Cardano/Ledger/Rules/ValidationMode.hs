@@ -25,8 +25,7 @@ module Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
   runTestOnSignal,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Core

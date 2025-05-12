@@ -210,8 +210,7 @@ module Cardano.Ledger.Api.PParams (
   EraPParams,
   AlonzoEraPParams,
   BabbageEraPParams,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraPParams,

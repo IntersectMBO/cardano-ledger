@@ -11,8 +11,7 @@ module Test.Cardano.Chain.Common.Example (
   exampleAddrSpendingData_VerKey,
   exampleChainDifficulty,
   exampleKeyHash,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   AddrAttributes (..),

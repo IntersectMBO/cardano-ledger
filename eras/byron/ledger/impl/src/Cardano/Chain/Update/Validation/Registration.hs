@@ -24,8 +24,7 @@ module Cardano.Chain.Update.Validation.Registration (
   registerProposal,
   TooLarge (..),
   Adopted (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation

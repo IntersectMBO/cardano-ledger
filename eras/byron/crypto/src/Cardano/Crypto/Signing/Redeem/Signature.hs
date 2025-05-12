@@ -11,8 +11,7 @@ module Cardano.Crypto.Signing.Redeem.Signature (
   verifyRedeemSig,
   verifyRedeemSigDecoded,
   verifyRedeemSigRaw,
-)
-where
+) where
 
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)

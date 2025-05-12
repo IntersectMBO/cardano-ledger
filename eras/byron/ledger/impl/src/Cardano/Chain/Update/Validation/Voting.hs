@@ -15,8 +15,7 @@ module Cardano.Chain.Update.Validation.Voting (
   State (..),
   Error (..),
   registerVoteWithConfirmation,
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation

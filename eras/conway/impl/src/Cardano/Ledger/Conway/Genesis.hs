@@ -13,8 +13,7 @@ module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
   toConwayGenesisPairs,
   cgDelegsL,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -85,6 +84,7 @@ instance ToCBOR ConwayGenesis where
             !> To cgInitialDReps
 
 instance DecCBOR ConwayGenesis
+
 instance EncCBOR ConwayGenesis
 
 instance ToJSON ConwayGenesis where

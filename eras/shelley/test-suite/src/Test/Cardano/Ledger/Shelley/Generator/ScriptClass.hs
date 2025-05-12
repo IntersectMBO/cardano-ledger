@@ -30,8 +30,7 @@ module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
   baseScripts,
   scriptKeyCombinations,
   scriptKeyCombination,
-)
-where
+) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)

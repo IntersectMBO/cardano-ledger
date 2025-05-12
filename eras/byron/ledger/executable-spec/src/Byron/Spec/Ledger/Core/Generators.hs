@@ -8,8 +8,7 @@ module Byron.Spec.Ledger.Core.Generators (
   blockCountGen,
   k,
   kForNumberOfEpochs,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   Addr (Addr),

@@ -329,6 +329,7 @@ data LegacyPlutusArgs l
       !(PlutusScriptContext l)
 
 deriving instance Eq (PlutusScriptContext l) => Eq (LegacyPlutusArgs l)
+
 deriving instance Show (PlutusScriptContext l) => Show (LegacyPlutusArgs l)
 
 instance NFData (PlutusScriptContext l) => NFData (LegacyPlutusArgs l) where

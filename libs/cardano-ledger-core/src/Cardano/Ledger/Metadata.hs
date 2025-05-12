@@ -10,8 +10,7 @@
 module Cardano.Ledger.Metadata (
   Metadatum (..),
   validMetadatum,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

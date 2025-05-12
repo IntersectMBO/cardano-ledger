@@ -34,8 +34,7 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   ansiWlPretty,
   ppEditExpr,
   ediff,
-)
-where
+) where
 
 import qualified Cardano.Binary as Plain
 import qualified Cardano.Crypto.DSIGN as DSIGN

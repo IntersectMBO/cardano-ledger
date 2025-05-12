@@ -45,8 +45,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   setPrevPParams,
   setFutureGenDeleg,
   adoptFutureGenDeleg,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (

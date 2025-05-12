@@ -43,8 +43,7 @@ module Cardano.Ledger.State.SnapShots (
   ssStakeDistrL,
   ssDelegationsL,
   ssPoolParamsL,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),

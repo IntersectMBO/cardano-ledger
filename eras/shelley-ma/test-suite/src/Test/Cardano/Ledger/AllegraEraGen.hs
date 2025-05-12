@@ -17,8 +17,7 @@ module Test.Cardano.Ledger.AllegraEraGen (
   unQuantifyTL,
   someLeaf,
   genValidityInterval,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core

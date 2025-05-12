@@ -1,7 +1,6 @@
 module Main (
   main,
-)
-where
+) where
 
 import Cardano.Prelude
 import qualified Test.Cardano.Chain.Block.CBOR

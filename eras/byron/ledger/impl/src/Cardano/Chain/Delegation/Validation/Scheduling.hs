@@ -11,8 +11,7 @@ module Cardano.Chain.Delegation.Validation.Scheduling (
   Error (..),
   ScheduledDelegation (..),
   scheduleCertificate,
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)

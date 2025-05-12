@@ -29,8 +29,7 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   RedeemerReport,
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))

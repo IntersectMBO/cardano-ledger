@@ -7,8 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (
   exEmptyBlock,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)

@@ -70,8 +70,7 @@ module Cardano.Ledger.Conway.PParams (
   conwayModifiedPPGroups,
   pvtHardForkInitiationL,
   pvtMotionNoConfidenceL,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..), OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts (
@@ -473,10 +472,13 @@ class ToDRepGroup (t :: DRepGroup) where
 
 instance ToDRepGroup 'NetworkGroup where
   toDRepGroup = NetworkGroup
+
 instance ToDRepGroup 'EconomicGroup where
   toDRepGroup = EconomicGroup
+
 instance ToDRepGroup 'TechnicalGroup where
   toDRepGroup = TechnicalGroup
+
 instance ToDRepGroup 'GovGroup where
   toDRepGroup = GovGroup
 
@@ -485,6 +487,7 @@ class ToStakePoolGroup (t :: StakePoolGroup) where
 
 instance ToStakePoolGroup 'SecurityGroup where
   toStakePoolGroup = SecurityGroup
+
 instance ToStakePoolGroup 'NoStakePoolGroup where
   toStakePoolGroup = NoStakePoolGroup
 

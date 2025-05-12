@@ -61,10 +61,15 @@ instance
 
 -- TxCert
 instance ToExpr GenesisDelegCert
+
 instance ToExpr MIRPot
+
 instance ToExpr MIRTarget
+
 instance ToExpr MIRCert
+
 instance ToExpr (ShelleyTxCert era)
+
 instance ToExpr ShelleyDelegCert
 
 -- TxWits

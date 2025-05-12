@@ -69,6 +69,7 @@ data Foo = Foo Int | Bar Int Int
   deriving (Show, Eq, Ord, Generic)
 
 instance HasSimpleRep Foo
+
 instance HasSpec Foo
 
 fooSpec :: Specification Foo
@@ -211,7 +212,9 @@ reifiesMultiple = constrained' $ \x y z ->
   ]
 
 data Three = One | Two | Three deriving (Ord, Eq, Show, Generic)
+
 instance HasSimpleRep Three
+
 instance HasSpec Three
 
 trueSpecUniform :: Specification Three

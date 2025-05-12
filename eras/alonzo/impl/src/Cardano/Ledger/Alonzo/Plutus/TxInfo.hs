@@ -42,8 +42,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   -- * LgacyPlutusArgs helpers
   toPlutusV1Args,
   toLegacyPlutusArgs,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core

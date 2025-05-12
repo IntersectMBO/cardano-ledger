@@ -7,8 +7,7 @@
 -- Description : Golden Tests for the Alonzo era
 module Test.Cardano.Ledger.Alonzo.Golden (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core

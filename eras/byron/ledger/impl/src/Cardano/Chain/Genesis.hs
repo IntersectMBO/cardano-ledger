@@ -1,7 +1,6 @@
 module Cardano.Chain.Genesis (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Genesis.AvvmBalances as X
 import Cardano.Chain.Genesis.Config as X

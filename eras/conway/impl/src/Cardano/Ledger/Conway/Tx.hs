@@ -10,8 +10,7 @@ module Cardano.Ledger.Conway.Tx (
   tierRefScriptFee,
   refScriptCostStride,
   refScriptCostMultiplier,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)

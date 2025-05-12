@@ -26,8 +26,7 @@ module Cardano.Ledger.SafeHash
   castSafeHash,
   extractHash,
   indexProxy,
-)
-where
+) where
 
 import Cardano.Ledger.Hashes
 import Data.Proxy

@@ -24,8 +24,7 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   internSet,
   toMemptyLens,
   decShareMonadCBOR,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.DecCBOR
 import Cardano.Ledger.Binary.Decoding.Decoder

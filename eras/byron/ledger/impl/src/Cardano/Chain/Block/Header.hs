@@ -67,8 +67,7 @@ module Cardano.Chain.Block.Header (
   -- * ToSign
   ToSign (..),
   recoverSignedBytes,
-)
-where
+) where
 
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary (

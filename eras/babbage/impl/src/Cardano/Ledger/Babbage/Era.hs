@@ -7,8 +7,7 @@ module Cardano.Ledger.Babbage.Era (
   BabbageUTXOS,
   BabbageUTXOW,
   BabbageLEDGER,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)

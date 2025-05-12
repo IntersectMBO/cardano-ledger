@@ -34,16 +34,15 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
  )
+import qualified Data.Map.Strict as Map
 import GHC.Exts (fromList)
 import Lens.Micro ((%~), (&), (.~))
 import Lens.Micro.Mtl (use)
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
-
-import qualified Data.Map.Strict as Map
-import qualified PlutusLedgerApi.Common as P
 
 spec ::
   forall era.

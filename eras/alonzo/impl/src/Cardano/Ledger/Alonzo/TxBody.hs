@@ -77,8 +77,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   utxoEntrySize,
   alonzoRedeemerPointer,
   alonzoRedeemerPointerInverse,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()

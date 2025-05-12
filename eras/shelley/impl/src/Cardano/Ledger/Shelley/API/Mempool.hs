@@ -35,8 +35,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
   mkMempoolEnv,
   mkMempoolState,
   overNewEpochState,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Binary (

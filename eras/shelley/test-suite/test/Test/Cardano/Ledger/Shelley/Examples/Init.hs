@@ -15,8 +15,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Init (
   initSt,
   nonce0,
   lastByronHeaderHash,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))

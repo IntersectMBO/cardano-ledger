@@ -133,7 +133,6 @@ import Constrained.TheKnot (
   prodSnd_,
   prod_,
  )
-
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
@@ -145,16 +144,23 @@ import Test.QuickCheck (Arbitrary (..), oneof)
 -- ==================================================================
 
 instance (Typeable a, Typeable b) => HasSimpleRep (a, b)
+
 instance (Typeable a, Typeable b, Typeable c) => HasSimpleRep (a, b, c)
+
 instance (Typeable a, Typeable b, Typeable c, Typeable d) => HasSimpleRep (a, b, c, d)
+
 instance (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e) => HasSimpleRep (a, b, c, d, e)
+
 instance
   (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g) =>
   HasSimpleRep (a, b, c, d, e, g)
+
 instance
   (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g, Typeable h) =>
   HasSimpleRep (a, b, c, d, e, g, h)
+
 instance Typeable a => HasSimpleRep (Maybe a)
+
 instance (Typeable a, Typeable b) => HasSimpleRep (Either a b)
 
 instance
@@ -162,12 +168,14 @@ instance
   , HasSpec b
   ) =>
   HasSpec (a, b)
+
 instance
   ( HasSpec a
   , HasSpec b
   , HasSpec c
   ) =>
   HasSpec (a, b, c)
+
 instance
   ( HasSpec a
   , HasSpec b
@@ -175,6 +183,7 @@ instance
   , HasSpec d
   ) =>
   HasSpec (a, b, c, d)
+
 instance
   ( HasSpec a
   , HasSpec b
@@ -183,6 +192,7 @@ instance
   , HasSpec e
   ) =>
   HasSpec (a, b, c, d, e)
+
 instance
   ( HasSpec a
   , HasSpec b
@@ -192,6 +202,7 @@ instance
   , HasSpec g
   ) =>
   HasSpec (a, b, c, d, e, g)
+
 instance
   ( HasSpec a
   , HasSpec b

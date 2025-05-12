@@ -16,8 +16,7 @@ module Cardano.Chain.Ssc (
   dropInnerSharesMap,
   dropVssCertificatesMap,
   dropVssCertificate,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

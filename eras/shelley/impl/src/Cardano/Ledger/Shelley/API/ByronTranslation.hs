@@ -11,8 +11,7 @@ module Cardano.Ledger.Shelley.API.ByronTranslation (
   -- * Exported for testing purposes
   translateCompactTxOutByronToShelley,
   translateTxIdByronToShelley,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.Common as Byron

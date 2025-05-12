@@ -4,8 +4,7 @@
 
 module Cardano.Ledger.Conway.TxWits (
   module BabbageTxWitsReExport,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.TxWits (
   addrAlonzoTxWitsL,

@@ -88,7 +88,6 @@ import Constrained.List (
   uncurryList_,
  )
 import Constrained.PrettyUtils
-
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
 import qualified Data.List.NonEmpty as NE

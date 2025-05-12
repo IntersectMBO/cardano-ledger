@@ -21,8 +21,7 @@
 module Byron.Spec.Ledger.Update (
   module Byron.Spec.Ledger.Update,
   PredicateFailure (),
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   BlockCount (..),

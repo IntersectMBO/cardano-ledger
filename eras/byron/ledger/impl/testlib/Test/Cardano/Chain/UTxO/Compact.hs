@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.UTxO.Compact (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.UTxO (
   fromCompactTxId,

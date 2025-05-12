@@ -35,8 +35,7 @@ module Cardano.Ledger.Api.Scripts (
   ),
   pattern VotingPurpose,
   pattern ProposingPurpose,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (

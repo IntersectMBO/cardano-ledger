@@ -12,8 +12,7 @@ module Cardano.Chain.Delegation.Payload (
   APayload (..),
   Payload,
   unsafePayload,
-)
-where
+) where
 
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Ledger.Binary (

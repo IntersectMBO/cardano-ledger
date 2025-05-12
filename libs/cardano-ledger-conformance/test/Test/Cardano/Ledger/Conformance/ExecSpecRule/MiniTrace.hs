@@ -29,10 +29,6 @@ import qualified Data.OSet.Strict as OSet
 import Data.Proxy
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
-import qualified Test.Cardano.Ledger.Generic.Proof as Proof
-
 -- \| This is where most of the ExecSpecRule instances are defined
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   nameCerts,
@@ -43,6 +39,9 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   namePoolCert,
   nameTxCert,
  )
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
+import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 
 -- ====================================================================
 

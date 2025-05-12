@@ -54,8 +54,7 @@ module Cardano.Ledger.Binary.Encoding.Coders (
   -- $Combinators
   encodeKeyedStrictMaybeWith,
   encodeKeyedStrictMaybe,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Coders (Density (Dense, Sparse), Wrapped (..))
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))

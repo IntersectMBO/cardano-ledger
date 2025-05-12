@@ -19,8 +19,7 @@
 -- cabal run cardano-ledger-alonzo:gen-golden"
 module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Paths_cardano_ledger_alonzo (getDataFileName)

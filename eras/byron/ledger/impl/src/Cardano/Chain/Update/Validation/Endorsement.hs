@@ -12,8 +12,7 @@ module Cardano.Chain.Update.Validation.Endorsement (
   CandidateProtocolUpdate (..),
   register,
   Error (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation

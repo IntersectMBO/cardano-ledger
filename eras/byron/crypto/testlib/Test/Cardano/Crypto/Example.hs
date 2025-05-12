@@ -14,8 +14,7 @@ module Test.Cardano.Crypto.Example (
   exampleSigningKeys,
   exampleSafeSigner,
   staticSafeSigners,
-)
-where
+) where
 
 import Cardano.Crypto (
   AProtocolMagic (..),

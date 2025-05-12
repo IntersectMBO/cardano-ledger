@@ -10,8 +10,7 @@ module Cardano.Ledger.Shelley.HardForks (
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
   forgoPointerAddressResolution,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 

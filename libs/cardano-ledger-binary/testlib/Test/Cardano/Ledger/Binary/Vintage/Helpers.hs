@@ -21,8 +21,7 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers (
   cfg,
   scfg,
   sizeTest,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

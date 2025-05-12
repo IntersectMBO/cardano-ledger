@@ -14,8 +14,7 @@
 module Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHARDFORK,
   ConwayHardForkEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
 import Cardano.Ledger.Conway.Core

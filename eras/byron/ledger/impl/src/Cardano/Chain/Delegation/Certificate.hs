@@ -27,8 +27,7 @@ module Cardano.Chain.Delegation.Certificate (
 
   -- * Certificate Predicate
   isValid,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto (

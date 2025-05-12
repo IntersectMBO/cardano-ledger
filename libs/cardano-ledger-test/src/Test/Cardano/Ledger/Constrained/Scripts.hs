@@ -13,6 +13,13 @@ module Test.Cardano.Ledger.Constrained.Scripts (
   sufficientScript,
 ) where
 
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock,
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Core (NativeScript, Script, getNativeScript, hashScript)
@@ -20,6 +27,14 @@ import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
+ )
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
@@ -42,22 +57,6 @@ import Test.Cardano.Ledger.Generic.Functions (
 import Test.Cardano.Ledger.Generic.GenState
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
-
-import Cardano.Ledger.Allegra.Scripts (
-  AllegraEraScript,
-  Timelock,
-  ValidityInterval (..),
-  pattern RequireTimeExpire,
-  pattern RequireTimeStart,
- )
-import Cardano.Ledger.Shelley.Scripts (
-  MultiSig,
-  ShelleyEraScript,
-  pattern RequireAllOf,
-  pattern RequireAnyOf,
-  pattern RequireMOf,
-  pattern RequireSignature,
- )
 
 -- ======================================
 

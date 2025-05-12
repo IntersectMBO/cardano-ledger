@@ -21,8 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PredicateFailure,
   VotingPeriod (..),
   votedFuturePParams,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   Globals (quorum),

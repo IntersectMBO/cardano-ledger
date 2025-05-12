@@ -78,6 +78,7 @@ import qualified Debug.Trace as Debug
 import Lens.Micro
 
 type instance EraRuleFailure "UTXOS" BabbageEra = AlonzoUtxosPredFailure BabbageEra
+
 type instance EraRuleEvent "UTXOS" BabbageEra = AlonzoUtxosEvent BabbageEra
 
 instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure BabbageEra

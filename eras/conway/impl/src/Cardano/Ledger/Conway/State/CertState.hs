@@ -20,8 +20,7 @@ module Cardano.Ledger.Conway.State.CertState (
   conwayObligationCertState,
   conwayCertsTotalDepositsTxBody,
   conwayCertsTotalRefundsTxBody,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),

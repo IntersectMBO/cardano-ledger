@@ -6,8 +6,7 @@ module Cardano.Ledger.Shelley (
   TxBody (..),
   ShelleyTxAuxData,
   nativeMultiSigTag,
-)
-where
+) where
 
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis ()

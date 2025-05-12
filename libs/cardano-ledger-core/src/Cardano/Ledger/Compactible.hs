@@ -4,8 +4,7 @@
 module Cardano.Ledger.Compactible (
   -- * Compactible
   Compactible (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Data.Kind (Type)

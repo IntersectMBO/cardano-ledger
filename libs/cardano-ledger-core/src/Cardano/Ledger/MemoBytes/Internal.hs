@@ -64,8 +64,7 @@ module Cardano.Ledger.MemoBytes.Internal (
 
   -- * Raw equality
   EqRaw (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (

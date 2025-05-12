@@ -16,8 +16,7 @@ module Test.Cardano.Chain.Update.Gen (
   genUpId,
   genUpsData,
   genVote,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (SlotNumber (..))
 import Cardano.Chain.Update (

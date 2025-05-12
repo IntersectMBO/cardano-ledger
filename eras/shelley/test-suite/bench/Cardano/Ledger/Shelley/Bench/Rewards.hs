@@ -10,8 +10,7 @@ module Cardano.Ledger.Shelley.Bench.Rewards (
   createRUpd,
   createRUpdWithProv,
   genChainInEpoch,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (

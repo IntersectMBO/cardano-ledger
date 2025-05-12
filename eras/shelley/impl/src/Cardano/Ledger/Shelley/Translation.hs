@@ -10,8 +10,7 @@ module Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   emptyFromByronTranslationContext,
   toFromByronTranslationContext,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

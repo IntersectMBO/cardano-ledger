@@ -7,8 +7,7 @@ module Cardano.Chain.UTxO.TxProof (
   TxProof (..),
   mkTxProof,
   recoverTxProof,
-)
-where
+) where
 
 import Cardano.Chain.Common.Merkle (
   MerkleRoot,

@@ -18,8 +18,7 @@ module Cardano.Ledger.Block (
   bheader,
   bbody,
   neededTxInsForBlock,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

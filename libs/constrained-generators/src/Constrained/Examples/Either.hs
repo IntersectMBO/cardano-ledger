@@ -2,9 +2,8 @@
 
 module Constrained.Examples.Either where
 
-import Data.Set qualified as Set
-
 import Constrained.API
+import Data.Set qualified as Set
 
 eitherSpec :: Specification (Either Int Int)
 eitherSpec = constrained $ \e ->

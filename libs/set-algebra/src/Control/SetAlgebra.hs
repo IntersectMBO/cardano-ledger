@@ -106,8 +106,7 @@ module Control.SetAlgebra (
   -- $Misc
   materialize,
   fromList,
-)
-where
+) where
 
 import Control.Iterate.BaseTypes (
   BaseRep (..),

@@ -4,8 +4,7 @@ module Test.Cardano.Crypto.Dummy (
   aProtocolMagic,
   protocolMagic,
   protocolMagicId,
-)
-where
+) where
 
 import Cardano.Crypto (
   AProtocolMagic (..),

@@ -21,8 +21,7 @@ module Cardano.Ledger.Conway.Rules.Utxow (
   ConwayUTXOW,
   ConwayUtxowPredFailure (..),
   shelleyToConwayUtxowPredFailure,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (

@@ -18,7 +18,6 @@ module Cardano.Ledger.Shelley.Tx (
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
-)
-where
+) where
 
 import Cardano.Ledger.Shelley.Tx.Internal

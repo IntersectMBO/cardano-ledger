@@ -41,8 +41,7 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   hasEq,
   format,
   genSigningKey,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
@@ -390,6 +389,7 @@ pattern IsEq <- Type Is _
     IsEq = Type Is Isn't
 
 {-# COMPLETE IsTypeable #-}
+
 pattern IsTypeable :: () => Typeable a => HasInstances a
 pattern IsTypeable <- Type _ _
   where

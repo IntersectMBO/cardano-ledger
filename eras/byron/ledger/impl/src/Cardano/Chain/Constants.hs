@@ -2,8 +2,7 @@
 --   For configurable constants, see Cardano.Genesis.Configuration.
 module Cardano.Chain.Constants (
   sharedSeedLength,
-)
-where
+) where
 
 import Cardano.Prelude
 

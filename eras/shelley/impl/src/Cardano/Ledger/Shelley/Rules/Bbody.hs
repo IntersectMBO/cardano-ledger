@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   ShelleyBbodyEvent (..),
   PredicateFailure,
   State,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (

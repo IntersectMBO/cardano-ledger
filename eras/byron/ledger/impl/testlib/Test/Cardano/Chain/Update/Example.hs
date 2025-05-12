@@ -16,8 +16,7 @@ module Test.Cardano.Chain.Update.Example (
   exampleProposalBody,
   exampleUpId,
   exampleVote,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   TxFeePolicy (..),

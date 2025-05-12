@@ -31,8 +31,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkBootKeyPairWithSeed,
   genByronVKeyAddr,
   genByronAddrFromVKey,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -118,12 +117,16 @@ instance ToExpr (KeyPair r) where
 
 class MakeCredential c r where
   mkCredential :: c -> Credential r
+
 instance MakeCredential (Credential r) r where
   mkCredential = id
+
 instance MakeCredential (KeyPair r) r where
   mkCredential = KeyHashObj . hashKey . vKey
+
 instance MakeCredential (KeyHash r) r where
   mkCredential = KeyHashObj
+
 instance MakeCredential ScriptHash r where
   mkCredential = ScriptHashObj
 
@@ -131,22 +134,33 @@ class MakeStakeReference c where
   mkStakeRef :: c -> StakeReference
   default mkStakeRef :: MakeCredential c 'Staking => c -> StakeReference
   mkStakeRef = StakeRefBase . mkCredential
+
 instance MakeStakeReference StakeReference where
   mkStakeRef = id
+
 instance MakeStakeReference (Credential 'Staking)
+
 instance MakeStakeReference (KeyPair 'Staking)
+
 instance MakeStakeReference (KeyHash 'Staking)
+
 instance MakeStakeReference ScriptHash
+
 instance MakeStakeReference Ptr where
   mkStakeRef = StakeRefPtr
+
 instance MakeStakeReference (Maybe StakeReference) where
   mkStakeRef = mkStakeRefMaybe
+
 instance MakeStakeReference (Maybe (Credential 'Staking)) where
   mkStakeRef = mkStakeRefMaybe
+
 instance MakeStakeReference (Maybe (KeyPair 'Staking)) where
   mkStakeRef = mkStakeRefMaybe
+
 instance MakeStakeReference (Maybe (KeyHash 'Staking)) where
   mkStakeRef = mkStakeRefMaybe
+
 instance MakeStakeReference (Maybe ScriptHash) where
   mkStakeRef = mkStakeRefMaybe
 

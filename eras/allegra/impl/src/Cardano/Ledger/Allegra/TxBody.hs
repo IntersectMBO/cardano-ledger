@@ -36,8 +36,7 @@ module Cardano.Ledger.Allegra.TxBody (
   AllegraTxBodyRaw (..),
   StrictMaybe (..),
   ValidityInterval (..),
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))

@@ -37,6 +37,7 @@ data List (f :: k -> Type) (as :: [k]) where
 infixr 5 :>
 
 deriving instance (forall a. Show (f a)) => Show (List f as)
+
 deriving instance (forall a. Eq (f a)) => Eq (List f as)
 
 type family Length as where

@@ -6,8 +6,7 @@
 
 module Test.Cardano.Chain.Block.Size (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Block
 import Cardano.Ledger.Binary hiding (label)

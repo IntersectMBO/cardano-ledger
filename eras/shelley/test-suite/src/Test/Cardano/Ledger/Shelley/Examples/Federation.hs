@@ -17,8 +17,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,
   coreNodeKeysBySchedule,
   genDelegs,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN (SignKeyDSIGN)
 import Cardano.Ledger.BaseTypes (Globals (..))

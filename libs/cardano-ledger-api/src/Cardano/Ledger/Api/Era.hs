@@ -52,8 +52,7 @@ module Cardano.Ledger.Api.Era (
   ProtVerInBounds,
   atLeastEra,
   atMostEra,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (Allegra, AllegraEra)
 import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)

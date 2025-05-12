@@ -62,58 +62,108 @@ data TranslationInstance era = TranslationInstance
 
 deriving instance
   (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx era)) => Eq (TranslationInstance era)
+
 deriving instance
   (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx era)) => Show (TranslationInstance era)
 
 instance Cborg.Serialise PV1.DCert
+
 instance Cborg.Serialise PV1.TxInInfo
+
 instance Cborg.Serialise PV1.TxInfo
+
 instance Cborg.Serialise PV1.TxOut
+
 instance Cborg.Serialise PV2.ScriptPurpose
+
 instance Cborg.Serialise PV2.TxId
+
 instance Cborg.Serialise PV2.TxOutRef
+
 instance Cborg.Serialise PV2.TxInInfo
+
 instance Cborg.Serialise PV2.TxInfo
+
 instance Cborg.Serialise PV3.Address
+
 instance Cborg.Serialise PV3.BuiltinData
+
 instance Cborg.Serialise PV3.ChangedParameters
+
 instance Cborg.Serialise PV3.ColdCommitteeCredential
+
 instance Cborg.Serialise PV3.Committee
+
 instance Cborg.Serialise PV3.Constitution
+
 instance Cborg.Serialise PV3.Credential
+
 instance Cborg.Serialise PV3.CurrencySymbol
+
 instance Cborg.Serialise PV3.DRep
+
 instance Cborg.Serialise PV3.DRepCredential
+
 instance Cborg.Serialise PV3.DatumHash
+
 instance Cborg.Serialise PV3.Delegatee
+
 instance Cborg.Serialise PV3.GovernanceAction
+
 instance Cborg.Serialise PV3.GovernanceActionId
+
 instance Cborg.Serialise PV3.HotCommitteeCredential
+
 instance Cborg.Serialise PV3.Lovelace
+
 instance Cborg.Serialise PV3.MintValue
+
 instance Cborg.Serialise PV3.OutputDatum
+
 instance Cborg.Serialise PV3.POSIXTime
+
 instance Cborg.Serialise PV3.ProposalProcedure
+
 instance Cborg.Serialise PV3.ProtocolVersion
+
 instance Cborg.Serialise PV3.PubKeyHash
+
 instance Cborg.Serialise PV3.ScriptHash
+
 instance Cborg.Serialise PV3.ScriptPurpose
+
 instance Cborg.Serialise PV3.StakingCredential
+
 instance Cborg.Serialise PV3.TokenName
+
 instance Cborg.Serialise PV3.TxCert
+
 instance Cborg.Serialise PV3.TxId
+
 instance Cborg.Serialise PV3.TxInInfo
+
 instance Cborg.Serialise PV3.TxInfo
+
 instance Cborg.Serialise PV3.TxOut
+
 instance Cborg.Serialise PV3.TxOutRef
+
 instance Cborg.Serialise PV3.Value
+
 instance Cborg.Serialise PV3.Vote
+
 instance Cborg.Serialise PV3.Voter
+
 instance (Cborg.Serialise k, Cborg.Serialise v) => Cborg.Serialise (PV3.Map k v)
+
 instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
+
 instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
+
 instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
+
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
+
 instance Cborg.Serialise PV3.Rational
 
 instance Cborg.Serialise VersionedTxInfo

@@ -20,13 +20,6 @@
 --   That class is defined in this module, but the instance for that class is made in TheKnot.
 module Constrained.SumList where
 
-import Data.Either (partitionEithers)
-import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
-import Data.Semigroup (sconcat)
-import System.Random (Random (..))
-import Test.QuickCheck (Arbitrary, Gen, choose, shuffle, vectorOf)
-
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec)
@@ -58,11 +51,17 @@ import Constrained.NumSpec (
 import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
+import Data.Either (partitionEithers)
 import Data.List ((\\))
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe, isNothing, listToMaybe)
+import Data.Semigroup (sconcat)
 import qualified Data.Set as Set
 import GHC.Stack
 import Prettyprinter hiding (cat)
+import System.Random (Random (..))
+import Test.QuickCheck (Arbitrary, Gen, choose, shuffle, vectorOf)
 
 -- ====================================================================
 -- What we need to know, that can only be defined in TheKnot module, is

@@ -35,8 +35,7 @@ module Data.OSet.Strict (
   (|><),
   (><|),
   filter,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -257,6 +256,7 @@ pattern xs :|>: x <- (unsnoc -> Just (xs, x))
 infixl 5 :|>:
 
 {-# COMPLETE Empty, (:|>:) #-}
+
 {-# COMPLETE Empty, (:<|:) #-}
 
 -- | \( O(n\log(m*n)) \). For every uncons-ed element from the sequence on the right,

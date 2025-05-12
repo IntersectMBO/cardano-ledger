@@ -68,8 +68,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   dRepDeposit_,
   dRepActivity_,
   minFeeRefScriptCostPerByte_,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)

@@ -12,8 +12,7 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
   roundTripsCBORBuildable,
   compareHexDump,
   deprecatedGoldenDecode,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

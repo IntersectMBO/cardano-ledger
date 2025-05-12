@@ -66,6 +66,7 @@ import Numeric.Natural (Natural)
 
 type RewardAccounts =
   Map (Credential 'Staking) Coin
+
 {-# DEPRECATED RewardAccounts "In favor of `Map` (`Credential` `Staking`) `Coin`" #-}
 
 data EpochState era = EpochState
@@ -81,16 +82,19 @@ data EpochState era = EpochState
   deriving (Generic)
 
 instance CanGetUTxO EpochState
+
 instance CanSetUTxO EpochState where
   utxoL = lens esLState (\es ls -> es {esLState = ls}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake EpochState
+
 instance CanSetInstantStake EpochState where
   instantStakeL = lens esLState (\es ls -> es {esLState = ls}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
 instance CanGetChainAccountState EpochState
+
 instance CanSetChainAccountState EpochState where
   chainAccountStateL = lens esChainAccountState $ \es cas -> es {esChainAccountState = cas}
   {-# INLINE chainAccountStateL #-}
@@ -208,11 +212,13 @@ data UTxOState era = UTxOState
   deriving (Generic)
 
 instance CanGetUTxO UTxOState
+
 instance CanSetUTxO UTxOState where
   utxoL = lens utxosUtxo $ \s u -> s {utxosUtxo = u}
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake UTxOState
+
 instance CanSetInstantStake UTxOState where
   instantStakeL = lens utxosInstantStake $ \s is -> s {utxosInstantStake = is}
   {-# INLINE instantStakeL #-}
@@ -337,16 +343,19 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 instance CanGetUTxO NewEpochState
+
 instance CanSetUTxO NewEpochState where
   utxoL = lens nesEs (\s es -> s {nesEs = es}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake NewEpochState
+
 instance CanSetInstantStake NewEpochState where
   instantStakeL = lens nesEs (\s es -> s {nesEs = es}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
 instance CanGetChainAccountState NewEpochState
+
 instance CanSetChainAccountState NewEpochState where
   chainAccountStateL = lens nesEs (\s es -> s {nesEs = es}) . chainAccountStateL
   {-# INLINE chainAccountStateL #-}
@@ -449,11 +458,13 @@ data LedgerState era = LedgerState
   deriving (Generic)
 
 instance CanGetUTxO LedgerState
+
 instance CanSetUTxO LedgerState where
   utxoL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake LedgerState
+
 instance CanSetInstantStake LedgerState where
   instantStakeL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . instantStakeL
   {-# INLINE instantStakeL #-}

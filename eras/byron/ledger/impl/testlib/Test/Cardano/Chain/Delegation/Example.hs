@@ -1,7 +1,6 @@
 module Test.Cardano.Chain.Delegation.Example (
   exampleCertificates,
-)
-where
+) where
 
 import Cardano.Chain.Delegation (Certificate, signCertificate)
 import Cardano.Chain.Slotting (EpochNumber (..))

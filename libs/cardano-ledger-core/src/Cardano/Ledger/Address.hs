@@ -55,8 +55,7 @@ module Cardano.Ledger.Address (
   decodeRewardAccount,
   fromCborRewardAccount,
   Withdrawals (..),
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash

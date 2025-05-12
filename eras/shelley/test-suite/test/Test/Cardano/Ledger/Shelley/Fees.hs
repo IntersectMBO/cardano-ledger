@@ -9,8 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Fees (
   sizeTests,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.BaseTypes (

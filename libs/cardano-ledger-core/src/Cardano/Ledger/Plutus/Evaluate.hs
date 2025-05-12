@@ -30,8 +30,7 @@ module Cardano.Ledger.Plutus.Evaluate (
   runPlutusScriptWithLogs,
   evaluatePlutusWithContext,
   explainPlutusEvaluationError,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

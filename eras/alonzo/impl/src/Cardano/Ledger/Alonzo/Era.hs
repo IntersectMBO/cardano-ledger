@@ -8,8 +8,7 @@ module Cardano.Ledger.Alonzo.Era (
   AlonzoUTXOW,
   AlonzoBBODY,
   AlonzoLEDGER,
-)
-where
+) where
 
 import Cardano.Ledger.Mary (MaryEra, MaryValue)
 import Cardano.Ledger.Shelley.Core

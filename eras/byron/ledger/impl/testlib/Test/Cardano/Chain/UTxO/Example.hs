@@ -20,8 +20,7 @@ module Test.Cardano.Chain.UTxO.Example (
   exampleTxWitness,
   exampleRedeemSignature,
   exampleHashTx,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   NetworkMagic (..),

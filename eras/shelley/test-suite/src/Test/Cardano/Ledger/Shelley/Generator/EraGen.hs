@@ -28,8 +28,7 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
   someKeyPairs,
   allScripts,
   mkDummyHash,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)

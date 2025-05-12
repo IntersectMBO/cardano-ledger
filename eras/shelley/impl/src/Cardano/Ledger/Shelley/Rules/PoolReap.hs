@@ -18,8 +18,7 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapState (..),
   PredicateFailure,
   ShelleyPoolreapPredFailure,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)

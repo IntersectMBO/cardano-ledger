@@ -2,8 +2,7 @@
 
 module Test.Cardano.Mirror (
   mainnetEpochFiles,
-)
-where
+) where
 
 import Cardano.Prelude
 import System.Directory (doesDirectoryExist, getDirectoryContents)

@@ -15,8 +15,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   Delta (..),
   encodedLen,
   pickRandomFromMap,
-)
-where
+) where
 
 import Cardano.Ledger.Address (
   Addr (..),

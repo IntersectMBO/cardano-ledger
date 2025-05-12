@@ -25,8 +25,7 @@ module Cardano.Ledger.Shelley.UTxO (
   getShelleyWitsVKeyNeeded,
   getShelleyWitsVKeyNeededNoGov,
   module UTxO,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))

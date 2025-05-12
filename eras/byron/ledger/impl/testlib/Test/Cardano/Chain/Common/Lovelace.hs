@@ -6,8 +6,7 @@
 
 module Test.Cardano.Chain.Common.Lovelace (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   LovelaceError (..),

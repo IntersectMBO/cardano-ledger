@@ -8,8 +8,7 @@
 module Cardano.Ledger.Conway (
   Conway,
   ConwayEra,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Conway.Era (ConwayEra)

@@ -84,8 +84,7 @@ module Cardano.Ledger.BaseTypes (
   -- * Injection
   Inject (..),
   positiveUnitIntervalNonZeroRational,
-)
-where
+) where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))

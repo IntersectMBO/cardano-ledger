@@ -5,8 +5,7 @@
 
 module Test.Cardano.Chain.Block.ValidationMode (
   tests,
-)
-where
+) where
 
 import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Byron.Spec.Chain.STS.Rule.Chain (CHAIN)

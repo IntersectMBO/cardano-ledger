@@ -8,8 +8,7 @@ module Cardano.Chain.Block.Proof (
   ProofValidationError (..),
   mkProof,
   recoverProof,
-)
-where
+) where
 
 import Cardano.Chain.Block.Body (
   ABody (..),

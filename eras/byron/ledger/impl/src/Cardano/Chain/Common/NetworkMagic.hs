@@ -7,8 +7,7 @@
 module Cardano.Chain.Common.NetworkMagic (
   NetworkMagic (..),
   makeNetworkMagic,
-)
-where
+) where
 
 import Cardano.Crypto.ProtocolMagic (
   AProtocolMagic (..),

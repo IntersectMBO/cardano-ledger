@@ -58,8 +58,7 @@ module Cardano.Ledger.Alonzo.PParams (
 
   -- * JSON helpers
   alonzoCommonPParamsHKDPairs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.BaseTypes (

@@ -2,8 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
-where
+module Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript) where
 
 import Cardano.Ledger.Plutus.Language (
   Language (..),

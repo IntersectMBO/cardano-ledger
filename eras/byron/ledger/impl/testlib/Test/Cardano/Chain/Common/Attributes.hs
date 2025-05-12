@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Common.Attributes (
   tests,
-)
-where
+) where
 
 import Cardano.Prelude
 import Hedgehog (assert, forAll, property)

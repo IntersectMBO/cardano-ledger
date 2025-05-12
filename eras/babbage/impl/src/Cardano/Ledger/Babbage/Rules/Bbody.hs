@@ -22,7 +22,6 @@ import Cardano.Ledger.Babbage.Rules.Ledgers ()
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure)
 import Cardano.Ledger.Core
-
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
   ShelleyDelegPredFailure,

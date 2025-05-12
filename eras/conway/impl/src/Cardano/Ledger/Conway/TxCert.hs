@@ -42,8 +42,7 @@ module Cardano.Ledger.Conway.TxCert (
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
   pattern UpdateDRepTxCert,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (Anchor, StrictMaybe (..), invalidKey, kindObject)

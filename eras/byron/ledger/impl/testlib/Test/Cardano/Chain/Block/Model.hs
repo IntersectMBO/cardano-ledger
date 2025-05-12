@@ -23,8 +23,7 @@ module Test.Cardano.Chain.Block.Model (
   elaborateAndUpdate,
   passConcreteValidation,
   elaborateBlock,
-)
-where
+) where
 
 import Byron.Spec.Chain.STS.Block (BlockStats (..))
 import qualified Byron.Spec.Chain.STS.Block as Abstract

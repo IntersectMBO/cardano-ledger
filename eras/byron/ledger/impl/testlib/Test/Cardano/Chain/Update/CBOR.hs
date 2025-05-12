@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.Update.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (rationalToLovelacePortion)
 import Cardano.Chain.Update (ApplicationName (..), SoftforkRule (..))

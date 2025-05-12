@@ -11,8 +11,7 @@ module Test.Cardano.Chain.UTxO.Model (
   elaborateInitialUTxO,
   elaborateTxWitnesses,
   elaborateTxWitsBSWithMap,
-)
-where
+) where
 
 import qualified Byron.Spec.Ledger.STS.UTXO as Abstract
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)

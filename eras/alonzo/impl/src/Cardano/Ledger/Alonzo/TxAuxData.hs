@@ -45,8 +45,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   addPlutusScripts,
   decodeTxAuxDataByTokenType,
   emptyAlonzoTxAuxDataRaw,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))

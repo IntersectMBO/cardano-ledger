@@ -114,8 +114,7 @@ module Cardano.Ledger.UMap (
   domDeleteAll,
   deleteStakingCredential,
   extractStakingCredential,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Binary

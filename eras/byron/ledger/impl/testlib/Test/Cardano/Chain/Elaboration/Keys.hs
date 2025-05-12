@@ -8,8 +8,7 @@ module Test.Cardano.Chain.Elaboration.Keys (
   vKeyPair,
   vKeyToSKey,
   vKeyToSafeSigner,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   KeyPair,

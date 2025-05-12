@@ -1812,10 +1812,13 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
+
 instance InjectRuleFailure "CERTS" ShelleyDelegPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
+
 instance InjectRuleFailure "CERT" ShelleyDelegPredFailure ConwayEra where
   injectFailure = DelegFailure . injectFailure
+
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
   injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c

@@ -12,8 +12,7 @@
 -- Example demonstrating Genesis Delegation
 module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
   genesisDelegExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)

@@ -21,8 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   PoolEnv (..),
   PredicateFailure,
   ShelleyPoolPredFailure (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (raNetwork)

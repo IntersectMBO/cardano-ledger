@@ -45,8 +45,7 @@ module Data.OMap.Strict (
   adjust,
   filter,
   decodeOMap,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR,
@@ -360,6 +359,7 @@ pattern xs :|>: x <- (unsnoc -> Just (xs, x))
 infixl 5 :|>:
 
 {-# COMPLETE Empty, (:|>:) #-}
+
 {-# COMPLETE Empty, (:<|:) #-}
 
 -- | \( O(n \log m) \). For every uncons-ed element from the sequence on the right,

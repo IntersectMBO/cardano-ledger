@@ -72,8 +72,7 @@ module Cardano.Chain.Block.Block (
   abobHdrChainDifficulty,
   abobHdrHash,
   abobHdrPrevHash,
-)
-where
+) where
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 

@@ -4,8 +4,7 @@
 
 module Test.Cardano.Chain.UTxO.ValidationMode (
   tests,
-)
-where
+) where
 
 import qualified Byron.Spec.Ledger.Core as Abstract
 import qualified Byron.Spec.Ledger.Core.Generators as Abstract

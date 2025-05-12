@@ -10,8 +10,7 @@
 
 module Cardano.Chain.Genesis.KeyHashes (
   GenesisKeyHashes (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash)
 import Cardano.Ledger.Binary

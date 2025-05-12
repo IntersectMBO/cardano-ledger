@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.Ssc.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Ssc (
   SscPayload (..),

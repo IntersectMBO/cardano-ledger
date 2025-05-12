@@ -12,8 +12,7 @@
 module Cardano.Ledger.Rewards (
   RewardType (..),
   Reward (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (

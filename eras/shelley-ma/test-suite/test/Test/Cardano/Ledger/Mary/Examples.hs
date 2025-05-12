@@ -3,8 +3,7 @@
 
 module Test.Cardano.Ledger.Mary.Examples (
   testMaryNoDelegLEDGER,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)

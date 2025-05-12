@@ -20,8 +20,7 @@ module Cardano.Ledger.TxIn (
   mkTxInPartial,
   txInToText,
   TxIx,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)

@@ -27,8 +27,7 @@ module Cardano.Ledger.Api.Tx.Address (
   RewardAccount (..),
   serialiseRewardAccount,
   deserialiseRewardAccount,
-)
-where
+) where
 
 import Cardano.Ledger.Address
 import Control.Applicative ((<|>))

@@ -22,8 +22,7 @@ module Cardano.Ledger.Tools (
   boom,
   integralToByteStringN,
   byteStringToNum,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)

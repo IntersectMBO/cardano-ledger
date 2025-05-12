@@ -9,8 +9,7 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (
   timelockTests,
   MultiSig,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (

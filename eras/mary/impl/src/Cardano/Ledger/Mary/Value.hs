@@ -38,8 +38,7 @@ module Cardano.Ledger.Mary.Value (
 
   -- * Deprecated
   prune,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes (Inject (..))

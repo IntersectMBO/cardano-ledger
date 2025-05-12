@@ -47,8 +47,7 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psDepositsL,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
 import Cardano.Ledger.Binary (
@@ -275,7 +274,9 @@ data CommitteeAuthorization
   deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks CommitteeAuthorization
+
 instance NFData CommitteeAuthorization
+
 instance ToJSON CommitteeAuthorization
 
 instance EncCBOR CommitteeAuthorization where

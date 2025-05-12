@@ -15,8 +15,7 @@ module Cardano.Ledger.Alonzo (
   pattern AlonzoTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()

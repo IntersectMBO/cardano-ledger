@@ -7,8 +7,7 @@
 module Cardano.Chain.Common.KeyHash (
   KeyHash (..),
   hashKey,
-)
-where
+) where
 
 import Cardano.Chain.Common.AddressHash
 import Cardano.Crypto (decodeAbstractHash, hashHexF)

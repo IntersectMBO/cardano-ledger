@@ -911,6 +911,7 @@ test Nothing = do
 
 bad :: [Int]
 bad = [] -- [3, 8, 13, 41, 50, 60, 65, 82, 99, 100, 109, 112]
+
 go :: Int -> IO ()
 go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], notElem i bad]
 

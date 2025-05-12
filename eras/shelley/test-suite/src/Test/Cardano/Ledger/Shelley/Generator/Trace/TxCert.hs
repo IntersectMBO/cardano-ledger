@@ -15,8 +15,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
   CERTS,
   genTxCerts,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
 import Cardano.Ledger.Coin (Coin (..))

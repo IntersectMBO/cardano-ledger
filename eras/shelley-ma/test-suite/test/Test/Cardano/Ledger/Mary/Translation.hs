@@ -6,8 +6,7 @@
 module Test.Cardano.Ledger.Mary.Translation (
   maryTranslationTests,
   maryEncodeDecodeTests,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary

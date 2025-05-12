@@ -5,8 +5,7 @@
 
 module Cardano.Ledger.Mary.Tx (
   validateTimelock,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Core (EraTx (..), upgradeTxAuxData, upgradeTxBody, upgradeTxWits)

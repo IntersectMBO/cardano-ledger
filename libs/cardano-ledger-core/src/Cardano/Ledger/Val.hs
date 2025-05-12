@@ -14,8 +14,7 @@ module Cardano.Ledger.Val (
   scale,
   invert,
   sumVal,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)

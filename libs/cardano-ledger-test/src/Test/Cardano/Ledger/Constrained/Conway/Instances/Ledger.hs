@@ -200,6 +200,7 @@ type ConwayTxBodyTypes =
    , StrictMaybe Coin
    , Coin
    ]
+
 instance HasSpec (TxBody ConwayEra)
 
 instance HasSimpleRep (TxBody ConwayEra) where
@@ -232,9 +233,13 @@ instance HasSimpleRep DeltaCoin where
   type SimpleRep DeltaCoin = Integer
   fromSimpleRep = DeltaCoin
   toSimpleRep (DeltaCoin c) = c
+
 instance HasSpec DeltaCoin
+
 instance OrdLike DeltaCoin
+
 instance NumLike DeltaCoin
+
 instance Foldy DeltaCoin where
   genList s s' = map fromSimpleRep <$> genList @Integer (toSimpleRepSpec s) (toSimpleRepSpec s')
   theAddFn = AddW
@@ -247,18 +252,25 @@ instance Foldy DeltaCoin where
 deriving via Integer instance Num DeltaCoin
 
 instance (Typeable (TxCert era), Typeable era) => HasSimpleRep (GovSignal era)
+
 instance HasSpec (GovSignal ConwayEra)
 
 instance HasSimpleRep SlotNo
+
 instance OrdLike SlotNo
+
 instance HasSpec SlotNo
 
 instance HasSimpleRep EpochNo
+
 instance OrdLike EpochNo
+
 instance HasSpec EpochNo
+
 instance NumLike EpochNo
 
 instance HasSimpleRep TxIx
+
 instance HasSpec TxIx
 
 instance Typeable index => HasSpec (SafeHash index) where
@@ -272,27 +284,35 @@ instance Typeable index => HasSpec (SafeHash index) where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep TxId
+
 instance HasSpec TxId
 
 instance HasSimpleRep TxIn
+
 instance HasSpec TxIn
 
 instance Typeable a => HasSimpleRep (StrictSeq a) where
   type SimpleRep (StrictSeq a) = [a]
   toSimpleRep = toList
   fromSimpleRep = StrictSeq.fromList
+
 instance HasSpec a => HasSpec (StrictSeq a)
+
 instance Typeable a => Forallable (StrictSeq a) a
 
 instance Typeable a => HasSimpleRep (Seq a) where
   type SimpleRep (Seq a) = [a]
   toSimpleRep = toList
   fromSimpleRep = Seq.fromList
+
 instance HasSpec a => HasSpec (Seq a)
+
 instance Typeable a => Forallable (Seq a) a
+
 instance HasSpec a => C.Sized (Seq a)
 
 instance Typeable a => HasSimpleRep (Sized a)
+
 instance HasSpec a => HasSpec (Sized a)
 
 sizedValue_ :: (HasSpec (Sized a), HasSpec a) => Term (Sized a) -> Term a
@@ -302,15 +322,18 @@ sizedSize_ :: (HasSpec (Sized a), HasSpec a) => Term (Sized a) -> Term Int64
 sizedSize_ = sel @1
 
 instance HasSimpleRep Addr28Extra
+
 instance HasSpec Addr28Extra
 
 instance HasSimpleRep DataHash32
+
 instance HasSpec DataHash32
 
 type ShelleyTxOutTypes era =
   '[ Addr
    , Value era
    ]
+
 instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
   type TheSop (ShelleyTxOut era) = '["ShelleyTxOut" ::: ShelleyTxOutTypes era]
   toSimpleRep (ShelleyTxOut addr val) =
@@ -327,6 +350,7 @@ type AlonzoTxOutTypes era =
    , Value era
    , StrictMaybe DataHash
    ]
+
 instance (Era era, Val (Value era)) => HasSimpleRep (AlonzoTxOut era) where
   type TheSop (AlonzoTxOut era) = '["AlonzoTxOut" ::: AlonzoTxOutTypes era]
   toSimpleRep (AlonzoTxOut addr val mdat) =
@@ -345,6 +369,7 @@ type BabbageTxOutTypes era =
    , Datum era
    , StrictMaybe (Script era)
    ]
+
 instance (Typeable (Script era), Era era, Val (Value era)) => HasSimpleRep (BabbageTxOut era) where
   type TheSop (BabbageTxOut era) = '["BabbageTxOut" ::: BabbageTxOutTypes era]
   toSimpleRep (BabbageTxOut addr val dat msc) =
@@ -391,6 +416,7 @@ instance
   fromSimpleRep x = fromMaybe err . toCompact $ fromSimpleRep x
     where
       err = error $ "toCompact @" ++ show (typeOf x) ++ " " ++ show x
+
 instance
   ( Compactible a
   , GenericallyInstantiated (CompactForm a)
@@ -406,12 +432,14 @@ instance HasSimpleRep MaryValue where
   type TheSop MaryValue = '["MaryValue" ::: '[Coin]]
   toSimpleRep (MaryValue c _) = c
   fromSimpleRep c = MaryValue c mempty
+
 instance HasSpec MaryValue
 
 maryValueCoin_ :: Term MaryValue -> Term Coin
 maryValueCoin_ = sel @0
 
 instance HasSimpleRep PV1.Data
+
 instance HasSpec PV1.Data where
   type TypeSpec PV1.Data = ()
   emptySpec = ()
@@ -426,17 +454,20 @@ instance Era era => HasSimpleRep (Data era) where
   type SimpleRep (Data era) = PV1.Data
   toSimpleRep = getPlutusData
   fromSimpleRep = mkMemoizedEra @era . PlutusData
+
 instance Era era => HasSpec (Data era)
 
 instance Era era => HasSimpleRep (BinaryData era) where
   type SimpleRep (BinaryData era) = Data era
   toSimpleRep = binaryDataToData
   fromSimpleRep = dataToBinaryData
+
 instance
   (Era era, HasSpec (Data era)) =>
   HasSpec (BinaryData era)
 
 instance Typeable era => HasSimpleRep (Datum era)
+
 instance (Era era, HasSpec (Data era)) => HasSpec (Datum era)
 
 -- TODO: here we are cheating to get out of having to deal with Plutus scripts
@@ -445,6 +476,7 @@ instance Typeable era => HasSimpleRep (AlonzoScript era) where
   toSimpleRep (TimelockScript tl) = tl
   toSimpleRep (PlutusScript _) = error "toSimpleRep for AlonzoScript on a PlutusScript"
   fromSimpleRep = TimelockScript
+
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
@@ -525,9 +557,11 @@ instance HasSimpleRep CompactAddr where
   type SimpleRep CompactAddr = SimpleRep Addr
   toSimpleRep = toSimpleRep . decompactAddr
   fromSimpleRep = compactAddr . fromSimpleRep
+
 instance HasSpec CompactAddr
 
 instance HasSimpleRep Addr
+
 instance HasSpec Addr
 
 instance HasSimpleRep BootstrapAddress where
@@ -553,9 +587,11 @@ instance HasSimpleRep BootstrapAddress where
 instance HasSpec BootstrapAddress
 
 instance HasSimpleRep NetworkMagic
+
 instance HasSpec NetworkMagic
 
 instance HasSimpleRep AddrType
+
 instance HasSpec AddrType
 
 instance Typeable b => HasSpec (AbstractHash Blake2b_224 b) where
@@ -571,21 +607,26 @@ instance Typeable b => HasSpec (AbstractHash Blake2b_224 b) where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep StakeReference
+
 instance HasSpec StakeReference
 
 instance HasSimpleRep SlotNo32
+
 instance HasSpec SlotNo32
 
 instance HasSimpleRep Ptr
+
 instance HasSpec Ptr
 
 instance HasSimpleRep CertIx where
   type SimpleRep CertIx = Word16
   toSimpleRep = unCertIx
   fromSimpleRep = CertIx
+
 instance HasSpec CertIx
 
 instance Typeable r => HasSimpleRep (Credential r)
+
 instance Typeable r => HasSpec (Credential r)
 
 cKeyHashObj ::
@@ -597,6 +638,7 @@ cScriptHashObj ::
 cScriptHashObj = con @"ScriptHashObj"
 
 instance HasSimpleRep ScriptHash
+
 instance HasSpec ScriptHash
 
 pickFromFixedPool :: Arbitrary a => Int -> Gen a
@@ -632,18 +674,23 @@ instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep (ConwayTxCert era)
+
 instance Era era => HasSpec (ConwayTxCert era)
 
 instance HasSimpleRep ConwayDelegCert
+
 instance HasSpec ConwayDelegCert
 
 instance HasSimpleRep PoolCert
+
 instance HasSpec PoolCert
 
 instance HasSimpleRep PoolParams
+
 instance HasSpec PoolParams
 
 instance HasSimpleRep PoolMetadata
+
 instance HasSpec PoolMetadata
 
 instance HasSpec StakePoolRelay where
@@ -657,15 +704,19 @@ instance HasSpec StakePoolRelay where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep Port
+
 instance HasSpec Port
 
 instance HasSimpleRep ConwayGovCert
+
 instance HasSpec ConwayGovCert
 
 instance HasSimpleRep Anchor
+
 instance HasSpec Anchor
 
 instance HasSimpleRep Url
+
 instance HasSpec Url where
   type TypeSpec Url = ()
   emptySpec = ()
@@ -734,6 +785,7 @@ data StringW :: [Type] -> Type -> Type where
   StrLenW :: StringLike s => StringW '[s] Int
 
 deriving instance Show (StringW as b)
+
 deriving instance Eq (StringW as b)
 
 strLen_ :: (HasSpec s, StringLike s) => Term s -> Term Int
@@ -765,21 +817,27 @@ class StringLike s where
   getLength :: s -> Int
 
 instance HasSimpleRep Delegatee
+
 instance HasSpec Delegatee
 
 instance HasSimpleRep DRep
+
 instance HasSpec DRep
 
 instance HasSimpleRep Withdrawals
+
 instance HasSpec Withdrawals
 
 instance HasSimpleRep RewardAccount
+
 instance HasSpec RewardAccount
 
 instance HasSimpleRep Network
+
 instance HasSpec Network
 
 instance HasSimpleRep MultiAsset
+
 instance HasSpec MultiAsset where
   emptySpec =
     defaultMapSpec
@@ -792,43 +850,56 @@ instance HasSimpleRep AssetName where
   type SimpleRep AssetName = ShortByteString
   toSimpleRep (AssetName sbs) = sbs
   fromSimpleRep sbs = AssetName sbs
+
 instance HasSpec AssetName
 
 instance HasSimpleRep PolicyID
+
 instance HasSpec PolicyID
 
 instance HasSimpleRep TxAuxDataHash
+
 instance HasSpec TxAuxDataHash
 
 instance Typeable era => HasSimpleRep (VotingProcedures era)
+
 instance Typeable era => HasSpec (VotingProcedures era)
 
 instance HasSimpleRep (VotingProcedure era)
+
 instance Typeable era => HasSpec (VotingProcedure era)
 
 instance HasSimpleRep Vote
+
 instance HasSpec Vote
 
 instance HasSimpleRep GovActionId
+
 instance HasSpec GovActionId where
   shrinkWithTypeSpec _ _ = []
 
 instance HasSimpleRep GovActionIx
+
 instance HasSpec GovActionIx
 
 instance HasSimpleRep (GovPurposeId p era)
+
 instance (Typeable p, Era era) => HasSpec (GovPurposeId p era)
 
 instance Typeable era => HasSimpleRep (GovAction era)
+
 instance EraSpecPParams era => HasSpec (GovAction era)
 
 instance HasSimpleRep (Constitution era)
+
 instance EraPParams era => HasSpec (Constitution era)
 
 instance HasSimpleRep (ConwayPParams StrictMaybe c)
+
 instance Typeable c => HasSpec (ConwayPParams StrictMaybe c)
 
 instance HasSimpleRep (ConwayPParams Identity era)
+
 instance Era era => HasSpec (ConwayPParams Identity era)
 
 instance HasSimpleRep CoinPerByte where
@@ -836,6 +907,7 @@ instance HasSimpleRep CoinPerByte where
   type SimpleRep CoinPerByte = Coin
   fromSimpleRep = CoinPerByte
   toSimpleRep = unCoinPerByte
+
 instance HasSpec CoinPerByte
 
 instance HasSpec Char where
@@ -859,15 +931,18 @@ instance HasSpec CostModel where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep Language
+
 instance HasSpec Language
 
 instance HasSimpleRep (NoUpdate a)
+
 instance Typeable a => HasSpec (NoUpdate a)
 
 instance Typeable a => HasSimpleRep (THKD tag StrictMaybe a) where
   type SimpleRep (THKD tag StrictMaybe a) = SOP (TheSop (StrictMaybe a))
   fromSimpleRep = THKD . fromSimpleRep
   toSimpleRep (THKD sm) = toSimpleRep sm
+
 instance (IsNormalType a, Typeable tag, HasSpec a) => HasSpec (THKD tag StrictMaybe a)
 
 instance Typeable a => HasSimpleRep (THKD tag Identity a) where
@@ -884,9 +959,11 @@ instance
   HasSpec (THKD tag Identity a)
 
 instance HasSimpleRep GovActionPurpose
+
 instance HasSpec GovActionPurpose
 
 instance HasSimpleRep Voter
+
 instance HasSpec Voter
 
 -- TODO: this might be a problem considering duplicates in the list! This
@@ -895,10 +972,13 @@ instance (Typeable a, Ord a) => HasSimpleRep (SOS.OSet a) where
   type SimpleRep (SOS.OSet a) = [a]
   fromSimpleRep = SOS.fromStrictSeq . StrictSeq.fromList
   toSimpleRep = toList . SOS.toStrictSeq
+
 instance (Ord a, HasSpec a) => HasSpec (SOS.OSet a)
+
 instance (Typeable a, Ord a) => Forallable (SOS.OSet a) a
 
 instance Typeable era => HasSimpleRep (ProposalProcedure era)
+
 instance EraSpecPParams era => HasSpec (ProposalProcedure era)
 
 pProcDeposit_ ::
@@ -912,36 +992,47 @@ pProcGovAction_ ::
 pProcGovAction_ = sel @2
 
 instance HasSimpleRep ValidityInterval
+
 instance HasSpec ValidityInterval
 
 instance HasSimpleRep DRepState
+
 instance HasSpec DRepState
 
 instance HasSimpleRep CommitteeAuthorization
+
 instance HasSpec CommitteeAuthorization
 
 instance HasSimpleRep (CommitteeState era)
+
 instance Era era => HasSpec (CommitteeState era)
 
 instance Typeable era => HasSimpleRep (VState era)
+
 instance Era era => HasSpec (VState era)
 
 instance HasSimpleRep (PState era)
+
 instance Era era => HasSpec (PState era)
 
 instance HasSimpleRep (DState era)
+
 instance Era era => HasSpec (DState era)
 
 instance HasSimpleRep FutureGenDeleg
+
 instance HasSpec FutureGenDeleg
 
 instance HasSimpleRep GenDelegPair
+
 instance HasSpec GenDelegPair
 
 instance HasSimpleRep GenDelegs
+
 instance HasSpec GenDelegs
 
 instance HasSimpleRep InstantaneousRewards
+
 instance HasSpec InstantaneousRewards
 
 type UMapTypes =
@@ -950,10 +1041,12 @@ type UMapTypes =
    , Map (Credential 'Staking) (KeyHash 'StakePool)
    , Map (Credential 'Staking) DRep
    ]
+
 instance HasSimpleRep UMap where
   type TheSop UMap = '["UMap" ::: UMapTypes]
   toSimpleRep um = inject @"UMap" @'["UMap" ::: UMapTypes] (rdPairMap um) (ptrMap um) (sPoolMap um) (dRepMap um)
   fromSimpleRep rep = algebra @'["UMap" ::: UMapTypes] rep unify
+
 instance HasSpec UMap
 
 instance HasSimpleRep RDPair where
@@ -972,23 +1065,29 @@ instance HasSimpleRep RDPair where
             (fromSimpleRep rew)
             (fromSimpleRep dep)
       )
+
 instance HasSpec RDPair
 
 instance Typeable era => HasSimpleRep (ShelleyCertState era)
+
 instance EraCertState era => HasSpec (ShelleyCertState era)
 
 instance Typeable era => HasSimpleRep (ConwayCertState era)
+
 instance ConwayEraCertState era => HasSpec (ConwayCertState era)
 
 instance Typeable era => HasSimpleRep (GovRelation StrictMaybe era)
+
 instance Era era => HasSpec (GovRelation StrictMaybe era)
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (GovEnv era)
+
 instance
   (EraSpecPParams era, EraTxOut era, EraCertState era, EraGov era, HasSpec (CertState era)) =>
   HasSpec (GovEnv era)
 
 instance Typeable era => HasSimpleRep (GovActionState era)
+
 instance (Era era, EraSpecPParams era) => HasSpec (GovActionState era)
 
 gasId_ ::
@@ -1035,7 +1134,9 @@ gasProposalProcedure_ = sel @4
 --  toSimpleRep and fromSimpleRep methods to make the HasSimpleRep instance.
 
 type GAS era = GovActionState era
+
 type ProposalTree era = (StrictMaybe GovActionId, [Tree (GAS era)])
+
 type ProposalsType era =
   '[ ProposalTree era -- PParamUpdate
    , ProposalTree era -- HardFork
@@ -1049,6 +1150,7 @@ type ProposalsType era =
    -- of DFS gives us a lot of testing already, and there are bigger fish to fry than
    -- this right now.
    ]
+
 instance EraPParams era => HasSimpleRep (Proposals era) where
   type TheSop (Proposals era) = '["Proposals" ::: ProposalsType era]
   toSimpleRep props =
@@ -1204,12 +1306,15 @@ instance
         ]
 
 instance HasSimpleRep (EnactSignal ConwayEra)
+
 instance HasSpec (EnactSignal ConwayEra)
 
 instance Typeable era => HasSimpleRep (EnactState era)
+
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (EnactState era)
 
 instance HasSimpleRep (Committee era)
+
 instance Era era => HasSpec (Committee era)
 
 instance
@@ -1217,6 +1322,7 @@ instance
   , Typeable era
   ) =>
   HasSimpleRep (RatifyEnv era)
+
 instance
   ( HasSpec (InstantStake era)
   , Era era
@@ -1224,48 +1330,62 @@ instance
   HasSpec (RatifyEnv era)
 
 instance HasSimpleRep (RatifyState ConwayEra)
+
 instance HasSpec (RatifyState ConwayEra)
 
 instance HasSimpleRep (RatifySignal ConwayEra)
+
 instance HasSpec (RatifySignal ConwayEra)
 
 instance HasSimpleRep PoolDistr
+
 instance HasSpec PoolDistr
 
 instance HasSimpleRep IndividualPoolStake
+
 instance HasSpec IndividualPoolStake
 
 instance HasSimpleRep (ConwayGovCertEnv ConwayEra)
+
 instance HasSpec (ConwayGovCertEnv ConwayEra)
 
 instance Typeable era => HasSimpleRep (PoolEnv era)
+
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (PoolEnv era)
 
 instance Era era => HasSimpleRep (CertEnv era)
+
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (CertEnv era)
 
 instance HasSimpleRep NonMyopic
+
 instance HasSpec NonMyopic
 
 instance HasSimpleRep Likelihood
+
 instance HasSpec Likelihood
 
 instance HasSimpleRep LogWeight
+
 instance HasSpec LogWeight
 
 instance HasSimpleRep ChainAccountState
+
 instance HasSpec ChainAccountState
 
 instance HasSimpleRep SnapShot
+
 instance HasSpec SnapShot
 
 instance HasSimpleRep Stake
+
 instance HasSpec Stake
 
 instance (Typeable k, Typeable v, VMap.Vector vk k, VMap.Vector vv v) => HasSimpleRep (VMap vk vv k v) where
   type SimpleRep (VMap vk vv k v) = Map k v
   toSimpleRep = VMap.toMap
   fromSimpleRep = VMap.fromMap
+
 instance
   ( VMap.Vector vk k
   , VMap.Vector vv v
@@ -1282,9 +1402,11 @@ instance
   HasSpec (VMap vk vv k v)
 
 instance HasSimpleRep SnapShots
+
 instance HasSpec SnapShots
 
 instance (Typeable (CertState era), EraTxOut era) => HasSimpleRep (LedgerState era)
+
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1299,6 +1421,7 @@ instance
   HasSpec (LedgerState era)
 
 instance (Typeable (InstantStake era), Typeable (GovState era), Typeable era) => HasSimpleRep (UTxOState era)
+
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1309,23 +1432,29 @@ instance
   HasSpec (UTxOState era)
 
 instance HasSimpleRep (ShelleyInstantStake era)
+
 instance Typeable era => HasSpec (ShelleyInstantStake era)
 
 instance HasSimpleRep (ConwayInstantStake era)
+
 instance Typeable era => HasSpec (ConwayInstantStake era)
 
 instance Typeable (TxOut era) => HasSimpleRep (UTxO era)
+
 instance
   (Era era, HasSpec (TxOut era), IsNormalType (TxOut era)) =>
   HasSpec (UTxO era)
 
 instance HasSimpleRep (ConwayGovState ConwayEra)
+
 instance HasSpec (ConwayGovState ConwayEra)
 
 instance HasSimpleRep (DRepPulsingState ConwayEra)
+
 instance HasSpec (DRepPulsingState ConwayEra)
 
 instance HasSimpleRep (PulsingSnapshot ConwayEra)
+
 instance HasSpec (PulsingSnapshot ConwayEra)
 
 type DRepPulserTypes =
@@ -1343,6 +1472,7 @@ type DRepPulserTypes =
    , Map (Credential 'Staking) (CompactForm Coin)
    , Map (KeyHash 'StakePool) PoolParams
    ]
+
 instance
   HasSimpleRep
     (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
@@ -1370,9 +1500,11 @@ instance
       rep
       $ \ps um b sd spd dd ds ce cs es p pds poolps ->
         DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals poolps
+
 instance HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (UtxoEnv era)
+
 instance
   (EraGov era, EraTxOut era, EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
   HasSpec (UtxoEnv era)
@@ -1390,6 +1522,7 @@ instance
   , Era era
   ) =>
   HasSimpleRep (AlonzoTx era)
+
 instance
   ( EraSpecPParams era
   , HasSpec (TxBody era)
@@ -1408,6 +1541,7 @@ type ShelleyTxTypes era =
    , TxWits era
    , Maybe (TxAuxData era)
    ]
+
 instance
   ( EraTxOut era
   , EraTx era
@@ -1432,6 +1566,7 @@ instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyT
       (\body wits aux -> ShelleyTx body wits (maybeToStrictMaybe aux))
 
 instance HasSimpleRep IsValid
+
 instance HasSpec IsValid
 
 -- ===============================================================
@@ -1442,6 +1577,7 @@ type AlonzoTxAuxDataTypes era =
   '[ Map Word64 Metadatum
    , StrictSeq (Timelock era)
    ]
+
 instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
   type
     TheSop (AlonzoTxAuxData era) =
@@ -1453,6 +1589,7 @@ instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
   fromSimpleRep rep =
     algebra @'["AlonzoTxAuxData" ::: AlonzoTxAuxDataTypes era] rep $
       \metaMap tsSeq -> AlonzoTxAuxData metaMap tsSeq mempty
+
 instance
   ( Era era
   , AlonzoEraScript era
@@ -1465,6 +1602,7 @@ type AllegraTxAuxDataTypes era =
   '[ Map Word64 Metadatum
    , StrictSeq (Timelock era)
    ]
+
 instance Era era => HasSimpleRep (AllegraTxAuxData era) where
   type
     TheSop (AllegraTxAuxData era) =
@@ -1487,6 +1625,7 @@ instance
 type ShelleyTxAuxDataTypes era =
   '[ Map Word64 Metadatum
    ]
+
 instance Era era => HasSimpleRep (ShelleyTxAuxData era) where
   type
     TheSop (ShelleyTxAuxData era) =
@@ -1506,6 +1645,7 @@ instance
   HasSpec (ShelleyTxAuxData era)
 
 instance HasSimpleRep Metadatum
+
 instance HasSpec Metadatum
 
 -- ===============================================================
@@ -1515,6 +1655,7 @@ type AlonzoTxWitsTypes =
   '[ Set (WitVKey 'Witness)
    , Set BootstrapWitness
    ]
+
 instance AlonzoEraScript era => HasSimpleRep (AlonzoTxWits era) where
   type
     TheSop (AlonzoTxWits era) =
@@ -1526,12 +1667,14 @@ instance AlonzoEraScript era => HasSimpleRep (AlonzoTxWits era) where
   fromSimpleRep rep =
     algebra @'["AlonzoTxWits" ::: AlonzoTxWitsTypes] rep $
       \vkeyWits bootstrapWits -> AlonzoTxWits vkeyWits bootstrapWits mempty (TxDats mempty) (Redeemers mempty)
+
 instance AlonzoEraScript era => HasSpec (AlonzoTxWits era)
 
 type ShelleyTxWitsTypes era =
   '[ Set (WitVKey 'Witness)
    , Set BootstrapWitness
    ]
+
 instance EraScript era => HasSimpleRep (ShelleyTxWits era) where
   type
     TheSop (ShelleyTxWits era) =
@@ -1543,6 +1686,7 @@ instance EraScript era => HasSimpleRep (ShelleyTxWits era) where
   fromSimpleRep rep =
     algebra @'["ShelleyTxWits" ::: ShelleyTxWitsTypes era] rep $
       \vkeyWits bootstrapWits -> ShelleyTxWits vkeyWits mempty bootstrapWits
+
 instance EraScript era => HasSpec (ShelleyTxWits era)
 
 instance Typeable r => HasSpec (WitVKey r) where
@@ -1566,6 +1710,7 @@ instance HasSpec BootstrapWitness where
   toPreds _ _ = toPred True
 
 instance Era era => HasSimpleRep (LedgerEnv era)
+
 instance (HasSpec (PParams era), Era era) => HasSpec (LedgerEnv era)
 
 onJust' ::
@@ -1586,9 +1731,11 @@ onSized ::
 onSized sz p = match sz $ \a _ -> p a
 
 instance Typeable era => HasSimpleRep (ConwayDelegEnv era)
+
 instance (HasSpec (PParams era), Era era) => HasSpec (ConwayDelegEnv era)
 
 instance Era era => HasSimpleRep (EpochState era)
+
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1603,24 +1750,31 @@ instance
   HasSpec (EpochState era)
 
 instance HasSimpleRep FreeVars
+
 instance HasSpec FreeVars
 
 instance HasSimpleRep PoolRewardInfo
+
 instance HasSpec PoolRewardInfo
 
 instance HasSimpleRep LeaderOnlyReward
+
 instance HasSpec LeaderOnlyReward
 
 instance HasSimpleRep StakeShare
+
 instance HasSpec StakeShare
 
 instance HasSimpleRep BlocksMade
+
 instance HasSpec BlocksMade
 
 instance HasSimpleRep RewardType
+
 instance HasSpec RewardType
 
 instance HasSimpleRep RewardAns
+
 instance HasSpec RewardAns
 
 instance HasSimpleRep PulsingRewUpdate where
@@ -1628,9 +1782,11 @@ instance HasSimpleRep PulsingRewUpdate where
   toSimpleRep (Complete x) = toSimpleRep x
   toSimpleRep x@(Pulsing _ _) = toSimpleRep (runShelleyBase (fst <$> completeRupd x))
   fromSimpleRep x = Complete (fromSimpleRep x)
+
 instance HasSpec PulsingRewUpdate
 
 instance (Typeable (StashedAVVMAddresses era), Era era) => HasSimpleRep (NewEpochState era)
+
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1646,19 +1802,24 @@ instance
   HasSpec (NewEpochState era)
 
 instance HasSimpleRep Reward
+
 instance HasSpec Reward
 
 instance HasSimpleRep RewardSnapShot
+
 instance HasSpec RewardSnapShot
 
 instance HasSimpleRep RewardUpdate
+
 instance HasSpec RewardUpdate
+
 type PulserTypes =
   '[ Int
    , FreeVars
    , VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)
    , RewardAns
    ]
+
 instance HasSimpleRep Pulser where
   type TheSop Pulser = '["Pulser" ::: PulserTypes]
   toSimpleRep (RSLP n free bal ans) =
@@ -1675,6 +1836,7 @@ instance HasSimpleRep Pulser where
 instance HasSpec Pulser
 
 instance (Typeable (Tx era), Typeable era) => HasSimpleRep (CertsEnv era)
+
 instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx era)) => HasSpec (CertsEnv era)
 
 -- CompactForm
@@ -1724,9 +1886,11 @@ data CoercibleW (args :: [Type]) (res :: Type) where
   CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW '[a] b
 
 deriving instance Show (CoercibleW args res)
+
 deriving instance Eq (CoercibleW args res)
 
 instance Syntax CoercibleW
+
 instance Semantics CoercibleW where
   semantics = \case
     CoerceW -> coerce
@@ -1755,6 +1919,7 @@ data CoinW (ds :: [Type]) (res :: Type) where
   ToDeltaW :: CoinW '[Coin] DeltaCoin
 
 deriving instance Show (CoinW args res)
+
 deriving instance Eq (CoinW args res)
 
 instance Syntax CoinW
@@ -1782,22 +1947,29 @@ deltaToCoin :: DeltaCoin -> Coin
 deltaToCoin (DeltaCoin i) = Coin i
 
 instance Typeable era => HasSimpleRep (ShelleyGovState era)
+
 instance (EraTxOut era, EraGov era, EraSpecPParams era) => HasSpec (ShelleyGovState era)
 
 instance HasSimpleRep ShelleyDelegCert
+
 instance HasSpec ShelleyDelegCert
 
 instance HasSimpleRep MIRCert
+
 instance HasSpec MIRCert
 
 instance HasSimpleRep MIRTarget
+
 instance HasSpec MIRTarget
 
 instance HasSimpleRep MIRPot
+
 instance HasSpec MIRPot
 
 instance HasSimpleRep (ShelleyTxCert era)
+
 instance Era era => HasSpec (ShelleyTxCert era)
 
 instance HasSimpleRep GenesisDelegCert
+
 instance HasSpec GenesisDelegCert

@@ -35,8 +35,7 @@ module Cardano.Ledger.Mary.TxBody (
     mtbMint
   ),
   MaryTxBodyRaw,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody

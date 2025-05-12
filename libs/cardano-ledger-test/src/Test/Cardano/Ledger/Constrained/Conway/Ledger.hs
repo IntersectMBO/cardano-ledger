@@ -4,10 +4,9 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.Ledger where
 
-import Constrained.API
-
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
+import Constrained.API
 import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::

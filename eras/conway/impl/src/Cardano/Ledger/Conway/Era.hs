@@ -52,23 +52,33 @@ type instance Value ConwayEra = MaryValue
 -------------------------------------------------------------------------------
 
 type instance EraRule "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
+
 type instance EraRuleFailure "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
+
 type instance EraRuleEvent "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
 
 type instance EraRule "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
+
 type instance EraRuleFailure "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
+
 type instance EraRuleEvent "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
 
 type instance EraRule "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
+
 type instance EraRuleFailure "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
+
 type instance EraRuleEvent "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
 
 type instance EraRule "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
+
 type instance EraRuleFailure "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
+
 type instance EraRuleEvent "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
 
 type instance EraRule "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
+
 type instance EraRuleFailure "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
+
 type instance EraRuleEvent "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
 
 -------------------------------------------------------------------------------

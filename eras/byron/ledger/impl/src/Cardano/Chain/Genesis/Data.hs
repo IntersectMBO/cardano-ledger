@@ -13,8 +13,7 @@ module Cardano.Chain.Genesis.Data (
   GenesisDataError (..),
   mainnetProtocolMagicId,
   readGenesisData,
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)

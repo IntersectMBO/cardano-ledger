@@ -19,8 +19,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Presets (
   someKeyPairs,
   keyPairs,
   scriptSpace,
-)
-where
+) where
 
 import Cardano.Ledger.Core (EraScript, hashScript)
 import Cardano.Ledger.Keys (

@@ -76,8 +76,7 @@ module Cardano.Ledger.Core.PParams (
   -- * PParamsUpdate to Data
   PParam (..),
   makePParamMap,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),

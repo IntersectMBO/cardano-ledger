@@ -24,8 +24,7 @@ module Test.Cardano.Ledger.Generic.TxGen (
   coreTxBody,
   coreTxOut,
   genUTxO,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,

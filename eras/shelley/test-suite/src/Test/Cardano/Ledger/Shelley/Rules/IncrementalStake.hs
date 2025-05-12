@@ -15,14 +15,6 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   aggregateUtxoCoinByCredential,
 ) where
 
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
-  forAllChainTrace,
-  ledgerTraceFromBlock,
-  longTraceLen,
-  traceLen,
- )
-
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
@@ -51,6 +43,13 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  TestingLedger,
+  forAllChainTrace,
+  ledgerTraceFromBlock,
+  longTraceLen,
+  traceLen,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
  )

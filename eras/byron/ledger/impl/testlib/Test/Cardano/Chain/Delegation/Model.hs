@@ -7,8 +7,7 @@
 
 module Test.Cardano.Chain.Delegation.Model (
   tests,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Delegation (DELEG, SDELEG)
 import qualified Byron.Spec.Ledger.Delegation as Abstract

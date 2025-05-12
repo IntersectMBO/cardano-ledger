@@ -1,7 +1,6 @@
 module Test.Cardano.Chain.MempoolPayload.Gen (
   genMempoolPayload,
-)
-where
+) where
 
 import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
 import Cardano.Crypto (ProtocolMagicId)

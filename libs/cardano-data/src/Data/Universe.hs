@@ -40,8 +40,7 @@ module Data.Universe (
   (:~:) (Refl),
   TypeRep,
   compareByShape,
-)
-where
+) where
 
 import Data.Kind (Type)
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))

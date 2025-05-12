@@ -574,6 +574,7 @@ data RatifyEnv era = RatifyEnv
   deriving (Generic)
 
 instance CanGetInstantStake RatifyEnv
+
 instance CanSetInstantStake RatifyEnv where
   instantStakeL = lens reInstantStake (\x y -> x {reInstantStake = y})
 
@@ -594,6 +595,7 @@ reCommitteeStateL :: Lens' (RatifyEnv era) (CommitteeState era)
 reCommitteeStateL = lens reCommitteeState (\x y -> x {reCommitteeState = y})
 
 deriving instance Show (InstantStake era) => Show (RatifyEnv era)
+
 deriving instance Eq (InstantStake era) => Eq (RatifyEnv era)
 
 instance Default (InstantStake era) => Default (RatifyEnv era) where

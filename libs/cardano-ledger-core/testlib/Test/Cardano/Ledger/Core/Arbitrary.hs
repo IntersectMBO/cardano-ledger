@@ -42,8 +42,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   uniformSubSet,
   uniformSubMap,
   uniformSubMapElems,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.Hash.Class

@@ -12,8 +12,7 @@ module Cardano.Chain.Slotting.SlotNumber (
   addSlotCount,
   -- deprecated
   subSlotCount,
-)
-where
+) where
 
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
 import Cardano.Ledger.Binary (

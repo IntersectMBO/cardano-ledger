@@ -3,8 +3,7 @@ module Cardano.Ledger.Allegra.Core (
   ValidityInterval (..),
   AllegraEraTxAuxData (..),
   module Cardano.Ledger.Shelley.Core,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.Tx ()

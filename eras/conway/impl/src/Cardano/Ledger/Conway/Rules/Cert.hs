@@ -95,6 +95,7 @@ instance EraPParams era => EncCBOR (CertEnv era) where
             !> To ceCommitteeProposals
 
 deriving instance EraPParams era => Eq (CertEnv era)
+
 deriving instance EraPParams era => Show (CertEnv era)
 
 instance EraPParams era => NFData (CertEnv era)

@@ -18,25 +18,22 @@
 
 module Test.Cardano.Ledger.Constrained.Tests where
 
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.Shelley
 import Control.Arrow (first)
 import Control.Monad
 import Data.Foldable (fold)
 import Data.Group
+import Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
 import Data.List (intercalate, isPrefixOf)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Prelude hiding (subtract)
-
 import Test.Cardano.Ledger.Constrained.Ast
-
-import Cardano.Ledger.Coin
-import Cardano.Ledger.Core (Era)
-import Cardano.Ledger.Shelley
-import Data.HashSet (HashSet)
-import qualified Data.HashSet as HashSet
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
@@ -47,6 +44,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.QuickCheck hiding (getSize, total)
+import Prelude hiding (subtract)
 
 {-
 

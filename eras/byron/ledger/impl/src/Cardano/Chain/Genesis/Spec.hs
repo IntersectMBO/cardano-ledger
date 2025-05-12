@@ -5,8 +5,7 @@
 module Cardano.Chain.Genesis.Spec (
   GenesisSpec (..),
   mkGenesisSpec,
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances (..))

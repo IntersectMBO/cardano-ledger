@@ -163,7 +163,9 @@ instance (EraPParams era, EraCertState era) => EncCBOR (GovEnv era) where
             !> To geCertState
 
 instance (NFData (PParams era), Era era, EraCertState era) => NFData (GovEnv era)
+
 deriving instance (Show (PParams era), Era era, EraCertState era) => Show (GovEnv era)
+
 deriving instance (Eq (PParams era), EraCertState era) => Eq (GovEnv era)
 
 data ConwayGovPredFailure era
@@ -312,7 +314,9 @@ instance (EraPParams era, EraTxCert era) => EncCBOR (GovSignal era) where
             !> To gsVotingProcedures
             !> To gsProposalProcedures
             !> To gsCertificates
+
 deriving instance (EraPParams era, Eq (TxCert era)) => Eq (GovSignal era)
+
 deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
 
 instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
