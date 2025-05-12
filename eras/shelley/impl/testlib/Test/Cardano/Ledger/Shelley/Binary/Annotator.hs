@@ -18,20 +18,15 @@ module Test.Cardano.Ledger.Shelley.Binary.Annotator (
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.Tx.Internal (
-  ShelleyTx (MkShelleyTx),
-  ShelleyTxRaw (..),
-  unsafeConstructTxWithBytes,
- )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.Shelley.TxWits hiding (mapTraverseableDecoderA)
 import Data.Functor.Identity (Identity (..))
 import Data.IntMap
 import qualified Data.MapExtras as Map (fromElems)
@@ -70,31 +65,8 @@ instance
       )
     let txs =
           StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitTx bodies wits auxData
+            Seq.zipWith3 ShelleyTx bodies wits (maybeToStrictMaybe <$> auxData)
     pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
-
-instance
-  ( Era era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTxRaw era)
-  where
-  decCBOR =
-    decode $
-      RecD ShelleyTxRaw
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
-
-deriving newtype instance
-  ( Era era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTx era)
 
 deriving newtype instance DecCBOR (TxBody ShelleyEra)
 
@@ -132,27 +104,3 @@ instance Era era => DecCBOR (MultiSigRaw era) where
       2 -> (,) 2 . MultiSigAnyOf <$> decCBOR
       3 -> (,) 3 <$> (MultiSigMOf <$> decCBOR <*> decCBOR)
       k -> invalidKey k
-
-segWitTx ::
-  forall era.
-  EraTx era =>
-  TxBody era ->
-  TxWits era ->
-  Maybe (TxAuxData era) ->
-  ShelleyTx era
-segWitTx body' witnessSet auxData =
-  let
-    wrappedAuxDataBytes = case auxData of
-      Nothing -> Plain.serialize Plain.encodeNull
-      Just b -> Plain.serialize b
-    fullBytes =
-      Plain.serialize (Plain.encodeListLen 3)
-        <> Plain.serialize body'
-        <> Plain.serialize witnessSet
-        <> wrappedAuxDataBytes
-   in
-    unsafeConstructTxWithBytes
-      body'
-      witnessSet
-      (maybeToStrictMaybe auxData)
-      fullBytes

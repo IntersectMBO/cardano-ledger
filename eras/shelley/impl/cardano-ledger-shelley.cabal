@@ -53,7 +53,6 @@ library
     Cardano.Ledger.Shelley.Transition
     Cardano.Ledger.Shelley.Translation
     Cardano.Ledger.Shelley.Tx
-    Cardano.Ledger.Shelley.Tx.Internal
     Cardano.Ledger.Shelley.TxAuxData
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.TxCert

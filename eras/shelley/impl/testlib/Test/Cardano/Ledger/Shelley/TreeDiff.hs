@@ -99,14 +99,6 @@ instance ToExpr LogWeight
 
 instance ToExpr NonMyopic
 
--- Tx
-instance
-  ( ToExpr (TxAuxData era)
-  , ToExpr (TxBody era)
-  , ToExpr (TxWits era)
-  ) =>
-  ToExpr (ShelleyTxRaw era)
-
 instance
   ( ToExpr (TxAuxData era)
   , ToExpr (TxBody era)
