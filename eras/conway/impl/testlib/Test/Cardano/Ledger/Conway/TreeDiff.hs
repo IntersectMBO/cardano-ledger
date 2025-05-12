@@ -46,6 +46,12 @@ instance
   ) =>
   ToExpr (ConwayPlutusPurpose AsItem era)
 
+instance
+  ( ToExpr (TxCert era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (ConwayPlutusPurpose AsIxItem era)
+
 -- PlutusContext
 instance
   ( Era era
@@ -126,6 +132,18 @@ instance
   toExpr x@(DRPulsing (DRepPulser {})) = App "DRComplete" [toExpr a, toExpr b]
     where
       (a, b) = finishDRepPulser x
+
+-- TODO: consider this
+instance
+  ( EraStake era
+  , EraPParams era
+  , ToExpr (DRepPulsingState era)
+  , ToExpr (RatifyState era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (DRepPulser era Identity (RatifyState era))
+  where
+  toExpr = toExpr . finishDRepPulser . DRPulsing
 
 instance ToExpr (InstantStake era) => ToExpr (RatifyEnv era) where
   toExpr (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =

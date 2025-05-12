@@ -70,6 +70,7 @@ import Test.Tasty.QuickCheck
 
 import Cardano.Ledger.Conway.Governance (GovActionId (..), GovActionIx (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import Test.Cardano.Ledger.Alonzo.Era
 
 -- ==========================================================
 
@@ -649,19 +650,19 @@ stakeToHotCommittee = coerceKeyRole
 stakeToColdCommittee :: Credential 'Staking -> Credential 'ColdCommitteeRole
 stakeToColdCommittee = coerceKeyRole
 
-solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
+solveUniv :: (Reflect era, AlonzoEraTest era) => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do
   toolChainSub proof standardOrderInfo (universePreds size proof) emptySubst
 
 universeStage ::
-  Reflect era =>
+  (Reflect era, AlonzoEraTest era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
   Gen (Subst era)
 universeStage size proof = toolChainSub proof standardOrderInfo (universePreds size proof)
 
-demo :: ReplMode -> IO ()
+demo :: AlonzoEraTest ShelleyEra => ReplMode -> IO ()
 demo mode = do
   let proof = Shelley
   subst <- generate (universeStage def proof emptySubst)
@@ -671,8 +672,8 @@ demo mode = do
   env <- monadTyped (substToEnv subst emptyEnv)
   modeRepl mode proof env ""
 
-demoTest :: TestTree
+demoTest :: AlonzoEraTest ShelleyEra => TestTree
 demoTest = testIO "Testing Universe Stage" (demo CI)
 
-main :: IO ()
+main :: AlonzoEraTest ShelleyEra => IO ()
 main = defaultMain $ testIO "Testing Universe Stage" (demo Interactive)
