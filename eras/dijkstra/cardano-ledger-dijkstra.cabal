@@ -86,4 +86,4 @@ test-suite tests
 
   build-depends:
     base,
-    testlib,
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},

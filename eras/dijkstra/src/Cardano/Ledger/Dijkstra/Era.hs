@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Dijkstra.Era () where
+module Cardano.Ledger.Dijkstra.Era (
+  DijkstraEra,
+) where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era (..), Value)
