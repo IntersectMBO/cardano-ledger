@@ -234,7 +234,7 @@ library
 
   build-depends:
     aeson,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base58-bytestring,
     bimap >=0.4 && <0.6,
     binary,
@@ -339,7 +339,7 @@ library testlib
     -Wunused-packages
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base16-bytestring >=1,
     bimap,
     byron-spec-chain,

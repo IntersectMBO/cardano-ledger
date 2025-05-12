@@ -99,7 +99,7 @@ library
   build-depends:
     FailT,
     aeson >=2,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base-deriving-via,
     base16-bytestring,
     base64-bytestring,
@@ -239,7 +239,7 @@ executable plutus-debug
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-ledger-binary,
     cardano-ledger-core,
     optparse-applicative,
