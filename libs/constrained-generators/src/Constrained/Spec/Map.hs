@@ -16,13 +16,6 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-#endif
-
 module Constrained.Spec.Map where
 
 import Constrained.AbstractSyntax

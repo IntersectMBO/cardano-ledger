@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,15 +24,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-#endif
-
 module Constrained.Spec.SumProd (
   IsNormalType,
+  ProdAsListComputes,
   caseOn,
   branch,
   branchW,
@@ -133,6 +128,7 @@ import Constrained.TheKnot (
   prodSnd_,
   prod_,
  )
+import Constrained.TypeErrors
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
@@ -250,7 +246,24 @@ type family ResultType t where
   ResultType (a -> b) = ResultType b
   ResultType a = a
 
-type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a, CountCases a ~ 1)
+type IsNormalType a =
+  ( AssertComputes
+      (Cases a)
+      ( Text "Failed to compute Cases in a use of IsNormalType for "
+          :$$: ShowType a
+          :<>: Text ", are you missing an IsNormalType constraint?"
+      )
+  , Cases a ~ '[a]
+  , AssertComputes
+      (Args a)
+      ( Text "Failed to compute Args in a use of IsNormalType for "
+          :<>: ShowType a
+          :<>: Text ", are you missing an IsNormalType constraint?"
+      )
+  , Args a ~ '[a]
+  , IsProd a
+  , CountCases a ~ 1
+  )
 
 type family Cases t where
   Cases (Sum a b) = a : Cases b
@@ -258,12 +271,18 @@ type family Cases t where
 
 type IsProductType a =
   ( HasSimpleRep a
+  , AssertComputes
+      (Cases (SimpleRep a))
+      ( Text "Failed to compute Cases in a use of IsProductType for "
+          :$$: ShowType a
+          :<>: Text ", are you missing an IsProductType constraint?"
+      )
   , Cases (SimpleRep a) ~ '[SimpleRep a]
   , SimpleRep a ~ SumOver (Cases (SimpleRep a))
   , IsProd (SimpleRep a)
   , HasSpec (SimpleRep a)
   , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , All HasSpec (ProductAsList a)
+  , All HasSpec (Args (SimpleRep a))
   )
 
 type ProductAsList a = Args (SimpleRep a)
@@ -472,15 +491,45 @@ branchW ::
 branchW w body =
   Weighted (Just w) (bind (buildBranch @p body . toArgs @a))
 
+-- | ProdAsListComputes is here to make sure that in situations like this:
+--
+-- > type family Foobar k
+-- >
+-- > ex :: HasSpec (Foobar k) => Specification (Int, Foobar k)
+-- > ex = constrained $ \ p -> match p $ \ i _ -> (i ==. 10)
+--
+-- Where you're trying to work with an unevaluated type family in constraints.
+-- You get reasonable type errors prompting you to add the @IsNormalType (Foobar k)@ constraint
+-- like this:
+--
+-- >     • Type list computation is stuck on
+-- >         Args (Foobar k)
+-- >       Have you considered adding an IsNormalType or ProdAsListComputes constraint?
+-- >     • In the first argument of ‘($)’, namely ‘match p’
+-- >       In the expression: match p $ \ i _ -> (i ==. 10)
+-- >       In the second argument of ‘($)’, namely
+-- >         ‘\ p -> match p $ \ i _ -> (i ==. 10)’
+-- >     |
+-- > 503 | ex = constrained $ \ p -> match p $ \ i _ -> (i ==. 10)
+-- >     |                           ^^^^^
+--
+-- Which should help you come to the conclusion that you need to do something
+-- like this for everything to compile:
+--
+-- > ex :: (HasSpec (Foobar k), IsNormalType (Foobar k)) => Specification (Int, Foobar k)
+type ProdAsListComputes a =
+  AssertSpineComputes
+    (Text "Have you considered adding an IsNormalType or ProdAsListComputes constraint?")
+    (ProductAsList a)
+
 match ::
   forall p a.
   ( IsProductType a
   , IsPred p
   , GenericRequires a
+  , ProdAsListComputes a
   ) =>
-  Term a ->
-  FunTy (MapList Term (ProductAsList a)) p ->
-  Pred
+  Term a -> FunTy (MapList Term (ProductAsList a)) p -> Pred
 match p m = caseOn p (branch @p m)
 
 -- NOTE: `ResultType r ~ Term a` is NOT a redundant constraint,
@@ -536,11 +585,13 @@ forAll' ::
   , All HasSpec (Args (SimpleRep a))
   , IsPred p
   , IsProd (SimpleRep a)
+  , IsProductType a
   , HasSpec a
   , GenericRequires a
+  , ProdAsListComputes a
   ) =>
   Term t ->
-  FunTy (MapList Term (Args (SimpleRep a))) p ->
+  FunTy (MapList Term (ProductAsList a)) p ->
   Pred
 forAll' xs f = forAll xs $ \x -> match @p x f
 
@@ -554,10 +605,12 @@ constrained' ::
   , All HasSpec (Args (SimpleRep a))
   , IsProd (SimpleRep a)
   , HasSpec a
+  , IsProductType a
   , IsPred p
   , GenericRequires a
+  , ProdAsListComputes a
   ) =>
-  FunTy (MapList Term (Args (SimpleRep a))) p ->
+  FunTy (MapList Term (ProductAsList a)) p ->
   Specification a
 constrained' f = constrained $ \x -> match @p x f
 
@@ -572,12 +625,15 @@ reify' ::
   , IsProd (SimpleRep b)
   , HasSpec a
   , HasSpec b
+  , IsProductType b
+  , IsProd a
   , IsPred p
   , GenericRequires b
+  , ProdAsListComputes b
   ) =>
   Term a ->
   (a -> b) ->
-  FunTy (MapList Term (Args (SimpleRep b))) p ->
+  FunTy (MapList Term (ProductAsList b)) p ->
   Pred
 reify' a r f = reify a r $ \x -> match @p x f
 
