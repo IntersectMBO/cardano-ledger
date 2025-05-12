@@ -3,21 +3,7 @@
 
   inputs = {
 
-    ###########################################################################
-    # We pin the versions of haskell.nix and hackage.nix because
-    # - Cross compilation for windows is broken in newer versions.
-    # - plutus-preprocessor is a non-buildable package and it seems to be treated differently in newer versions.
-    # We should unpin this once we no longer need it by specifying only haskell.nix and let it use its own default hackage.nix
-    # haskellNix.url = "github:input-output-hk/haskell.nix";
-    hackageNix = {
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
-      flake = false;
-    };
-    haskellNix = {
-      url = "github:input-output-hk/haskell.nix/a0283c855a38ed70ba521f7a9290e78488ddf11b";
-      inputs.hackage.follows = "hackageNix";
-    };
-    ###########################################################################
+    haskellNix.url = "github:input-output-hk/haskell.nix";
 
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
@@ -76,7 +62,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc966";
+        defaultCompiler = "ghc967";
         fourmoluVersion = "0.17.0.0";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
@@ -266,9 +252,9 @@
 
           devShells = let
             mkDevShells = p: {
-              # `nix develop .#profiling` (or `.#ghc966.profiling): a shell with profiling enabled
+              # `nix develop .#profiling` (or `.#ghc967.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-              # `nix develop .#pre-commit` (or `.#ghc966.pre-commit): a shell with pre-commit enabled
+              # `nix develop .#pre-commit` (or `.#ghc967.pre-commit): a shell with pre-commit enabled
               pre-commit = let
                 pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
                   src = ./.;
