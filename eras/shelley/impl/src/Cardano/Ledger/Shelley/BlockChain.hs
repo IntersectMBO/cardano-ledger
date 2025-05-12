@@ -51,7 +51,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
