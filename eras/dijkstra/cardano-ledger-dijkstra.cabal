@@ -25,6 +25,7 @@ flag asserts
 library
   exposed-modules:
     Cardano.Ledger.Dijkstra
+    Cardano.Ledger.Dijkstra.Era
   hs-source-dirs: src
 
   default-language: Haskell2010
@@ -39,6 +40,9 @@ library
 
   build-depends:
     base >=4.14 && <5,
+    cardano-ledger-conway,
+    cardano-ledger-mary,
+    cardano-ledger-core,
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
