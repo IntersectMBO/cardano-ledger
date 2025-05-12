@@ -8,7 +8,9 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Constrained.TypeErrors (
+  Computes,
   AssertComputes,
+  AssertSpineComputes,
   module X,
 ) where
 
@@ -35,21 +37,32 @@ import GHC.TypeLits as X
 -- force the evaluation of `ty` and consequently doesn't end up with GHC wanting to report
 -- that `Computes tyThatDoesntCompute (TE err)` fails and consequently normalizing `TE err`
 -- and finally arriving at `TypeError err`.
-type family Computes (ty :: Type) (err :: Constraint) :: Constraint where
-  Computes Dummy _ =
+type family Computes (ty :: k0) (err :: Constraint) (a :: k) :: k where
+  Computes Dummy _ _ =
     TypeError
       (Text "This shouldn't be reachable because " :<>: ShowType Dummy :<>: Text " shouldn't be exported!")
-  Computes _ _ = ()
+  Computes (Dummy : as) _ _ =
+    TypeError
+      (Text "This shouldn't be reachable because " :<>: ShowType Dummy :<>: Text " shouldn't be exported!")
+  Computes _ _ a = a
 
 -- This is intentionally hidden in here to avoid any funny business
 data Dummy
 
--- NOTE: this indirection is necessary only for older versions of GHC where this is
--- "the right" amount of strictness - apparently it's not necessary on newer versions of GHC!
--- The alternative would be to just do `AssertComputes ty em = Computes ty (TypeError em)` below
--- and that works fine on e.g. ghc 9.12 (and other recent versions) but fails on 8.10.7 because
--- GHC is "too eager" to throw the type error.
-type family TE em where
-  TE em = TypeError em
+type AssertComputes ty em = Computes ty (TypeError em) (() :: Constraint)
 
-type AssertComputes ty em = Computes ty (TE em)
+type family AssertSpineComputesF (help :: ErrorMessage) (xs :: [k]) (err :: ()) :: Constraint where
+  AssertSpineComputesF _ '[] _ = ()
+  AssertSpineComputesF help (_ : xs) err = AssertSpineComputes help xs
+
+type AssertSpineComputes help (xs :: [k]) =
+  AssertSpineComputesF
+    help
+    xs
+    ( TypeError
+        ( Text "Type list computation is stuck on "
+            :$$: Text "  "
+            :<>: ShowType xs
+            :$$: help
+        )
+    )
