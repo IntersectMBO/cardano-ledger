@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
   StrictMaybe (..),
+  maybeToStrictMaybe,
   mkNonceFromNumber,
   strictMaybeToMaybe,
  )
@@ -50,7 +51,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -225,7 +226,7 @@ instance EraTx era => DecCBOR (ShelleyTxSeq era) where
       )
     let txs =
           StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitTx bodies wits auxData
+            Seq.zipWith3 ShelleyTx bodies wits (maybeToStrictMaybe <$> auxData)
     pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
 
 slotToNonce :: SlotNo -> Nonce
