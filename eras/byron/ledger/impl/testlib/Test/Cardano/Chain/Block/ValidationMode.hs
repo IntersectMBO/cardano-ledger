@@ -80,11 +80,11 @@ ts_prop_updateBlock_Valid =
       sampleTrace <- forAll $ trace @CHAIN () traceLength
       let lastState = Trace.lastState sampleTrace
           chainEnv@( _currentSlot
-                     , abstractInitialUTxO
-                     , _allowedDelegators
-                     , _protocolParamaters
-                     , stableAfter
-                     ) = Trace._traceEnv sampleTrace
+                    , abstractInitialUTxO
+                    , _allowedDelegators
+                    , _protocolParamaters
+                    , stableAfter
+                    ) = Trace._traceEnv sampleTrace
       abstractBlock <-
         forAll
           $ Abstract.sigGenChain

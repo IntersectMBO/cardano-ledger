@@ -242,8 +242,8 @@ data TransactionScriptFailure era
       -- | Map of pointers which can be resolved together with PlutusScripts and their
       -- respective contexts
       !( Map
-           (PlutusPurpose AsIx era)
-           (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash)
+          (PlutusPurpose AsIx era)
+          (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash)
        )
   | -- | Missing datum.
     MissingDatum !DataHash

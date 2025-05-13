@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- Syntactic operations on types: Term, Pred, Spec, Ctx, etc.
-module Constrained.MinSyntax where
+module Constrained.Min.Syntax where
 
 import Constrained.Core (
   Evidence (..),
@@ -34,7 +34,7 @@ import Constrained.Env
 import Constrained.GenT
 import Constrained.Graph
 import Constrained.List hiding (ListCtx)
-import Constrained.MinBase
+import Constrained.Min.Base
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
 import qualified Data.Foldable as Foldable (fold, toList)
