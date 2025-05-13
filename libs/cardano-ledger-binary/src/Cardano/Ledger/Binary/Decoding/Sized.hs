@@ -1,11 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Ledger.Binary.Decoding.Sized (
   Sized (..),
   mkSized,
   decodeSized,
   toSizedL,
+  mapSized,
+  unsafeMapSized,
 )
 where
 
@@ -33,6 +36,14 @@ data Sized a = Sized
   -- be needed, but it can be expensive to compute.
   }
   deriving (Eq, Show, Generic)
+
+-- | Map a function over `Sized` and recompute the size
+mapSized :: EncCBOR b => Version -> (a -> b) -> Sized a -> Sized b
+mapSized v f (Sized val _) = mkSized v (f val)
+
+-- | Maps a function over the value, but does not recompute the size
+unsafeMapSized :: (a -> b) -> Sized a -> Sized b
+unsafeMapSized f s@Sized {sizedValue} = s {sizedValue = f sizedValue}
 
 instance NoThunks a => NoThunks (Sized a)
 

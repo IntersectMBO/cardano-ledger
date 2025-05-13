@@ -70,6 +70,11 @@ module Cardano.Ledger.Conway.PParams (
   conwayModifiedPPGroups,
   pvtHardForkInitiationL,
   pvtMotionNoConfidenceL,
+  conwayApplyPPUpdates,
+  emptyConwayPParams,
+  emptyConwayPParamsUpdate,
+  asNaturalHKD,
+  asBoundedIntegralHKD,
 )
 where
 
@@ -922,7 +927,12 @@ instance Era era => DecCBOR (ConwayPParams Identity era) where
 instance Era era => FromCBOR (ConwayPParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
-instance ToJSON (ConwayPParams Identity ConwayEra) where
+instance
+  ( ConwayEraPParams era
+  , PParamsHKD Identity era ~ ConwayPParams Identity era
+  ) =>
+  ToJSON (ConwayPParams Identity era)
+  where
   toJSON = object . conwayPParamsPairs
   toEncoding = pairs . mconcat . conwayPParamsPairs
 

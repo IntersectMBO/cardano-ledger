@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -10,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Data.OSet.Strict (
   OSet (Empty, (:<|:), (:|>:)),
@@ -35,6 +35,8 @@ module Data.OSet.Strict (
   (|><),
   (><|),
   filter,
+  mapL,
+  mapR,
 )
 where
 
@@ -48,6 +50,7 @@ import Cardano.Ledger.Binary (
  )
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (toJSON))
+import Data.Foldable (Foldable (foldr', foldl'))
 import Data.Foldable qualified as F
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
@@ -278,3 +281,13 @@ osetl ><| osetr = case osetl of
   ls :|>: l -> ls ><| (l <| osetr)
 
 infixr 5 ><|
+
+-- | Map over the elements, preferring the leftmost element in case there are 
+-- duplicates
+mapR :: Ord b => (a -> b) -> OSet a -> OSet b
+mapR f = foldr' ((:<|:) . f) Empty
+
+-- | Map over the elements, preferring the rightmost element in case there are 
+-- duplicates
+mapL :: Ord b => (a -> b) -> OSet a -> OSet b
+mapL f = foldl' (\x y -> x :|>: f y) Empty

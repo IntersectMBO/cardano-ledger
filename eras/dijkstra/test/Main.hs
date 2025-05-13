@@ -3,6 +3,25 @@
 module Main where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
+import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
+import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
+import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
+import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
+import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
+import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
+import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
+import Test.Cardano.Ledger.Conway.GoldenSpec as Golden
+import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
+import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
+import qualified Test.Cardano.Ledger.Conway.Imp as Imp
+import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
+import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
+import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
+import qualified Test.Cardano.Ledger.Conway.Spec as Spec
+import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
+import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 main :: IO ()
 main =
