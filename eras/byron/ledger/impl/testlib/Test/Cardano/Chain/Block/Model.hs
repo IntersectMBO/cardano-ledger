@@ -350,8 +350,8 @@ data ValidationOutput = ValidationOutput
   -- the trace initial environment.
   , result ::
       !( Either
-           ChainValidationError
-           (ChainValidationState, AbstractToConcreteIdMaps)
+          ChainValidationError
+          (ChainValidationState, AbstractToConcreteIdMaps)
        )
   }
 

@@ -66,9 +66,9 @@ exampleTypeRepsTx =
           <| typeReps in0
           >< typeReps in1
           >< ( Seq.fromList
-                 [ typeOf (undefined :: [TxOut])
-                 , typeOf (undefined :: [Wit])
-                 ]
+                [ typeOf (undefined :: [TxOut])
+                , typeOf (undefined :: [Wit])
+                ]
              )
 
 --------------------------------------------------------------------------------

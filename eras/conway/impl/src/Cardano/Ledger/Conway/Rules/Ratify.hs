@@ -317,15 +317,15 @@ ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
       , st@( RatifyState
-               rsEnactState@EnactState
-                 { ensCurPParams
-                 , ensTreasury
-                 , ensPrevGovActionIds
-                 }
-               _rsEnacted
-               _rsExpired
-               rsDelayed
-             )
+              rsEnactState@EnactState
+                { ensCurPParams
+                , ensTreasury
+                , ensPrevGovActionIds
+                }
+              _rsEnacted
+              _rsExpired
+              rsDelayed
+            )
       , RatifySignal rsig
       ) <-
     judgmentContext

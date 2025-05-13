@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- Base types: Term, Pred, Spec, Ctx, and classes: HasSpec, Syntax, Semantics, and Logic for the MinModel
-module Constrained.MinBase where
+module Constrained.Min.Base where
 
 import Constrained.Core (Evidence (..), Var (..), eqVar)
 import Constrained.GenT

@@ -135,19 +135,19 @@ genTx ::
   Gen (Tx era)
 genTx
   ge@( GenEnv
-         keySpace@KeySpace_
-           { ksKeyPairs
-           , ksCoreNodes
-           , ksMSigScripts
-           , ksIndexedGenDelegates
-           , ksIndexedPaymentKeys
-           , ksIndexedStakingKeys
-           , ksIndexedPayScripts
-           , ksIndexedStakeScripts
-           }
-         scriptspace
-         constants
-       )
+        keySpace@KeySpace_
+          { ksKeyPairs
+          , ksCoreNodes
+          , ksMSigScripts
+          , ksIndexedGenDelegates
+          , ksIndexedPaymentKeys
+          , ksIndexedStakingKeys
+          , ksIndexedPayScripts
+          , ksIndexedStakeScripts
+          }
+        scriptspace
+        constants
+      )
   (LedgerEnv slot _ txIx pparams reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do

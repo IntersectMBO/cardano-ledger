@@ -21,7 +21,7 @@
 -- HasSpec instances for known types Integer, Bool, Set , (,)
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.MinModel where
+module Constrained.Min.Model where
 
 import Constrained.Core (
   Evidence (..),
@@ -34,8 +34,8 @@ import Constrained.Env
 import Constrained.GenT
 import qualified Constrained.Graph as Graph
 import Constrained.List hiding (ListCtx)
-import Constrained.MinBase
-import Constrained.MinSyntax
+import Constrained.Min.Base
+import Constrained.Min.Syntax
 import Debug.Trace
 
 -- import Control.Applicative ((<|>))
@@ -925,6 +925,11 @@ propagateSpecM spec ctxM = do ctx <- ctxM; pure $ propagateSpec ctx spec
 computeSpecSimplified ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Spec a)
 computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
+  And ps -> do
+    spec <- fold <$> mapM (computeSpecSimplified x) ps
+    case spec of
+      SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
+      s -> pure s
   ElemPred True t xs -> propagateSpecM (MemberSpec xs) (toCtx x t)
   ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (emptySpec @b) (NE.toList xs)) (toCtx x t)
   -- Monitor {} -> pure mempty
@@ -932,11 +937,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
-  And ps -> do
-    spec <- fold <$> mapM (computeSpecSimplified x) ps
-    case spec of
-      SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
-      s -> pure s
+  
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty

@@ -209,10 +209,10 @@ genTxCerts ::
     )
 genTxCerts
   ge@( GenEnv
-         KeySpace_ {ksIndexedStakingKeys}
-         _scriptspace
-         Constants {maxCertsPerTx}
-       )
+        KeySpace_ {ksIndexedStakingKeys}
+        _scriptspace
+        Constants {maxCertsPerTx}
+      )
   pp
   certState
   slot

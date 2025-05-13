@@ -16,27 +16,29 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+-- HasSpec instances for known types such as (a,b,c), (a,b,c,d) i.e. tuples.
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.MinTuple where
+module Constrained.Min.Tuple where
+  
+-- import Constrained.Env
+import Constrained.Min.Base
+import Constrained.Min.Model
+import Constrained.Min.Syntax
 
-import Constrained.Env
-import Constrained.MinBase
-import Constrained.MinModel
-import Constrained.MinSyntax
-
-import Constrained.Core (Evidence (..), Value (..), Var (..), eqVar)
-import Constrained.GenT
+-- import Constrained.Core (Evidence (..), Value (..), Var (..), eqVar)
+-- import Constrained.GenT
 import Constrained.List hiding (ListCtx)
-import Constrained.Syntax (var)
+-- import Constrained.Syntax (var)
 import Data.Kind
-import Data.List.NonEmpty (NonEmpty (..))
+-- import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
-import Data.String (fromString)
-import Data.Typeable
-import GHC.Stack
-import Prettyprinter
-import Test.QuickCheck.Gen
+-- import Data.String (fromString)
+-- import Data.Typeable
+-- import GHC.Stack
+-- import Prettyprinter
+-- import Test.QuickCheck.Gen
 
 -- =======================================================
 -- Experiment to see if we can build tuples, using only the binary tuple
@@ -57,14 +59,14 @@ instance (HasSpec a, HasSpec b, HasSpec c) => HasSpec (a, b, c) where
       a
       bc
       ( \x y -> case (x :: Spec a, y :: Spec (b, c)) of
-          (MemberSpec xs, MemberSpec ys) -> MemberSpec (NE.fromList [(a, b, c) | a <- NE.toList xs, (b, c) <- NE.toList ys])
+          (MemberSpec xs, MemberSpec ys) -> MemberSpec (NE.fromList [(a', b', c') | a'<- NE.toList xs, (b', c') <- NE.toList ys])
           -- There are probably other cases
-          (specA, specBC) -> constrained $ \x -> And [satisfies (head_ x) specA, satisfies (tail_ x) specBC]
+          (specA, specBC) -> constrained $ \ p -> And [satisfies (head_ p) specA, satisfies (tail_ p) specBC]
       )
 
   genFromTypeSpec (a, bc) = f <$> genFromSpecT a <*> genFromSpecT bc
     where
-      f a (b, c) = (a, b, c)
+      f a' (b', c') = (a', b', c')
 
   toPreds x (a, bc) = satisfies (head_ x) a <> satisfies (tail_ x) bc
 
@@ -86,7 +88,7 @@ instance (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => HasSpec (a, b, c, d) wh
       ( \x y -> case (x, y) of
           (MemberSpec xs, MemberSpec ys) -> MemberSpec (NE.fromList [(a, b, c, d) | (a, b) <- NE.toList xs, (c, d) <- NE.toList ys])
           -- There are probably other cases
-          (specAB, specCD) -> constrained $ \x -> And [satisfies (left4_ x) specAB, satisfies (right4_ x) specCD]
+          (specAB, specCD) -> constrained $ \ ps -> And [satisfies (left4_ ps) specAB, satisfies (right4_ ps) specCD]
       )
 
   genFromTypeSpec (ab, cd) = f <$> genFromSpecT ab <*> genFromSpecT cd
@@ -115,10 +117,10 @@ instance Syntax TupleSym where
   name TailW = "tail_"
 
 instance Semantics TupleSym where
-  semantics Left4W = \(a, b, c, d) -> (a, b)
-  semantics Right4W = \(a, b, c, d) -> (c, d)
-  semantics HeadW = \(a, b, c) -> a
-  semantics TailW = \(a, b, c) -> (b, c)
+  semantics Left4W = \(a, b, _c, _d) -> (a, b)
+  semantics Right4W = \(_a, _b, c, d) -> (c, d)
+  semantics HeadW = \(a, _b, _c) -> a
+  semantics TailW = \(_a, b, c) -> (b, c)
 
 instance Logic TupleSym where
   propagate _ _ TrueSpec = TrueSpec
@@ -241,31 +243,26 @@ class TypeList ts where
   unfoldList :: (forall a (as :: [*]). List f as -> f a) -> List f ts
 -}
 
-args1 :: List Term '[Int, Bool, String]
-args1 = Lit 5 :> Lit True :> Lit "abc" :> Nil
-
-getTermsize :: Term Int -> Term Bool -> Term String -> Maybe Int
-getTermsize (Lit n) (Lit b) (Lit s) = Just $ if b then n else length s
-getTermsize _ _ _ = Nothing
 
 -- | Fold over a (List Term ts) with 'getTermsize' which consumes a Term component for each element of the list
 ex1 :: Maybe Int
-ex1 = uncurryList getTermsize args1
+ex1 = uncurryList getTermsize1 args1
   where
     args1 :: List Term '[Int, Bool, String]
     args1 = Lit 5 :> Lit True :> Lit "abc" :> Nil
-    getTermsize :: Term Int -> Term Bool -> Term String -> Maybe Int
-    getTermsize (Lit n) (Lit b) (Lit s) = Just $ if b then n else length s
-    getTermsize _ _ _ = Nothing
+    getTermsize1 :: Term Int -> Term Bool -> Term String -> Maybe Int
+    getTermsize1 (Lit n) (Lit b) (Lit s) = Just $ if b then n else length s
+    getTermsize1 _ _ _ = Nothing
 
 -- Fold over a list with two parts 'unLit' and 'getSize'
 ex2 :: Int
-ex2 = uncurryList_ unLit getsize args2
+ex2 = uncurryList_ unLit getsize2 args2
   where
     unLit :: forall a. Term a -> a
     unLit (Lit n) = n
-    getsize :: Int -> Bool -> String -> Int
-    getsize n b s = if b then n else length s
+    unLit _ = error "unLit on non literal"
+    getsize2 :: Int -> Bool -> String -> Int
+    getsize2 n b s = if b then n else length s
     args2 :: List Term '[Int, Bool, String]
     args2 = Lit 5 :> Lit True :> Lit "abc" :> Nil
 

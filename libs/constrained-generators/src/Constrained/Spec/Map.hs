@@ -341,17 +341,17 @@ instance Logic MapW where
     constrained $ \m ->
       [Assert $ Lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
         ++ [ forAll m $ \kv ->
-               letBind (fst_ kv) $ \k' ->
-                 letBind (snd_ kv) $ \v ->
-                   whenTrue (Lit k ==. k') $
-                     -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
-                     -- do that because we don't have access to `IsNormalType v` here. When
-                     -- we refactor the `IsNormalType` machinery we will be able to make
-                     -- this nicer.
-                     case spec of
-                       MemberSpec as -> Assert $ v `elem_` Lit [a | Just a <- NE.toList as]
-                       TypeSpec (SumSpec _ _ vspec) cant ->
-                         v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
+              letBind (fst_ kv) $ \k' ->
+                letBind (snd_ kv) $ \v ->
+                  whenTrue (Lit k ==. k') $
+                    -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
+                    -- do that because we don't have access to `IsNormalType v` here. When
+                    -- we refactor the `IsNormalType` machinery we will be able to make
+                    -- this nicer.
+                    case spec of
+                      MemberSpec as -> Assert $ v `elem_` Lit [a | Just a <- NE.toList as]
+                      TypeSpec (SumSpec _ _ vspec) cant ->
+                        v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
            ]
   propagate LookupW (HOLE :? Value m :> Nil) spec =
     if Nothing `conformsToSpec` spec

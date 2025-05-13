@@ -329,7 +329,7 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
             psWithGas
               & pGraphL . govRelationL . pGraphNodesL
                 %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
-                       . Map.adjust (peChildrenL %~ Set.insert newId) parentId
+                      . Map.adjust (peChildrenL %~ Set.insert newId) parentId
                    )
       | otherwise = Nothing
 
