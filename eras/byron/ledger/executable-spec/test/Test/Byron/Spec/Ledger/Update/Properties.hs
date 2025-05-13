@@ -15,8 +15,7 @@ module Test.Byron.Spec.Ledger.Update.Properties (
   ublockOnlyValidSignalsAreGenerated,
   ublockRelevantTracesAreCovered,
   ublockSampleTraceMetrics,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   BlockCount (BlockCount),

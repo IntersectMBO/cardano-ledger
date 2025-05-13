@@ -7,8 +7,7 @@ module Cardano.Ledger.Babbage.Rules (
   module Cardano.Ledger.Babbage.Rules.Utxo,
   module Cardano.Ledger.Babbage.Rules.Utxos,
   module Cardano.Ledger.Babbage.Rules.Utxow,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage.Core (EraRuleEvent)
 import Cardano.Ledger.Babbage.Era (BabbageEra)

@@ -12,8 +12,7 @@ module Test.Cardano.Chain.Block.Gen (
   genBoundaryBlock,
   genBoundaryHeader,
   genABlockOrBoundaryHdr,
-)
-where
+) where
 
 import Cardano.Chain.Block (
   ABlockOrBoundaryHdr (..),

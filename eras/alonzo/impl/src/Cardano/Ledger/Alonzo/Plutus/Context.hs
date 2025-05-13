@@ -31,8 +31,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxCert,
   PlutusScriptPurpose,
   PlutusScriptContext,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),

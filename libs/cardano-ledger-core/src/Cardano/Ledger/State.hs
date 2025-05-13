@@ -6,8 +6,7 @@ module Cardano.Ledger.State (
   module Cardano.Ledger.State.SnapShots,
   module Cardano.Ledger.State.Stake,
   module Cardano.Ledger.State.Governance,
-)
-where
+) where
 
 import Cardano.Ledger.State.CertState
 import Cardano.Ledger.State.ChainAccount

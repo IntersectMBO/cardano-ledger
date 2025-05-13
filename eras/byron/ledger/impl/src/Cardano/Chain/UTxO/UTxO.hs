@@ -27,8 +27,7 @@ module Cardano.Chain.UTxO.UTxO (
   (</|),
   txOutputUTxO,
   isRedeemUTxO,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address,

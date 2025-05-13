@@ -76,8 +76,7 @@ module Cardano.Ledger.Hashes (
   -- ** Other operations
   castSafeHash,
   extractHash,
-)
-where
+) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash

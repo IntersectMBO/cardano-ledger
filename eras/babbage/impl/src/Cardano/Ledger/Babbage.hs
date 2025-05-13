@@ -12,8 +12,7 @@ module Cardano.Ledger.Babbage (
   TxBody (BabbageTxBody),
   AlonzoScript,
   AlonzoTxAuxData,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))

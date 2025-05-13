@@ -2,8 +2,7 @@ module Test.Cardano.Chain.Slotting.Example (
   exampleEpochNumber,
   exampleEpochAndSlotCount,
   exampleSlotNumber,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (
   EpochAndSlotCount (..),

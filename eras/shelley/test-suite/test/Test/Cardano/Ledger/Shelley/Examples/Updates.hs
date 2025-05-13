@@ -12,8 +12,7 @@
 module Test.Cardano.Ledger.Shelley.Examples.Updates (
   updatesExample,
   updates4,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),

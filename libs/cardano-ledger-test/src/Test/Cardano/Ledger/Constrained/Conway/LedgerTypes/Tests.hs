@@ -73,6 +73,7 @@ genConwayFn = genFromSpec
 
 -- Analagous to <$> except the function to be applied takes a (Term a -> t) instead of (a -> t)
 infixr 6 !$!
+
 (!$!) ::
   forall t a.
   HasSpec a =>
@@ -81,6 +82,7 @@ infixr 6 !$!
 
 -- Analagous to <*> except the function to be applied takes a Gen (Term a -> t) instead of F (a -> t)
 infixl 4 !*!
+
 (!*!) ::
   forall t a.
   HasSpec a =>

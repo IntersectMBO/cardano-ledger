@@ -43,8 +43,7 @@ module Cardano.Chain.Common.Address (
   makeVerKeyAddress,
   makeVerKeyHdwAddress,
   makeRedeemAddress,
-)
-where
+) where
 
 import Cardano.Chain.Common.AddrAttributes (
   AddrAttributes (..),

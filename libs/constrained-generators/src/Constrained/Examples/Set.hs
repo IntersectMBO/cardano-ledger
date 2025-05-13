@@ -142,11 +142,14 @@ setSubSize = constrained $ \s ->
 
 newtype NotASet a = NotASet (Set a)
   deriving (Generic, Show, Eq)
+
 instance (Typeable a, Ord a) => HasSimpleRep (NotASet a) where
   type SimpleRep (NotASet a) = [a]
   fromSimpleRep = NotASet . Set.fromList
   toSimpleRep (NotASet s) = Set.toList s
+
 instance (Ord a, HasSpec a) => HasSpec (NotASet a)
+
 instance (Typeable a, Ord a) => Forallable (NotASet a) a
 
 emptyListSpec :: Specification ([Int], NotASet (Either Int Int, Int))

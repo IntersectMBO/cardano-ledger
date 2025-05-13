@@ -6,8 +6,7 @@ module Cardano.Ledger.Binary.Decoding.Sized (
   mkSized,
   decodeSized,
   toSizedL,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotated (..), ByteSpan (..), annotatedDecoder)
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))

@@ -142,10 +142,12 @@ unsafeNonZero :: a -> NonZero a
 unsafeNonZero = NonZero
 
 infixl 7 %.
+
 (%.) :: Integral a => a -> NonZero a -> Ratio a
 x %. y = x % unNonZero y
 
 infixl 7 %?
+
 (%?) :: Integral a => a -> a -> Ratio a
 x %? y
   | y == 0 = 0
@@ -155,6 +157,7 @@ toIntegerNonZero :: Integral a => NonZero a -> NonZero Integer
 toIntegerNonZero (NonZero x) = NonZero $ toInteger x
 
 infixl 7 /.
+
 (/.) :: Fractional a => a -> NonZero a -> a
 x /. y = x / unNonZero y
 

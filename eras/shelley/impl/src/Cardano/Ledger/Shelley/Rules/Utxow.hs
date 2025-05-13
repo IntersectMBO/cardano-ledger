@@ -30,8 +30,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   validateMetadata,
   validateMIRInsufficientGenesisSigs,
   validateNeededWitnesses,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),

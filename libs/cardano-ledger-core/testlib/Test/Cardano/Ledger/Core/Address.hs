@@ -13,8 +13,7 @@ module Test.Cardano.Ledger.Core.Address (
   deserialiseRewardAccountOld,
   decompactAddrOld,
   decompactAddrOldLazy,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address (

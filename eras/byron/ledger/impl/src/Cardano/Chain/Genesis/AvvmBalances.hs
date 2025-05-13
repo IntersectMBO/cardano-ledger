@@ -9,8 +9,7 @@
 
 module Cardano.Chain.Genesis.AvvmBalances (
   GenesisAvvmBalances (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (Lovelace)
 import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)

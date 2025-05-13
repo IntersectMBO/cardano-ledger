@@ -40,8 +40,7 @@ module Cardano.Protocol.TPraos.BHeader (
   mkSeed,
   bnonce,
   makeHeaderView,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
@@ -278,6 +277,7 @@ newtype BHeader c = BHeaderConstr (MemoBytes (BHeaderRaw c))
   deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, DecCBOR, SafeToHash)
 
 type instance MemoHashIndex (BHeaderRaw c) = EraIndependentBlockHeader
+
 instance HashAnnotated (BHeader c) EraIndependentBlockHeader where
   hashAnnotated = getMemoSafeHash
 
@@ -296,6 +296,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader bHeaderBody bHeaderSig =
       mkMemoized (pvMajor (bprotver bHeaderBody)) $ BHeaderRaw bHeaderBody bHeaderSig
+
 {-# COMPLETE BHeader #-}
 
 -- | Hash a given block header
@@ -448,8 +449,8 @@ mkSeed ucNonce (SlotNo slot) eNonce =
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
-            NeutralNonce -> mempty
-            Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 data LastAppliedBlock = LastAppliedBlock

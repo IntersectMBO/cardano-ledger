@@ -5,8 +5,7 @@
 
 module Test.Cardano.Chain.MempoolPayload.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   ByteSpan,

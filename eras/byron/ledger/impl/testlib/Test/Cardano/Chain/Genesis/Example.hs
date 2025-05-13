@@ -9,8 +9,7 @@ module Test.Cardano.Chain.Genesis.Example (
   exampleGenesisDelegation,
   exampleGenesisInitializer,
   exampleGenesisSpec,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   BlockCount (..),

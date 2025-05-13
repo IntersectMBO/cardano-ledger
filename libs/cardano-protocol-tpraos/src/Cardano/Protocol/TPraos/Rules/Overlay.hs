@@ -19,8 +19,7 @@ module Cardano.Protocol.TPraos.Rules.Overlay (
   classifyOverlaySlot,
   lookupInOverlaySchedule,
   overlaySlots,
-)
-where
+) where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
@@ -240,11 +239,11 @@ overlayTransition ::
 overlayTransition =
   judgmentContext
     >>= \( TRC
-            ( OverlayEnv dval pd (GenDelegs genDelegs) eta0
-              , cs
-              , bh@(BHeader bhb _)
-              )
-          ) -> do
+             ( OverlayEnv dval pd (GenDelegs genDelegs) eta0
+               , cs
+               , bh@(BHeader bhb _)
+               )
+           ) -> do
         let vk = bheaderVk bhb
             vkh = hashKey vk
             slot = bheaderSlotNo bhb

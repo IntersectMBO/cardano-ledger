@@ -3,8 +3,7 @@
 module Cardano.Chain.Block.ValidationMode (
   BlockValidationMode (..),
   toTxValidationMode,
-)
-where
+) where
 
 import Cardano.Chain.UTxO.ValidationMode (TxValidationMode (..))
 import Cardano.Prelude

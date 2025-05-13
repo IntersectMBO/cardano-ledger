@@ -144,8 +144,7 @@ module Constrained.API (
   sndSpec,
   var,
   Prod (..),
-)
-where
+) where
 
 import Constrained.AbstractSyntax
 import Constrained.Base (
@@ -190,27 +189,6 @@ import Constrained.NumSpec (
   cardinality,
   negateFn,
  )
-
-import Constrained.Spec.SumProd
-import Constrained.TheKnot
-
-import Constrained.Syntax (
-  assert,
-  assertExplain,
-  assertReified,
-  dependsOn,
-  exists,
-  explanation,
-  forAll,
-  genHint,
-  letBind,
-  lit,
-  monitor,
-  reifies,
-  reify,
-  unsafeExists,
- )
-
 import Constrained.Spec.Map (
   MapSpec (..),
   dom_,
@@ -229,9 +207,28 @@ import Constrained.Spec.Set (
   subset_,
   union_,
  )
-import Constrained.Syntax (var)
+import Constrained.Spec.SumProd
+import Constrained.Syntax (
+  assert,
+  assertExplain,
+  assertReified,
+  dependsOn,
+  exists,
+  explanation,
+  forAll,
+  genHint,
+  letBind,
+  lit,
+  monitor,
+  reifies,
+  reify,
+  unsafeExists,
+  var,
+ )
+import Constrained.TheKnot
 
 infix 4 /=.
+
 (/=.) :: HasSpec a => Term a -> Term a -> Term Bool
 a /=. b = not_ (a ==. b)
 
@@ -239,6 +236,7 @@ length_ :: HasSpec a => Term [a] -> Term Integer
 length_ = sizeOf_
 
 infixr 2 ||.
+
 (||.) ::
   Term Bool ->
   Term Bool ->
@@ -246,6 +244,7 @@ infixr 2 ||.
 (||.) = or_
 
 infixr 5 ++.
+
 (++.) :: HasSpec a => Term [a] -> Term [a] -> Term [a]
 (++.) = append_
 

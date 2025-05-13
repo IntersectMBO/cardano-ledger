@@ -23,8 +23,7 @@ module Cardano.Ledger.Conway.Scripts (
   ConwayPlutusPurpose (..),
   pattern VotingPurpose,
   pattern ProposingPurpose,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts
@@ -175,7 +174,9 @@ instance AllegraEraScript ConwayEra where
 
 instance NFData (PlutusScript ConwayEra) where
   rnf = rwhnf
+
 instance NoThunks (PlutusScript ConwayEra)
+
 instance SafeToHash (PlutusScript ConwayEra) where
   originalBytes ps = withPlutusScript ps originalBytes
 
@@ -207,13 +208,19 @@ data ConwayPlutusPurpose f era
   deriving (Generic)
 
 deriving instance Eq (ConwayPlutusPurpose AsIx era)
+
 deriving instance Ord (ConwayPlutusPurpose AsIx era)
+
 deriving instance Show (ConwayPlutusPurpose AsIx era)
+
 instance NoThunks (ConwayPlutusPurpose AsIx era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsItem era)
+
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsItem era)
+
 instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsItem era)
+
 deriving via
   (CBORGroup (ConwayPlutusPurpose f era))
   instance
@@ -223,6 +230,7 @@ deriving via
     , EncCBOR (TxCert era)
     ) =>
     EncCBOR (ConwayPlutusPurpose f era)
+
 deriving via
   (CBORGroup (ConwayPlutusPurpose f era))
   instance
@@ -236,7 +244,9 @@ deriving via
     DecCBOR (ConwayPlutusPurpose f era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsIxItem era)
+
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsIxItem era)
+
 instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsIxItem era)
 
 instance

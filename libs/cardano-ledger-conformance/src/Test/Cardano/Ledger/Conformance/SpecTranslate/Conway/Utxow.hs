@@ -15,9 +15,8 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   showOpaqueErrorString,
  )
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
-
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
 instance
   ( Era era

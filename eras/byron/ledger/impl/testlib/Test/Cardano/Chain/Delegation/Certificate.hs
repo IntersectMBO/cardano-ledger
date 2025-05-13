@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.Delegation.Certificate (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Delegation (
   ACertificate (delegateVK),

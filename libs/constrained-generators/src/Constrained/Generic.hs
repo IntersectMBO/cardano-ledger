@@ -24,7 +24,6 @@ import Constrained.List (
   listShape,
   uncurryList_,
  )
-
 import Data.Functor.Const
 import Data.Functor.Identity
 import Data.Kind
@@ -315,6 +314,7 @@ instance (TypeList prod, SOPLike (con : cases) r) => SOPLike ((c ::: prod) : con
 class SimpleConstructor rep where
   toSimpleCon' :: rep p -> ProdOver (Constr rep)
   fromSimpleCon' :: ProdOver (Constr rep) -> rep p
+
 instance
   ( SimpleConstructor f
   , SimpleConstructor g

@@ -65,8 +65,7 @@ module Cardano.Ledger.Api.Tx.Body (
   ConwayEraTxBody,
   votingProceduresTxBodyL,
   proposalProceduresTxBodyL,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))

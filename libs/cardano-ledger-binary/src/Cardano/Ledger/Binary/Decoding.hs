@@ -35,8 +35,7 @@ module Cardano.Ledger.Binary.Decoding (
   -- * Helpers
   toStrictByteString,
   decodeMemPack,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.DecCBOR

@@ -76,9 +76,9 @@ display h = do
             ++ [ indent . indent $ "-- @@@"
                , indent . indent $ "S" ++ show lang ++ " ->"
                , indent . indent . indent $
-                  let sep = (("\n" ++) . indent . indent . indent $ ", ")
-                      hexChunks = map show $ showHexBytesGrouped 90 (SBS.fromShort scriptBytes)
-                   in "[ " ++ intercalate sep hexChunks
+                   let sep = (("\n" ++) . indent . indent . indent $ ", ")
+                       hexChunks = map show $ showHexBytesGrouped 90 (SBS.fromShort scriptBytes)
+                    in "[ " ++ intercalate sep hexChunks
                , indent . indent . indent $ "]"
                ]
 

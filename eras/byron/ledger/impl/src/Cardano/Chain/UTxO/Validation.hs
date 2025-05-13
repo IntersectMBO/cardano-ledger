@@ -15,8 +15,7 @@ module Cardano.Chain.UTxO.Validation (
   TxValidationError (..),
   Environment (..),
   UTxOValidationError (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address (..),

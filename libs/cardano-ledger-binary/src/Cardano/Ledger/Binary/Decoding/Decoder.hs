@@ -163,8 +163,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),

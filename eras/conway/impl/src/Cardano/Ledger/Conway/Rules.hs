@@ -21,8 +21,7 @@ module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Utxo,
   module Cardano.Ledger.Conway.Rules.Utxos,
   module Cardano.Ledger.Conway.Rules.Utxow,
-)
-where
+) where
 
 import Cardano.Ledger.Conway.Core (EraRuleEvent, InjectRuleEvent (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)

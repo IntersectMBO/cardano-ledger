@@ -7,8 +7,7 @@ module Test.Cardano.Ledger.Binary.Random (
   QC (..),
   mkDummyHash,
   mkHashStdGen,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashToBytesShort)
 import Cardano.Crypto.Hash.Short (Blake2bPrefix)

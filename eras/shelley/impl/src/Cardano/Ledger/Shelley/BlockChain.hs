@@ -26,8 +26,7 @@ module Cardano.Ledger.Shelley.BlockChain (
   --
   incrBlocks,
   coreAuxDataBytes,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes (

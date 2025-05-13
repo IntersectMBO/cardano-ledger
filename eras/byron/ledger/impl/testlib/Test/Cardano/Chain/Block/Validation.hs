@@ -6,8 +6,7 @@
 
 module Test.Cardano.Chain.Block.Validation (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Block (
   ABlockOrBoundary (..),

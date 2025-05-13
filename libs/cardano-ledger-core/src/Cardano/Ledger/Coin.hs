@@ -32,8 +32,7 @@ module Cardano.Ledger.Coin (
   toCoinNonZero,
   fromCompactCoinNonZero,
   compactCoinNonZero,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   HasZero (..),

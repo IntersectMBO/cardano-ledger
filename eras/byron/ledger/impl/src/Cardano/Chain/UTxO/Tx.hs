@@ -11,8 +11,7 @@ module Cardano.Chain.UTxO.Tx (
   TxAttributes,
   TxIn (..),
   TxOut (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address (..),

@@ -34,8 +34,7 @@ module Cardano.Ledger.Alonzo.TxOut (
   getAlonzoTxOutEitherAddr,
   utxoEntrySize,
   internAlonzoTxOut,
-)
-where
+) where
 
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (

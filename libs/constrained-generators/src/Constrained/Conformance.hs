@@ -64,7 +64,6 @@ import Constrained.Syntax (
   runCaseOn,
   substitutePred,
  )
-
 import Data.List (intersect, nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe

@@ -12,8 +12,7 @@ module Cardano.Ledger.Keys.WitVKey (
   WitVKey (WitVKey),
   witVKeyHash,
   wvkSig,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class (
   SignedDSIGN,

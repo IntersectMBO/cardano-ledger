@@ -23,8 +23,7 @@ module Cardano.Chain.Common.Attributes (
   mkAttributes,
   dropAttributes,
   dropEmptyAttributes,
-)
-where
+) where
 
 import Cardano.HeapWords (HeapWords (..), heapWords2)
 import Cardano.Ledger.Binary (

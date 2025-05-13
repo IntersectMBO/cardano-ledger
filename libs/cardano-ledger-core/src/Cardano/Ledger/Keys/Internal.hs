@@ -25,8 +25,7 @@ module Cardano.Ledger.Keys.Internal (
   -- * Re-exports from cardano-crypto-class
   decodeSignedDSIGN,
   encodeSignedDSIGN,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN hiding (
   decodeSignedDSIGN,

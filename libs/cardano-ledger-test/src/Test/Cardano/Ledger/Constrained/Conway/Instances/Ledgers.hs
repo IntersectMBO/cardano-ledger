@@ -15,6 +15,7 @@ import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (EraSpecPParams)
 
 instance Typeable era => HasSimpleRep (ShelleyLedgersEnv era)
+
 instance
   ( EraSpecPParams era
   , EraGov era

@@ -34,8 +34,7 @@ module Cardano.Ledger.Alonzo.Core (
   ppuMaxCollateralInputsL,
   AlonzoEraTxAuxData (..),
   module Cardano.Ledger.Mary.Core,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoEraPParams,

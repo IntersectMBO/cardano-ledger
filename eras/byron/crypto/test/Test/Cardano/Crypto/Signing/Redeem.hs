@@ -2,8 +2,7 @@
 
 module Test.Cardano.Crypto.Signing.Redeem (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (SignTag (..))
 import Cardano.Crypto.Signing.Redeem (

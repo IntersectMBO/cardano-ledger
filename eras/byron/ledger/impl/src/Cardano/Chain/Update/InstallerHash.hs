@@ -5,8 +5,7 @@
 
 module Cardano.Chain.Update.InstallerHash (
   InstallerHash (..),
-)
-where
+) where
 
 import Cardano.Crypto (Hash, hashRaw)
 import Cardano.Crypto.Raw (Raw)

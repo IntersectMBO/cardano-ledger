@@ -9,8 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)

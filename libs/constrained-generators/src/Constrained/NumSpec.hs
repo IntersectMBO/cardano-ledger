@@ -67,7 +67,6 @@ import Constrained.Generic (
   SimpleRep,
  )
 import Constrained.PrettyUtils
-
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
 import Data.Kind
@@ -190,16 +189,27 @@ instance MaybeBounded (Unbounded a) where
   upperBound = Nothing
 
 instance MaybeBounded Int
+
 instance MaybeBounded Int64
+
 instance MaybeBounded Int32
+
 instance MaybeBounded Int16
+
 instance MaybeBounded Int8
+
 instance MaybeBounded Word64
+
 instance MaybeBounded Word32
+
 instance MaybeBounded Word16
+
 instance MaybeBounded Word8
+
 deriving via Unbounded Integer instance MaybeBounded Integer
+
 deriving via Unbounded (Ratio Integer) instance MaybeBounded (Ratio Integer)
+
 deriving via Unbounded Float instance MaybeBounded Float
 
 instance MaybeBounded Natural where
@@ -257,6 +267,7 @@ instance Arbitrary Natural where
 
 instance Uniform Natural where
   uniformM g = wordToNatural . abs <$> uniformM g
+
 instance Random Natural where
   randomR (lo, hi) g = first fromIntegral $ randomR (toInteger lo, toInteger hi) g
 

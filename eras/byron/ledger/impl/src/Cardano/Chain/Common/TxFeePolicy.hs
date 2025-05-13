@@ -12,8 +12,7 @@
 
 module Cardano.Chain.Common.TxFeePolicy (
   TxFeePolicy (..),
-)
-where
+) where
 
 import Cardano.Chain.Common.CBOR (
   decodeKnownCborDataItem,

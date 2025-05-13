@@ -17,8 +17,7 @@ module Test.Cardano.Protocol.Crypto.VRF.Fake (
   VerKeyVRF (..),
   SignKeyVRF (..),
   WithResult (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)

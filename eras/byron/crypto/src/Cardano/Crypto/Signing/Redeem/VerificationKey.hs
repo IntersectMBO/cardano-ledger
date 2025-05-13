@@ -19,8 +19,7 @@ module Cardano.Crypto.Signing.Redeem.VerificationKey (
   fromAvvmVK,
   fromVerificationKeyToByteString,
   redeemVKBuild,
-)
-where
+) where
 
 import Cardano.Crypto.Orphans ()
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)

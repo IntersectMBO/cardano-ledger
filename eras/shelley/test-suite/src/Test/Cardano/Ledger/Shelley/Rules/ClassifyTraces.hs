@@ -16,8 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
   relevantCasesAreCovered,
   propAbstractSizeBoundsBytes,
   propAbstractSizeNotTooBig,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')

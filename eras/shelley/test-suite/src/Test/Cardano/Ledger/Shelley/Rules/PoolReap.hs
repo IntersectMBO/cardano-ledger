@@ -8,8 +8,7 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))

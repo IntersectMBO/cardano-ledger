@@ -14,8 +14,7 @@ module Cardano.Ledger.Shelley.Core (
   pattern DelegStakeTxCert,
   module Cardano.Ledger.Core,
   module Cardano.Ledger.Shelley.Governance,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Core (

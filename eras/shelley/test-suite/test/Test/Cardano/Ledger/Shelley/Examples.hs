@@ -3,8 +3,7 @@
 module Test.Cardano.Ledger.Shelley.Examples (
   CHAINExample (..),
   testCHAINExample,
-)
-where
+) where
 
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley ()
@@ -42,8 +41,8 @@ testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
           <&> chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
       )
         .->> ( expectedSt
-                & chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
-                & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
+                 & chainStateNesL . nesPdL . poolDistrTotalL .~ mempty
+                 & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
              )
     )
     >> expectExprEqual (totalAda expectedSt) maxLLSupply

@@ -23,8 +23,7 @@ module Cardano.Chain.UTxO.Compact (
   CompactTxOut (..),
   toCompactTxOut,
   fromCompactTxOut,
-)
-where
+) where
 
 import Cardano.Chain.Common.Compact (
   CompactAddress,

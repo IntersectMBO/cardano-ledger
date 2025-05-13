@@ -25,8 +25,7 @@ module Test.Cardano.Ledger.Binary.Annotator (
   FullByteString (..),
   decodeAnnSet,
   translateViaCBORAnnotator,
-)
-where
+) where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain

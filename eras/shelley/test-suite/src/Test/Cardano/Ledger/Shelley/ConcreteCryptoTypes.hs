@@ -8,8 +8,7 @@
 module Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   MockCrypto,
   C,
-)
-where
+) where
 
 import Cardano.Crypto.KES (MockKES)
 import Cardano.Ledger.Shelley (ShelleyEra)

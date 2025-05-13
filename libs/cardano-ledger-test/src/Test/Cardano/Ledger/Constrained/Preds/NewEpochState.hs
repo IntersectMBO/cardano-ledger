@@ -58,19 +58,19 @@ epochstatePreds _proof =
   , Random snapShotFee
   , markPoolDistr
       :<-: ( Constr
-              "calculatePoolDistr"
-              ( \stak del pl ->
-                  unPoolDistr $
-                    calculatePoolDistr
-                      ( SnapShot
-                          (Stake (VMap.fromMap (Map.map UMap.compactCoinOrError stak)))
-                          (VMap.fromMap del)
-                          (VMap.fromMap pl)
-                      )
-              )
-              ^$ markStake
-              ^$ markDelegs
-              ^$ markPools
+               "calculatePoolDistr"
+               ( \stak del pl ->
+                   unPoolDistr $
+                     calculatePoolDistr
+                       ( SnapShot
+                           (Stake (VMap.fromMap (Map.map UMap.compactCoinOrError stak)))
+                           (VMap.fromMap del)
+                           (VMap.fromMap pl)
+                       )
+               )
+               ^$ markStake
+               ^$ markDelegs
+               ^$ markPools
            )
   ]
 

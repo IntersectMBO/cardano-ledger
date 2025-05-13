@@ -9,8 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)

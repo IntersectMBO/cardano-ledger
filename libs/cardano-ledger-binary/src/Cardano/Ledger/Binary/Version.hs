@@ -25,8 +25,7 @@ module Cardano.Ledger.Binary.Version (
   -- ** Concrete era versions
   byronProtVer,
   shelleyProtVer,
-)
-where
+) where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Control.DeepSeq (NFData)

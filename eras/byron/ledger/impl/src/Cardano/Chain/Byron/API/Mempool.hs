@@ -9,8 +9,7 @@ module Cardano.Chain.Byron.API.Mempool (
   applyMempoolPayload,
   mempoolPayloadRecoverBytes,
   mempoolPayloadReencode,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common

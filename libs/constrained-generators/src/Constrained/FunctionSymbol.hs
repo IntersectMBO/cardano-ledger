@@ -10,7 +10,6 @@
 module Constrained.FunctionSymbol where
 
 import Constrained.List
-
 import Data.Kind
 import Data.Typeable
 

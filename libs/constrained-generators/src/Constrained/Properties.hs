@@ -75,7 +75,6 @@ import Constrained.TheKnot (
   prettyPlan,
   shrinkWithSpec,
  )
-
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Typeable (Typeable, typeOf)
@@ -180,6 +179,7 @@ prop_univSound (TestableFn (fn :: t as b)) =
                             QC.counterexample ("\ngenerated value: a = " ++ show a) $
                               QC.counterexample ("\nfn ctx[a] = " ++ show res) $
                                 conformsToSpecProp res spec
+
 main :: IO ()
 main = QC.quickCheck (QC.withMaxSuccess 10000 prop_univSound)
 

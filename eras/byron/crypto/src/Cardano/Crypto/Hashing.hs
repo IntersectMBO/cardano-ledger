@@ -52,8 +52,7 @@ module Cardano.Crypto.Hashing (
   hashHexF,
   mediumHashF,
   shortHashF,
-)
-where
+) where
 
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.HeapWords

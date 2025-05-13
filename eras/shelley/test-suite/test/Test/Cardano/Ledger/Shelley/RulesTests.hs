@@ -10,8 +10,7 @@ module Test.Cardano.Ledger.Shelley.RulesTests (
   chainExamples,
   multisigExamples,
   testTickF,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))

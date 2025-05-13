@@ -26,8 +26,7 @@ module Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
   normalizePtr,
-)
-where
+) where
 
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), integralToBounded)
@@ -186,7 +185,9 @@ data StakeReference
   deriving (Show, Eq, Generic, Ord)
 
 instance ToJSON StakeReference
+
 instance NFData StakeReference
+
 instance NoThunks StakeReference
 
 -- | Pointers have been deprecated and aren't used anymore. For this reason we can safely use
@@ -203,6 +204,7 @@ data Ptr = Ptr {-# UNPACK #-} !SlotNo32 {-# UNPACK #-} !TxIx {-# UNPACK #-} !Cer
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
 
 instance NFData Ptr
+
 instance NoThunks Ptr
 
 -- | Convert any invalid `Ptr` to a `Ptr` that contains all zeros for its fields. Any

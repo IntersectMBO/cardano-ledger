@@ -12,8 +12,7 @@ module Cardano.Ledger.Mary (
   ShelleyTxOut,
   MaryValue,
   TxBody (..),
-)
-where
+) where
 
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()

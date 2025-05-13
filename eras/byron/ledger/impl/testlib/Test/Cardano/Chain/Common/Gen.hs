@@ -26,8 +26,7 @@ module Test.Cardano.Chain.Common.Gen (
   genKeyHash,
   genTxFeePolicy,
   genTxSizeLinear,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   AddrAttributes (..),

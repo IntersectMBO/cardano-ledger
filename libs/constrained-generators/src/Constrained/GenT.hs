@@ -277,6 +277,7 @@ vectorOfT i gen = GenT $ \mode _ -> do
       _ -> pure $ runGE res
 
 infixl 2 `suchThatT`
+
 suchThatT :: (Typeable a, MonadGenError m) => GenT m a -> (a -> Bool) -> GenT m a
 suchThatT g p = suchThatWithTryT 100 g p
 

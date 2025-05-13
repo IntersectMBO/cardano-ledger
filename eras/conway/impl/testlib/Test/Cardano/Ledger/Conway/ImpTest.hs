@@ -1365,18 +1365,18 @@ proposalsShowDebug ps showRoots =
     , viaShow $ ps ^. pRootsL . grConstitutionL
     ]
       <> ( if showRoots
-            then
-              [ "Hierarchy"
-              , ">> PParamUpdate"
-              , viaShow $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
-              , ">> HardFork"
-              , viaShow $ ps ^. pGraphL . grHardForkL . pGraphNodesL
-              , ">> Committee"
-              , viaShow $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
-              , ">> Constitution"
-              , viaShow $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
-              ]
-            else mempty
+             then
+               [ "Hierarchy"
+               , ">> PParamUpdate"
+               , viaShow $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
+               , ">> HardFork"
+               , viaShow $ ps ^. pGraphL . grHardForkL . pGraphNodesL
+               , ">> Committee"
+               , viaShow $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
+               , ">> Constitution"
+               , viaShow $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
+               ]
+             else mempty
          )
       <> ["----- Proposals End -----"]
 
@@ -1812,10 +1812,13 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
+
 instance InjectRuleFailure "CERTS" ShelleyDelegPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
+
 instance InjectRuleFailure "CERT" ShelleyDelegPredFailure ConwayEra where
   injectFailure = DelegFailure . injectFailure
+
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
   injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c

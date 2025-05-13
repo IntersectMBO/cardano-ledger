@@ -9,13 +9,12 @@
 
 module Constrained.Examples.CheatSheet where
 
+import Constrained.API
+import Constrained.Properties (forAllSpec)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics
 import Test.QuickCheck (Property, label)
-
-import Constrained.API
-import Constrained.Properties (forAllSpec)
 
 -- The `constrained-generators` library allows us to write
 -- constraints that give us random generators, shrinkers, and checkers
@@ -588,6 +587,7 @@ data FooBarBaz = Foo Int Int | Bar Bool | Baz deriving (Eq, Show, Generic)
 -- All you need to do is introduce instances for `HasSimpleRep` and `HasSpec`:
 
 instance HasSimpleRep FooBarBaz
+
 instance HasSpec FooBarBaz
 
 fooBarBaz :: Specification FooBarBaz

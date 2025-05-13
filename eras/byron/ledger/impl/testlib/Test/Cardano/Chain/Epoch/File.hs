@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Epoch.File (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFilesWithBoundary)
 import Cardano.Prelude

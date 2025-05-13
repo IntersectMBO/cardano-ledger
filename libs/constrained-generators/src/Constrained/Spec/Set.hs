@@ -65,7 +65,6 @@ import Constrained.PrettyUtils
 import Constrained.SumList (knownUpperBound, maxFromSpec)
 import Constrained.Syntax
 import Constrained.TheKnot
-
 import Data.Foldable
 import Data.Kind
 import Data.List ((\\))

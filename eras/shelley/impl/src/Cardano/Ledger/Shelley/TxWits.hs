@@ -32,8 +32,7 @@ module Cardano.Ledger.Shelley.TxWits (
   bootAddrShelleyTxWitsL,
   addrWits',
   shelleyEqTxWitsRaw,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

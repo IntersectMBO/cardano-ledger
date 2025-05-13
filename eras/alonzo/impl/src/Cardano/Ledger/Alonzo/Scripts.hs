@@ -57,8 +57,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
   module Cardano.Ledger.Plutus.ExUnits,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts
@@ -293,16 +292,23 @@ data AlonzoPlutusPurpose f era
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIx era)
+
 deriving instance Ord (AlonzoPlutusPurpose AsIx era)
+
 deriving instance Show (AlonzoPlutusPurpose AsIx era)
+
 instance NoThunks (AlonzoPlutusPurpose AsIx era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
+
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
+
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsItem era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsIxItem era)
+
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsIxItem era)
+
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsIxItem era)
 
 instance

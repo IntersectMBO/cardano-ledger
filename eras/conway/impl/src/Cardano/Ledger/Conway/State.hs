@@ -6,7 +6,6 @@ module Cardano.Ledger.Conway.State (
 ) where
 
 import Cardano.Ledger.Babbage.State
-
 import Cardano.Ledger.Conway.State.CertState
 import Cardano.Ledger.Conway.State.Stake
 import Cardano.Ledger.Conway.State.VState

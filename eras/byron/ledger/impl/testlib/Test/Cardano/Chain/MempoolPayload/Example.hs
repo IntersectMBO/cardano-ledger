@@ -5,8 +5,7 @@ module Test.Cardano.Chain.MempoolPayload.Example (
   exampleMempoolPayload1,
   exampleMempoolPayload2,
   exampleMempoolPayload3,
-)
-where
+) where
 
 import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
 import Data.List ((!!))

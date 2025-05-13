@@ -35,8 +35,7 @@ module Test.Control.State.Transition.Trace.Generator.QuickCheck (
 
   -- * Internal
   mkIntervals,
-)
-where
+) where
 
 import Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC))
 import qualified Control.State.Transition.Extended as STS

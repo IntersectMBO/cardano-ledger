@@ -2,8 +2,7 @@ module Cardano.Chain.Common.AddressHash (
   AddressHash,
   addressHash,
   unsafeAddressHash,
-)
-where
+) where
 
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromDigest)
 import Cardano.Ledger.Binary (EncCBOR, byronProtVer, serialize)

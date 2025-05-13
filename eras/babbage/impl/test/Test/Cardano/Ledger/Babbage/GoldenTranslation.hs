@@ -16,8 +16,7 @@
 -- cabal run cardano-ledger-<era>:gen-golden"
 module Test.Cardano.Ledger.Babbage.GoldenTranslation (
   spec,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Paths_cardano_ledger_babbage (getDataFileName)

@@ -10,8 +10,7 @@ module Cardano.Protocol.TPraos.Rules.OCert (
   PredicateFailure,
   OCertEnv (..),
   OcertPredicateFailure (..),
-)
-where
+) where
 
 import Cardano.Crypto.KES (Signable, verifySignedKES)
 import Cardano.Ledger.BaseTypes

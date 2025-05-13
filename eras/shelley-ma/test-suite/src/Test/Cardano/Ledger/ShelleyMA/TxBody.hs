@@ -10,8 +10,7 @@
 
 module Test.Cardano.Ledger.ShelleyMA.TxBody (
   txBodyTest,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))

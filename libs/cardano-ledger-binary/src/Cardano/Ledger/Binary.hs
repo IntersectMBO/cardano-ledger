@@ -6,8 +6,7 @@ module Cardano.Ledger.Binary (
   module Cardano.Ledger.Binary.Plain,
   Term (..),
   C.DeserialiseFailure (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding

@@ -1,8 +1,7 @@
 module Cardano.Crypto.Signing.Redeem.KeyGen (
   redeemKeyGen,
   redeemDeterministicKeyGen,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.Redeem.SigningKey (RedeemSigningKey (..))
 import Cardano.Crypto.Signing.Redeem.VerificationKey (RedeemVerificationKey (..))

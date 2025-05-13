@@ -38,8 +38,7 @@ module Cardano.Protocol.TPraos.API (
   -- Leader Schedule
   checkLeaderValue,
   getLeaderSchedule,
-)
-where
+) where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF

@@ -6,8 +6,7 @@ module Test.Common (
   testPropertyN,
   withMaxTimesSuccess,
   module X,
-)
-where
+) where
 
 import Control.Applicative
 import Data.Proxy as X

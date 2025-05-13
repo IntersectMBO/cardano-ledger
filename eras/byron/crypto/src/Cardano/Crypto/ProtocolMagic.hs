@@ -17,8 +17,7 @@ module Cardano.Crypto.ProtocolMagic (
   RequiresNetworkMagic (..),
   getProtocolMagic,
   getProtocolMagicId,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   Annotated (..),

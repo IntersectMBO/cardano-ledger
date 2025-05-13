@@ -3,8 +3,7 @@
 
 module Cardano.Chain.Common.BlockCount (
   BlockCount (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

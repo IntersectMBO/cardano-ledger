@@ -37,8 +37,7 @@ module Cardano.Chain.Update.Proposal (
 
   -- * ProposalBody Binary Serialization
   recoverProposalSignedBytes,
-)
-where
+) where
 
 import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)

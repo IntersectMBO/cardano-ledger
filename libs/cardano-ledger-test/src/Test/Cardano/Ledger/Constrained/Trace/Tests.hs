@@ -6,8 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Constrained.Trace.Tests
-where
+module Test.Cardano.Ledger.Constrained.Trace.Tests where
 
 import Cardano.Ledger.Babbage.TxOut ()
 import Cardano.Ledger.BaseTypes (TxIx)

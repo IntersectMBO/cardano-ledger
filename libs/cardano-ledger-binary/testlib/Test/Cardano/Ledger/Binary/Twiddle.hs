@@ -19,8 +19,7 @@ module Test.Cardano.Ledger.Binary.Twiddle (
   twiddleInvariantProp,
   emptyOrNothing,
   twiddleStrictMaybe,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

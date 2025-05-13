@@ -41,8 +41,7 @@ module Test.Cardano.Ledger.Common (
 
   -- * Miscellanous helpers
   tracedDiscard,
-)
-where
+) where
 
 import Control.DeepSeq (NFData)
 import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))

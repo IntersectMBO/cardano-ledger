@@ -9,8 +9,7 @@ module Test.Cardano.Crypto.CBOR (
   constantByteString,
   getBytes,
   tests,
-)
-where
+) where
 
 import Cardano.Crypto (
   AbstractHash,

@@ -75,8 +75,7 @@ module Test.Cardano.Ledger.Imp.Common (
   -- * Re-exports from ImpSpec
   withImpInit,
   modifyImpInit,
-)
-where
+) where
 
 import Control.Monad.IO.Class
 import Data.List (isInfixOf)

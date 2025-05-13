@@ -74,7 +74,6 @@ import Constrained.List (
  )
 import Constrained.PrettyUtils
 import Constrained.TypeErrors
-
 import Control.Monad.Writer (
   Writer,
   tell,
@@ -102,6 +101,7 @@ instance Show (Hint a) => Show (HintF a) where
   show (HintF h) = show h
 
 data Deps
+
 instance Dependencies Deps where
   type HasSpecD Deps = HasSpec
   type TypeSpecD Deps = TypeSpecF
@@ -111,9 +111,13 @@ instance Dependencies Deps where
   type HintD Deps = HintF
 
 type Binder = BinderD Deps
+
 type AppRequires t as b = AppRequiresD Deps t as b
+
 type Pred = PredD Deps
+
 type Term = TermD Deps
+
 type Specification = SpecificationD Deps
 
 pattern TypeSpec :: () => HasSpec a => TypeSpec a -> [a] -> Specification a
@@ -337,7 +341,7 @@ type GenericallyInstantiated a =
           :<>: ShowType a
           :<>: Text ", likely in a HasSpec instance."
           :$$: Text
-                "However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep."
+                 "However, the type has no definition of SimpleRep, likely because of a missing instance of HasSimpleRep."
       )
   , HasSimpleRep a
   , HasSpec (SimpleRep a)
@@ -557,6 +561,7 @@ type GenericRequires a =
 data BaseW (dom :: [Type]) (rng :: Type) where
   ToGenericW :: GenericRequires a => BaseW '[a] (SimpleRep a)
   FromGenericW :: GenericRequires a => BaseW '[SimpleRep a] a
+
 deriving instance Eq (BaseW dom rng)
 
 instance Show (BaseW d r) where

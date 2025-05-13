@@ -6,7 +6,6 @@ module Test.Cardano.Ledger.Constrained.Shrink (
 
 import Control.Monad
 import Data.Maybe
-
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad

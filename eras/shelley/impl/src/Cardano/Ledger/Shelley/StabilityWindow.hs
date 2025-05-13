@@ -1,8 +1,7 @@
 module Cardano.Ledger.Shelley.StabilityWindow (
   computeStabilityWindow,
   computeRandomnessStabilisationWindow,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes
 import Data.Word (Word64)

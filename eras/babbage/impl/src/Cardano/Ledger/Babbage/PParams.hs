@@ -37,8 +37,7 @@ module Cardano.Ledger.Babbage.PParams (
   coinsPerUTxOByteToCoinsPerUTxOWord,
   babbagePParamsHKDPairs,
   babbageCommonPParamsHKDPairs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core

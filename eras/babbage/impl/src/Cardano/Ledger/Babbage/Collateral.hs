@@ -9,8 +9,7 @@
 module Cardano.Ledger.Babbage.Collateral (
   collAdaBalance,
   collOuts,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))

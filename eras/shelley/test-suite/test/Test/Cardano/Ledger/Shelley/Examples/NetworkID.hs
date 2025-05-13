@@ -3,8 +3,7 @@
 
 module Test.Cardano.Ledger.Shelley.Examples.NetworkID (
   testPoolNetworkId,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)

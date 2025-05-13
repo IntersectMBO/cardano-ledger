@@ -13,8 +13,7 @@
 module Cardano.Chain.Genesis.NonAvvmBalances (
   GenesisNonAvvmBalances (..),
   convertNonAvvmDataToBalances,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address,

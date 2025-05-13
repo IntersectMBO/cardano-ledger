@@ -12,7 +12,6 @@
 module Constrained.PrettyUtils where
 
 import Constrained.List
-
 import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter

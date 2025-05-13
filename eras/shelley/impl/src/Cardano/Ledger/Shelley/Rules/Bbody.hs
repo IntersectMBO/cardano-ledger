@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   ShelleyBbodyEvent (..),
   PredicateFailure,
   State,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (
@@ -177,11 +176,11 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , Block bhview txsSeq
-              )
-          ) -> do
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block bhview txsSeq
+               )
+           ) -> do
         let txs = fromTxSeq txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
             actualBodyHash = hashTxSeq txsSeq

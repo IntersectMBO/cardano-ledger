@@ -54,8 +54,7 @@ module Cardano.Ledger.Binary.Encoding.EncCBOR (
   encodedVerKeyVRFSizeExpr,
   encodedSignKeyVRFSizeExpr,
   encodedCertVRFSizeExpr,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,

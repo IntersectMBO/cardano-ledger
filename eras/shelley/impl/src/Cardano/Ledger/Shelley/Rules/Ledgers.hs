@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
   ShelleyLedgersPredFailure (..),
   ShelleyLedgersEvent (..),
   PredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))

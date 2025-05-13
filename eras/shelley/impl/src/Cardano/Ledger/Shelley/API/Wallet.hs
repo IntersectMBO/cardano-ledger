@@ -35,8 +35,7 @@ module Cardano.Ledger.Shelley.API.Wallet (
   AdaPots (..),
   totalAdaES,
   totalAdaPotsES,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (

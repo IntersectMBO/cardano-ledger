@@ -72,8 +72,7 @@ module Cardano.Chain.Block.Block (
   abobHdrChainDifficulty,
   abobHdrHash,
   abobHdrPrevHash,
-)
-where
+) where
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 
@@ -456,7 +455,7 @@ encCBORABoundaryBody :: ABoundaryBody a -> Encoding
 encCBORABoundaryBody _ =
   (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-          <> encCBOR (mempty :: Map Word8 LByteString)
+           <> encCBOR (mempty :: Map Word8 LByteString)
        )
 
 -- | For a boundary block, we keep the header, body, and an annotation for

@@ -19,8 +19,7 @@ module Cardano.Protocol.TPraos.Rules.Prtcl (
   PredicateFailure,
   PrtlSeqFailure (..),
   prtlSeqChecks,
-)
-where
+) where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF

@@ -6,8 +6,7 @@ module Cardano.Ledger.Babbage.Core (
   ppCoinsPerUTxOByteL,
   ppuCoinsPerUTxOByteL,
   module Cardano.Ledger.Alonzo.Core,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Babbage.PParams (

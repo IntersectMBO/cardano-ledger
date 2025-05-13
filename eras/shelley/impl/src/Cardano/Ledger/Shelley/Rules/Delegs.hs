@@ -25,8 +25,7 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   validateZeroRewards,
   validateStakePoolDelegateeRegistered,
   drainWithdrawals,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   CertIx (..),

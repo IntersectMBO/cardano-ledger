@@ -24,8 +24,7 @@ module Cardano.Ledger.Allegra.TxAuxData (
   metadataAllegraTxAuxDataL,
   AllegraEraTxAuxData (..),
   timelockScriptsAllegraTxAuxDataL,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)

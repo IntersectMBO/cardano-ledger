@@ -5,8 +5,7 @@
 module Byron.Spec.Ledger.Update.Test (
   coverUpiregFailures,
   coverUpivoteFailures,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Update
 import Data.Data (Data)

@@ -9,8 +9,7 @@
 
 module Cardano.Ledger.Mary.TxAuxData (
   module Cardano.Ledger.Allegra.TxAuxData,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.TxAuxData (
   AllegraEraTxAuxData (..),

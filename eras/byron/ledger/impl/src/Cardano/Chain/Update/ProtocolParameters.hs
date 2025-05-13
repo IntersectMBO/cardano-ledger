@@ -12,8 +12,7 @@ module Cardano.Chain.Update.ProtocolParameters (
   ProtocolParameters (..),
   upAdptThd,
   isBootstrapEraPP,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   LovelacePortion,

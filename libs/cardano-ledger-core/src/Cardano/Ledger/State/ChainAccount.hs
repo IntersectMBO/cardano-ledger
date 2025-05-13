@@ -40,7 +40,9 @@ type AccountState = ChainAccountState
 pattern AccountState :: Coin -> Coin -> AccountState
 pattern AccountState {asTreasury, asReserves} = ChainAccountState asTreasury asReserves
 {-# DEPRECATED AccountState "In favor of `ChainAccountState`" #-}
+
 {-# DEPRECATED asTreasury "In favor of `casTreasury`" #-}
+
 {-# DEPRECATED asReserves "In favor of `casReserves`" #-}
 
 data ChainAccountState = ChainAccountState

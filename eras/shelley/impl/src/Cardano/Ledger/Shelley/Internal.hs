@@ -17,8 +17,7 @@ module Cardano.Ledger.Shelley.Internal (
   showSafeHash,
   synopsisCoinMap,
   showTxCerts,
-)
-where
+) where
 
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),

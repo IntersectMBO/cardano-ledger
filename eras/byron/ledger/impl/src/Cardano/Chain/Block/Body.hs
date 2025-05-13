@@ -13,8 +13,7 @@ module Cardano.Chain.Block.Body (
   ABody (..),
   bodyTxs,
   bodyWitnesses,
-)
-where
+) where
 
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload (..))

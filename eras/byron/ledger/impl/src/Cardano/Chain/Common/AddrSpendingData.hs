@@ -9,8 +9,7 @@ module Cardano.Chain.Common.AddrSpendingData (
   AddrSpendingData (..),
   AddrType (..),
   addrSpendingDataToType,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
 import Cardano.HeapWords

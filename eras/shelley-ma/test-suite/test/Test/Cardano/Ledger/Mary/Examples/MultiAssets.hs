@@ -10,8 +10,7 @@
 -- Examples demonstrating the use of multi-assets.
 module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
   multiAssetsExample,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (

@@ -12,8 +12,7 @@ module Cardano.Chain.Update.SystemTag (
   SystemTagError (..),
   checkSystemTag,
   systemTagMaxLength,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

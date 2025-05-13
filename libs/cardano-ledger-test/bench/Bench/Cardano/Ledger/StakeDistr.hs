@@ -13,8 +13,7 @@
 -- | Benchmark the TickF rule. and its major sub-computations and rules, to discover where the time is spent
 module Bench.Cardano.Ledger.StakeDistr (
   tickfRuleBench,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))

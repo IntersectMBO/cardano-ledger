@@ -31,8 +31,7 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   timelockScript,
   timelockHash,
   timelockStakeCred,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -79,6 +78,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
@@ -89,8 +89,6 @@ import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-
-import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 
 -- =================================================================
 -- =========================  Shared data  =========================

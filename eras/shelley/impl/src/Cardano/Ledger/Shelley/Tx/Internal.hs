@@ -45,8 +45,7 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   witsFromTxWitnesses,
   shelleyEqTxRaw,
   unsafeConstructTxWithBytes,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),

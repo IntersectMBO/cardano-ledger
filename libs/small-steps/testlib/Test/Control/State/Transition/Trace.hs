@@ -51,8 +51,7 @@ module Test.Control.State.Transition.Trace (
   applySTSTest,
   getEvents,
   splitTrace,
-)
-where
+) where
 
 import Control.DeepSeq (NFData)
 import Control.Monad (void)

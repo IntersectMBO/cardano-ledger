@@ -10,8 +10,7 @@
 module Cardano.Chain.Slotting.EpochNumber (
   EpochNumber (..),
   isBootstrapEra,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

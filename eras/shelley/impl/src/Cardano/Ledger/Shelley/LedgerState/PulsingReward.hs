@@ -17,8 +17,7 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   circulation,
   updateNonMyopic,
   decayFactor,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..), raCredential)
 import Cardano.Ledger.BaseTypes (

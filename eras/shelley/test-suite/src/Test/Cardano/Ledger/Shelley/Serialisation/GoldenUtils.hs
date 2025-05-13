@@ -11,8 +11,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
   roundTripFailure,
   checkEncodingCBORDecodeFailure,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   Annotator,
@@ -31,7 +30,6 @@ import Cardano.Ledger.Binary (
   serialize,
   serialize',
  )
-
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Exception (throwIO)
 import Control.Monad (unless)

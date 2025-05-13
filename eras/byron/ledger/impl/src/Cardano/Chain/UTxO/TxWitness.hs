@@ -12,8 +12,7 @@ module Cardano.Chain.UTxO.TxWitness (
   TxSigData (..),
   TxSig,
   recoverSigData,
-)
-where
+) where
 
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.CBOR (

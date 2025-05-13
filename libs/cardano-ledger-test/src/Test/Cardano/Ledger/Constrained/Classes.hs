@@ -1242,6 +1242,7 @@ instance LiftT (AddsSpec c) where
 instance Show (AddsSpec c) where show = showAddsSpec
 
 instance Semigroup (AddsSpec c) where (<>) = mergeAddsSpec
+
 instance Monoid (AddsSpec c) where mempty = AddsSpecAny
 
 showAddsSpec :: AddsSpec c -> String

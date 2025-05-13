@@ -4,8 +4,7 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Coin (Coin)

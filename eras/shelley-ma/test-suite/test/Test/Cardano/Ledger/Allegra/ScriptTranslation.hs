@@ -3,8 +3,7 @@
 
 module Test.Cardano.Ledger.Allegra.ScriptTranslation (
   testScriptPostTranslation,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.State

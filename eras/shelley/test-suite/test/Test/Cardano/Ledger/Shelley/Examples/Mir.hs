@@ -12,8 +12,7 @@
 -- Example demonstrating the Move Instantaneous Rewards mechanism
 module Test.Cardano.Ledger.Shelley.Examples.Mir (
   mirExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)

@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Slotting.Properties (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Slotting (
   SlotCount (..),

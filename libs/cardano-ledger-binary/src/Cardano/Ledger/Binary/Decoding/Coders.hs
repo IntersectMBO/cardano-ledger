@@ -59,8 +59,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   unusedRequiredKeys,
   duplicateKey,
   guardUntilAtLeast,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))

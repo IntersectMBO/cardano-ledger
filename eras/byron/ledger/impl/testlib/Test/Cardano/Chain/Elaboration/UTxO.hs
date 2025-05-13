@@ -10,8 +10,7 @@ module Test.Cardano.Chain.Elaboration.UTxO (
   elaborateTxBody,
   elaborateTxBS,
   elaborateTxOut,
-)
-where
+) where
 
 import qualified Byron.Spec.Ledger.Core as Abstract
 import qualified Byron.Spec.Ledger.STS.UTXO as Abstract

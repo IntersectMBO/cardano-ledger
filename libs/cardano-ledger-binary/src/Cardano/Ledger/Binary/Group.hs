@@ -8,8 +8,7 @@ module Cardano.Ledger.Binary.Group (
   EncCBORGroup (..),
   listLenInt,
   DecCBORGroup (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding

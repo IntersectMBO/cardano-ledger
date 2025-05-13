@@ -12,8 +12,7 @@ module Cardano.Ledger.Api.Tx.In (
   txIxToInt,
   txIxFromIntegral,
   mkTxIxPartial,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   TxIx,

@@ -3,7 +3,6 @@
 module Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.TxSeq.Internal

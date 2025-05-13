@@ -118,10 +118,13 @@ class Arbitrary t => HasRep t where
 
 instance HasRep Word64 where
   hasRep = Word64R
+
 instance HasRep Int where
   hasRep = IntR
+
 instance HasRep Coin where
   hasRep = CoinR
+
 instance HasRep DeltaCoin where
   hasRep = DeltaCoinR
 

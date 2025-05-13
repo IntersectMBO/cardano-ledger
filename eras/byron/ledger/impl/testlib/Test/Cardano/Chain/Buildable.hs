@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Buildable (
   tests,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Attributes (Attributes),

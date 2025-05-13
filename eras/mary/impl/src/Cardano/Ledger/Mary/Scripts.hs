@@ -4,8 +4,7 @@
 
 module Cardano.Ledger.Mary.Scripts (
   module Cardano.Ledger.Allegra.Scripts,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Core

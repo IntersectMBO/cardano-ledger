@@ -11,8 +11,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
   -- * Individual properties
   golden_json_ShelleyGenesis,
   golden_cbor_ShelleyGenesis,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))

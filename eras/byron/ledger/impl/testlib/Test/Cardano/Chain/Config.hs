@@ -3,8 +3,7 @@
 
 module Test.Cardano.Chain.Config (
   readMainetCfg,
-)
-where
+) where
 
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Crypto.Hashing (Hash, decodeHash)

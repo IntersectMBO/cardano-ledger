@@ -23,8 +23,7 @@ module Test.Cardano.Ledger.Shelley.Rewards (
   RewardUpdateOld (..),
   createRUpdOld,
   createRUpdOld_,
-)
-where
+) where
 
 import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)

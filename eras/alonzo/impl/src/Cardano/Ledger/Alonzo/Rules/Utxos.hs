@@ -30,8 +30,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
   when2Phase,
   FailureDescription (..),
   scriptFailureToFailureDescription,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOS)

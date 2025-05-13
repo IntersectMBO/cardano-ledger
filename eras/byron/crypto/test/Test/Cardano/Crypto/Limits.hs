@@ -6,8 +6,7 @@
 
 module Test.Cardano.Crypto.Limits (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto (AbstractHash, Signature (..), VerificationKey)
 import qualified Cardano.Crypto.Wallet as CC

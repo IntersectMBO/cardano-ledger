@@ -18,8 +18,7 @@ module Test.Cardano.Chain.Elaboration.Block (
     proposalIds,
     transactionIds
   ),
-)
-where
+) where
 
 import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Byron.Spec.Chain.STS.Rule.Chain (CHAIN, disL)

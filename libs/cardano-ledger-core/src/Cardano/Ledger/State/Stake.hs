@@ -16,8 +16,7 @@ module Cardano.Ledger.State.Stake (
   CanSetInstantStake (..),
   snapShotFromInstantStake,
   resolveActiveInstantStakeCredentials,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),

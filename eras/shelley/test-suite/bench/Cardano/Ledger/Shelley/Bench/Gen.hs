@@ -8,8 +8,7 @@ module Cardano.Ledger.Shelley.Bench.Gen (
   genTriple,
   genBlock,
   genChainState,
-)
-where
+) where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (

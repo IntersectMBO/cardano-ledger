@@ -8,8 +8,7 @@
 
 module Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   aliceByronAddr,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Signing as Byron

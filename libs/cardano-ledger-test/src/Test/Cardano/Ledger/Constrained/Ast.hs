@@ -120,6 +120,7 @@ data Term era t where
   Pair :: Term era a -> Term era b -> Term era (a, b)
 
 infix 4 :=:
+
 infix 4 :<-:
 
 data Pred era where
@@ -174,6 +175,7 @@ data Sum era c where
 -- Special patterns for building literal Terms of type Size and Word64
 
 infix 4 :⊆:
+
 pattern (:⊆:) :: forall era. (forall a. Ord a => Term era (Set a) -> Term era (Set a) -> Pred era)
 pattern x :⊆: y = Subset x y
 
@@ -1160,6 +1162,7 @@ patt rep term = Pat rep [arg rep term]
 
 instance Show (Pat era t) where
   show (Pat r xs) = "Pat " ++ show r ++ " " ++ showL show ", " xs
+
 instance Show (Arg era t) where
   show (Arg (Field nm _ _ _)) = nm
   show (Arg f@(FConst _ _ _ _)) = show f

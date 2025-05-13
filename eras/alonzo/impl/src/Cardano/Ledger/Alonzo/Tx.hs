@@ -63,8 +63,7 @@ module Cardano.Ledger.Alonzo.Tx (
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
   alonzoEqTxRaw,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)

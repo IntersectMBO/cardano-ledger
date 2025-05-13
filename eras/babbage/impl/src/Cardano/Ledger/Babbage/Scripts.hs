@@ -16,8 +16,7 @@ module Cardano.Ledger.Babbage.Scripts (
   AlonzoScript (..),
   isPlutusScript,
   PlutusScript (..),
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Core
@@ -125,7 +124,9 @@ instance AllegraEraScript BabbageEra where
 
 instance NFData (PlutusScript BabbageEra) where
   rnf = rwhnf
+
 instance NoThunks (PlutusScript BabbageEra)
+
 instance SafeToHash (PlutusScript BabbageEra) where
   originalBytes ps = withPlutusScript ps originalBytes
 

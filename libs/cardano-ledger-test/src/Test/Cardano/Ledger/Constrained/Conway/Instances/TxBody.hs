@@ -40,6 +40,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 -- ==============================================================================
 
 instance Typeable era => HasSimpleRep (Update era)
+
 instance EraSpecPParams era => HasSpec (Update era)
 
 -- =========================================
@@ -135,6 +136,7 @@ instance HasSimpleRep (TxBody AllegraEra) where
             (maybeToStrictMaybe up)
             (maybeToStrictMaybe aux)
       )
+
 instance HasSpec (TxBody AllegraEra)
 
 -- =========================================================================
@@ -185,6 +187,7 @@ instance HasSimpleRep (TxBody MaryEra) where
             (maybeToStrictMaybe aux)
             ma
       )
+
 instance HasSpec (TxBody MaryEra)
 
 -- =================================================================================

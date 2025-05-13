@@ -7,8 +7,7 @@ module Cardano.Chain.Epoch.Validation (
   EpochError (..),
   validateEpochFile,
   validateEpochFiles,
-)
-where
+) where
 
 import Cardano.Chain.Block (
   ABlockOrBoundary (..),

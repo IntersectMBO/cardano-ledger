@@ -64,8 +64,7 @@ module Cardano.Ledger.Api.Tx.Cert (
   pattern ResignCommitteeColdTxCert,
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
-)
-where
+) where
 
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,

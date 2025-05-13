@@ -8,8 +8,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Translation (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes hiding ((==>))

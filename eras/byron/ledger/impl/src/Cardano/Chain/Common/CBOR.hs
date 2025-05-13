@@ -33,8 +33,7 @@ module Cardano.Chain.Common.CBOR (
   encodeCrcProtected,
   encodedCrcProtectedSizeExpr,
   decodeCrcProtected,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

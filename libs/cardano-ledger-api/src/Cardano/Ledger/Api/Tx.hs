@@ -64,8 +64,7 @@ module Cardano.Ledger.Api.Tx (
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Api.Era ()

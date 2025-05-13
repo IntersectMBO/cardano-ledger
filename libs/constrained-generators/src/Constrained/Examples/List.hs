@@ -6,10 +6,9 @@
 
 module Constrained.Examples.List where
 
-import Data.Word
-
 import Constrained.API
 import Constrained.Examples.Basic
+import Data.Word
 
 type Numbery a =
   ( Foldy a

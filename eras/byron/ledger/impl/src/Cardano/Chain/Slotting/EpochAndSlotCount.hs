@@ -13,8 +13,7 @@ module Cardano.Chain.Slotting.EpochAndSlotCount (
   toSlotNumber,
   fromSlotNumber,
   slotNumberEpoch,
-)
-where
+) where
 
 import Cardano.Chain.Slotting.EpochNumber (EpochNumber (..))
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))

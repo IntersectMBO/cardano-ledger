@@ -20,8 +20,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
   computeDRepExpiry,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochNo,
@@ -265,16 +264,16 @@ conwayGovCertTransition = do
         certState
           & certVStateL . vsDRepsL
             %~ ( Map.adjust
-                  ( \drepState ->
-                      drepState
-                        & drepExpiryL
-                          .~ computeDRepExpiry
-                            ppDRepActivity
-                            cgceCurrentEpoch
-                            (certState ^. certVStateL . vsNumDormantEpochsL)
-                        & drepAnchorL .~ mAnchor
-                  )
-                  cred
+                   ( \drepState ->
+                       drepState
+                         & drepExpiryL
+                           .~ computeDRepExpiry
+                             ppDRepActivity
+                             cgceCurrentEpoch
+                             (certState ^. certVStateL . vsNumDormantEpochsL)
+                         & drepAnchorL .~ mAnchor
+                   )
+                   cred
                )
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeHotCredential hotCred

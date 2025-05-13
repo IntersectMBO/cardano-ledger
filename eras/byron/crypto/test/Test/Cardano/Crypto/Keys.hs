@@ -3,8 +3,7 @@
 
 module Test.Cardano.Crypto.Keys (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (
   deterministicKeyGen,

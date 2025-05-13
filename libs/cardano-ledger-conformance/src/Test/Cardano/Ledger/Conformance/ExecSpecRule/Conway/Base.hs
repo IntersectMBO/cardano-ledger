@@ -74,12 +74,14 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
   CommitteeState (..),
   IndividualPoolStake (..),
  )
 import Constrained.API
+import Data.ByteString (ByteString)
 import Data.Either (isRight)
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
@@ -122,9 +124,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   committeeMinSize_,
   protocolVersion_,
  )
-
-import Cardano.Ledger.Keys (DSIGN, VKey (..))
-import Data.ByteString (ByteString)
 import Test.Cardano.Ledger.Constrained.Conway.Utxo (witnessDepositPurpose)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..), witness)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -151,6 +150,7 @@ data ConwayCertExecContext era
   deriving (Generic, Eq, Show)
 
 instance Typeable era => HasSimpleRep (ConwayCertExecContext era)
+
 instance Era era => HasSpec (ConwayCertExecContext era)
 
 -- No particular constraints, other than witnessing
@@ -261,6 +261,7 @@ instance
   inject = crecGovActionMap
 
 instance Typeable era => HasSimpleRep (ConwayRatifyExecContext era)
+
 instance
   ( EraPParams era
   , HasSpec (GovActionState era)

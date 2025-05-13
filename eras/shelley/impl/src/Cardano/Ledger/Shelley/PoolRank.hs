@@ -25,8 +25,7 @@ module Cardano.Ledger.Shelley.PoolRank (
   applyDecay,
   Likelihood (..),
   leaderProbability,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,

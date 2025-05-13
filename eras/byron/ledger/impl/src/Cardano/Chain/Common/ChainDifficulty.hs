@@ -5,8 +5,7 @@
 module Cardano.Chain.Common.ChainDifficulty (
   ChainDifficulty (..),
   dropChainDifficulty,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

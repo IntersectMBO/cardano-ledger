@@ -37,8 +37,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   Split (..),
   module CoreUtils,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (hashToBytes)

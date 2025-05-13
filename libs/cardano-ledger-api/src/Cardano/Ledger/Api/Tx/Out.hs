@@ -68,8 +68,7 @@ module Cardano.Ledger.Api.Tx.Out (
   datumTxOutL,
   Datum (..),
   referenceScriptTxOutL,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
 import Cardano.Ledger.Api.Era ()

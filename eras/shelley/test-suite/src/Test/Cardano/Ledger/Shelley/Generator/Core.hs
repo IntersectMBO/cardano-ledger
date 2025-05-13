@@ -54,8 +54,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
   PreAlonzo,
   hashData,
   findPlutus,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..))

@@ -36,8 +36,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Cast (
   dariaStake,
   dariaSHK,
   dariaAddr,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (

@@ -4,8 +4,7 @@ module Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump (
   Environment (..),
   State (..),
   tryBumpVersion,
-)
-where
+) where
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.ProtocolConstants (kUpdateStabilityParam)

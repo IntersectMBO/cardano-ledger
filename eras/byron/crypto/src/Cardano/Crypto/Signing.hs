@@ -1,7 +1,6 @@
 module Cardano.Crypto.Signing (
   module X,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.KeyGen as X
 import Cardano.Crypto.Signing.Redeem as X

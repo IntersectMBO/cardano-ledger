@@ -38,8 +38,7 @@ module Cardano.Ledger.Shelley.Genesis (
   secondsToNominalDiffTimeMicro,
   sgInitialFundsL,
   sgStakingL,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256)

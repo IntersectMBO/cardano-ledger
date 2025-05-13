@@ -21,8 +21,7 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredPools, -- How to precompute env for the Stake Pool transactions
   ledgerDelegateManyKeysOnePool,
   ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr, RewardAccount (..))
 import Cardano.Ledger.BaseTypes (

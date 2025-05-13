@@ -2,8 +2,7 @@
 
 module Test.Cardano.Chain.Genesis.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Prelude
 import Test.Cardano.Chain.Genesis.Gen

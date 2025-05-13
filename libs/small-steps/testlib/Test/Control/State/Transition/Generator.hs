@@ -63,8 +63,7 @@ module Test.Control.State.Transition.Generator (
 
   -- * Helpers
   coverFailures,
-)
-where
+) where
 
 import Control.Arrow (second)
 import Control.Monad (forM, void)

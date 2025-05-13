@@ -7,8 +7,7 @@ module Test.Cardano.Ledger.Core.Utils (
   testGlobals,
   mkDummySafeHash,
   txInAt,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochSize (..),

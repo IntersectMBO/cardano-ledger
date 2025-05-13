@@ -62,8 +62,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTripLabel,
   embedTripLabelExtra,
   decodeAnnExtra,
-)
-where
+) where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain

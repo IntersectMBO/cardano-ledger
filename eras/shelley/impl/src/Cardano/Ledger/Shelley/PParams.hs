@@ -34,8 +34,7 @@ module Cardano.Ledger.Shelley.PParams (
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),

@@ -98,6 +98,7 @@ instance HasSimpleRep Coin where
     Nothing -> error $ "The impossible happened in toSimpleRep for (Coin " ++ show i ++ ")"
     Just w -> w
   fromSimpleRep = word64ToCoin
+
 instance HasSpec Coin
 
 instance MaybeBounded Coin where
@@ -122,6 +123,7 @@ instance Foldy Coin where
 deriving via Integer instance Num Coin
 
 instance Typeable a => HasSimpleRep (StrictMaybe a)
+
 instance (HasSpec a, IsNormalType a) => HasSpec (StrictMaybe a)
 
 cSNothing_ :: (HasSpec a, IsNormalType a) => Term (StrictMaybe a)
@@ -131,7 +133,9 @@ cSJust_ :: (HasSpec a, IsNormalType a) => Term a -> Term (StrictMaybe a)
 cSJust_ = con @"SJust"
 
 instance HasSimpleRep EpochInterval
+
 instance OrdLike EpochInterval
+
 instance HasSpec EpochInterval
 
 instance HasSpec UnitInterval where
@@ -155,6 +159,7 @@ instance HasSpec NonNegativeInterval where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep CostModels
+
 instance HasSpec CostModels where
   type TypeSpec CostModels = ()
   emptySpec = ()
@@ -166,27 +171,33 @@ instance HasSpec CostModels where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep Prices
+
 instance HasSpec Prices
 
 instance HasSimpleRep ExUnits where
   type SimpleRep ExUnits = SimpleRep (Natural, Natural)
   fromSimpleRep = uncurry ExUnits . fromSimpleRep
   toSimpleRep (ExUnits a b) = toSimpleRep (a, b)
+
 instance HasSpec ExUnits
 
 instance HasSimpleRep OrdExUnits where
   type SimpleRep OrdExUnits = SimpleRep ExUnits
   fromSimpleRep = OrdExUnits . fromSimpleRep
   toSimpleRep = toSimpleRep . unOrdExUnits
+
 instance HasSpec OrdExUnits
 
 instance HasSimpleRep PoolVotingThresholds
+
 instance HasSpec PoolVotingThresholds
 
 instance HasSimpleRep DRepVotingThresholds
+
 instance HasSpec DRepVotingThresholds
 
 instance HasSimpleRep ProtVer
+
 instance HasSpec ProtVer
 
 -- We do this like this to get the right bounds for `VersionRep`
@@ -194,6 +205,7 @@ instance HasSpec ProtVer
 -- to version.
 newtype VersionRep = VersionRep Word8
   deriving (Show, Eq, Ord, Num, Random, Arbitrary, Integral, Real, Enum) via Word8
+
 instance HasSpec VersionRep where
   type TypeSpec VersionRep = NumSpec VersionRep
   emptySpec = emptyNumSpec
@@ -203,9 +215,11 @@ instance HasSpec VersionRep where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalNumSpec
+
 instance Bounded VersionRep where
   minBound = VersionRep $ getVersion minBound
   maxBound = VersionRep $ getVersion maxBound
+
 instance MaybeBounded VersionRep
 
 instance HasSimpleRep Version where
@@ -220,7 +234,9 @@ instance HasSimpleRep Version where
           ]
     Right a -> a
   toSimpleRep = VersionRep . getVersion
+
 instance HasSpec Version
+
 instance OrdLike Version
 
 succV_ :: Term Version -> Term Version
@@ -368,9 +384,11 @@ instance (EraSpecPParams era, EraTxOut era, EraGov era) => HasSpec (PParams era)
 -- =======================================
 
 instance EraSpecPParams era => HasSimpleRep (ProposedPPUpdates era)
+
 instance EraSpecPParams era => HasSpec (ProposedPPUpdates era)
 
 instance EraSpecPParams era => HasSimpleRep (FuturePParams era)
+
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (FuturePParams era)
 
 -- =============================================================

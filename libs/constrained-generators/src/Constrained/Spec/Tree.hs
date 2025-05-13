@@ -62,7 +62,6 @@ import Constrained.TheKnot (
   genFromSpecT,
   shrinkWithSpec,
  )
-
 import Data.Kind
 import Data.Tree
 import GHC.Generics
@@ -235,6 +234,7 @@ data TreeW (dom :: [Type]) (rng :: Type) where
   RootLabelW :: HasSpec a => TreeW '[Tree a] a
 
 deriving instance Eq (TreeW d r)
+
 deriving instance Show (TreeW d r)
 
 instance Semantics TreeW where

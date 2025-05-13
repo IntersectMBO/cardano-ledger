@@ -54,6 +54,7 @@ import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
 instance HasSimpleRep DepositPurpose
+
 instance HasSpec DepositPurpose
 
 witnessDepositPurpose ::

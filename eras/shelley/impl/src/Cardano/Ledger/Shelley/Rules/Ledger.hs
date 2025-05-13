@@ -31,8 +31,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   epochFromSlot,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
 import Cardano.Ledger.Binary (
@@ -98,6 +97,7 @@ data LedgerEnv era = LedgerEnv
   deriving (Generic)
 
 deriving instance Show (PParams era) => Show (LedgerEnv era)
+
 deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era)

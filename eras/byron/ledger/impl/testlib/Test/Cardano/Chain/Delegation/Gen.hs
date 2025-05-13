@@ -5,8 +5,7 @@ module Test.Cardano.Chain.Delegation.Gen (
   genCertificateDistinctList,
   genError,
   genPayload,
-)
-where
+) where
 
 import Cardano.Chain.Delegation (
   ACertificate (delegateVK, issuerVK),

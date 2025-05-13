@@ -26,8 +26,7 @@ module Cardano.Crypto.Signing.Signature (
   verifySignature,
   verifySignatureDecoded,
   verifySignatureRaw,
-)
-where
+) where
 
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Raw (Raw (..))

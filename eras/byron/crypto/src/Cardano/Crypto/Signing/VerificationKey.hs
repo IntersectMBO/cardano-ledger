@@ -16,8 +16,7 @@ module Cardano.Crypto.Signing.VerificationKey (
   fullVerificationKeyHexF,
   shortVerificationKeyHexF,
   parseFullVerificationKey,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (

@@ -38,8 +38,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   utxoEnvSlotL,
   utxoEnvPParamsL,
   utxoEnvCertStateL,
-)
-where
+) where
 
 import Cardano.Ledger.Address (
   Addr (..),
@@ -139,6 +138,7 @@ utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
 utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
 
 deriving instance (Show (PParams era), Show (CertState era)) => Show (UtxoEnv era)
+
 deriving instance (Eq (PParams era), Eq (CertState era)) => Eq (UtxoEnv era)
 
 instance (Era era, NFData (PParams era), NFData (CertState era)) => NFData (UtxoEnv era)

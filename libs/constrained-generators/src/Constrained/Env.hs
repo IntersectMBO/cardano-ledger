@@ -14,7 +14,6 @@ import Constrained.GenT (
   MonadGenError,
   genError,
  )
-
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable

@@ -201,6 +201,7 @@ instance ToExpr t => ToExpr (WitBlock t era) where
 
 wbHash :: WitBlock t era -> Set t
 wbHash (WitBlock x _) = x
+
 wbMap :: WitBlock t era -> Map t (ProofType t era)
 wbMap (WitBlock _ y) = y
 
@@ -740,14 +741,19 @@ class (EraTxCert era, HasSpec (TxCert era)) => EraSpecTxCert era where
 
 instance EraSpecTxCert ShelleyEra where
   witTxCert = witShelleyTxCert
+
 instance EraSpecTxCert AllegraEra where
   witTxCert = witShelleyTxCert
+
 instance EraSpecTxCert MaryEra where
   witTxCert = witShelleyTxCert
+
 instance EraSpecTxCert AlonzoEra where
   witTxCert = witShelleyTxCert
+
 instance EraSpecTxCert BabbageEra where
   witTxCert = witShelleyTxCert
+
 instance EraSpecTxCert ConwayEra where
   witTxCert = witConwayTxCert
 
@@ -763,10 +769,15 @@ class
   genScript :: Gen (Script era)
 
 instance GenScript ShelleyEra where genScript = genNestedMultiSig 2
+
 instance GenScript AllegraEra where genScript = genNestedTimelock @AllegraEra 2
+
 instance GenScript MaryEra where genScript = genNestedTimelock @MaryEra 2
+
 instance GenScript AlonzoEra where genScript = fromNativeScript <$> genNestedTimelock @AlonzoEra 2
+
 instance GenScript BabbageEra where genScript = fromNativeScript <$> genNestedTimelock @BabbageEra 2
+
 instance GenScript ConwayEra where genScript = fromNativeScript <$> genNestedTimelock @ConwayEra 2
 
 -- ===============================================================
@@ -790,6 +801,7 @@ spec2 univ big =
     [ assert $ subset_ (lit big) setHash
     , witness univ setHash
     ]
+
 go2 :: IO ()
 go2 = do
   univ <- generate $ genWitUniv @ShelleyEra 5
@@ -821,10 +833,15 @@ class EraUniverse era where
   eraWitUniv :: Int -> WitUniv era
 
 instance EraUniverse ConwayEra where eraWitUniv = conwayWitUniv
+
 instance EraUniverse BabbageEra where eraWitUniv = babbageWitUniv
+
 instance EraUniverse AlonzoEra where eraWitUniv = alonzoWitUniv
+
 instance EraUniverse MaryEra where eraWitUniv = maryWitUniv
+
 instance EraUniverse AllegraEra where eraWitUniv = allegraWitUniv
+
 instance EraUniverse ShelleyEra where eraWitUniv = shelleyWitUniv
 
 -- =======================================================================

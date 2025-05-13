@@ -16,8 +16,7 @@ module Cardano.Ledger.Shelley.State.Stake (
   addShelleyInstantStake,
   deleteShelleyInstantStake,
   resolveShelleyInstantStake,
-)
-where
+) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (
@@ -55,6 +54,7 @@ data ShelleyInstantStake era = ShelleyInstantStake
   deriving (Generic, Show, Eq, Ord)
 
 instance NFData (ShelleyInstantStake era)
+
 instance NoThunks (ShelleyInstantStake era)
 
 instance Typeable era => EncCBOR (ShelleyInstantStake era) where

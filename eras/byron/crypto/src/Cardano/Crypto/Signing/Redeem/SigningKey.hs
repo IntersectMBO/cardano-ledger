@@ -7,8 +7,7 @@
 module Cardano.Crypto.Signing.Redeem.SigningKey (
   RedeemSigningKey (..),
   redeemToVerification,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.Redeem.VerificationKey (
   RedeemVerificationKey (..),

@@ -68,8 +68,7 @@ module Cardano.Ledger.Shelley.TxCert (
   PoolCert (..),
   isRegStakeTxCert,
   isUnRegStakeTxCert,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (invalidKey, kindObject)
 import Cardano.Ledger.Binary (

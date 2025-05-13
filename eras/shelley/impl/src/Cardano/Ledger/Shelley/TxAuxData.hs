@@ -27,8 +27,7 @@ module Cardano.Ledger.Shelley.TxAuxData (
   -- * Re-exports
   Metadatum (..),
   validMetadatum,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)

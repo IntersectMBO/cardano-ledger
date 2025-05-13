@@ -8,8 +8,7 @@ module Test.Cardano.Chain.Byron.API (
   ts_roundTripApplyMempoolPayloadErrCompat,
   ts_scheduledDelegations,
   tests,
-)
-where
+) where
 
 import qualified Byron.Spec.Chain.STS.Block as STS
 import Byron.Spec.Chain.STS.Rule.Chain (CHAIN)

@@ -23,8 +23,7 @@ module Cardano.Ledger.Shelley.Rewards (
   sumCompactRewards,
   rewardOnePoolMember,
   mkPoolRewardInfo,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),

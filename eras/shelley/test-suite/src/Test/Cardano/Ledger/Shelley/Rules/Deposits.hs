@@ -9,8 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.Deposits (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
@@ -28,6 +27,8 @@ import Cardano.Ledger.Val ((<+>))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
 import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -36,9 +37,6 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (shortChainTrace)
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..))
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
-
-import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.QuickCheck (
   Property,
   counterexample,

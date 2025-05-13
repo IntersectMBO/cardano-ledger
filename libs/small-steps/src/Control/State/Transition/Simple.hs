@@ -7,8 +7,7 @@ module Control.State.Transition.Simple (
   applySTSIndifferently,
   applySTS,
   module Extended,
-)
-where
+) where
 
 import Control.Monad.Identity (Identity (..))
 import Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently)

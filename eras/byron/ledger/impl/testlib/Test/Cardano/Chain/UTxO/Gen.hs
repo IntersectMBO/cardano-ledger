@@ -24,8 +24,7 @@ module Test.Cardano.Chain.UTxO.Gen (
   genUTxO,
   genUTxOError,
   genUTxOValidationError,
-)
-where
+) where
 
 import Cardano.Chain.Common (makeNetworkMagic, mkAttributes)
 import Cardano.Chain.UTxO (

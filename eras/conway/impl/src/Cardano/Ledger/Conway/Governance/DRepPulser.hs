@@ -422,6 +422,7 @@ data DRepPulsingState era
   deriving (Generic)
 
 instance (EraPParams era, NFData (InstantStake era)) => NFData (DRepPulsingState era)
+
 instance (EraPParams era, NoThunks (InstantStake era)) => NoThunks (DRepPulsingState era)
 
 -- | This is potentially an expensive getter. Make sure not to use it in the first 80% of

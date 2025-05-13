@@ -17,8 +17,7 @@ module Cardano.Protocol.TPraos.OCert (
   KESPeriod (..),
   slotsPerKESPeriod,
   kesPeriod,
-)
-where
+) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES

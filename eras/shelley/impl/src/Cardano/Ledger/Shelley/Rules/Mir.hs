@@ -17,8 +17,7 @@ module Cardano.Ledger.Shelley.Rules.Mir (
   ShelleyMirPredFailure,
   ShelleyMirEvent (..),
   emptyInstantaneousRewards,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)

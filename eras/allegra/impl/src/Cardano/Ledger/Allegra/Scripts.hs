@@ -46,8 +46,7 @@ module Cardano.Ledger.Allegra.Scripts (
   decodeVI,
   -- translate,
   translateTimelock,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
@@ -209,7 +208,9 @@ newtype Timelock era = MkTimelock (MemoBytes (TimelockRaw era))
 
 pattern TimelockConstr :: MemoBytes (TimelockRaw era) -> Timelock era
 pattern TimelockConstr timelockRaw = MkTimelock timelockRaw
+
 {-# COMPLETE TimelockConstr #-}
+
 {-# DEPRECATED TimelockConstr "In favor of more consistently name `MkTimelock`" #-}
 
 instance Era era => MemPack (Timelock era) where
@@ -218,6 +219,7 @@ instance Era era => MemPack (Timelock era) where
   unpackM = MkTimelock <$> unpackMemoBytesM (eraProtVerLow @era)
 
 instance Era era => NoThunks (Timelock era)
+
 instance Era era => EncCBOR (Timelock era)
 
 instance Era era => DecCBOR (Timelock era) where
@@ -292,36 +294,42 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
 
 mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
 mkRequireSignatureTimelock = mkMemoizedEra @era . TimelockSignature
+
 getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
 getRequireSignatureTimelock (MkTimelock (Memo (TimelockSignature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
 mkRequireAllOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
 mkRequireAllOfTimelock = mkMemoizedEra @era . TimelockAllOf
+
 getRequireAllOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
 getRequireAllOfTimelock (MkTimelock (Memo (TimelockAllOf ms) _)) = Just ms
 getRequireAllOfTimelock _ = Nothing
 
 mkRequireAnyOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
 mkRequireAnyOfTimelock = mkMemoizedEra @era . TimelockAnyOf
+
 getRequireAnyOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
 getRequireAnyOfTimelock (MkTimelock (Memo (TimelockAnyOf ms) _)) = Just ms
 getRequireAnyOfTimelock _ = Nothing
 
 mkRequireMOfTimelock :: forall era. Era era => Int -> StrictSeq (Timelock era) -> Timelock era
 mkRequireMOfTimelock n = mkMemoizedEra @era . TimelockMOf n
+
 getRequireMOfTimelock :: Timelock era -> Maybe (Int, StrictSeq (Timelock era))
 getRequireMOfTimelock (MkTimelock (Memo (TimelockMOf n ms) _)) = Just (n, ms)
 getRequireMOfTimelock _ = Nothing
 
 mkTimeStartTimelock :: forall era. Era era => SlotNo -> Timelock era
 mkTimeStartTimelock = mkMemoizedEra @era . TimelockTimeStart
+
 getTimeStartTimelock :: Timelock era -> Maybe SlotNo
 getTimeStartTimelock (MkTimelock (Memo (TimelockTimeStart mslot) _)) = Just mslot
 getTimeStartTimelock _ = Nothing
 
 mkTimeExpireTimelock :: forall era. Era era => SlotNo -> Timelock era
 mkTimeExpireTimelock = mkMemoizedEra @era . TimelockTimeExpire
+
 getTimeExpireTimelock :: Timelock era -> Maybe SlotNo
 getTimeExpireTimelock (MkTimelock (Memo (TimelockTimeExpire mslot) _)) = Just mslot
 getTimeExpireTimelock _ = Nothing

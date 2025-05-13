@@ -20,8 +20,7 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
   AllegraUtxoPredFailure (..),
   validateOutsideValidityIntervalUTxO,
   shelleyToAllegraUtxoPredFailure,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Core

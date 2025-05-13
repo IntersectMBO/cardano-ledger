@@ -5,8 +5,7 @@
 
 module Cardano.Chain.Update.ProtocolVersion (
   ProtocolVersion (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

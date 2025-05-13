@@ -31,8 +31,7 @@ module Cardano.Chain.Block.Validation (
   calcUTxOSize,
   foldUTxO,
   foldUTxOBlock,
-)
-where
+) where
 
 import Cardano.Chain.Block.Block (
   ABlock (..),

@@ -15,8 +15,7 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
   genByteString,
   genLazyByteString,
   genShortByteString,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class hiding (Signable)
 import Cardano.Crypto.Util

@@ -15,8 +15,7 @@ module Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   pparamsToChainChecksPParams,
   chainChecks,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version)

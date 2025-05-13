@@ -13,8 +13,7 @@ module Cardano.Ledger.PoolParams (
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (

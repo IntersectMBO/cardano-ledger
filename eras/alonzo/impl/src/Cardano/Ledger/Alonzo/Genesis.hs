@@ -28,8 +28,7 @@ module Cardano.Ledger.Alonzo.Genesis (
     agMaxCollateralInputs
   ),
   toAlonzoGenesisPairs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))

@@ -17,8 +17,7 @@ module Cardano.Ledger.Binary.Decoding.Drop (
   dropTriple,
   dropWord8,
   dropWord64,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Control.Monad (replicateM_)

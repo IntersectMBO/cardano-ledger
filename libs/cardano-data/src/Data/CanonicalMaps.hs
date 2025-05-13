@@ -7,8 +7,7 @@ module Data.CanonicalMaps (
   canonicalMap,
   pointWise,
   Map.Map,
-)
-where
+) where
 
 import Data.Map.Internal (
   Map (..),

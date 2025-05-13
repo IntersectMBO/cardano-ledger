@@ -21,15 +21,13 @@ module Constrained.Core (
   NonEmpty ((:|)),
   Evidence (..),
   unionWithMaybe,
-)
-where
+) where
 
 import Constrained.List (
   List (..),
   mapList,
  )
 import Constrained.PrettyUtils
-
 import Control.Applicative
 import Data.Function
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -101,7 +99,9 @@ data Value a where
   Value :: Show a => !a -> Value a
 
 deriving instance Eq a => Eq (Value a)
+
 deriving instance Ord a => Ord (Value a)
+
 instance Show (Value a) where
   showsPrec p (Value a) = showsPrec p a
 

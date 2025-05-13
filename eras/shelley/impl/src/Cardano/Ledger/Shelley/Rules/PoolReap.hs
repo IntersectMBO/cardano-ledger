@@ -18,8 +18,7 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapState (..),
   PredicateFailure,
   ShelleyPoolreapPredFailure,
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -183,7 +182,7 @@ poolReapTransition = do
       ( cs
           & certDStateL . dsUnifiedL
             %~ ( \uni ->
-                  SPoolUView (RewDepUView uni UM.∪+ Map.map compactCoinOrError refunds) UM.⋫ retired
+                   SPoolUView (RewDepUView uni UM.∪+ Map.map compactCoinOrError refunds) UM.⋫ retired
                )
           & certPStateL . psStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psFutureStakePoolParamsL %~ (eval . (retired ⋪))

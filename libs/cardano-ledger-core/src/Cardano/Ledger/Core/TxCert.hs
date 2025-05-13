@@ -21,8 +21,7 @@ module Cardano.Ledger.Core.TxCert (
   poolCertKeyHashWitness,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)

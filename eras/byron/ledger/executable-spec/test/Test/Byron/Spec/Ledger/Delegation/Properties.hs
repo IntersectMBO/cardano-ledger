@@ -16,8 +16,7 @@ module Test.Byron.Spec.Ledger.Delegation.Properties (
   dblockTracesAreClassified,
   relevantCasesAreCovered,
   onlyValidSignalsAreGenerated,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   Epoch (Epoch),

@@ -22,8 +22,7 @@ module Cardano.Ledger.State.PoolDistr (
   poolDistrDistrL,
   poolDistrTotalL,
   individualTotalPoolStakeL,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))

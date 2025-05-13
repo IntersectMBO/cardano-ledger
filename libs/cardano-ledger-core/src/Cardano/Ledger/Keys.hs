@@ -62,8 +62,7 @@ module Cardano.Ledger.Keys (
   SignKeyVRF,
   VerKeyVRF,
   hashVerKeyVRF,
-)
-where
+) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
@@ -89,12 +88,15 @@ hashVerKeyVRF = VRFVerKeyHash . Hash.castHash . VRF.hashVerKeyVRF
 {-# DEPRECATED hashVerKeyVRF "Use `Cardano.Protocol.Crypto.hashVerKeyVRF` instead" #-}
 
 type Hash = Hash.Hash HASH
+
 {-# DEPRECATED Hash "In favor of `Cardano.Crypto.Hash.Hash` `HASH`" #-}
 
 type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
+
 {-# DEPRECATED SignedDSIGN "In favor of @`Cardano.Crypto.DSIGN.SignedDSIGN` `DSIGN`@" #-}
 
 type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
+
 {-# DEPRECATED SignKeyDSIGN "In favor of @`Cardano.Crypto.DSIGN.SignKeyDSIGN` `DSIGN`@" #-}
 
 -- | Hash a given signature
@@ -113,15 +115,19 @@ hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN
 --------------------------------------------------------------------------------
 
 type KESignable c = KES.Signable (KES c)
+
 {-# DEPRECATED KESignable "In favor of @`Cardano.Crypto.KES.Signable` (`KES` c)@" #-}
 
 type SignedKES c = KES.SignedKES (KES c)
+
 {-# DEPRECATED SignedKES "In favor of @`Cardano.Crypto.KES.SignedKES` (`KES` c)@" #-}
 
 type SignKeyKES c = KES.SignKeyKES (KES c)
+
 {-# DEPRECATED SignKeyKES "In favor of @`Cardano.Crypto.KES.SignKeyKES` (`KES` c)@" #-}
 
 type VerKeyKES c = KES.VerKeyKES (KES c)
+
 {-# DEPRECATED VerKeyKES "In favor of @`Cardano.Crypto.KES.VerKeyKES` (`KES` c)@" #-}
 
 --------------------------------------------------------------------------------
@@ -129,13 +135,17 @@ type VerKeyKES c = KES.VerKeyKES (KES c)
 --------------------------------------------------------------------------------
 
 type VRFSignable c = VRF.Signable (VRF c)
+
 {-# DEPRECATED VRFSignable "In favor of @`Cardano.Crypto.VRF.Signable` (`VRF` c)@" #-}
 
 type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
+
 {-# DEPRECATED CertifiedVRF "In favor of @`Cardano.Crypto.VRF.CertifiedVRF` (`VRF` c)@" #-}
 
 type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
+
 {-# DEPRECATED SignKeyVRF "In favor of @`Cardano.Crypto.VRF.SignKeyVRF` (`VRF` c)@" #-}
 
 type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
+
 {-# DEPRECATED VerKeyVRF "In favor of @`Cardano.Crypto.VRF.VerKeyVRF` (`VRF` c)@" #-}

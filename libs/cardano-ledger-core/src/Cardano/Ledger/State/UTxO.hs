@@ -39,8 +39,7 @@ module Cardano.Ledger.State.UTxO (
   areAllAdaOnly,
   verifyWitVKey,
   getScriptHash,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
@@ -88,6 +87,7 @@ class CanGetUTxO t => CanSetUTxO t where
   utxoL :: Lens' (t era) (UTxO era)
 
 instance CanGetUTxO UTxO
+
 instance CanSetUTxO UTxO where
   utxoL = id
 
@@ -236,8 +236,11 @@ newtype ScriptsProvided era = ScriptsProvided
   deriving (Generic)
 
 deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
+
 deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)
+
 deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
+
 deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
 
 class EraTx era => EraUTxO era where

@@ -24,8 +24,7 @@ module Cardano.Ledger.Shelley.API.Validation (
   TickTransitionError (..),
   BlockTransitionError (..),
   chainChecks,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)

@@ -17,8 +17,7 @@ module Cardano.Ledger.State.Governance (
   nextEpochPParams,
   nextEpochUpdatedPParams,
   knownFuturePParams,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe, maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
@@ -141,8 +140,11 @@ solidifyFuturePParams = \case
   fpp -> fpp
 
 deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
+
 deriving stock instance Show (PParams era) => Show (FuturePParams era)
+
 deriving via AllowThunk (FuturePParams era) instance NoThunks (FuturePParams era)
+
 instance (Typeable era, EncCBOR (PParams era)) => EncCBOR (FuturePParams era) where
   encCBOR =
     encode . \case

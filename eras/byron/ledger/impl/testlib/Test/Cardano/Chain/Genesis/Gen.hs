@@ -13,8 +13,7 @@ module Test.Cardano.Chain.Genesis.Gen (
   genGenesisKeyHashes,
   genSignatureEpochNumber,
   genTestnetBalanceOptions,
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis (

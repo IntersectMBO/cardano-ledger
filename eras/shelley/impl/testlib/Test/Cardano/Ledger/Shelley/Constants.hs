@@ -4,8 +4,7 @@
 module Test.Cardano.Ledger.Shelley.Constants (
   Constants (..),
   defaultConstants,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Data.Word (Word64)

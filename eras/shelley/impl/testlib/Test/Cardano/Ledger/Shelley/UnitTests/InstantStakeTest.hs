@@ -110,9 +110,9 @@ instantStakeIncludesRewards = do
           ]
             ++ [ stake
                | stake@(_, reward) <-
-                  [ (tom, rdRewardCoin tomRD) -- tom uxtxoCoin cab be zero because his address has StakeRefNull
-                  , (mary, rdRewardCoin maryRD) -- mary uxtxoCoin can be zero because she has no UtxO entry
-                  ]
+                   [ (tom, rdRewardCoin tomRD) -- tom uxtxoCoin cab be zero because his address has StakeRefNull
+                   , (mary, rdRewardCoin maryRD) -- mary uxtxoCoin can be zero because she has no UtxO entry
+                   ]
                , reward /= Coin 0 -- We need to filter out zero rewards from instant stake
                ]
 

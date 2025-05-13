@@ -11,8 +11,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Block (
   genBlock,
   genBlockWithTxGen,
   tickChainState,
-)
-where
+) where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)

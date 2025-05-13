@@ -15,8 +15,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   Delta (..),
   encodedLen,
   pickRandomFromMap,
-)
-where
+) where
 
 import Cardano.Ledger.Address (
   Addr (..),
@@ -136,19 +135,19 @@ genTx ::
   Gen (Tx era)
 genTx
   ge@( GenEnv
-        keySpace@KeySpace_
-          { ksKeyPairs
-          , ksCoreNodes
-          , ksMSigScripts
-          , ksIndexedGenDelegates
-          , ksIndexedPaymentKeys
-          , ksIndexedStakingKeys
-          , ksIndexedPayScripts
-          , ksIndexedStakeScripts
-          }
-        scriptspace
-        constants
-      )
+         keySpace@KeySpace_
+           { ksKeyPairs
+           , ksCoreNodes
+           , ksMSigScripts
+           , ksIndexedGenDelegates
+           , ksIndexedPaymentKeys
+           , ksIndexedStakingKeys
+           , ksIndexedPayScripts
+           , ksIndexedStakeScripts
+           }
+         scriptspace
+         constants
+       )
   (LedgerEnv slot _ txIx pparams reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do

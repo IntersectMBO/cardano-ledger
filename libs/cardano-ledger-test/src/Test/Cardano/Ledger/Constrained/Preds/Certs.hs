@@ -10,9 +10,6 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.Certs where
 
-import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
-
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -28,6 +25,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
+import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   ChainAccountState,
   InstantaneousRewards,
@@ -61,6 +59,7 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck

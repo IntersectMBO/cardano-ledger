@@ -12,8 +12,7 @@ module Test.Cardano.Chain.Block.CBOR (
   exampleHeader,
   exampleProof,
   exampleToSign,
-)
-where
+) where
 
 import Cardano.Chain.Block (
   ABlockSignature (..),

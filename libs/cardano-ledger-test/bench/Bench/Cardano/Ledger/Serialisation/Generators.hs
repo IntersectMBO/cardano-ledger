@@ -1,8 +1,7 @@
 -- | Benchmarks for the serialisation generators
 module Bench.Cardano.Ledger.Serialisation.Generators (
   benchTxGeneration,
-)
-where
+) where
 
 import Cardano.Ledger.Core
 import Criterion.Main

@@ -26,8 +26,7 @@ module Cardano.Ledger.Alonzo.TxSeq.Internal (
   AlonzoTxSeq (.., AlonzoTxSeq),
   hashAlonzoTxSeq,
   alignedValidFlags,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era

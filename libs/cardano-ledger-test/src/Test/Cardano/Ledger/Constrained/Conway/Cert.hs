@@ -205,22 +205,27 @@ instance EraSpecCert ShelleyEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
+
 instance EraSpecCert AllegraEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
+
 instance EraSpecCert MaryEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
+
 instance EraSpecCert AlonzoEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
+
 instance EraSpecCert BabbageEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
+
 instance EraSpecCert ConwayEra where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey

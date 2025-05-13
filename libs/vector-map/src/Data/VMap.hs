@@ -46,8 +46,7 @@ module Data.VMap (
   KV.KVVector,
   KV.normalize,
   KV.normalizeM,
-)
-where
+) where
 
 import Control.DeepSeq
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)

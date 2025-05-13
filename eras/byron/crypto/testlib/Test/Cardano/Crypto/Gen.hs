@@ -36,8 +36,7 @@ module Test.Cardano.Crypto.Gen (
   genHashRaw,
   genTextHash,
   feedPM,
-)
-where
+) where
 
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing (

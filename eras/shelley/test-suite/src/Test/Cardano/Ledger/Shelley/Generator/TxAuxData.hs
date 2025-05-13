@@ -3,8 +3,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.TxAuxData (
   genMetadata,
   genMetadata',
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),

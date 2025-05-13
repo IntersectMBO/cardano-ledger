@@ -114,8 +114,7 @@ module Cardano.Ledger.UMap (
   domDeleteAll,
   deleteStakingCredential,
   extractStakingCredential,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Binary
@@ -501,8 +500,8 @@ umInvariant cred ptr UMap {umElems, umPtrs} = forwards && backwards
         Just (UMElem _r ptrSet _s _) ->
           not (Set.member ptr ptrSet)
             || ( case Map.lookup ptr umPtrs of
-                  Nothing -> False
-                  Just cred2 -> cred == cred2
+                   Nothing -> False
+                   Just cred2 -> cred == cred2
                )
     backwards =
       case Map.lookup ptr umPtrs of

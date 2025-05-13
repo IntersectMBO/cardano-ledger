@@ -21,8 +21,7 @@ module Cardano.Chain.Genesis.Config (
   configProtocolParameters,
   configAvvmDistr,
   mkConfigFromFile,
-)
-where
+) where
 
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Common (BlockCount)

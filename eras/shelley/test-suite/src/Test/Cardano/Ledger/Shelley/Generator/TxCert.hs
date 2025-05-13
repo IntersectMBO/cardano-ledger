@@ -13,8 +13,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.TxCert (
   genTxCert,
   CertCred (..),
-)
-where
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)

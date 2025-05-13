@@ -7,8 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Constrained.Preds.Universes
-where
+module Test.Cardano.Ledger.Constrained.Preds.Universes where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Signing as Byron
@@ -26,6 +25,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (GovActionId (..), GovActionIx (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..))
@@ -40,6 +40,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Default (Default (def))
 import qualified Data.List as List
 import Data.Map (Map)
@@ -67,9 +68,6 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
-
-import Cardano.Ledger.Conway.Governance (GovActionId (..), GovActionIx (..))
-import Cardano.Ledger.TxIn (TxIn (..))
 
 -- ==========================================================
 
@@ -601,11 +599,11 @@ universePreds size p =
       )
   , txoutUniv p
       :<-: ( Constr
-              "insert"
-              (\x y _z -> Set.insert x {- (Set.union z -} (Set.fromList y)) -- )
-              ^$ feeTxOut
-              ^$ preTxoutUniv
-              ^$ (colTxoutUniv p)
+               "insert"
+               (\x y _z -> Set.insert x {- (Set.union z -} (Set.fromList y)) -- )
+               ^$ feeTxOut
+               ^$ preTxoutUniv
+               ^$ (colTxoutUniv p)
            )
   , plutusUniv :<-: constTarget (Map.map (\(x, y) -> (x, ScriptF p y)) (allPlutusScripts p))
   , spendPlutusUniv :<-: constTarget (Map.map (\(x, y) -> (x, ScriptF p y)) (spendPlutusScripts p))

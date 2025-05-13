@@ -33,8 +33,7 @@ module Data.VMap.KVVector (
   internKVVectorMaybe,
   normalize,
   normalizeM,
-)
-where
+) where
 
 import Control.Applicative
 import Control.DeepSeq

@@ -23,8 +23,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core

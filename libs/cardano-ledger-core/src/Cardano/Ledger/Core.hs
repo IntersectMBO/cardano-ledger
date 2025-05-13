@@ -58,8 +58,7 @@ module Cardano.Ledger.Core (
   module Cardano.Ledger.Core.TxCert,
   module Cardano.Ledger.Core.PParams,
   module Cardano.Ledger.Core.Translation,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (

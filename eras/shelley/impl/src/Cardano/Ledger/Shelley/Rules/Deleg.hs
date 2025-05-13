@@ -16,8 +16,7 @@ module Cardano.Ledger.Shelley.Rules.Deleg (
   PredicateFailure,
   ShelleyDelegPredFailure (..),
   ShelleyDelegEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),

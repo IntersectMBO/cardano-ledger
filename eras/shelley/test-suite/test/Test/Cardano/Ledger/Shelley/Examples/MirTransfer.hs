@@ -3,8 +3,7 @@
 
 module Test.Cardano.Ledger.Shelley.Examples.MirTransfer (
   testMIRTransfer,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))

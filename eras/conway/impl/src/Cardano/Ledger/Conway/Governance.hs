@@ -547,6 +547,7 @@ instance ToCBOR DefaultVote where
   toCBOR DefaultNoConfidence = encodeWord8 2
 
 instance EncCBOR DefaultVote
+
 instance DecCBOR DefaultVote
 
 defaultStakePoolVote ::

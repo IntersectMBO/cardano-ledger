@@ -94,8 +94,7 @@ module Byron.Spec.Ledger.Delegation (
   SdelegsPredicateFailure (..),
   MsdelegPredicateFailure (..),
   DelegPredicateFailure (..),
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   BlockCount,

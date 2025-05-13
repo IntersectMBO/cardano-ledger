@@ -23,8 +23,7 @@ module Cardano.Ledger.Shelley.Era (
   ShelleyUPEC,
   ShelleyUTXO,
   ShelleyUTXOW,
-)
-where
+) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)

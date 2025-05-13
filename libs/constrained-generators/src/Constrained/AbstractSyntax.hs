@@ -27,16 +27,12 @@ import Constrained.GenT
 import Constrained.Generic
 import Constrained.List
 import Constrained.PrettyUtils
-
 import Control.Monad.Identity
-
 import Data.Kind
 import Data.List.NonEmpty qualified as NE
 import Data.String
 import Data.Typeable
-
 import Prettyprinter hiding (cat)
-
 import Test.QuickCheck
 
 ------------------------------------------------------------------------

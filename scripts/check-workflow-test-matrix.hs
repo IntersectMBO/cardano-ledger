@@ -17,18 +17,17 @@ import Control.Monad (unless)
 import Data.Bool (bool)
 import Data.Foldable (for_)
 import Data.List ((\\))
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
+import qualified Data.Text.IO as Text
 import Data.Yaml (Value, decodeFileThrow)
 import Lens.Micro ((^..))
 import Lens.Micro.Aeson (key, values, _String)
 import Options.Applicative
+import qualified System.Console.Terminal.Size as TS
 import System.Directory (doesDirectoryExist)
 import System.Exit (die, exitFailure)
 import System.FilePath ((</>))
-
-import qualified Data.Map.Strict as Map
-import qualified Data.Text.IO as Text
-import qualified System.Console.Terminal.Size as TS
 
 data Options = Options
   { optProjectDir :: FilePath

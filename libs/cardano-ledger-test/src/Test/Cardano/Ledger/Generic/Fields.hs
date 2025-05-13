@@ -40,8 +40,7 @@ module Test.Cardano.Ledger.Generic.Fields (
   abstractPParams,
   abstractPParamsUpdate,
   abstractPPUpdate,
-)
-where
+) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.TxBody (TxBody (..))

@@ -8,8 +8,7 @@ module Test.Cardano.Chain.Elaboration.Update (
   elaborateSoftwareVersion,
   elaborateUpdateProposal,
   elaborateVote,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (unSlotCount)
 import Byron.Spec.Ledger.Core.Omniscient (signatureData, signatureVKey)
