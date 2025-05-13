@@ -301,10 +301,10 @@ encCBORHeader es h =
     <> encCBOR (headerPrevHash h)
     <> encCBOR (headerProof h)
     <> ( encodeListLen 4
-           <> encCBOR (fromSlotNumber es $ headerSlot h)
-           <> encCBOR (headerGenesisKey h)
-           <> encCBOR (headerDifficulty h)
-           <> encCBOR (headerSignature h)
+          <> encCBOR (fromSlotNumber es $ headerSlot h)
+          <> encCBOR (headerGenesisKey h)
+          <> encCBOR (headerDifficulty h)
+          <> encCBOR (headerSignature h)
        )
     <> encCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
 
@@ -548,22 +548,22 @@ encCBORABoundaryHeader pm hdr =
   encodeListLen 5
     <> encCBOR pm
     <> ( case boundaryPrevHash hdr of
-           Left gh -> encCBOR (genesisHeaderHash gh)
-           Right hh -> encCBOR hh
+          Left gh -> encCBOR (genesisHeaderHash gh)
+          Right hh -> encCBOR hh
        )
     -- Body proof
     -- The body is always an empty slot leader schedule, so we hash that.
     <> encCBOR (serializeCborHash ([] :: [()]))
     -- Consensus data
     <> ( encodeListLen 2
-           -- Epoch
-           <> encCBOR (boundaryEpoch hdr)
-           -- Chain difficulty
-           <> encCBOR (boundaryDifficulty hdr)
+          -- Epoch
+          <> encCBOR (boundaryEpoch hdr)
+          -- Chain difficulty
+          <> encCBOR (boundaryDifficulty hdr)
        )
     -- Extra data
     <> ( encodeListLen 1
-           <> encCBOR genesisTag
+          <> encCBOR genesisTag
        )
   where
     -- Genesis tag to indicate the presence of a genesis hash in a non-zero
