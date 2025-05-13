@@ -36,6 +36,9 @@ spec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid" $ do
+  it "Inline datum with Plutus V1" $ do
+    const $ pendingWith "not implemented yet"
+
   it "MalformedScriptWitnesses" $ do
     let scriptHash = hashPlutusScript @PlutusV2 malformedPlutus
     txIn <- produceScript scriptHash
@@ -79,3 +82,18 @@ spec = describe "Invalid" $ do
         , injectFailure $
             CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
         ]
+
+  it "Inline datum failing script" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Use a collateral output" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Inline datum and ref script and redundant script witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Inline datum with redundant datum witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "No such thing as a reference datum" $ do
+    const $ pendingWith "not implemented yet"
