@@ -142,9 +142,9 @@ txEx1 = ShelleyTx txbodyEx1 txwits SNothing
               (hashAnnotated txbodyEx1)
               ( [asWitness Cast.alicePay]
                   <> [ asWitness $
-                         KeyPair @'Genesis
-                           (coreNodeVK 0)
-                           (coreNodeSK 0)
+                        KeyPair @'Genesis
+                          (coreNodeVK 0)
+                          (coreNodeSK 0)
                      ]
               )
         }

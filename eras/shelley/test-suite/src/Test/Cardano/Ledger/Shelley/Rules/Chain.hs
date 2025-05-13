@@ -310,18 +310,18 @@ chainTransition ::
 chainTransition =
   judgmentContext
     >>= \( TRC
-             ( _
-               , ChainState
-                   nes
-                   cs
-                   eta0
-                   etaV
-                   etaC
-                   etaH
-                   lab
-               , Block bh txs
-               )
-           ) -> do
+            ( _
+              , ChainState
+                  nes
+                  cs
+                  eta0
+                  etaV
+                  etaC
+                  etaH
+                  lab
+              , Block bh txs
+              )
+          ) -> do
         case prtlSeqChecks lab bh of
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e

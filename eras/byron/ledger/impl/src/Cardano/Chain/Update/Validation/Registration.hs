@@ -442,9 +442,9 @@ registerProposalComponents env rs proposal = do
       unAnnotated protocolMagic
         == ProtocolMagicId 633343913 -- staging
         && ( currentSlot
-               == SlotNumber 969188 -- in epoch 44
-               || currentSlot
-               == SlotNumber 1915231 -- in epoch 88
+              == SlotNumber 969188 -- in epoch 44
+              || currentSlot
+              == SlotNumber 1915231 -- in epoch 88
            )
 
 -- | Validate a protocol update

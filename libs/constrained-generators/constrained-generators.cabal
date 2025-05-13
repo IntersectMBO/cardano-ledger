@@ -39,9 +39,10 @@ library
     Constrained.Generic
     Constrained.Graph
     Constrained.List
-    Constrained.MinBase
-    Constrained.MinSyntax
-    Constrained.MinModel
+    Constrained.Min.Base
+    Constrained.Min.Syntax
+    Constrained.Min.Model
+    Constrained.Min.Tuple
     Constrained.NumSpec
     Constrained.PrettyUtils
     Constrained.Properties

@@ -494,9 +494,9 @@ spec = do
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ [ RegDepositDelegTxCert
-                     cred
-                     (DelegStakeVote poolKh (DRepCredential drepCred))
-                     expectedDeposit
+                    cred
+                    (DelegStakeVote poolKh (DRepCredential drepCred))
+                    expectedDeposit
                  ]
         expectDelegatedToPool cred poolKh
         expectDelegatedVote cred (DRepCredential drepCred)
@@ -522,8 +522,8 @@ spec = do
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ [ DelegTxCert
-                     cred
-                     (DelegStake poolKh)
+                    cred
+                    (DelegStake poolKh)
                  ]
         expectDelegatedToPool cred poolKh
 
@@ -562,9 +562,9 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [ RegDepositDelegTxCert
-                   cred
-                   (DelegStakeVote poolKh (DRepCredential drepCred))
-                   expectedDeposit
+                  cred
+                  (DelegStakeVote poolKh (DRepCredential drepCred))
+                  expectedDeposit
                ]
       expectDelegatedToPool cred poolKh
       expectDelegatedVote cred (DRepCredential drepCred)
@@ -589,9 +589,9 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [ RegDepositDelegTxCert
-                   cred
-                   (DelegStakeVote poolKh (DRepCredential drepCred))
-                   expectedDeposit
+                  cred
+                  (DelegStakeVote poolKh (DRepCredential drepCred))
+                  expectedDeposit
                ]
       expectDelegatedToPool cred poolKh
       expectDelegatedVote cred (DRepCredential drepCred)

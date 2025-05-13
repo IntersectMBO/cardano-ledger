@@ -272,7 +272,7 @@ CtxApp <=. (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3) :<| 12)
 
 Working our way from outside in, we first propagate (<=.), then (+.), then (size_). This reduces in several steps.
 Note that we have deliberately **bolded** the  **`$`** , to note visually where the last argument to `propagateSpec`
-occurs. Note after each step, this last arg becomes composition of `propagate`.
+occurs. Note after each step, this last arg becomes a 1 step larger composition of `propagate`.
 
 1. `propagateSpec (CtxApp <=. (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3) :<| 12))` **`$`** `spec`
 2. `propagateSpec (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3)))` **`$`** `(propagate <=. (HOLE:<| 12) spec)`
@@ -1205,8 +1205,8 @@ instance Semantics PairSym where
   semantics FstW = fst
   semantics SndW = snd
   semantics PairW = (,)
-  rewriteRules FstW (Pair x _ :> Nil) Evidence = Just x
-  rewriteRules SndW (Pair _ y :> Nil) Evidence = Just y
+  rewriteRules FstW (Pair x _) Evidence = Just x
+  rewriteRules SndW (Pair _ y) Evidence = Just y
   rewriteRules t l Evidence = Lit <$> applyFunSym @PairSym (semantics t) l
 ```
 The `Syntax` and `Semantics` instances are very simple, except for the `rewriteRules` which tell
@@ -1214,6 +1214,7 @@ how `FstW` and `SndW` project over a `PairW` application. The pattern matching o
 the over the application of the `PairW` application uses the Haskell Pattern synonym `Pair`
 
 ```
+-- | Create a Haskell Pattern where (Pair x y) matches (App PairW (x :> y :> Nil))
 pattern Pair ::
   forall c. () => forall a b. (c ~ (a, b), HasSpec a, HasSpec b) => Term a -> Term b -> Term c
 pattern Pair x y <- App (getWitness -> Just PairW) (x :> y :> Nil)
@@ -1271,7 +1272,7 @@ sameSnd b ps = [a | (a, b') <- ps, b == b']
 
 The function `genFromSpecT` generates a random value from a `Spec`. Of the 5 constructors of `Spec`, the case analysis over
 4 of them (`ErrorSpec`, `TrueSpec`, `TypeSpec`, and `MemberSpec`) is straight forward. The 5th, `SuspendedSpec` is more
-involved, in that it consists of 1 or more `Pred`, and poossibly multiple variables. Here is a simplified version of `genFromSpecT`
+involved, in that it consists of 1 or more `Pred`, and possibly multiple variables. Here is a simplified version of `genFromSpecT`
 to illustrate that point.
 
 ```
@@ -1291,9 +1292,9 @@ genFromSpecT (simplifySpec -> spec) = case spec of
 
 The key to `genFromPreds` is to turn `preds` into a `SolverPlan` which consists of choosing an order
 to solve all the variables in `preds`. For each variable, we create a `SolverStep` which includes that variable, 
-and the subset of `preds` that mention it. Then solving each `SolverStep` in the order they appear in the plan.
+and the subset of `preds` that mention it. Then we solve each `SolverStep` in the order they appear in the plan.
 
-Let's step throught the process on a simple `SuspendedSpec`
+Let's step throught the process on a the simple `SuspendedSpec` **spec3** given below.
 
 ```
 spec3 :: Spec (Integer, Integer, Integer)
@@ -1301,7 +1302,7 @@ spec3 = constrained $ \ v4 ->
   match v4 $ \ v3 v1 v0 -> And [Assert $ v3 <=. v1, Assert $ v1 <=. v0]
 ```
 
-In the picture below, each `SolverStep` includes the variable, followed by `<-` and a list of sub predicates, terminated by `---`
+In the code block below, each `SolverStep` includes the variable name, followed by `<-` and a list of sub predicates, terminated by `---`
 
 ```
  SolverPlan
@@ -1324,12 +1325,12 @@ In the picture below, each `SolverStep` includes the variable, followed by `<-` 
       ---
 ```
 
-The plan orders the variables in this order `[v_0, v_1, v_3, v_2, v_4]` It has the property that in each step, the sub predicates
+The plan orders the variables in this order `[v_0, v_1, v_3, v_2, v_4]`.  It has the property that in each step, the sub predicates
 mention only the variable for that step, and variables that appear in previous steps. The reader should verify that this is true. Solving
 the plan, chooses the first variable and a conforming random value, adds it to the environment, and then substituting that value into
 the rest of the plan, and then solving that shorter plan, until no variables are left. 
 Choosing `v_0` and a conforming value `19`, note how the the `Pred` for `v_1` after substitution
-`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []`
+`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []` . Every substitution may enable further simplifcation.
 
 ```
 Env {v_0 -> 19}
@@ -1396,13 +1397,15 @@ Step v_4
       MemberSpec [ (-29,-2,19) ]
 ```	
 
-Finally there is only one variable left to choose `v_4`, and one conforming value, with the final environment
+Finally there is only one variable left to choose `v_4`, and one conforming value, which completes the final environment for every variable
+in the original `SuspendedSpec`.
 
 ```
 Env { v_0 -> 19, v_1 -> -2, v_2 -> (-2,19), v_3 -> -29 , v_4 -> (-29,-2,19) }
 ```
 
-Since the solution to original `Spec`, is `v_4`, the solution is `(-29,-2,19)`, the other
+Since the `constrained` library function defining the original `spec3`, binds the variable `v_4`, 
+the solution to the `Spec` can be found in the final environment bound by `v_4` which is `(-29,-2,19)`, the other
 variables are intermediate, and are used only to build the final solution.
 
 ```
@@ -1411,3 +1414,74 @@ spec3 = constrained $ \ v_4 ->
 ```
 
 ## Translating `Pred` to `Spec` and the use of `propagate`
+
+For each SolverStep. in the process above, we have a variable `v` and a `Pred`. We need to convert that `Pred` into a `Spec`
+for `v`. To do that we use the function `computeSpecSimplified` which runs in the `GE` monad which can collect errors
+if they occur. The function `localGESpec` catches `GenError`s and turns them into `ErrorSpec` , and re-raises
+`FatalSpec` if that occurs.
+
+```
+-- | We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
+localGESpec ge = case ge of
+   (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
+   (FatalError es) -> FatalError es
+   (Result v) -> Result v
+``` 
+
+Here is a partial definition for  `computeSpecSimplified` that illustrates the important operation of handling
+multiple `Pred` embedded in the FOTL connective `And`
+
+```
+computeSpecSimplified :: forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Spec a)
+computeSpecSimplified x preds = localGESpec $ case simplifyPred preds of
+  And ps -> do
+    spec <- fold <$> mapM (computeSpecSimplified x) ps
+    case spec of
+      SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
+      s -> pure s
+  ...
+``` 
+
+The function works as follows
+1. Guard the `GE` computation with `localGESpec`. This may return a valid result, return a `ErrorSpec`, or raise a Haskell Error.
+2. First apply simplifying rules to `preds`
+3. Then a case analysis over the resulting simplified `Pred` is preformed
+4. If the case is `And`, map `computeSpecSimplified` over each of them, and then `fold` over the results using the `Monoid` operator `(<>)` for `Spec`
+    - One may visualize this as `(computeSpecSimplified x1 <> computeSpecSimplified x2 <> ... <> computeSpecSimplified xN)`
+    - Recall each of the sub-`Pred` mentions only the variable `x`, so all the resulting `Spec` are for the same variable
+	- Each application of `(<>)` either builds a richer `Spec` for `x`, encompassing all the constraints, or
+	  returns an `ErrorSpec` if they are inconsistent.
+5. If the final resulting `Spec` is a `SuspendedSpec`, simplify it's `Pred` and return
+6. If it is any other `Spec` just return the `Spec` 
+
+The complete defintion follows. The other (non-And) rules fall into two cases.
+1. A literal constant occurs, and we can compute the final `Spec` using the properties of constants.
+3. A non literal `Term` occurs. Which must mention the single variable `x` and some (possibly nested) function symbols.
+     -  We use `toCtx` to build a 1-Hole context, and then use `propagateSpecM` (which calls `propagateSpec` which makes
+        (one or more calls to `propagate`,  to compute the result.
+
+
+```
+computeSpecSimplified ::
+  forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Spec a)
+computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
+  ElemPred True t xs -> propagateSpecM (MemberSpec xs) (toCtx x t)
+  ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (emptySpec @b) (NE.toList xs)) (toCtx x t)
+  TruePred -> pure mempty
+  FalsePred es -> genErrorNE es
+  Assert (Lit True) -> pure mempty
+  Assert (Lit False) -> genError (show pred3)
+  Assert t -> propagateSpecM (equalSpec True) (toCtx x t)
+  ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
+  ForAll t b -> do
+    bSpec <- computeSpecBinderSimplified b
+    propagateSpecM (fromForAllSpec bSpec) (toCtx x t)
+  Case (Lit val) as bs -> runCaseOn val as bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case t as bs -> do
+    simpAs <- computeSpecBinderSimplified as
+    simpBs <- computeSpecBinderSimplified bs
+    propagateSpecM (typeSpec (SumSpec simpAs simpBs)) (toCtx x t)
+
+  Let t b -> pure $ SuspendedSpec x (Let t b)
+  Exists k b -> pure $ SuspendedSpec x (Exists k b)
+```  
