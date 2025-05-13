@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
-import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
+import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Imp.Common
 
@@ -46,6 +47,8 @@ spec ::
   Spec
 spec = do
   AlonzoImp.spec @era
-  describe "BabbageImpSpec" . withImpInit @(LedgerSpec era) $ do
-    Utxow.spec
-    Utxo.spec
+  withImpInit @(LedgerSpec era) $
+    describe "BabbageImpSpec" $ do
+      Utxo.spec
+      Utxow.spec
+      Utxos.spec @era
