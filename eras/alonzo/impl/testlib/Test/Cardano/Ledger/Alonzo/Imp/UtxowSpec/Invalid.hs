@@ -146,8 +146,8 @@ spec = describe "Invalid transactions" $ do
             let resetTxOutDataHash =
                   bodyTxL . outputsTxBodyL
                     %~ ( \case
-                           h :<| r -> resetDataHash h :<| r
-                           _ -> error "Expected non-empty outputs"
+                          h :<| r -> resetDataHash h :<| r
+                          _ -> error "Expected non-empty outputs"
                        )
 
             txInAt (0 :: Int)
