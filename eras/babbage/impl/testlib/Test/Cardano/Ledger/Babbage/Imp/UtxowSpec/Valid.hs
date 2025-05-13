@@ -43,3 +43,27 @@ spec = describe "Valid" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . referenceInputsTxBodyL .~ [txIn]
     submitTx_ tx1
+
+  it "Inline datum" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Reference script" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Inline datum and ref script" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Reference input with data hash, no data witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Reference input with data hash, with data witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Reference script to authorize delegation certificate" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Reference script in output" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Spend simple script output with reference script" $ do
+    const $ pendingWith "not implemented yet"

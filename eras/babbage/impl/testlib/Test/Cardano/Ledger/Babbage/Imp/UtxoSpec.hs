@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Babbage.ImpTest (
   submitTx,
   submitTx_,
  )
-import Test.Cardano.Ledger.Common (SpecWith, describe, it, when)
+import Test.Cardano.Ledger.Common (SpecWith, describe, it, pendingWith, when)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common (mkAddr)
 import Test.Cardano.Ledger.Plutus.Examples (inputsOverlapsWithRefInputs)
@@ -66,3 +66,9 @@ spec = describe "UTXO" $ do
           mkBasicTx mkBasicTxBody
             & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
             & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+
+  it "Incorrect collateral total" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Min-utxo value with output too large" $ do
+    const $ pendingWith "not implemented yet"
