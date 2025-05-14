@@ -9,11 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-#if __GLASGOW_HASKELL__ >= 900
--- this is needed for 9.2: recoveryBytes = annotation
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-#endif
-
 module Cardano.Chain.Update.Proposal (
   -- * Proposal
   AProposal (..),
