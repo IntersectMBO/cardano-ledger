@@ -31,6 +31,7 @@ library
     Constrained.Examples.Either
     Constrained.Examples.Fold
     Constrained.Examples.List
+    Constrained.Examples.ManualExamples
     Constrained.Examples.Map
     Constrained.Examples.Set
     Constrained.Examples.Tree
@@ -40,8 +41,8 @@ library
     Constrained.Graph
     Constrained.List
     Constrained.Min.Base
-    Constrained.Min.Syntax
     Constrained.Min.Model
+    Constrained.Min.Syntax
     Constrained.Min.Tuple
     Constrained.NumSpec
     Constrained.PrettyUtils

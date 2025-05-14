@@ -53,8 +53,6 @@ import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter
 
--- import Data.Either
-
 -- =======================================
 -- Tools for building Spec
 
@@ -987,6 +985,7 @@ instance Logic EqSym where
       False -> notEqualSpec s
 
 infix 4 ==.
+
 (==.) :: (HasSpec Bool, HasSpec a) => Term a -> Term a -> Term Bool
 (==.) x y = App EqualW (x :> y :> Nil)
 

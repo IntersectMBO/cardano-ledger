@@ -120,22 +120,22 @@ pParamsPreds p =
   , (protVer p) `CanFollow` (prevProtVer p)
   ]
     ++ ( case whichPParams p of
-          PParamsShelleyToMary -> []
-          PParamsAlonzoToAlonzo ->
-            [ extract (maxTxExUnits p) (pparams p)
-            , extract (collateralPercentage p) (pparams p)
-            ]
-          PParamsBabbageToBabbage ->
-            [ extract (maxTxExUnits p) (pparams p)
-            , extract (collateralPercentage p) (pparams p)
-            ]
-          PParamsConwayToConway ->
-            [ extract (maxTxExUnits p) (pparams p)
-            , extract (collateralPercentage p) (pparams p)
-            , extract (drepActivity p) (pparams p)
-            , extract (drepDeposit p) (pparams p)
-            , extract (proposalDeposit p) (pparams p)
-            ]
+           PParamsShelleyToMary -> []
+           PParamsAlonzoToAlonzo ->
+             [ extract (maxTxExUnits p) (pparams p)
+             , extract (collateralPercentage p) (pparams p)
+             ]
+           PParamsBabbageToBabbage ->
+             [ extract (maxTxExUnits p) (pparams p)
+             , extract (collateralPercentage p) (pparams p)
+             ]
+           PParamsConwayToConway ->
+             [ extract (maxTxExUnits p) (pparams p)
+             , extract (collateralPercentage p) (pparams p)
+             , extract (drepActivity p) (pparams p)
+             , extract (drepDeposit p) (pparams p)
+             , extract (proposalDeposit p) (pparams p)
+             ]
        )
 
 pParamsStage ::

@@ -36,9 +36,6 @@ import qualified Constrained.Graph as Graph
 import Constrained.List hiding (ListCtx)
 import Constrained.Min.Base
 import Constrained.Min.Syntax
-import Debug.Trace
-
--- import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable (fold)
@@ -56,8 +53,6 @@ import GHC.Stack
 import Prettyprinter
 import Test.QuickCheck hiding (forAll)
 
--- import Test.QuickCheck.Gen(getSize)
-
 -- ====================================================
 -- Now some concrete examples
 -- 1) Introduce the function symbols
@@ -72,7 +67,9 @@ data IntegerSym (dom :: [Type]) rng where
   MinusW :: IntegerSym '[Integer, Integer] Integer
   LessOrEqW :: IntegerSym '[Integer, Integer] Bool
   GreaterOrEqW :: IntegerSym '[Integer, Integer] Bool
+
 deriving instance Eq (IntegerSym dom rng)
+
 instance Show (IntegerSym dom rng) where show = name
 
 instance Syntax IntegerSym where
@@ -595,6 +592,7 @@ data EitherSym (dom :: [Type]) rng where
   RightW :: EitherSym '[b] (Either a b)
 
 deriving instance Eq (EitherSym dom rng)
+
 instance Show (EitherSym dom rng) where show = name
 
 instance Syntax EitherSym where
@@ -937,7 +935,6 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
-  
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
@@ -1038,6 +1035,7 @@ fixupWithSpec spec a
 -}
 
 type Hints = DependGraph
+
 type DependGraph = Graph.Graph Name
 
 dependency :: HasVariables t => Name -> t -> DependGraph
@@ -1203,11 +1201,8 @@ stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
 stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
 stepPlan env p@(SolverPlan (SolverStage x ps spec : pl) gr) = do
   (spec', specs) <- runGE
-    $ trace -- explain
-      ( show (pretty env) ++ "\nStep " ++ show x ++ show (pretty p)
-      -- (  pretty x  /> vsep' (map pretty ps)
-      -- )
-      )
+    $ explain
+      (show (pretty env) ++ "\nStep " ++ show x ++ show (pretty p))
     $ do
       ispecs <- mapM (computeSpec x) ps
       pure $ (fold ispecs, ispecs)

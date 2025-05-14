@@ -276,11 +276,11 @@ conwayBbodyTransition ::
 conwayBbodyTransition = do
   judgmentContext
     >>= \( TRC
-            ( _
-              , state@(BbodyState ls _)
-              , Block _ txsSeq
-              )
-          ) -> do
+             ( _
+               , state@(BbodyState ls _)
+               , Block _ txsSeq
+               )
+           ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
             txs = txSeqTxns txsSeq
             totalRefScriptSize =

@@ -4,14 +4,14 @@ This document describes the design of the internals of the Constrained Generator
 It attempts to explain how the system works. 
 
 There is another document
-*Constrained Generators Manual* that can be found in the file 
-"cardano-ledger/docs/constrained-generators/manual.md" in the Cardano Ledger repository.
+*Constrained Generators Manual* that can be found in [here](https://github.com/IntersectMBO/cardano-ledger/blob/master/docs/constrained-generators/manual.md),
+in the Cardano Ledger repository.
 This explains the user facing API, and teaches users to write specifications. It is
 deliberately silent about the internals of the system. 
 
 In this document we explore the principles that make the system work. To do that we deliberately omit some of the advanced
 features having to do with explanations, interfacing with advanced features of Test.QuickCheck, existentials, reifications, 
-and hints. We expect another document to deal with those features, which add considerable complexity to the code base. 
+hints, and Generics. We expect another document to deal with those features, which add considerable complexity to the code base. 
 So we use a much simplified system to describe just the basic principles of adding logical properties to 
 a simple typed lamba calculus.
 
@@ -41,8 +41,8 @@ more detail.
 
 1. Every function symbol has `Syntax`, `Semantics`, and `Logic` capabilities. While the concepts of
    `Syntax` and `Semantics` are familiar ones, `Logic` capabilities, include the the notion of property
-    propagation. Consider an application term `(f x 8)` with exactly one variable `x` that has some property
-	`P`. Propagation works as follows. For every function symbol `f`, we need to be able to do the following.
+    propagation. Consider an application term `(f x 8)` that has some property
+	`P`, and mentions exactly one variable `x`. Propagation works as follows. For every function symbol `f`, we need to be able to do the following.
     Given `(hasProperty (f x 8) P)` find property `Q` such that `(hasProperty x Q)`
 
 2. The FOTL for the Constrained Generators System is embedded in the Haskell datatypes `Term a` and `Pred`
@@ -216,7 +216,7 @@ A function symbol can have three kinds of operations.
         the variable in an application, from the property about the application itself.
    
 Note that if a Term is not inside an `Assert` all we need are the `Syntax` and `Semantic` properties.
-Every function symbol inside an `Assert` must have `Logic` properties. Here is how way capture this
+Every function symbol inside an `Assert` must have `Logic` properties. Here is how we capture this
 in the Constrained Generators System. Constructors of a type with kind `([Type] -> Type -> Type)`
 are candidates for function symbols. We make the constuctors real function symbols by
 making `Syntax`, `Semantics` and `Logic` instances for that type.
@@ -258,7 +258,7 @@ data IntegerSym (dom :: [Type]) rng where
 
 ## The function propagateSpec, and nested function symbols.
 
-Consider the term `((size_ x +. Lit 3) <=. Lit 12)` with a bunch of nested function symbols, with just 1 variable `x`
+Consider the Term `((size_ x +. Lit 3) <=. Lit 12)` with a bunch of nested function symbols, with just 1 variable `x`
 To solve this, we will have to use `propagate` for each of the nested function symbols `size_`, `(+.)`, and `(<=.)`.
 We do this by working our way from the outermost function symbol `(<=.)`, to the middle function symbol `(+.)`, to the
 innermost function symbol `size_`. This is the role of the function `propagateSpec` 
@@ -277,13 +277,13 @@ occurs. Note after each step, this last arg becomes a 1 step larger composition 
 1. `propagateSpec (CtxApp <=. (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3) :<| 12))` **`$`** `spec`
 2. `propagateSpec (CtxApp +. (CtxApp size_ (Unary CtxHole) :<| 3)))` **`$`** `(propagate <=. (HOLE:<| 12) spec)`
 3. `propagateSpec (CtxApp size_ (Unary CtxHole)))` **`$`** `(propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12) spec))`
-4. `propagateSpec CtxHole)` **`$`** `(propagate size_ Hole (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12) spec)))`
-5.  **`$`** `propagate size_ Hole (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12) spec))`
+4.  **`$`** `propagate size_ (Unary HOLE) (propagate +. (HOLE:<| 3) (propagate <=. (HOLE :<| 12) spec)))`
 
-Note the pattern in the code below. The recursize call to 'propagateSpec' is on the pattern variable `ctx` which is the
+Note the pattern in the code below that defies `propagateSpec`.
+The recursize call to 'propagateSpec' is on the pattern variable `ctx` which is the
 part of the context pointed to by the arrows (:<|) and (:|>), and this recurive call to `propagateSpec` is
 applied to a new spec computed by 'propagate', where the variable `ctx` is replaced by HOLE.
-we end up on line 5), with three nested calls to `propagate`. Here is the defintion of `propagateSpec`
+We end up on line **4** above, with three nested calls to `propagate`. Here is the defintion of `propagateSpec`
 
 ```
 propagateSpec :: forall v a. HasSpec v => Ctx v a -> Spec a -> Spec v
@@ -435,9 +435,12 @@ class HasSpec a where
 
 In a later section we present `HasSpec` instances for several
 types: [Bool](#HasSpecBool), [Integer](#HasSpecInteger), [Set a](#HasSpecSet), 
-[Pair(a,b)](HasSpecPair) and `(Either a b)`
+[Pair(a,b)](HasSpecPair) and [Either a b](HasSpecEither)
 
 ## The Spec datatype
+
+The type `Spec` is the datatype we use to describe properties about the variables in the `Spec`.
+It has 5 construtors.
 
  ```
   data Spec a where
@@ -491,7 +494,7 @@ instance HasSpec Bool where
 3. The method `guardTypeSpec` returns an `ErrorSpec` if the `TypeSpec` is inconsistent. There is only
    one inconsistent set of `Bool`, so return `ErrorSpec` if the set is null.
    
-4. The method `consformsTo` just tests if the input `Bool` is in the set of booleans.
+4. The method `consformsTo` just tests if the input `i :: Bool` is in the set of booleans.
 
 5. The method `toPreds` returns `FalsePred` if the `TypeSpec` is the null set, and if not
    returns the `ElemPred` that say each item in the set must be in the list computed from that set.
@@ -564,7 +567,7 @@ caseBoolSpec spec cont = case possibleValues spec of
     possibleValues s = filter (flip conformsToSpec s) [True, False]
 ```
 
-Finally, add the `name` function symbol as function over terms
+Finally, add the function symbol, with  (`name NotW` == `"not_"`) as a function over terms
 
 ```
 not_ :: Term Bool -> Term Bool
@@ -1126,148 +1129,6 @@ instance Logic SetSym where
             ]
 ```
 
-
-
-<a id="HasSpecPair"></a>
-## HasSpec Pair (a,b) instance
-
-Binary Tuples are a simple example of arbitrary Haskell tuples, which suggest how (3-tuples, 4-tuples, etc.) might be be defined.
-We will discuss this generalization later. Binary tuples will need 3 function symbols, which will come from 
-the `Syntax`, `Semantics` and `Logic` instances of `PairSym` 
-
-```
-data PairSym (dom :: [Type]) rng where
-  FstW :: PairSym '[(a, b)] a
-  SndW :: PairSym '[(a, b)] b
-  PairW :: PairSym '[a, b] (a, b)
-```
-
-The `HasSpec` instance uses the `PairSpec` datatype as its `TypeSpec` family instance.
-Like many `TypeSpec` it has `SemiGroup` and `Monoid` instances.
-```
-data PairSpec a b = Cartesian (Spec a) (Spec b)
-
-instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
-  show (Cartesian l r) = "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
-
-instance (HasSpec a, HasSpec b) => Semigroup (PairSpec a b) where
-  (Cartesian x y) <> (Cartesian a b) = Cartesian (x <> a) (y <> b)
-
-instance (HasSpec a, HasSpec b) => Monoid (PairSpec a b) where mempty = Cartesian mempty mempty
-
-guardPair :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (a, b)
-guardPair specA specB = handleErrors specA specB (\s t -> typeSpec (Cartesian s t))
-
--- | If either of the first two arguments are an ErrorSpec, return an ErrorSpec.
---   If Both are error free, then apply the third argument, a continuation, to
---   the error-free inputs. This pattern occurs frequently.
-handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
-handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
-  (Just m1, Just m2) -> ErrorSpec (m1 <> m2)
-  (Just m1, _) -> ErrorSpec m1
-  (_, Just m2) -> ErrorSpec m2
-  (Nothing, Nothing) -> f spec1 spec2
-```
-
-The `HasSpec` is actually quite simple.
-
-```
-instance (HasSpec a, HasSpec b) => HasSpec (a, b) where
-  type TypeSpec (a, b) = PairSpec a b
-
-  emptySpec = Cartesian mempty mempty
-
-  combineSpec (Cartesian a b) (Cartesian a' b') = guardPair (a <> a') (b <> b')
-
-  conformsTo (a, b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
-
-  guardTypeSpec (Cartesian x y) = guardPair x y
-
-  genFromTypeSpec (Cartesian sa sb) = (,) <$> genFromSpecT sa <*> genFromSpecT sb
-
-  toPreds x (Cartesian sf ss) = satisfies (fst_ x) sf <> satisfies (snd_ x) ss
-```
-
-### Syntax, Semantics, and Logic instances for PairSym
-
-```
-deriving instance Eq (PairSym dom rng)
-
-instance Show (PairSym dom rng) where show = name
-
-instance Syntax PairSym where
-  name FstW = "fst_"
-  name SndW = "snd_"
-  name PairW = "pair_"
-  inFix _ = False
-
-instance Semantics PairSym where
-  semantics FstW = fst
-  semantics SndW = snd
-  semantics PairW = (,)
-  rewriteRules FstW (Pair x _) Evidence = Just x
-  rewriteRules SndW (Pair _ y) Evidence = Just y
-  rewriteRules t l Evidence = Lit <$> applyFunSym @PairSym (semantics t) l
-```
-The `Syntax` and `Semantics` instances are very simple, except for the `rewriteRules` which tell
-how `FstW` and `SndW` project over a `PairW` application. The pattern matching over 
-the over the application of the `PairW` application uses the Haskell Pattern synonym `Pair`
-
-```
--- | Create a Haskell Pattern where (Pair x y) matches (App PairW (x :> y :> Nil))
-pattern Pair ::
-  forall c. () => forall a b. (c ~ (a, b), HasSpec a, HasSpec b) => Term a -> Term b -> Term c
-pattern Pair x y <- App (getWitness -> Just PairW) (x :> y :> Nil)
-```
-
-
-```
-instance Logic PairSym where
-  propagateTypeSpec FstW (Unary HOLE) ts cant = typeSpec $ Cartesian (TypeSpec ts cant) TrueSpec
-  propagateTypeSpec SndW (Unary HOLE) ts cant = typeSpec $ Cartesian TrueSpec (TypeSpec ts cant)
-  propagateTypeSpec PairW (a :|> HOLE) sc@(Cartesian sa sb) cant
-    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
-    | otherwise =
-        ErrorSpec
-          ( NE.fromList
-              ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
-          )
-  propagateTypeSpec PairW (HOLE :<| b) sc@(Cartesian sa sb) cant
-    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
-    | otherwise =
-        ErrorSpec
-          ( NE.fromList
-              ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show (TypeSpec sc cant)]
-          )
-
-  propagateMemberSpec FstW (Unary HOLE) es = typeSpec $ Cartesian (MemberSpec es) TrueSpec
-  propagateMemberSpec SndW (Unary HOLE) es = typeSpec $ Cartesian TrueSpec (MemberSpec es)
-  propagateMemberSpec PairW (a :|> HOLE) es =
-    case (nub (sameFst a (NE.toList es))) of
-      (w : ws) -> MemberSpec (w :| ws)
-      [] ->
-        ErrorSpec $
-          NE.fromList
-            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
-            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
-            ]
-  propagateMemberSpec PairW (HOLE :<| b) es =
-    case (nub (sameSnd b (NE.toList es))) of
-      (w : ws) -> MemberSpec (w :| ws)
-      [] ->
-        ErrorSpec $
-          NE.fromList
-            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
-            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
-            ]
-
-sameFst :: Eq a1 => a1 -> [(a1, a2)] -> [a2]
-sameFst a ps = [b | (a', b) <- ps, a == a']
-
-sameSnd :: Eq a1 => a1 -> [(a2, a1)] -> [a2]
-sameSnd b ps = [a | (a, b') <- ps, b == b']
-```
-
 ## SolverPlans
 
 The function `genFromSpecT` generates a random value from a `Spec`. Of the 5 constructors of `Spec`, the case analysis over
@@ -1328,9 +1189,12 @@ In the code block below, each `SolverStep` includes the variable name, followed 
 The plan orders the variables in this order `[v_0, v_1, v_3, v_2, v_4]`.  It has the property that in each step, the sub predicates
 mention only the variable for that step, and variables that appear in previous steps. The reader should verify that this is true. Solving
 the plan, chooses the first variable and a conforming random value, adds it to the environment, and then substituting that value into
-the rest of the plan, and then solving that shorter plan, until no variables are left. 
-Choosing `v_0` and a conforming value `19`, note how the the `Pred` for `v_1` after substitution
-`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []` . Every substitution may enable further simplifcation.
+the rest of the plan, and then solving that shorter plan, until no variables are left.  Let's step through the example.
+
+Choosing `v_0` and a random conforming value `19`, note how the the `Pred` for `v_1` after substitution
+`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []` . 
+Every substitution may enable further simplifcation, and replaces that variable with something without any variables
+in the succeeding `SolverSteps`.
 
 ```
 Env {v_0 -> 19}
@@ -1353,7 +1217,7 @@ Step v_1
       ---
 ```
 
-Choosing `v_1` and a conforming value `-2`, and subsituting we get
+Choosing `v_1` and a random conforming value `-2`, and subsituting we get
 
 ```
 Env {v_0 -> 19, v_1 -> -2}
@@ -1443,7 +1307,7 @@ computeSpecSimplified x preds = localGESpec $ case simplifyPred preds of
 ``` 
 
 The function works as follows
-1. Guard the `GE` computation with `localGESpec`. This may return a valid result, return a `ErrorSpec`, or raise a Haskell Error.
+1. Guard the `GE` computation with `localGESpec`. This may: return a valid `Result`, return a `ErrorSpec`, or raise a Haskell Error.
 2. First apply simplifying rules to `preds`
 3. Then a case analysis over the resulting simplified `Pred` is preformed
 4. If the case is `And`, map `computeSpecSimplified` over each of them, and then `fold` over the results using the `Monoid` operator `(<>)` for `Spec`
@@ -1465,6 +1329,11 @@ The complete defintion follows. The other (non-And) rules fall into two cases.
 computeSpecSimplified ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Spec a)
 computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
+  And ps -> do
+    spec <- fold <$> mapM (computeSpecSimplified x) ps
+    case spec of
+      SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
+      s -> pure s
   ElemPred True t xs -> propagateSpecM (MemberSpec xs) (toCtx x t)
   ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (emptySpec @b) (NE.toList xs)) (toCtx x t)
   TruePred -> pure mempty
@@ -1484,4 +1353,112 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
 
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
-```  
+```
+
+
+<a id="HasSpecEither"></a>
+## HasSpec (Either a b) instance
+
+We include the `HasSpec (Either a b)` instance because it illustrates how one may make a `HasSpec` instance
+for a datatype with more than one constructor function. In the full system such datatypes are handled
+by using a Sum of Products representation, which is recursive, nested version of the Pairs and Either.
+This adds considerable complexity to the system, but the key ideas are fuly illustrated by the pair
+`(a,b)` and `(Either a b)` instances.
+
+
+The `TypeSpec` for `(Either a b)` is the datatype `(SumSpec a b)`
+
+```
+data SumSpec a b = SumSpec (Spec a) (Spec b)
+  deriving (Show)
+
+deriving instance (Eq (Spec a), Eq (Spec b)) => Eq (SumSpec a b)
+
+guardSum :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (Either a b)
+guardSum (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
+guardSum (ErrorSpec es) _ = ErrorSpec (NE.cons "sum error on left" es)
+guardSum _ (ErrorSpec es) = ErrorSpec (NE.cons "sum error on right" es)
+guardSum s s' = typeSpec $ SumSpec s s'
+```
+
+The `HasSpec (Either a b)` instance is quite simple, essentially carrying around two different
+`Specs` in `SumSpec a b`.  One for values `(Left a)` and a different one for values `(Right b)`. 
+Note the special construtor `Case` of `Pred` specially designed for the type `Either`.
+
+```
+instance (HasSpec a, HasSpec b) => HasSpec (Either a b) where
+  type TypeSpec (Either a b) = SumSpec a b
+
+  emptySpec = SumSpec mempty mempty
+
+  combineSpec (SumSpec a b) (SumSpec c d) = guardSum (a <> c) (b <> d)
+
+  conformsTo (Left a) (SumSpec sa _) = conformsToSpec a sa
+  conformsTo (Right b) (SumSpec _ sb) = conformsToSpec b sb
+
+  toPreds x (SumSpec a b) = Case x (bind $ \y -> satisfies y a) (bind $ \y -> satisfies y b)
+
+  genFromTypeSpec (SumSpec (simplifySpec -> sa) (simplifySpec -> sb))
+    | emptyA, emptyB = genError "genFromTypeSpec @SumSpec: empty"
+    | emptyA = Right <$> genFromSpecT sb  -- Gen a `b` object
+    | emptyB = Left  <$> genFromSpecT sa  -- Gen a `a` object
+    | otherwise = oneofT [Left <$> genFromSpecT sa, Right <$> genFromSpecT sb]
+    where
+      emptyA = isErrorLike sa
+      emptyB = isErrorLike sb
+```
+
+The function symbols on the Either type are embedded in the `EitherSym` datatype
+
+```
+data EitherSym (dom :: [Type]) rng where
+  LeftW :: EitherSym '[a] (Either a b)
+  RightW :: EitherSym '[b] (Either a b)
+
+deriving instance Eq (EitherSym dom rng)
+
+instance Show (EitherSym dom rng) where show = name
+
+instance Syntax EitherSym where
+  name LeftW = "left_"
+  name RightW = "right_"
+  inFix _ = False
+
+instance Semantics EitherSym where
+  semantics LeftW = Left
+  semantics RightW = Right
+
+instance Logic EitherSym where
+  propagateTypeSpec LeftW (Unary HOLE) (SumSpec sl _) cant = sl <> foldMap notEqualSpec [a | Left a <- cant]
+  propagateTypeSpec RightW (Unary HOLE) (SumSpec _ sr) cant = sr <> foldMap notEqualSpec [a | Right a <- cant]
+
+  propagateMemberSpec LeftW (Unary HOLE) es =
+    case [a | Left a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propMemberSpec (left_ HOLE) on (MemberSpec es) with no Left in es: " ++ show (NE.toList es)
+  propagateMemberSpec RightW (Unary HOLE) es =
+    case [a | Right a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propagate (Right HOLE) on (MemberSpec es) with no Right in es: " ++ show (NE.toList es)
+
+left_ :: (HasSpec a, HasSpec b) => Term a -> Term (Either a b)
+left_ x = App LeftW (x :> Nil)
+
+right_ :: (HasSpec a, HasSpec b) => Term b -> Term (Either a b)
+right_ x = App RightW (x :> Nil)
+```
+
+## Generalizing to N-ary Products and Sums
+
+
+
+
+
+
+Note how we could use the same technique for sum types with arbitrary number of constructors by nesting `Case`.

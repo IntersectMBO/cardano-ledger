@@ -191,11 +191,11 @@ alonzoBbodyTransition ::
 alonzoBbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , Block bh txsSeq
-              )
-          ) -> do
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block bh txsSeq
+               )
+           ) -> do
         let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
             actualBodyHash = hashTxSeq @era txsSeq

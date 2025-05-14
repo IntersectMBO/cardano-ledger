@@ -54,16 +54,16 @@ spec = do
     describe "Enactment" $ do
       prop "Adding votes preserves consistency" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact} :: ProposalsForEnactment ConwayEra
-          , voter :: Voter
-          , vote :: Vote
-          ) -> do
+           , voter :: Voter
+           , vote :: Vote
+           ) -> do
             case pfeToEnact of
               gas Seq.:<| _gass -> isRight . toGovRelationTreeEither $ proposalsAddVote voter vote (gasId gas) pfeProposals
               _ -> True
       prop "Enacting exhaustive lineages reduces Proposals to their roots" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment ConwayEra
-          ) -> do
+             ProposalsForEnactment ConwayEra
+           ) -> do
             let (ps', enacted, removedDueToEnactment, expiredRemoved) = proposalsApplyEnactment pfeToEnact Set.empty pfeProposals
             expiredRemoved `shouldSatisfy` Map.null
             enacted `shouldBe` fromElems gasId pfeToEnact
@@ -75,8 +75,8 @@ spec = do
             `shouldThrow` \AssertionFailed {} -> True
       prop "Expiring compliments of exhaustive lineages keeps proposals consistent" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment ConwayEra
-          ) -> do
+             ProposalsForEnactment ConwayEra
+           ) -> do
             let (ps', enacted, removedDueToEnactment, expiredRemoved) =
                   proposalsApplyEnactment Seq.Empty pfeToRemove pfeProposals
             enacted `shouldBe` mempty
@@ -93,8 +93,8 @@ spec = do
             `shouldThrow` \AssertionFailed {} -> True
       prop "Enacting and expiring conflicting proposals does not lead to removal due to enactment" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment ConwayEra
-          ) -> do
+             ProposalsForEnactment ConwayEra
+           ) -> do
             let (ps', enacted, enactedRemoved, expiredRemoved) = proposalsApplyEnactment pfeToEnact pfeToRemove pfeProposals
             Map.keysSet expiredRemoved `shouldBe` pfeToRemove
             enactedRemoved `shouldBe` mempty

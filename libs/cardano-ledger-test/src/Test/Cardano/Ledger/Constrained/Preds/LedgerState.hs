@@ -116,7 +116,7 @@ ledgerStatePreds _usize p =
   , Random constitutionChildren
   , proposalDeposits
       :<-: ( Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions)
-              :$ (Simple $ currProposals p)
+               :$ (Simple $ currProposals p)
            )
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
@@ -149,29 +149,29 @@ ledgerStatePreds _usize p =
   , SumsTo (Left (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
     ++ ( case whichGovState p of
-          GovStateConwayToConway ->
-            [ Random randomProposals
-            , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
-            , Choose
-                (ExactSize 1)
-                futurepps
-                [
-                  ( 1
-                  , Constr "DefinitePParamsUpdate" (DefinitePParamsUpdate @era . unPParams) ^$ ppx
-                  , [ppx :=: currPParams p]
-                  )
-                , (1, Constr "NoPParamsUpdate" (const (NoPParamsUpdate @era)) ^$ unit, [Random unit])
-                ]
-            , futurePParams p :<-: (Constr "head" getOne ^$ futurepps)
-            ]
-              -- TODO: yuck... This whole function should be refactored.
-              ++ case reify @era of
-                Conway -> prevPulsingPreds p -- Constraints to generate a valid Pulser
-          GovStateShelleyToBabbage ->
-            [ Sized (Range 0 1) (pparamProposals p)
-            , Sized (Range 0 1) (futurePParamProposals p)
-            , Lit (FuturePParamsR p) NoPParamsUpdate :=: futurePParams p
-            ]
+           GovStateConwayToConway ->
+             [ Random randomProposals
+             , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
+             , Choose
+                 (ExactSize 1)
+                 futurepps
+                 [
+                   ( 1
+                   , Constr "DefinitePParamsUpdate" (DefinitePParamsUpdate @era . unPParams) ^$ ppx
+                   , [ppx :=: currPParams p]
+                   )
+                 , (1, Constr "NoPParamsUpdate" (const (NoPParamsUpdate @era)) ^$ unit, [Random unit])
+                 ]
+             , futurePParams p :<-: (Constr "head" getOne ^$ futurepps)
+             ]
+               -- TODO: yuck... This whole function should be refactored.
+               ++ case reify @era of
+                 Conway -> prevPulsingPreds p -- Constraints to generate a valid Pulser
+           GovStateShelleyToBabbage ->
+             [ Sized (Range 0 1) (pparamProposals p)
+             , Sized (Range 0 1) (futurePParamProposals p)
+             , Lit (FuturePParamsR p) NoPParamsUpdate :=: futurePParams p
+             ]
        )
   where
     randomProposals = Var (pV p "randomProposals" (ProposalsR p) No)

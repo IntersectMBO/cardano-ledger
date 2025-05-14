@@ -286,10 +286,10 @@ proposalsSpec = do
               ]
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) [SJust <$> a]
-                            , SJust <$> b
-                            ]
+                             SNothing
+                             [ Node (SJust p1) [SJust <$> a]
+                             , SJust <$> b
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -309,9 +309,9 @@ proposalsSpec = do
         p1 <- submitInitialProposal
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) []
-                            ]
+                             SNothing
+                             [ Node (SJust p1) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -322,10 +322,10 @@ proposalsSpec = do
         p11 <- submitChildProposal p1
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) [Node (SJust p11) []]
-                            , Node (SJust p2) []
-                            ]
+                             SNothing
+                             [ Node (SJust p1) [Node (SJust p11) []]
+                             , Node (SJust p2) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -342,16 +342,16 @@ proposalsSpec = do
             ]
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p1)
-                                [ Node
-                                    (SJust p11)
-                                    (fmap SJust <$> a)
-                                ]
-                            , Node (SJust p2) [Node (SJust p21) []]
-                            , Node (SJust p3) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p1)
+                                 [ Node
+                                     (SJust p11)
+                                     (fmap SJust <$> a)
+                                 ]
+                             , Node (SJust p2) [Node (SJust p21) []]
+                             , Node (SJust p3) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -363,17 +363,17 @@ proposalsSpec = do
         p211 <- submitChildProposal p21
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p1)
-                                [ Node
-                                    (SJust p11)
-                                    (fmap SJust <$> a)
-                                ]
-                            , Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
-                            , Node (SJust p3) [Node (SJust p31) []]
-                            , Node (SJust p4) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p1)
+                                 [ Node
+                                     (SJust p11)
+                                     (fmap SJust <$> a)
+                                 ]
+                             , Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                             , Node (SJust p3) [Node (SJust p31) []]
+                             , Node (SJust p4) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -381,11 +381,11 @@ proposalsSpec = do
         passNEpochs 3
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
-                            , Node (SJust p3) [Node (SJust p31) []]
-                            , Node (SJust p4) []
-                            ]
+                             SNothing
+                             [ Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                             , Node (SJust p3) [Node (SJust p31) []]
+                             , Node (SJust p4) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -396,19 +396,19 @@ proposalsSpec = do
         p212 <- submitChildProposal p21
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p2)
-                                [ Node
-                                    (SJust p21)
-                                    [ Node (SJust p211) []
-                                    , Node (SJust p212) []
-                                    ]
-                                ]
-                            , Node (SJust p3) [Node (SJust p31) [Node (SJust p311) []]]
-                            , Node (SJust p4) [Node (SJust p41) []]
-                            , Node (SJust p5) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p2)
+                                 [ Node
+                                     (SJust p21)
+                                     [ Node (SJust p211) []
+                                     , Node (SJust p212) []
+                                     ]
+                                 ]
+                             , Node (SJust p3) [Node (SJust p31) [Node (SJust p311) []]]
+                             , Node (SJust p4) [Node (SJust p41) []]
+                             , Node (SJust p5) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -420,19 +420,19 @@ proposalsSpec = do
         p312 <- submitChildProposal p31
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p3)
-                                [ Node
-                                    (SJust p31)
-                                    [ Node (SJust p311) []
-                                    , Node (SJust p312) []
-                                    ]
-                                ]
-                            , Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
-                            , Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p3)
+                                 [ Node
+                                     (SJust p31)
+                                     [ Node (SJust p311) []
+                                     , Node (SJust p312) []
+                                     ]
+                                 ]
+                             , Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                             , Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -440,11 +440,11 @@ proposalsSpec = do
         passEpoch
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
-                            , Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                             , Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -452,10 +452,10 @@ proposalsSpec = do
         passEpoch
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -463,9 +463,9 @@ proposalsSpec = do
         passNEpochs 3
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []

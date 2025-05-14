@@ -20,25 +20,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Min.Tuple where
-  
--- import Constrained.Env
+
+import Constrained.List hiding (ListCtx)
 import Constrained.Min.Base
 import Constrained.Min.Model
 import Constrained.Min.Syntax
-
--- import Constrained.Core (Evidence (..), Value (..), Var (..), eqVar)
--- import Constrained.GenT
-import Constrained.List hiding (ListCtx)
--- import Constrained.Syntax (var)
 import Data.Kind
--- import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
--- import Data.String (fromString)
--- import Data.Typeable
--- import GHC.Stack
--- import Prettyprinter
--- import Test.QuickCheck.Gen
 
 -- =======================================================
 -- Experiment to see if we can build tuples, using only the binary tuple
@@ -59,115 +48,130 @@ instance (HasSpec a, HasSpec b, HasSpec c) => HasSpec (a, b, c) where
       a
       bc
       ( \x y -> case (x :: Spec a, y :: Spec (b, c)) of
-          (MemberSpec xs, MemberSpec ys) -> MemberSpec (NE.fromList [(a', b', c') | a'<- NE.toList xs, (b', c') <- NE.toList ys])
-          -- There are probably other cases
-          (specA, specBC) -> constrained $ \ p -> And [satisfies (head_ p) specA, satisfies (tail_ p) specBC]
+          (MemberSpec xs, MemberSpec ys) ->
+            -- Given two MemberSpec, build one MemberSpec, by joining all combinations
+            MemberSpec
+              ( NE.fromList
+                  [ (a', b', c')
+                  | a' <- NE.toList xs
+                  , (b', c') <- NE.toList ys
+                  ]
+              )
+          (specA, specBC) -> constrained $ \p -> And [satisfies (head3_ p) specA, satisfies (tail3_ p) specBC]
       )
 
   genFromTypeSpec (a, bc) = f <$> genFromSpecT a <*> genFromSpecT bc
     where
       f a' (b', c') = (a', b', c')
 
-  toPreds x (a, bc) = satisfies (head_ x) a <> satisfies (tail_ x) bc
+  toPreds x (a, bc) = satisfies (head3_ x) a <> satisfies (tail3_ x) bc
+
+head3_ :: All HasSpec '[a, b, c] => Term (a, b, c) -> Term a
+head3_ x = App Head3W (x :> Nil)
+
+tail3_ :: All HasSpec '[a, b, c] => Term (a, b, c) -> Term (b, c)
+tail3_ x = App Tail3W (x :> Nil)
 
 -- =======================================================
 
 instance (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => HasSpec (a, b, c, d) where
-  type TypeSpec (a, b, c, d) = (Spec (a, b), Spec (c, d))
+  type TypeSpec (a, b, c, d) = (Spec a, Spec (b, c, d))
 
-  emptySpec = (mempty @(Spec (a, b)), mempty @(Spec (c, d)))
+  emptySpec = (mempty @(Spec a), mempty @(Spec (b, c, d)))
 
-  combineSpec (a, b) (a', b') = guardTypeSpec (a <> a', b <> b')
+  combineSpec (a, bcd) (a', bcd') = guardTypeSpec (a <> a', bcd <> bcd')
 
-  conformsTo (a, b, c, d) (sAB, sCD) = conformsToSpec (a, b) sAB && conformsToSpec (c, d) sCD
+  conformsTo (a, b, c, d) (sA, sBCD) = conformsToSpec a sA && conformsToSpec (b, c, d) sBCD
 
-  guardTypeSpec (ab, cd) =
+  guardTypeSpec (a, bcd) =
     handleErrors
-      ab
-      cd
+      a
+      bcd
       ( \x y -> case (x, y) of
-          (MemberSpec xs, MemberSpec ys) -> MemberSpec (NE.fromList [(a, b, c, d) | (a, b) <- NE.toList xs, (c, d) <- NE.toList ys])
-          -- There are probably other cases
-          (specAB, specCD) -> constrained $ \ ps -> And [satisfies (left4_ ps) specAB, satisfies (right4_ ps) specCD]
+          (MemberSpec xs, MemberSpec ys) ->
+            MemberSpec
+              ( NE.fromList
+                  [ (s, b, c, d)
+                  | s <- NE.toList xs
+                  , (b, c, d) <- NE.toList ys
+                  ]
+              )
+          (specA, specBCD) -> constrained $ \ps -> And [satisfies (head4_ ps) specA, satisfies (tail4_ ps) specBCD]
       )
 
-  genFromTypeSpec (ab, cd) = f <$> genFromSpecT ab <*> genFromSpecT cd
+  genFromTypeSpec (a, bcd) = f <$> genFromSpecT a <*> genFromSpecT bcd
     where
-      f (a, b) (c, d) = (a, b, c, d)
+      f a' (b, c, d) = (a', b, c, d)
 
-  toPreds x (ab, cd) = satisfies (left4_ x) ab <> satisfies (right4_ x) cd
+  toPreds x (a, bcd) = satisfies (head4_ x) a <> satisfies (tail4_ x) bcd
+
+head4_ :: All HasSpec '[a, b, c, d] => Term (a, b, c, d) -> Term a
+head4_ x = App Head4W (x :> Nil)
+
+tail4_ :: All HasSpec '[a, b, c, d] => Term (a, b, c, d) -> Term (b, c, d)
+tail4_ x = App Tail4W (x :> Nil)
 
 -- ======================================================================
 -- We need some function symbols, to break Bigger tuples into sub-tuples
 
 data TupleSym (ds :: [Type]) r where
-  Left4W :: All HasSpec '[a, b, c, d] => TupleSym '[(a, b, c, d)] (a, b)
-  Right4W :: All HasSpec '[a, b, c, d] => TupleSym '[(a, b, c, d)] (c, d)
-  HeadW :: All HasSpec '[a, b, c] => TupleSym '[(a, b, c)] a
-  TailW :: All HasSpec '[a, b, c] => TupleSym '[(a, b, c)] (b, c)
+  Head3W :: All HasSpec '[a, b, c] => TupleSym '[(a, b, c)] a
+  Tail3W :: All HasSpec '[a, b, c] => TupleSym '[(a, b, c)] (b, c)
+  Head4W :: All HasSpec '[a, b, c, d] => TupleSym '[(a, b, c, d)] a
+  Tail4W :: All HasSpec '[a, b, c, d] => TupleSym '[(a, b, c, d)] (b, c, d)
 
 deriving instance Eq (TupleSym ds r)
+
 instance Show (TupleSym ds r) where show = name
 
 instance Syntax TupleSym where
   inFix _ = False
-  name Left4W = "left4_"
-  name Right4W = "right4_"
-  name HeadW = "head_"
-  name TailW = "tail_"
+  name Head3W = "head3_"
+  name Tail3W = "tail3_"
+  name Head4W = "head4_"
+  name Tail4W = "tail4_"
 
 instance Semantics TupleSym where
-  semantics Left4W = \(a, b, _c, _d) -> (a, b)
-  semantics Right4W = \(_a, _b, c, d) -> (c, d)
-  semantics HeadW = \(a, _b, _c) -> a
-  semantics TailW = \(_a, b, c) -> (b, c)
+  semantics Head3W = \(a, _b, _c) -> a
+  semantics Tail3W = \(_a, b, c) -> (b, c)
+  semantics Head4W = \(a, _b, _c, _d) -> a
+  semantics Tail4W = \(_a, b, c, d) -> (b, c, d)
 
 instance Logic TupleSym where
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
   propagate symW (Unary HOLE) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App symW (v' :> Nil)) (v :-> ps)
-  propagate Left4W (Unary HOLE) specAB = anyRight specAB
-  propagate Right4W (Unary HOLE) specCD = anyLeft specCD
-  propagate HeadW (Unary HOLE) specA = anyTail specA
-  propagate TailW (Unary HOLE) specBC = anyHead specBC
+  propagate Head3W (Unary HOLE) specA = anyTail3 specA
+  propagate Tail3W (Unary HOLE) specBC = anyHead3 specBC
+  propagate Head4W (Unary HOLE) specA = anyTail4 specA
+  propagate Tail4W (Unary HOLE) specBCD = anyHead4 specBCD
 
-anyHead :: forall a b c. (HasSpec a, HasSpec b, HasSpec c) => Spec (b, c) -> Spec (a, b, c)
-anyHead specBC = typeSpec @(a, b, c) (mempty @(Spec a), specBC)
+anyHead3 :: forall a b c. (HasSpec a, HasSpec b, HasSpec c) => Spec (b, c) -> Spec (a, b, c)
+anyHead3 specBC = typeSpec @(a, b, c) (mempty @(Spec a), specBC)
 
-anyTail :: forall a b c. (HasSpec a, HasSpec b, HasSpec c) => Spec a -> Spec (a, b, c)
-anyTail specA = typeSpec (specA, mempty @(Spec (b, c)))
+anyTail3 :: forall a b c. (HasSpec a, HasSpec b, HasSpec c) => Spec a -> Spec (a, b, c)
+anyTail3 specA = typeSpec (specA, mempty @(Spec (b, c)))
 
-anyLeft ::
-  forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec (c, d) -> Spec (a, b, c, d)
-anyLeft specCD = typeSpec (mempty @(Spec (a, b)), specCD)
+anyHead4 ::
+  forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec (b, c, d) -> Spec (a, b, c, d)
+anyHead4 specBCD = typeSpec (mempty @(Spec a), specBCD)
 
-anyRight ::
-  forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec (a, b) -> Spec (a, b, c, d)
-anyRight specAB = typeSpec (specAB, mempty @(Spec (c, d)))
-
--- ==========================================================
-
-head_ :: All HasSpec '[a, b, c] => Term (a, b, c) -> Term a
-head_ x = App HeadW (x :> Nil)
-
-tail_ :: All HasSpec '[a, b, c] => Term (a, b, c) -> Term (b, c)
-tail_ x = App TailW (x :> Nil)
-
-left4_ :: All HasSpec '[a, b, c, d] => Term (a, b, c, d) -> Term (a, b)
-left4_ x = App Left4W (x :> Nil)
-
-right4_ :: All HasSpec '[a, b, c, d] => Term (a, b, c, d) -> Term (c, d)
-right4_ x = App Right4W (x :> Nil)
+anyTail4 ::
+  forall a b c d. (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => Spec a -> Spec (a, b, c, d)
+anyTail4 specA = typeSpec (specA, mempty @(Spec (b, c, d)))
 
 -- ======================================================================
 -- The Match class, with function `match` makes using all tuples uniform
 -- For any n-tuple, supply `match` with an n-ary function to bring into
--- scope variables with type Term, which can be used to make Pred
+-- scope 'n' variables with type Term, which can be used to make Pred
+-- Note how the binary case is the inductive step, and the others just
+-- call the `match` with one less item in the tuple.
 
 class Match t (ts :: [Type]) | t -> ts where
   match :: All HasSpec ts => Term t -> FunTy (MapList Term ts) Pred -> Pred
 
+-- Base case where binary tuple.
 instance Match (a, b) '[a, b] where
   match ab f =
     Let
@@ -176,44 +180,26 @@ instance Match (a, b) '[a, b] where
           Let (snd_ ab) (bind $ \st -> f ft st)
       )
 
+-- Inductive case for ternary tuple, calls 'match' for binary tuple.
 instance Match (a, b, c) '[a, b, c] where
   match abc f =
     Let
-      (head_ abc)
-      ( bind $ \h ->
+      (head3_ abc)
+      ( bind $ \a ->
           Let
-            (tail_ abc)
-            ( bind $ \t ->
-                Let
-                  (fst_ t)
-                  ( bind $ \ft ->
-                      Let (snd_ t) (bind $ \st -> f h ft st)
-                  )
-            )
+            (tail3_ abc)
+            (bind $ \bc -> match @(b, c) bc (f a))
       )
 
+-- Inductive case for quadary tuple, calls 'match' for ternary tuple.
 instance Match (a, b, c, d) '[a, b, c, d] where
   match abcd f =
     Let
-      (left4_ abcd)
-      ( bind $ \v5 ->
+      (head4_ abcd)
+      ( bind $ \a ->
           Let
-            (right4_ abcd)
-            ( bind $ \v4 ->
-                Let
-                  (fst_ v5)
-                  ( bind $ \v3 ->
-                      Let
-                        (snd_ v5)
-                        ( bind $ \v2 ->
-                            Let
-                              (fst_ v4)
-                              ( bind $ \v1 ->
-                                  Let (snd_ v4) (bind $ \v0 -> f v3 v2 v1 v0)
-                              )
-                        )
-                  )
-            )
+            (tail4_ abcd)
+            (bind $ \bcd -> match @(b, c, d) bcd (f a))
       )
 
 -- =========================================================
@@ -232,6 +218,8 @@ spec4 :: Spec (Integer, Integer, Integer, Integer)
 spec4 = constrained $ \x ->
   match x $ \a b c d -> And [Assert $ a <=. b, Assert $ b <=. c, Assert $ c <=. d]
 
+-- ========================================================
+
 {-
 class TypeList ts where
   uncurryList :: FunTy (MapList f ts) r -> List f ts -> r
@@ -242,7 +230,6 @@ class TypeList ts where
                 -> (List f ts -> r) -> FunTy ts r
   unfoldList :: (forall a (as :: [*]). List f as -> f a) -> List f ts
 -}
-
 
 -- | Fold over a (List Term ts) with 'getTermsize' which consumes a Term component for each element of the list
 ex1 :: Maybe Int
