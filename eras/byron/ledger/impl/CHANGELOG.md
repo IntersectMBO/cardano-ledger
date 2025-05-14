@@ -1,11 +1,8 @@
 # Revision history for `cardano-ledger-byron`
 
-## 1.3.0.0
-
-* Remove `osHelper` and `archHelper` functions.
-
 ## 1.2.0.0
 
+* Remove `osHelper` and `archHelper` functions.
 * Added `Test.Cardano.Chain.Binary.Cddl` module
 
 ### `testlib`
