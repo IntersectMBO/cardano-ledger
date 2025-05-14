@@ -31,6 +31,7 @@ library
     Constrained.Examples.Either
     Constrained.Examples.Fold
     Constrained.Examples.List
+    Constrained.Examples.ManualExamples
     Constrained.Examples.Map
     Constrained.Examples.Set
     Constrained.Examples.Tree
@@ -41,10 +42,6 @@ library
     Constrained.Graph
     Constrained.List
     Constrained.NumOrd
-    Constrained.MinBase
-    Constrained.MinSyntax
-    Constrained.MinModel
-    Constrained.NumSpec
     Constrained.PrettyUtils
     Constrained.Properties
     Constrained.Spec.Map
@@ -78,6 +75,32 @@ library
     random,
     template-haskell,
 
+library testlib
+  exposed-modules:
+    Test.Minimal.Base
+    Test.Minimal.Model
+    Test.Minimal.Syntax
+    Test.Minimal.Tuple
+
+  hs-source-dirs: testlib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+  build-depends:
+    QuickCheck >=2.14,
+    base >=4.18 && <5,
+    constrained-generators,
+    containers,
+    mtl,
+    prettyprinter,
+
 test-suite constrained
   type: exitcode-stdio-1.0
   main-is: Tests.hs
@@ -109,12 +132,6 @@ benchmark bench
   default-language: Haskell2010
   ghc-options:
     -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wpartial-fields
-    -Wredundant-constraints
-    -Wunused-packages
     -rtsopts
 
   build-depends:

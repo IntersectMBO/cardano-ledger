@@ -21,7 +21,7 @@
 -- HasSpec instances for known types Integer, Bool, Set , (,)
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Min.Model where
+module Test.Minimal.Model where
 
 import Constrained.Core (
   Evidence (..),
@@ -34,11 +34,6 @@ import Constrained.Env
 import Constrained.GenT
 import qualified Constrained.Graph as Graph
 import Constrained.List hiding (ListCtx)
-import Constrained.Min.Base
-import Constrained.Min.Syntax
-import Debug.Trace
-
--- import Control.Applicative ((<|>))
 import Control.Monad (guard)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable (fold)
@@ -54,9 +49,9 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Stack
 import Prettyprinter
+import Test.Minimal.Base
+import Test.Minimal.Syntax
 import Test.QuickCheck hiding (forAll)
-
--- import Test.QuickCheck.Gen(getSize)
 
 -- ====================================================
 -- Now some concrete examples
@@ -70,21 +65,27 @@ import Test.QuickCheck hiding (forAll)
 data IntegerSym (dom :: [Type]) rng where
   PlusW :: IntegerSym '[Integer, Integer] Integer
   MinusW :: IntegerSym '[Integer, Integer] Integer
+  NegateW :: IntegerSym '[Integer] Integer
   LessOrEqW :: IntegerSym '[Integer, Integer] Bool
   GreaterOrEqW :: IntegerSym '[Integer, Integer] Bool
+
 deriving instance Eq (IntegerSym dom rng)
+
 instance Show (IntegerSym dom rng) where show = name
 
 instance Syntax IntegerSym where
   name PlusW = "+."
   name MinusW = "-."
+  name NegateW = "negate_"
   name LessOrEqW = "<=."
   name GreaterOrEqW = ">=."
+  inFix NegateW = False
   inFix _ = True
 
 instance Semantics IntegerSym where
   semantics PlusW = (+)
   semantics MinusW = (-)
+  semantics NegateW = negate
   semantics LessOrEqW = (<=)
   semantics GreaterOrEqW = (>=)
 
@@ -102,6 +103,8 @@ instance Logic IntegerSym where
       propagate LessOrEqW (x :|> HOLE) spec1
     (GreaterOrEqW, x :|> HOLE, spec2) ->
       propagate LessOrEqW (HOLE :<| x) spec2
+    (NegateW, Unary HOLE, TypeSpec interval cant) -> typeSpec (negateRange interval) <> notMemberSpec (map negate cant)
+    (NegateW, Unary HOLE, MemberSpec xs) -> MemberSpec $ NE.nub $ fmap negate xs
     (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
       TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
     (PlusW, HOLE :<| n, MemberSpec xs) ->
@@ -148,6 +151,9 @@ ltSpec n = typeSpec (Interval Nothing (Just (n - 1)))
 (-.) :: Term Integer -> Term Integer -> Term Integer
 (-.) x y = App MinusW (x :> y :> Nil)
 
+negate_ :: Term Integer -> Term Integer
+negate_ x = App NegateW (x :> Nil)
+
 -- =========================
 -- HasSpec Integer instance
 
@@ -166,7 +172,7 @@ instance HasSpec Integer where
   type TypeSpec Integer = Range
 
   -- \| From -∞ to +∞
-  emptySpec = Interval Nothing Nothing
+  anySpec = Interval Nothing Nothing
 
   -- \| Catch inconsistencies after using Monoid operation of the two Ranges.
   combineSpec s s' = guardTypeSpec (s <> s')
@@ -248,7 +254,7 @@ not_ x = App NotW (x :> Nil)
 instance HasSpec Bool where
   type TypeSpec Bool = Set Bool
 
-  emptySpec = Set.fromList [False, True]
+  anySpec = Set.fromList [False, True]
 
   combineSpec s s' = typeSpec (Set.union s s')
 
@@ -393,7 +399,7 @@ instance (Ord a, HasSpec a) => Monoid (SetSpec a) where
 instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
   type TypeSpec (Set a) = SetSpec a
 
-  emptySpec = SetSpec Set.empty TrueSpec TrueSpec
+  anySpec = SetSpec Set.empty TrueSpec TrueSpec
 
   combineSpec x y = guardSetSpec (x <> y)
 
@@ -472,12 +478,6 @@ instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
 pattern Pair ::
   forall c. () => forall a b. (c ~ (a, b), HasSpec a, HasSpec b) => Term a -> Term b -> Term c
 pattern Pair x y <- App (getWitness -> Just PairW) (x :> y :> Nil)
-
-{-
-pairView :: forall a b. (HasSpec a, HasSpec b) => Term (a,b) -> Maybe (Term a, Term b)
-pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
-pairView _ = Nothing
--}
 
 data PairSym (dom :: [Type]) rng where
   FstW :: PairSym '[(a, b)] a
@@ -574,7 +574,7 @@ guardPair specA specB = handleErrors specA specB (\s t -> typeSpec (Cartesian s 
 instance (HasSpec a, HasSpec b) => HasSpec (a, b) where
   type TypeSpec (a, b) = PairSpec a b
 
-  emptySpec = Cartesian mempty mempty
+  anySpec = Cartesian mempty mempty
 
   combineSpec (Cartesian a b) (Cartesian a' b') = guardPair (a <> a') (b <> b')
 
@@ -595,6 +595,7 @@ data EitherSym (dom :: [Type]) rng where
   RightW :: EitherSym '[b] (Either a b)
 
 deriving instance Eq (EitherSym dom rng)
+
 instance Show (EitherSym dom rng) where show = name
 
 instance Syntax EitherSym where
@@ -633,10 +634,11 @@ right_ x = App RightW (x :> Nil)
 
 -- ========== The Either HasSpec instance
 
-data SumSpec a b = SumSpec (Spec a) (Spec b)
-  deriving (Show)
+data SumSpec a b = SumSpec a b
 
-deriving instance (Eq (Spec a), Eq (Spec b)) => Eq (SumSpec a b)
+deriving instance (Eq a, Eq b) => Eq (SumSpec a b)
+
+deriving instance (Show a, Show b) => Show (SumSpec a b)
 
 guardSum :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (Either a b)
 guardSum (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
@@ -645,9 +647,9 @@ guardSum _ (ErrorSpec es) = ErrorSpec (NE.cons "sum error on right" es)
 guardSum s s' = typeSpec $ SumSpec s s'
 
 instance (HasSpec a, HasSpec b) => HasSpec (Either a b) where
-  type TypeSpec (Either a b) = SumSpec a b
+  type TypeSpec (Either a b) = SumSpec (Spec a) (Spec b)
 
-  emptySpec = SumSpec mempty mempty
+  anySpec = SumSpec mempty mempty
 
   combineSpec (SumSpec a b) (SumSpec c d) = guardSum (a <> c) (b <> d)
 
@@ -692,7 +694,7 @@ genFromSpecT ::
   forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Spec a -> GenT m a
 genFromSpecT (simplifySpec -> spec) = case spec of
   MemberSpec as -> explain ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
-  TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
+  TrueSpec -> genFromSpecT (typeSpec $ anySpec @a)
   SuspendedSpec x p
     -- NOTE: If `x` isn't free in `p` we still have to try to generate things
     -- from `p` to make sure `p` is sat and then we can throw it away. A better
@@ -835,13 +837,6 @@ aggressiveInlining pred0
             pure $ ElemPred bool (Lit a) xs
         | otherwise -> pure $ ElemPred bool t xs
       Subst x t p -> go fvs sub (substitutePred x t p)
-      {-
-      Reifies t' t f
-        | not (isLit t)
-        , Lit a <- substituteAndSimplifyTerm sub t -> do
-            tell $ Any True
-            pure $ Reifies t' (Lit a) f
-        | otherwise -> pure $ Reifies t' t f -}
       ForAll set b
         | not (isLit set)
         , Lit a <- substituteAndSimplifyTerm sub set -> do
@@ -854,13 +849,6 @@ aggressiveInlining pred0
             tell $ Any True
             pure $ runCaseOn a as bs $ \x v p -> substPred (singletonEnv x v) p
         | otherwise -> Case t <$> (goBinder fvs sub as) <*> (goBinder fvs sub bs)
-      {- When b tp
-        | not (isLit b)
-        , Lit a <- substituteAndSimplifyTerm sub b -> do
-            tell $ Any True
-            pure $ if a then tp else TruePred
-        | otherwise -> whenTrue b <$> go fvs sub tp
-      -}
       Let t (x :-> p)
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
             tell $ Any True
@@ -884,15 +872,6 @@ aggressiveInlining pred0
             tell $ Any True
             pure $ toPred b
         | otherwise -> pure pred2
-      {- -- If the term turns into a literal, there is no more generation to do here
-      -- so we can ignore the `GenHint`
-      GenHint _ t
-        | not (isLit t)
-        , Lit {} <- substituteAndSimplifyTerm sub t -> do
-            tell $ Any True
-            pure TruePred
-        | otherwise -> pure pred2
-      -}
       DependsOn t t'
         | not (isLit t)
         , Lit {} <- substituteAndSimplifyTerm sub t -> do
@@ -905,9 +884,6 @@ aggressiveInlining pred0
         | otherwise -> pure pred2
       TruePred -> pure pred2
       FalsePred {} -> pure pred2
-
--- Monitor {} -> pure pred2
--- Explain es p -> Explain es <$> go fvs sub p
 
 -- ==================================================================================
 
@@ -931,20 +907,14 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   ElemPred True t xs -> propagateSpecM (MemberSpec xs) (toCtx x t)
-  ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (emptySpec @b) (NE.toList xs)) (toCtx x t)
-  -- Monitor {} -> pure mempty
-  -- GenHint h t -> propagateSpecM (giveHint h) (toCtx x t)
+  ElemPred False (t :: Term b) xs -> propagateSpecM (TypeSpec @b (anySpec @b) (NE.toList xs)) (toCtx x t)
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
-  
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError (show pred3)
-  -- Elem was a pattern
-  -- Assert (Elem _ (Lit [])) -> pure (ErrorSpec (NE.fromList ["Empty list in ElemPat", show pred3]))
-  -- Assert (Elem t (Lit (y : ys))) -> propagateSpecM (MemberSpec (y :| ys)) (toCtx x t)
   Assert t -> propagateSpecM (equalSpec True) (toCtx x t)
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> do
@@ -964,40 +934,6 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
         , show $ indent 2 (pretty pred3)
         ]
   where
-    -- When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
-    -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
-    -- When {} -> pure $ SuspendedSpec x pred3
-    {- Reifies (Lit a) (Lit val) f
-      | f val == a -> pure TrueSpec
-      | otherwise ->
-          pure $
-            ErrorSpec (NE.fromList ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a])
-    Reifies t' (Lit val) f ->
-      propagateSpecM (equalSpec (f val)) (toCtx x t')
-    Reifies Lit {} _ _ ->
-      fatalErrorNE $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show pred3]
-    Explain es p -> do
-      -- In case things crash in here we want the explanation
-      s <- pushGE (NE.toList es) (computeSpecSimplified x p)
-      -- This is because while we do want to propagate `explanation`s into `SuspendedSpec`
-      -- we probably don't want to propagate the full "currently simplifying xyz" explanation.
-      case s of
-        SuspendedSpec x2 p2 -> pure $ SuspendedSpec x2 (explanation es p2)
-        _ -> pure $ addToErrorSpec es s
-    -- Impossible cases that should be ruled out by the dependency analysis and linearizer
-    DependsOn {} ->
-      fatalErrorNE $
-        NE.fromList
-          [ "The impossible happened in computeSpec: DependsOn"
-          , "  " ++ show x
-          , show $ indent 2 (pretty pred3)
-          ]
-    Reifies {} ->
-      fatalErrorNE $
-        NE.fromList
-          ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty pred3)]
-    -}
-
     -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
     localGESpec ge = case ge of
       (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
@@ -1027,17 +963,8 @@ normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec'
     (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
     spec' = fromGESpec $ computeSpec x (And ps')
 
-{-
--- Try to fix a value w.r.t a specification
-fixupWithSpec :: forall a. HasSpec a => Spec a -> a -> Maybe a
-fixupWithSpec spec a
-  | a `conformsToSpec` spec = Just a
-  | otherwise = case spec of
-      MemberSpec (x :| _) -> Just x
-      _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
--}
-
 type Hints = DependGraph
+
 type DependGraph = Graph.Graph Name
 
 dependency :: HasVariables t => Name -> t -> DependGraph
@@ -1203,11 +1130,8 @@ stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
 stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
 stepPlan env p@(SolverPlan (SolverStage x ps spec : pl) gr) = do
   (spec', specs) <- runGE
-    $ trace -- explain
-      ( show (pretty env) ++ "\nStep " ++ show x ++ show (pretty p)
-      -- (  pretty x  /> vsep' (map pretty ps)
-      -- )
-      )
+    $ explain
+      (show (pretty env) ++ "\nStep " ++ show x ++ show (pretty p))
     $ do
       ispecs <- mapM (computeSpec x) ps
       pure $ (fold ispecs, ispecs)
@@ -1237,27 +1161,18 @@ stepPlan env p@(SolverPlan (SolverStage x ps spec : pl) gr) = do
 computeDependencies :: Pred -> DependGraph
 computeDependencies = \case
   ElemPred _bool term _xs -> computeTermDependencies term
-  -- Monitor {} -> mempty
   Subst x t p -> computeDependencies (substitutePred x t p)
   Assert t -> computeTermDependencies t
-  -- Reifies t' t _ -> t' `irreflexiveDependencyOn` t
   ForAll set b ->
     let innerG = computeBinderDependencies b
      in innerG <> set `irreflexiveDependencyOn` Graph.nodes innerG
-  x `DependsOn` y -> x `irreflexiveDependencyOn` y
+  DependsOn x y -> x `irreflexiveDependencyOn` y
   Case t as bs -> noDependencies t <> computeBinderDependencies as <> computeBinderDependencies bs
-  {- When b p ->
-    let pG = computeDependencies p
-        oG = nodes pG `irreflexiveDependencyOn` b
-     in oG <> pG -}
   TruePred -> mempty
   FalsePred {} -> mempty
   And ps -> foldMap computeDependencies ps
   Exists _ b -> computeBinderDependencies b
   Let t b -> noDependencies t <> computeBinderDependencies b
-
--- GenHint _ t -> noDependencies t
--- Explain _ p -> computeDependencies p
 
 computeBinderDependencies :: Binder a -> DependGraph
 computeBinderDependencies (x :-> p) =
