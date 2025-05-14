@@ -1847,7 +1847,7 @@ prevPulsingPreds p =
   , utxoPulse p :<-: pulsingPairT p
   , prevGovActionIds
       :<-: ( Constr "PrevGovActionIdsFromProposals" (\cp -> toPrevGovActionIds (cp ^. pRootsL))
-              ^$ (currProposals p)
+               ^$ (currProposals p)
            )
   , currGovStates :<-: (Constr "proposalsActions" (toList . proposalsActions) ^$ currProposals p)
   , select drepPulser (utxoPulse p) _2

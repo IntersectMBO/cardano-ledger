@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- Syntactic operations on types: Term, Pred, Spec, Ctx, etc.
-module Constrained.Min.Syntax where
+module Test.Minimal.Syntax where
 
 import Constrained.Core (
   Evidence (..),
@@ -34,7 +34,6 @@ import Constrained.Env
 import Constrained.GenT
 import Constrained.Graph
 import Constrained.List hiding (ListCtx)
-import Constrained.Min.Base
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
 import qualified Data.Foldable as Foldable (fold, toList)
@@ -52,8 +51,7 @@ import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter
-
--- import Data.Either
+import Test.Minimal.Base
 
 -- =======================================
 -- Tools for building Spec
@@ -88,7 +86,7 @@ unsafeExists ::
 unsafeExists = exists (\_ -> fatalError "unsafeExists")
 
 notMemberSpec :: forall a f. (HasSpec a, Foldable f) => f a -> Spec a
-notMemberSpec x = TypeSpec (emptySpec @a) (Foldable.toList x)
+notMemberSpec x = TypeSpec (anySpec @a) (Foldable.toList x)
 
 isErrorLike :: forall a. Spec a -> Bool
 isErrorLike spec = isJust (hasError spec)
@@ -101,6 +99,8 @@ hasError (TypeSpec x _) =
     _ -> Nothing
 hasError _ = Nothing
 
+-- | Given two 'Spec', return an 'ErrorSpec' if one or more is an 'ErrorSpec'
+--   If neither is an 'ErrorSpec' apply the continuation 'f'
 handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
 handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
   (Just m1, Just m2) -> ErrorSpec (m1 <> m2)
@@ -964,7 +964,7 @@ equalSpec :: a -> Spec a
 equalSpec = MemberSpec . pure
 
 notEqualSpec :: forall a. HasSpec a => a -> Spec a
-notEqualSpec n = TypeSpec (emptySpec @a) [n]
+notEqualSpec n = TypeSpec (anySpec @a) [n]
 
 caseBoolSpec :: (HasSpec Bool, HasSpec a) => Spec Bool -> (Bool -> Spec a) -> Spec a
 caseBoolSpec spec cont = case possibleValues spec of
@@ -987,6 +987,7 @@ instance Logic EqSym where
       False -> notEqualSpec s
 
 infix 4 ==.
+
 (==.) :: (HasSpec Bool, HasSpec a) => Term a -> Term a -> Term Bool
 (==.) x y = App EqualW (x :> y :> Nil)
 

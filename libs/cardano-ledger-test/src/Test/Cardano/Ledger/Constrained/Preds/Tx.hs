@@ -506,10 +506,10 @@ txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era 
 txBodyPreds sizes@UnivSize {..} p =
   txOutPreds sizes p balanceCoin (outputs p)
     ++ [ mint
-          :<-: ( Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend))
-                  ^$ outputs p
-                  ^$ spending
-               )
+           :<-: ( Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend))
+                    ^$ outputs p
+                    ^$ spending
+                )
        , networkID :<-: justTarget network
        , -- inputs
          Sized (Range usMinInputs usMaxInputs) inputs
@@ -527,21 +527,21 @@ txBodyPreds sizes@UnivSize {..} p =
          Sized (Range 0 2) prewithdrawal
        , Subset prewithdrawal (Dom nonZeroRewards)
        , if usGenerateWithdrawals
-          then
-            withdrawals
-              :<-: ( Constr
-                      "mkRwrdAcnt"
-                      ( \s r ->
-                          Map.fromList
-                            ( map
-                                (\x -> (RewardAccount Testnet x, r Map.! x))
-                                (Set.toList s)
-                            )
-                      )
-                      ^$ prewithdrawal
-                      ^$ rewards
-                   )
-          else Sized (ExactSize 0) withdrawals
+           then
+             withdrawals
+               :<-: ( Constr
+                        "mkRwrdAcnt"
+                        ( \s r ->
+                            Map.fromList
+                              ( map
+                                  (\x -> (RewardAccount Testnet x, r Map.! x))
+                                  (Set.toList s)
+                              )
+                        )
+                        ^$ prewithdrawal
+                        ^$ rewards
+                    )
+           else Sized (ExactSize 0) withdrawals
        , nonZeroRewards :<-: (Constr "filter (/=0)" (Map.filter (/= (Coin 0))) ^$ rewards)
        , -- refInputs
          Sized (Range 0 1) refInputs
@@ -553,17 +553,17 @@ txBodyPreds sizes@UnivSize {..} p =
        , ttl :<-: (Constr "(+5)" (+ 5) ^$ currentSlot)
        , spending :=: Restrict inputs (utxo p)
        , SumsTo
-          (Right (Coin 1))
-          balanceCoin
-          EQL
-          [ProjMap CoinR outputCoinL spending, SumMap withdrawals, One txrefunds, One txdeposits]
+           (Right (Coin 1))
+           balanceCoin
+           EQL
+           [ProjMap CoinR outputCoinL spending, SumMap withdrawals, One txrefunds, One txdeposits]
        , txrefunds
-          :<-: ( Constr "certsRefunds" certsRefunds
-                  ^$ pparams p
-                  ^$ stakeDeposits
-                  ^$ drepDepositsView
-                  ^$ certs
-               )
+           :<-: ( Constr "certsRefunds" certsRefunds
+                    ^$ pparams p
+                    ^$ stakeDeposits
+                    ^$ drepDepositsView
+                    ^$ certs
+                )
        , txdeposits :<-: (Constr "certsDeposits" certsDeposits ^$ pparams p ^$ regPools ^$ certs)
        , scriptsNeeded :<-: (needT p ^$ tempTxBody ^$ utxo p)
        , txisvalid :<-: (Constr "allValid" allValid ^$ valids)
@@ -575,7 +575,7 @@ txBodyPreds sizes@UnivSize {..} p =
        , tempWppHash :<-: justTarget randomWppHash
        , tempTxFee :<-: constTarget (Coin (fromIntegral (maxBound :: Word64)))
        , tempTxBody
-          :<-: txbodyTarget tempTxFee tempWppHash (Lit CoinR (Coin (fromIntegral (maxBound :: Word64))))
+           :<-: txbodyTarget tempTxFee tempWppHash (Lit CoinR (Coin (fromIntegral (maxBound :: Word64))))
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
          txfee :<-: (Constr "finalFee" computeFinalFee ^$ pparams p ^$ tempTx ^$ utxo p)
@@ -629,18 +629,18 @@ txBodyPreds sizes@UnivSize {..} p =
             (SumsTo (Left (ExUnits 1 1)) (maxTxExUnits p) GTE [ProjMap ExUnitsR sndL redeemers])
         , plutusDataHashes
             :<-: ( Constr "plutusDataHashes" getPlutusDataHashes
-                    ^$ utxo p
-                    ^$ tempTxBody
-                    ^$ allScriptUniv p
+                     ^$ utxo p
+                     ^$ tempTxBody
+                     ^$ allScriptUniv p
                  )
         , Restrict plutusDataHashes dataUniv :=: dataWits
         , tempBootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ tempTxBody ^$ byronAddrUniv)
         , necessaryHashes :<-: necessaryKeyHashTarget @era tempTxBody reqSignerHashes
         , sufficientHashes
             :<-: ( Constr "sufficient" (sufficientKeyHashes p)
-                    ^$ Restrict neededHashSet (allScriptUniv p)
-                    ^$ certs
-                    ^$ genDelegs
+                     ^$ Restrict neededHashSet (allScriptUniv p)
+                     ^$ certs
+                     ^$ genDelegs
                  )
         , tempKeyWits
             :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
@@ -653,8 +653,8 @@ txBodyPreds sizes@UnivSize {..} p =
         , wppHash :<-: integrityHash p (pparams p) langs redeemers dataWits
         , owed
             :<-: ( Constr "owed" (\percent (Coin fee) -> rationalToCoinViaCeiling ((fromIntegral percent * fee) % 100))
-                    ^$ collateralPercentage p
-                    ^$ txfee
+                     ^$ collateralPercentage p
+                     ^$ txfee
                  )
         , -- we need to add 'extraCol' to the colUtxo, to pay the collateral fee.
           -- we arrange this so adding the 'extraCol' will make the sum of the all the collateral inputs, one more than 'owed'

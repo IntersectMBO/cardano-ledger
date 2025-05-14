@@ -1357,18 +1357,18 @@ proposalsShowDebug ps showRoots =
     , viaShow $ ps ^. pRootsL . grConstitutionL
     ]
       <> ( if showRoots
-            then
-              [ "Hierarchy"
-              , ">> PParamUpdate"
-              , viaShow $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
-              , ">> HardFork"
-              , viaShow $ ps ^. pGraphL . grHardForkL . pGraphNodesL
-              , ">> Committee"
-              , viaShow $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
-              , ">> Constitution"
-              , viaShow $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
-              ]
-            else mempty
+             then
+               [ "Hierarchy"
+               , ">> PParamUpdate"
+               , viaShow $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
+               , ">> HardFork"
+               , viaShow $ ps ^. pGraphL . grHardForkL . pGraphNodesL
+               , ">> Committee"
+               , viaShow $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
+               , ">> Constitution"
+               , viaShow $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
+               ]
+             else mempty
          )
       <> ["----- Proposals End -----"]
 

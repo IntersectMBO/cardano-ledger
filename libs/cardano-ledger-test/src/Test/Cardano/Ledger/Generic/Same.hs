@@ -254,8 +254,8 @@ instance
            ,
              ( "HashHeader"
              , if (sleHashHeader x1) == (sleHashHeader x2)
-                then Nothing
-                else Just ("UnequalHashHeader")
+                 then Nothing
+                 else Just ("UnequalHashHeader")
              )
            , ("ApplyTxError", sameLedgerFail proof (sleApplyTxError x1) (sleApplyTxError x2))
            , ("RewardsCredentials", eqByShow (sleRewardsCredentials x1) (sleRewardsCredentials x2))

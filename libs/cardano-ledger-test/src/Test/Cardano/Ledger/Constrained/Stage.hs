@@ -49,8 +49,8 @@ ledgerPipeline sizes proof =
   , Stage standardOrderInfo (universePreds sizes proof)
   ]
     ++ ( case whichPParams proof of
-          PParamsConwayToConway -> [Stage standardOrderInfo (vstatePreds proof)]
-          _ -> []
+           PParamsConwayToConway -> [Stage standardOrderInfo (vstatePreds proof)]
+           _ -> []
        )
     ++ [ Stage standardOrderInfo (pstatePreds proof)
        , Stage standardOrderInfo (certStatePreds proof)
