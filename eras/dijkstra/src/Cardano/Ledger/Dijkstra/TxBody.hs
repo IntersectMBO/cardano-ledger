@@ -10,11 +10,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Cardano.Ledger.Dijkstra.TxBody () where
 
+import Cardano.Ledger.Babbage.TxBody (babbageAllInputsTxBodyF, babbageSpendableInputsTxBodyF, allSizedOutputsBabbageTxBodyF)
 import Cardano.Ledger.BaseTypes (Network, StrictMaybe, fromSMaybe)
-import Cardano.Ledger.Binary (DecCBOR (..), Sized (..), mkSized)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..), mkSized, ToCBOR, unsafeMapSized)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Field,
@@ -22,29 +24,36 @@ import Cardano.Ledger.Binary.Coders (
   field,
   fieldGuarded,
   invalidField,
-  ofield,
+  ofield, encode, Wrapped (..), Density (..), Encode (..), (!>), encodeKeyedStrictMaybe,
  )
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures (..))
-import Cardano.Ledger.Conway.TxBody (TxBody (..), conwayTotalDepositsTxBody)
+import Cardano.Ledger.Conway.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.TxOut ()
-import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Mary.Value (MultiAsset, policies)
+import Cardano.Ledger.MemoBytes (
+  MemoBytes,
+  Memoized (..),
+  getMemoRawType,
+  lensMemoRawType,
+  mkMemoizedEra, EqRaw, getMemoSafeHash, MemoHashIndex,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Coerce (coerce)
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks)
-import Cardano.Ledger.MemoBytes (getMemoRawType, MemoBytes, mkMemoizedEra, Memoized (..), lensMemoRawType)
-import Cardano.Ledger.Babbage.TxBody (babbageSpendableInputsTxBodyF, babbageAllInputsTxBodyF)
 import Lens.Micro ((^.))
-import Data.Coerce (coerce)
+import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Conway (ConwayEra)
+import Lens.Micro (to)
 
 data DijkstraTxBodyRaw = DijkstraTxBodyRaw
   { dtbrSpendInputs :: !(Set TxIn)
@@ -70,6 +79,8 @@ data DijkstraTxBodyRaw = DijkstraTxBodyRaw
   deriving (Generic)
 
 deriving instance Eq DijkstraTxBodyRaw
+
+instance EqRaw (TxBody DijkstraEra)
 
 instance NoThunks DijkstraTxBodyRaw
 
@@ -168,6 +179,39 @@ instance DecCBOR DijkstraTxBodyRaw where
         ]
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
+
+encodeTxBodyRaw ::
+  DijkstraTxBodyRaw ->
+  Encode ('Closed 'Sparse) DijkstraTxBodyRaw
+encodeTxBodyRaw DijkstraTxBodyRaw {..} =
+  let ValidityInterval bot top = dtbrVldt
+   in Keyed
+        ( \i ci ri o cr tc f t c w b ->
+            DijkstraTxBodyRaw i ci ri o cr tc c w f (ValidityInterval b t)
+        )
+        !> Key 0 (To dtbrSpendInputs)
+        !> Omit null (Key 13 (To dtbrCollateralInputs))
+        !> Omit null (Key 18 (To dtbrReferenceInputs))
+        !> Key 1 (To dtbrOutputs)
+        !> encodeKeyedStrictMaybe 16 dtbrCollateralReturn
+        !> encodeKeyedStrictMaybe 17 dtbrTotalCollateral
+        !> Key 2 (To dtbrFee)
+        !> encodeKeyedStrictMaybe 3 top
+        !> Omit OSet.null (Key 4 (To dtbrCerts))
+        !> Omit (null . unWithdrawals) (Key 5 (To dtbrWithdrawals))
+        !> encodeKeyedStrictMaybe 8 bot
+        !> Omit null (Key 14 (To dtbrReqSignerHashes))
+        !> Omit (== mempty) (Key 9 (To dtbrMint))
+        !> encodeKeyedStrictMaybe 11 dtbrScriptIntegrityHash
+        !> encodeKeyedStrictMaybe 7 dtbrAuxDataHash
+        !> encodeKeyedStrictMaybe 15 dtbrNetworkId
+        !> Omit (null . unVotingProcedures) (Key 19 (To dtbrVotingProcedures))
+        !> Omit OSet.null (Key 20 (To dtbrProposalProcedures))
+        !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
+        !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
+
+instance EncCBOR DijkstraTxBodyRaw where
+  encCBOR = encode . encodeTxBodyRaw
 
 deriving newtype instance DecCBOR (TxBody DijkstraEra)
 
@@ -292,8 +336,16 @@ pattern DijkstraTxBody
 instance Memoized (TxBody DijkstraEra) where
   type RawType (TxBody DijkstraEra) = DijkstraTxBodyRaw
 
+instance EncCBOR (TxBody DijkstraEra)
+
+type instance MemoHashIndex DijkstraTxBodyRaw = EraIndependentTxBody
+
+instance HashAnnotated (TxBody DijkstraEra) EraIndependentTxBody where
+  hashAnnotated = getMemoSafeHash
+
 instance EraTxBody DijkstraEra where
   newtype TxBody DijkstraEra = MkDijkstraTxBody (MemoBytes DijkstraTxBodyRaw)
+    deriving (Generic, SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw
 
@@ -349,14 +401,100 @@ instance EraTxBody DijkstraEra where
         , dtbScriptIntegrityHash = ctbScriptIntegrityHash
         , dtbTxNetworkId = ctbTxNetworkId
         , dtbReferenceInputs = ctbReferenceInputs
-        , dtbCollateralReturn = fmap upgradeTxOut <$> ctbCollateralReturn
+        , dtbCollateralReturn = unsafeMapSized upgradeTxOut <$> ctbCollateralReturn
         , dtbTotalCollateral = ctbTotalCollateral
         , dtbCurrentTreasuryValue = ctbCurrentTreasuryValue
-        , dtbProposalProcedures = undefined <$> ctbProposalProcedures
+        , dtbProposalProcedures = OSet.mapL upgradeProposals ctbProposalProcedures
         , dtbVotingProcedures = coerce ctbVotingProcedures
         , dtbTreasuryDonation = ctbTreasuryDonation
         }
 
-dijkstraTotalDepositsTxBody :: PParams DijkstraEra -> (KeyHash StakePool -> Bool) -> TxBody DijkstraEra -> Coin
+upgradeProposals :: ProposalProcedure ConwayEra -> ProposalProcedure DijkstraEra
+upgradeProposals = undefined
+
+dijkstraTotalDepositsTxBody ::
+  PParams DijkstraEra -> (KeyHash StakePool -> Bool) -> TxBody DijkstraEra -> Coin
 dijkstraTotalDepositsTxBody = undefined
 
+instance AllegraEraTxBody DijkstraEra where
+  vldtTxBodyL = lensMemoRawType @DijkstraEra dtbrVldt $
+    \txb x -> txb {dtbrVldt = x}
+  {-# INLINE vldtTxBodyL #-}
+
+instance MaryEraTxBody DijkstraEra where
+  mintTxBodyL = lensMemoRawType @DijkstraEra dtbrMint $
+    \txb x -> txb {dtbrMint = x}
+  {-# INLINE mintTxBodyL #-}
+
+  mintedTxBodyF = to $ \txBody -> policies (dtbrMint (getMemoRawType txBody))
+  {-# INLINE mintedTxBodyF #-}
+
+instance AlonzoEraTxBody DijkstraEra where
+  collateralInputsTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrCollateralInputs $
+      \txb x -> txb {dtbrCollateralInputs = x}
+  {-# INLINE collateralInputsTxBodyL #-}
+
+  reqSignerHashesTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrReqSignerHashes $
+      \txb x -> txb {dtbrReqSignerHashes = x}
+  {-# INLINE reqSignerHashesTxBodyL #-}
+
+  scriptIntegrityHashTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrScriptIntegrityHash $
+      \txb x -> txb {dtbrScriptIntegrityHash = x}
+  {-# INLINE scriptIntegrityHashTxBodyL #-}
+
+  networkIdTxBodyL = lensMemoRawType @DijkstraEra dtbrNetworkId $
+    \txb x -> txb {dtbrNetworkId = x}
+  {-# INLINE networkIdTxBodyL #-}
+
+  redeemerPointer = undefined -- conwayRedeemerPointer
+
+  redeemerPointerInverse = undefined -- conwayRedeemerPointerInverse
+
+instance BabbageEraTxBody DijkstraEra where
+  sizedOutputsTxBodyL = lensMemoRawType @DijkstraEra dtbrOutputs $
+    \txb x -> txb {dtbrOutputs = x}
+  {-# INLINE sizedOutputsTxBodyL #-}
+
+  referenceInputsTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrReferenceInputs $
+      \txb x -> txb {dtbrReferenceInputs = x}
+  {-# INLINE referenceInputsTxBodyL #-}
+
+  totalCollateralTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrTotalCollateral $
+      \txb x -> txb {dtbrTotalCollateral = x}
+  {-# INLINE totalCollateralTxBodyL #-}
+
+  collateralReturnTxBodyL =
+    lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrCollateralReturn) $
+      \txb x -> txb {dtbrCollateralReturn = mkSized (eraProtVerLow @DijkstraEra) <$> x}
+  {-# INLINE collateralReturnTxBodyL #-}
+
+  sizedCollateralReturnTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrCollateralReturn $
+      \txb x -> txb {dtbrCollateralReturn = x}
+  {-# INLINE sizedCollateralReturnTxBodyL #-}
+
+  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  {-# INLINE allSizedOutputsTxBodyF #-}
+
+instance ConwayEraTxBody DijkstraEra where
+  votingProceduresTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrVotingProcedures $
+      \txb x -> txb {dtbrVotingProcedures = x}
+  {-# INLINE votingProceduresTxBodyL #-}
+  proposalProceduresTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrProposalProcedures $
+      \txb x -> txb {dtbrProposalProcedures = x}
+  {-# INLINE proposalProceduresTxBodyL #-}
+  currentTreasuryValueTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrCurrentTreasuryValue $
+      \txb x -> txb {dtbrCurrentTreasuryValue = x}
+  {-# INLINE currentTreasuryValueTxBodyL #-}
+  treasuryDonationTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrTreasuryDonation $
+      \txb x -> txb {dtbrTreasuryDonation = x}
+  {-# INLINE treasuryDonationTxBodyL #-}

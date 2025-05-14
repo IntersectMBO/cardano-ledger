@@ -64,6 +64,7 @@ import Cardano.Ledger.Binary (
   Sized (..),
   ToCBOR (..),
   mkSized,
+  unsafeMapSized,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -350,7 +351,7 @@ instance EraTxBody ConwayEra where
         , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
         , ctbTxNetworkId = btbTxNetworkId btb
         , ctbReferenceInputs = btbReferenceInputs btb
-        , ctbCollateralReturn = unsafeMapSized upgradeTxOut $ btbCollateralReturn btb
+        , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
         , ctbTotalCollateral = btbTotalCollateral btb
         , ctbCurrentTreasuryValue = SNothing
         , ctbProposalProcedures = OSet.empty
