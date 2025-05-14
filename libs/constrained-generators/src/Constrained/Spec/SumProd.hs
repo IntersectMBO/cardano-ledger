@@ -25,6 +25,7 @@
 module Constrained.Spec.SumProd (
   IsNormalType,
   ProdAsListComputes,
+  IsProductType,
   caseOn,
   branch,
   branchW,

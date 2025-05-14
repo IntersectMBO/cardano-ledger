@@ -459,8 +459,8 @@ mkSeed ucNonce (SlotNo slot) eNonce =
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
-            NeutralNonce -> mempty
-            Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 data LastAppliedBlock = LastAppliedBlock
