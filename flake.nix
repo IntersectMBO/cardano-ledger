@@ -191,7 +191,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc928" "ghc9121"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc966" "ghc9121"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
