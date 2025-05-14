@@ -177,11 +177,11 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , Block bhview txsSeq
-              )
-          ) -> do
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block bhview txsSeq
+               )
+           ) -> do
         let txs = fromTxSeq txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
             actualBodyHash = hashTxSeq txsSeq

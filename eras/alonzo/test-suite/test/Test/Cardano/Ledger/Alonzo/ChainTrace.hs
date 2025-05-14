@@ -150,21 +150,21 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
               )
               ( counterexample "At least one UTxO is consumed" utxoConsumed
                   .&&. ( case (hasPlutus, isValid') of
-                          (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
-                          (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
-                          (HasPlutus, IsValid True) ->
-                            conjoin
-                              [ counterexample "Non trivial execution units" nonTrivialExU
-                              , counterexample "Received the expected plutus scripts" expectedPScripts
-                              , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
-                              ]
-                          (HasPlutus, IsValid False) ->
-                            conjoin
-                              [ counterexample "No new UTxO" noNewUTxO
-                              , counterexample "The collateral amount was added to the fees" collateralInFees
-                              , dp === dp'
-                              , ds === ds'
-                              , counterexample "No failing Plutus scripts" $ not allPlutusTrue
-                              ]
+                           (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
+                           (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
+                           (HasPlutus, IsValid True) ->
+                             conjoin
+                               [ counterexample "Non trivial execution units" nonTrivialExU
+                               , counterexample "Received the expected plutus scripts" expectedPScripts
+                               , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
+                               ]
+                           (HasPlutus, IsValid False) ->
+                             conjoin
+                               [ counterexample "No new UTxO" noNewUTxO
+                               , counterexample "The collateral amount was added to the fees" collateralInFees
+                               , dp === dp'
+                               , ds === ds'
+                               , counterexample "No failing Plutus scripts" $ not allPlutusTrue
+                               ]
                        )
               )

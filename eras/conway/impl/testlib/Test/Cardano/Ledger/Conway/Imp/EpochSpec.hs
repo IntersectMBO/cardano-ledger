@@ -524,7 +524,7 @@ eventsSpec = describe "Events" $ do
           (_, evs) <- listen passEpoch
           filter isGovInfoEvent evs
             `shouldBeExpr` [ SomeSTSEvent @era @"TICK" . injectEvent $
-                              GovInfoEvent mempty mempty mempty mempty
+                               GovInfoEvent mempty mempty mempty mempty
                            ]
       replicateM_ (fromIntegral actionLifetime - 1) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
@@ -544,9 +544,9 @@ eventsSpec = describe "Events" $ do
         filteredEvs = filter isGovInfoEvent evs
       filteredEvs
         `shouldBeExpr` [ SomeSTSEvent @era @"TICK" . injectEvent $
-                          GovInfoEvent
-                            (Set.singleton gasA)
-                            (Set.singleton gasC)
-                            (Set.singleton gasB)
-                            (Map.singleton proposalC propDeposit)
+                           GovInfoEvent
+                             (Set.singleton gasA)
+                             (Set.singleton gasC)
+                             (Set.singleton gasB)
+                             (Map.singleton proposalC propDeposit)
                        ]

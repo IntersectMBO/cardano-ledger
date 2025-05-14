@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- Base types: Term, Pred, Spec, Ctx, and classes: HasSpec, Syntax, Semantics, and Logic for the MinModel
-module Constrained.Min.Base where
+module Test.Minimal.Base where
 
 import Constrained.Core (Evidence (..), Var (..), eqVar)
 import Constrained.GenT
@@ -212,13 +212,13 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
   type TypeSpec a
 
   -- `TypeSpec` behaves sort-of like a monoid with a neutral
-  -- element `emptySpec` and a `combineSpec` for combining
+  -- element `anySpec` and a `combineSpec` for combining
   -- two `TypeSpec a`. However, in order to provide flexibilty
   -- `combineSpec` takes two `TypeSpec` and constucts a `Spec`. This
   -- avoids e.g. having to have a separate implementation of `ErrorSpec`
   -- and `MemberSpec` in `TypeSpec`.
 
-  emptySpec :: TypeSpec a
+  anySpec :: TypeSpec a
   combineSpec :: TypeSpec a -> TypeSpec a -> Spec a
 
   -- | Generate a value that satisfies the `TypeSpec`.
