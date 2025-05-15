@@ -285,8 +285,6 @@ bheadTransition ::
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , STS (ShelleyTICK era)
-  , State (ShelleyTICK era) ~ NewEpochState era
-  , BaseM (ShelleyTICK era) ~ ShelleyBase
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo
