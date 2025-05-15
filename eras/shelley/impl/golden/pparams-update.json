@@ -1,0 +1,16 @@
+{
+    "decentralization": 0.79,
+    "extraPraosEntropy": null,
+    "maxBlockBodySize": 292445202,
+    "maxBlockHeaderSize": 53249,
+    "minPoolCost": 622970,
+    "monetaryExpansion": 0.8855156,
+    "poolPledgeInfluence": 3.8777413926852632e7,
+    "poolRetireMaxEpoch": 2414041002,
+    "stakeAddressDeposit": 180016,
+    "stakePoolDeposit": 205173,
+    "stakePoolTargetNum": 52993,
+    "treasuryCut": 0.3,
+    "txFeeFixed": 601034,
+    "txFeePerByte": 921162
+}
