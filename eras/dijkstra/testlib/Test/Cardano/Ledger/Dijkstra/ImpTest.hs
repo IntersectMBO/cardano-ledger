@@ -9,6 +9,7 @@ import Cardano.Ledger.Dijkstra.Translation ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Test.Cardano.Ledger.Conway.ImpTest
+import Cardano.Ledger.Conway.Rules ()
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure ()

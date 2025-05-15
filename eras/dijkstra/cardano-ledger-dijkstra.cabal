@@ -92,7 +92,7 @@ library testlib
   build-depends:
     base,
     cardano-ledger-core:cardano-ledger-core,
-    cardano-ledger-conway:testlib,
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-dijkstra,
 
 test-suite tests

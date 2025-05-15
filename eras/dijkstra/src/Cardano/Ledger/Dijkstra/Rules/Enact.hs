@@ -1,0 +1,133 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Cardano.Ledger.Dijkstra.Rules.Enact (
+  DijkstraENACT,
+  EnactSignal (..),
+  EnactState (..),
+) where
+
+import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.Dijkstra.Era (DijkstraENACT, DijkstraEra)
+import Cardano.Ledger.Dijkstra.Governance (
+  Committee (..),
+  EnactState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovPurposeId (GovPurposeId),
+  ensCommitteeL,
+  ensConstitutionL,
+  ensCurPParamsL,
+  ensPrevCommitteeL,
+  ensPrevConstitutionL,
+  ensPrevHardForkL,
+  ensPrevPParamUpdateL,
+  ensProtVerL,
+ )
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Val (Val (..))
+import Control.DeepSeq (NFData)
+import Control.State.Transition.Extended (
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+ )
+import Data.Foldable (fold)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Void (Void)
+import GHC.Generics
+import Lens.Micro
+
+type instance EraRuleEvent "ENACT" DijkstraEra = VoidEraRule "ENACT" DijkstraEra
+
+data EnactSignal era = EnactSignal
+  { esGovActionId :: !GovActionId
+  , esGovAction :: !(GovAction era)
+  }
+  deriving (Eq, Show, Generic)
+
+instance EraPParams era => EncCBOR (EnactSignal era) where
+  encCBOR x@(EnactSignal _ _) =
+    let EnactSignal {..} = x
+     in encode $
+          Rec EnactSignal
+            !> To esGovActionId
+            !> To esGovAction
+
+instance EraPParams era => NFData (EnactSignal era)
+
+instance EraGov era => STS (DijkstraENACT era) where
+  type Environment (DijkstraENACT era) = ()
+  type PredicateFailure (DijkstraENACT era) = Void
+  type Signal (DijkstraENACT era) = EnactSignal era
+  type State (DijkstraENACT era) = EnactState era
+  type BaseM (DijkstraENACT era) = ShelleyBase
+
+  initialRules = []
+  transitionRules = [enactmentTransition]
+
+enactmentTransition :: forall era. EraPParams era => TransitionRule (DijkstraENACT era)
+enactmentTransition = do
+  TRC ((), st, EnactSignal govActionId act) <- judgmentContext
+
+  pure $!
+    case act of
+      ParameterChange _ ppup _ ->
+        st
+          & ensCurPParamsL %~ (`applyPPUpdates` ppup)
+          & ensPrevPParamUpdateL .~ SJust (GovPurposeId govActionId)
+      HardForkInitiation _ pv ->
+        st
+          & ensProtVerL .~ pv
+          & ensPrevHardForkL .~ SJust (GovPurposeId govActionId)
+      TreasuryWithdrawals wdrls _ ->
+        let wdrlsAmount = fold wdrls
+            wdrlsNoNetworkId = Map.mapKeys raCredential wdrls
+         in st
+              { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
+              , ensTreasury = ensTreasury st <-> wdrlsAmount
+              }
+      NoConfidence _ ->
+        st
+          & ensCommitteeL .~ SNothing
+          & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
+      UpdateCommittee _ membersToRemove membersToAdd newThreshold -> do
+        st
+          & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newThreshold
+          & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
+      NewConstitution _ c ->
+        st
+          & ensConstitutionL .~ c
+          & ensPrevConstitutionL .~ SJust (GovPurposeId govActionId)
+      InfoAction -> st
+
+updatedCommittee ::
+  Set.Set (Credential 'ColdCommitteeRole) ->
+  Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
+  UnitInterval ->
+  StrictMaybe (Committee era) ->
+  Committee era
+updatedCommittee membersToRemove membersToAdd newThreshold committee =
+  case committee of
+    SNothing -> Committee membersToAdd newThreshold
+    SJust (Committee currentMembers _) ->
+      let newCommitteeMembers =
+            Map.union
+              membersToAdd
+              (currentMembers `Map.withoutKeys` membersToRemove)
+       in Committee
+            newCommitteeMembers
+            newThreshold
