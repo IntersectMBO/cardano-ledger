@@ -16,7 +16,6 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.Deposits as Deposits (tests)
 import qualified Test.Cardano.Ledger.Shelley.RulesTests as RulesTests (
   chainExamples,
   multisigExamples,
-  testTickF,
  )
 import qualified Test.Cardano.Ledger.Shelley.SafeHash as SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
@@ -52,7 +51,6 @@ defaultTests =
     , Serialisation.tests
     , RulesTests.chainExamples
     , RulesTests.multisigExamples
-    , RulesTests.testTickF
     , UnitTests.unitTests
     , SafeHash.safeHashTest
     ]
