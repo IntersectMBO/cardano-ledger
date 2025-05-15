@@ -23,7 +23,7 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
-  PParam' (..),
+  PParam (..),
   PParamUpdate (..),
   emptyPParams,
   PParamsUpdate (..),
@@ -75,10 +75,6 @@ module Cardano.Ledger.Core.PParams (
   downgradePParams,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
-
-  -- * PParamsUpdate to Data
-  PParam (..),
-  makePParamMap,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -106,8 +102,6 @@ import qualified Data.Foldable as F (foldMap', foldl', foldlM)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -145,7 +139,7 @@ instance EraPParams era => ToJSON (PParams era) where
 instance EraPParams era => FromJSON (PParams era) where
   parseJSON =
     Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
-      let accum acc PParam' {ppName, ppLens} =
+      let accum acc PParam {ppName, ppLens} =
             set ppLens <$> obj .: Aeson.fromText ppName <*> pure acc
        in F.foldlM accum (emptyPParams @era) (eraPParams @era)
 
@@ -154,7 +148,7 @@ instance EraPParams era => EncCBOR (PParams era) where
     encodeListLen (fromIntegral (length (eraPParams @era)))
       <> F.foldMap' toEnc (eraPParams @era)
     where
-      toEnc PParam' {ppLens} = encCBOR $ pp ^. ppLens
+      toEnc PParam {ppLens} = encCBOR $ pp ^. ppLens
 
 instance EraPParams era => DecCBOR (PParams era) where
   decCBOR =
@@ -163,7 +157,7 @@ instance EraPParams era => DecCBOR (PParams era) where
       (const (fromIntegral (length (eraPParams @era))))
       $ F.foldlM accum (emptyPParams @era) (eraPParams @era)
     where
-      accum acc PParam' {ppLens} =
+      accum acc PParam {ppLens} =
         set ppLens <$> decCBOR <*> pure acc
 
 instance EraPParams era => ToCBOR (PParams era) where
@@ -199,7 +193,7 @@ instance EraPParams era => EncCBOR (PParamsUpdate era) where
   encCBOR pp = encodeMapLen count <> enc
     where
       !(!count, !enc) = countAndConcat (eraPParams @era)
-      encodeField PParam' {ppUpdate} = do
+      encodeField PParam {ppUpdate} = do
         PParamUpdate {ppuTag, ppuLens} <- maybeToStrictMaybe ppUpdate
         (encodeWord ppuTag <>) . encCBOR <$> pp ^. ppuLens
       countAndConcat = F.foldl' accum (0, mempty)
@@ -226,7 +220,7 @@ instance EraPParams era => DecCBOR (PParamsUpdate era) where
       updateFieldMap =
         IntMap.fromList
           [ (fromIntegral ppuTag, field (set ppuLens . SJust) From)
-          | PParam' {ppUpdate = Just PParamUpdate {ppuTag, ppuLens}} <- eraPParams @era
+          | PParam {ppUpdate = Just PParamUpdate {ppuTag, ppuLens}} <- eraPParams @era
           ]
 
 instance EraPParams era => ToCBOR (PParamsUpdate era) where
@@ -404,7 +398,7 @@ class
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
-  eraPParams :: [PParam' era]
+  eraPParams :: [PParam era]
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
@@ -562,7 +556,7 @@ ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostL @era @StrictMaybe
 jsonPairsPParams :: forall era e a. EraPParams era => Aeson.KeyValue e a => PParams era -> [a]
 jsonPairsPParams pp =
   [ Aeson.fromText ppName .= toJSON (pp ^. ppLens)
-  | PParam' {ppName, ppLens} <- eraPParams @era
+  | PParam {ppName, ppLens} <- eraPParams @era
   ]
 
 jsonPairsPParamsUpdate ::
@@ -571,7 +565,7 @@ jsonPairsPParamsUpdate ::
   PParamsUpdate era -> [a]
 jsonPairsPParamsUpdate ppu =
   [ Aeson.fromText ppName .= toJSON v
-  | PParam' {ppName, ppUpdate = Just (PParamUpdate {ppuLens})} <- eraPParams @era
+  | PParam {ppName, ppUpdate = Just (PParamUpdate {ppuLens})} <- eraPParams @era
   , SJust v <- [ppu ^. ppuLens]
   ]
 
@@ -616,20 +610,9 @@ downgradePParamsUpdate ::
 downgradePParamsUpdate args (PParamsUpdate pphkd) =
   PParamsUpdate (downgradePParamsHKD @_ @StrictMaybe args pphkd)
 
--- =====================================================================================
--- Tools for building ToPlutusData instances for (PParamUpdates era).
-
--- | Pair the tag, and exisitenially hide the type of the lens for the field with that Lens'
-data PParam era where
-  PParam :: ToPlutusData t => Word -> Lens' (PParamsUpdate era) (StrictMaybe t) -> PParam era
-
--- | Turn a list into a Map, this assures we have no duplicates.
-makePParamMap :: [PParam era] -> Map Word (PParam era)
-makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
-
 -- | Represents a single protocol parameter and the data required to serialize it.
-data PParam' era where
-  PParam' ::
+data PParam era where
+  PParam ::
     (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t, ToPlutusData t) =>
     { ppName :: Text
     -- ^ Used as JSON key
@@ -637,7 +620,7 @@ data PParam' era where
     , ppUpdate :: Maybe (PParamUpdate era t)
     -- ^ Not all protocol parameters have an update functionality in all eras
     } ->
-    PParam' era
+    PParam era
 
 data PParamUpdate era t = PParamUpdate
   { ppuTag :: Word

@@ -631,65 +631,65 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppMinPoolCost = appMinPoolCost
     }
 
-ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam' era
+ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam era
 ppCoinsPerUTxOWord =
-  PParam'
+  PParam
     { ppName = "utxoCostPerByte"
     , ppLens = ppCoinsPerUTxOWordL
     , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL
     }
 
-ppCostModels :: AlonzoEraPParams era => PParam' era
+ppCostModels :: AlonzoEraPParams era => PParam era
 ppCostModels =
-  PParam'
+  PParam
     { ppName = "costModels"
     , ppLens = ppCostModelsL
     , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL
     }
 
-ppPrices :: AlonzoEraPParams era => PParam' era
+ppPrices :: AlonzoEraPParams era => PParam era
 ppPrices =
-  PParam'
+  PParam
     { ppName = "executionUnitPrices"
     , ppLens = ppPricesL
     , ppUpdate = Just $ PParamUpdate 19 ppuPricesL
     }
 
-ppMaxTxExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxTxExUnits :: AlonzoEraPParams era => PParam era
 ppMaxTxExUnits =
-  PParam'
+  PParam
     { ppName = "maxTxExecutionUnits"
     , ppLens = ppMaxTxExUnitsL
     , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL
     }
 
-ppMaxBlockExUnits :: AlonzoEraPParams era => PParam' era
+ppMaxBlockExUnits :: AlonzoEraPParams era => PParam era
 ppMaxBlockExUnits =
-  PParam'
+  PParam
     { ppName = "maxBlockExecutionUnits"
     , ppLens = ppMaxBlockExUnitsL
     , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL
     }
 
-ppMaxValSize :: AlonzoEraPParams era => PParam' era
+ppMaxValSize :: AlonzoEraPParams era => PParam era
 ppMaxValSize =
-  PParam'
+  PParam
     { ppName = "maxValueSize"
     , ppLens = ppMaxValSizeL
     , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL
     }
 
-ppCollateralPercentage :: AlonzoEraPParams era => PParam' era
+ppCollateralPercentage :: AlonzoEraPParams era => PParam era
 ppCollateralPercentage =
-  PParam'
+  PParam
     { ppName = "collateralPercentage"
     , ppLens = ppCollateralPercentageL
     , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL
     }
 
-ppMaxCollateralInputs :: AlonzoEraPParams era => PParam' era
+ppMaxCollateralInputs :: AlonzoEraPParams era => PParam era
 ppMaxCollateralInputs =
-  PParam'
+  PParam
     { ppName = "maxCollateralInputs"
     , ppLens = ppMaxCollateralInputsL
     , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL

@@ -169,7 +169,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
 instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
   toPlutusData ppu = P.Map $ mapMaybe ppToData (eraPParams @era)
     where
-      ppToData PParam' {ppUpdate} = do
+      ppToData PParam {ppUpdate} = do
         PParamUpdate {ppuTag, ppuLens} <- ppUpdate
         t <- strictMaybeToMaybe $ ppu ^. ppuLens
         pure (P.I (toInteger @Word ppuTag), toPlutusData t)
@@ -178,7 +178,7 @@ instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
     where
       accum acc (dataKey, dataVal) = do
         tag <- fromPlutusData @Word dataKey
-        PParam' {ppUpdate} <-
+        PParam {ppUpdate} <-
           IntMap.lookup (fromIntegral tag) ppMap
         PParamUpdate {ppuLens} <- ppUpdate
         plutusData <- fromPlutusData dataVal
@@ -186,7 +186,7 @@ instance ConwayEraPParams era => ToPlutusData (PParamsUpdate era) where
       ppMap =
         IntMap.fromList
           [ (fromIntegral ppuTag, pp)
-          | pp@PParam' {ppUpdate = Just PParamUpdate {ppuTag}} <- eraPParams @era
+          | pp@PParam {ppUpdate = Just PParamUpdate {ppuTag}} <- eraPParams @era
           ]
   fromPlutusData _ = Nothing
 
@@ -1261,81 +1261,81 @@ asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
           <> show (toInteger (maxBound @b))
           <> "]"
 
-ppPoolVotingThresholds :: ConwayEraPParams era => PParam' era
+ppPoolVotingThresholds :: ConwayEraPParams era => PParam era
 ppPoolVotingThresholds =
-  PParam'
+  PParam
     { ppName = "poolVotingThresholds"
     , ppLens = ppPoolVotingThresholdsL
     , ppUpdate = Just $ PParamUpdate 25 ppuPoolVotingThresholdsL
     }
 
-ppDRepVotingThresholds :: ConwayEraPParams era => PParam' era
+ppDRepVotingThresholds :: ConwayEraPParams era => PParam era
 ppDRepVotingThresholds =
-  PParam'
+  PParam
     { ppName = "dRepVotingThresholds"
     , ppLens = ppDRepVotingThresholdsL
     , ppUpdate = Just $ PParamUpdate 26 ppuDRepVotingThresholdsL
     }
 
-ppCommitteeMinSize :: ConwayEraPParams era => PParam' era
+ppCommitteeMinSize :: ConwayEraPParams era => PParam era
 ppCommitteeMinSize =
-  PParam'
+  PParam
     { ppName = "committeeMinSize"
     , ppLens = ppCommitteeMinSizeL
     , ppUpdate = Just $ PParamUpdate 27 ppuCommitteeMinSizeL
     }
 
-ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam' era
+ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam era
 ppCommitteeMaxTermLength =
-  PParam'
+  PParam
     { ppName = "committeeMaxTermLength"
     , ppLens = ppCommitteeMaxTermLengthL
     , ppUpdate = Just $ PParamUpdate 28 ppuCommitteeMaxTermLengthL
     }
 
-ppGovActionLifetime :: ConwayEraPParams era => PParam' era
+ppGovActionLifetime :: ConwayEraPParams era => PParam era
 ppGovActionLifetime =
-  PParam'
+  PParam
     { ppName = "govActionLifetime"
     , ppLens = ppGovActionLifetimeL
     , ppUpdate = Just $ PParamUpdate 29 ppuGovActionLifetimeL
     }
 
-ppGovActionDeposit :: ConwayEraPParams era => PParam' era
+ppGovActionDeposit :: ConwayEraPParams era => PParam era
 ppGovActionDeposit =
-  PParam'
+  PParam
     { ppName = "govActionDeposit"
     , ppLens = ppGovActionDepositL
     , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositL
     }
 
-ppDRepDeposit :: ConwayEraPParams era => PParam' era
+ppDRepDeposit :: ConwayEraPParams era => PParam era
 ppDRepDeposit =
-  PParam'
+  PParam
     { ppName = "dRepDeposit"
     , ppLens = ppDRepDepositL
     , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositL
     }
 
-ppDRepActivity :: ConwayEraPParams era => PParam' era
+ppDRepActivity :: ConwayEraPParams era => PParam era
 ppDRepActivity =
-  PParam'
+  PParam
     { ppName = "dRepActivity"
     , ppLens = ppDRepActivityL
     , ppUpdate = Just $ PParamUpdate 32 ppuDRepActivityL
     }
 
-ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam' era
+ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam era
 ppMinFeeRefScriptCostPerByte =
-  PParam'
+  PParam
     { ppName = "minFeeRefScriptCostPerByte"
     , ppLens = ppMinFeeRefScriptCostPerByteL
     , ppUpdate = Just $ PParamUpdate 33 ppuMinFeeRefScriptCostPerByteL
     }
 
-ppGovProtocolVersion :: ConwayEraPParams era => PParam' era
+ppGovProtocolVersion :: ConwayEraPParams era => PParam era
 ppGovProtocolVersion =
-  PParam'
+  PParam
     { ppName = "protocolVersion"
     , ppLens = ppProtocolVersionL
     , ppUpdate = Nothing

@@ -498,7 +498,7 @@
   * In the `Ratify` rule
     * Account for the tracking of enacted and expired proposals
 * Moved `ToExpr` instances out of the main library and into the testlib.
-* Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
+* Changed the type of ConwayPParams fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
 * Implement `getNextEpochCommitteeMembers` in Conway `EraGov`
 * Change argument of `validCommitteeTerm` function from `StrictMaybe Committee` to `GovAction`
