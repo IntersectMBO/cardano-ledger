@@ -116,7 +116,7 @@ ipv6 = bytes .size 16
 
 major_protocol_version = 1 .. 3
 
-metadata_hash = $hash32
+metadata_hash = bytes .size 2 / $hash32
 
 ; The first field determines where the funds are drawn from.
 ;   0 denotes the reserves,
