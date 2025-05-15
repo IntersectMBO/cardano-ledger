@@ -27,6 +27,9 @@ library
     Cardano.Ledger.Dijkstra
     Cardano.Ledger.Dijkstra.Era
     Cardano.Ledger.Dijkstra.Genesis
+    Cardano.Ledger.Dijkstra.Governance
+    Cardano.Ledger.Dijkstra.State.CertState
+    Cardano.Ledger.Dijkstra.State.Stake
     Cardano.Ledger.Dijkstra.Tx
     Cardano.Ledger.Dijkstra.TxAuxData
     Cardano.Ledger.Dijkstra.TxBody
@@ -61,6 +64,7 @@ library
     cardano-ledger-core,
     cardano-ledger-binary,
     cardano-data,
+    data-default,
     deepseq,
     mempack,
     microlens,
@@ -87,8 +91,8 @@ library testlib
 
   build-depends:
     base,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-core:cardano-ledger-core,
+    cardano-ledger-conway:testlib,
     cardano-ledger-dijkstra,
 
 test-suite tests

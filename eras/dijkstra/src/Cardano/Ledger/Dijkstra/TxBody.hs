@@ -30,7 +30,7 @@ import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (TxBody (..))
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.TxOut ()

@@ -16,3 +16,5 @@ You might need to use `coerce` in a couple of places to change the era parameter
 when translating these types. Also, there might be some constraints that expect 
 the era to be exactly the previous era, you will probably be able to generalize
 these functions and type class instances to make them compatible with the new era.
+
+For `EraRule` instances use the same rules as in the previous era.

@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Ratify (
+  ConwayRATIFY,
   RatifyState (..),
   committeeAccepted,
   committeeAcceptedRatio,

@@ -18,7 +18,7 @@ import Cardano.Ledger.Babbage.TxOut (
   valueEitherBabbageTxOutL,
  )
 import Cardano.Ledger.Core (EraScript (..), EraTxOut (..))
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Plutus (Datum (..), translateDatum)
 import Data.Maybe.Strict (StrictMaybe (..))

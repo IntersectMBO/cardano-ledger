@@ -398,7 +398,7 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
       , "futurePParams" .= cgsFuturePParams
       ]
 
-instance EraPParams ConwayEra => EraGov ConwayEra where
+instance EraGov ConwayEra where
   type GovState ConwayEra = ConwayGovState ConwayEra
 
   curPParamsGovStateL = cgsCurPParamsL

@@ -2,9 +2,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Ledger.Dijkstra.Genesis () where
 
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 
 instance EraGenesis DijkstraEra where
-  type Genesis DijkstraEra = ConwayGenesis
+  type Genesis DijkstraEra = ()

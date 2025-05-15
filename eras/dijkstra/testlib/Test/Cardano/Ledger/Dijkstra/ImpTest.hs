@@ -1,18 +1,14 @@
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.ImpTest () where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Governance ()
+import Cardano.Ledger.Dijkstra.Translation ()
+import Cardano.Ledger.Dijkstra.TxBody ()
+import Cardano.Ledger.Plutus (SLanguage (..))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Cardano.Ledger.Conway.Core (TranslationContext)
-import Cardano.Ledger.Plutus (SLanguage(..))
-
-type instance TranslationContext DijkstraEra = ()
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure ()
