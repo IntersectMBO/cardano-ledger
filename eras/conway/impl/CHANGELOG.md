@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Add `ReferenceInputsNotDisjointFromInputs`
 * Bump `ProtVerHigh ConwayEra` to `11`
 * Remove `ConwayTxBody`
 * Removed `era` parameter from `ConwayTxBodyRaw`

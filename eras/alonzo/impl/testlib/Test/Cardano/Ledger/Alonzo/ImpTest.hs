@@ -78,6 +78,7 @@ import Cardano.Ledger.Plutus (
   ScriptResult (..),
   hashData,
   hashPlutusScript,
+  plutusLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
@@ -93,6 +94,7 @@ import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes, isJust, isNothing)
 import Data.Set (Set, (\\))
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
@@ -276,13 +278,24 @@ fixupDatums tx = impAnn "fixupDatums" $ do
     collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
     collectDatums purpose = do
       let txIn = unAsItem <$> toSpendingPurpose (hoistPlutusPurpose toAsItem purpose)
-      txOut <- traverse (impGetUTxO @era) txIn
-      pure $ getData =<< txOut
+      mbyTxOut <- traverse (impGetUTxO @era) txIn
+      case mbyTxOut of
+        Just txOut -> getData txOut
+        Nothing -> pure Nothing
 
-    getData :: TxOut era -> Maybe (Data era)
-    getData txOut = case txOut ^. datumTxOutF of
-      DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) (scriptTestContexts @era)
-      _ -> Nothing
+    getData :: TxOut era -> ImpTestM era (Maybe (Data era))
+    getData txOut =
+      let sh = txOutScriptHash txOut
+       in case txOut ^. datumTxOutF of
+            DatumHash dh -> case Map.lookup sh (scriptTestContexts @era) of
+              Just x | hashData @era (spendDatum x) == dh -> pure . Just $ spendDatum x
+              _ -> do
+                logText $
+                  "Script not found in `scriptTestContexts`:\n"
+                    <> T.pack (show sh)
+                    <> "\n\nThe transaction will likely fail. To fix this, add the script to `scriptTestContexts`."
+                pure Nothing
+            _ -> pure Nothing
 
     txOutScriptHash txOut
       | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
@@ -302,10 +315,10 @@ fixupPPHash tx = impAnn "fixupPPHash" $ do
   let
     scriptHashes :: Set ScriptHash
     scriptHashes = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
-    plutusLanguage sh = do
+    scriptLanguage sh = do
       let mbyPlutus = impLookupPlutusScript sh
       pure $ getLanguageView pp . plutusScriptLanguage @era <$> mbyPlutus
-  langs <- traverse plutusLanguage $ Set.toList scriptHashes
+  langs <- traverse scriptLanguage $ Set.toList scriptHashes
   let
     integrityHash =
       hashScriptIntegrity
@@ -383,7 +396,7 @@ plutusTestScripts ::
   SLanguage l ->
   Map.Map ScriptHash ScriptTestContext
 plutusTestScripts lang =
-  Map.fromList
+  Map.fromList $
     [ mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 7)
     , mkScriptTestEntry (alwaysSucceedsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (alwaysSucceedsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
@@ -400,6 +413,9 @@ plutusTestScripts lang =
     , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
     , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
     ]
+      ++ [ mkScriptTestEntry (inputsOverlapsWithRefInputs lang) $ PlutusArgs (P.I 0) Nothing
+         | plutusLanguage lang >= PlutusV2
+         ]
 
 malformedPlutus :: Plutus l
 malformedPlutus = Plutus (PlutusBinary "invalid")

@@ -24,6 +24,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateTotalCollateral,
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
+  disjointRefInputs,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
@@ -60,7 +61,7 @@ import Cardano.Ledger.BaseTypes (
   networkId,
   systemStart,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..), natVersion)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Rules.ValidationMode (
@@ -231,7 +232,9 @@ disjointRefInputs ::
   Test (BabbageUtxoPredFailure era)
 disjointRefInputs pp inputs refInputs =
   when
-    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @BabbageEra)
+    ( pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @BabbageEra
+        && pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+    )
     (failureOnNonEmpty common BabbageNonDisjointRefInputs)
   where
     common = inputs `Set.intersection` refInputs

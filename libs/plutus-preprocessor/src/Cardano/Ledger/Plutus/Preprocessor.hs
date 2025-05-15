@@ -29,7 +29,7 @@ display :: Handle -> IO ()
 display h = do
   let indent = ("  " ++)
   hPutStr h $
-    unlines $
+    unlines
       [ "{-# LANGUAGE DataKinds #-}"
       , "{-# LANGUAGE GADTs #-}"
       , "{-# LANGUAGE LambdaCase #-}"
@@ -60,74 +60,78 @@ display h = do
              , scriptName ++ " ="
              , indent "decodeHexPlutus . mconcat . \\case"
              ]
-    forM_ [minBound .. maxBound] $ \lang -> do
-      let (scriptQ, script@(PlutusBinary scriptBytes)) = scriptLangLookup lang
-      compiledScript <- runQ scriptQ
-      hPutStr h $
-        unlines $
-          [ indent . indent . ("-- " ++) $
-              show $
-                withSLanguage lang $
-                  \slang -> hashPlutusScript (asSLanguage slang (Plutus script))
-          , indent . indent . ("-- Preprocessed " ++) . shows lang $ " Script:"
-          , indent . indent $ "-- @@@"
-          ]
-            ++ map (indent . indent . ("-- " ++)) (lines (pprint compiledScript))
-            ++ [ indent . indent $ "-- @@@"
-               , indent . indent $ "S" ++ show lang ++ " ->"
-               , indent . indent . indent $
-                   let sep = (("\n" ++) . indent . indent . indent $ ", ")
-                       hexChunks = map show $ showHexBytesGrouped 90 (SBS.fromShort scriptBytes)
-                    in "[ " ++ intercalate sep hexChunks
-               , indent . indent . indent $ "]"
-               ]
+    forM_ [minBound .. maxBound] $ \lang -> case scriptLangLookup lang of
+      Just (scriptQ, script@(PlutusBinary scriptBytes)) -> do
+        let
+        compiledScript <- runQ scriptQ
+        hPutStr h $
+          unlines $
+            [ indent . indent . ("-- " ++) $
+                show $
+                  withSLanguage lang $
+                    \slang -> hashPlutusScript (asSLanguage slang (Plutus script))
+            , indent . indent . ("-- Preprocessed " ++) . shows lang $ " Script:"
+            , indent . indent $ "-- @@@"
+            ]
+              ++ map (indent . indent . ("-- " ++)) (lines (pprint compiledScript))
+              ++ [ indent . indent $ "-- @@@"
+                 , indent . indent $ "S" ++ show lang ++ " ->"
+                 , indent . indent . indent $
+                     let sep = (("\n" ++) . indent . indent . indent $ ", ")
+                         hexChunks = map show $ showHexBytesGrouped 90 (SBS.fromShort scriptBytes)
+                      in "[ " ++ intercalate sep hexChunks
+                 , indent . indent . indent $ "]"
+                 ]
+      Nothing ->
+        hPutStr h . indent . indent $
+          "S" ++ show lang ++ " -> error \"Script not available in " ++ show lang ++ "\"\n"
 
 -- ========================================================================
 -- Generate the PlutusScripts.hs which does not depend on plutus-plugin.
 -- write out the file header (module and imports), then 'display' the result
 -- for each plutus script.
 
-allTestScripts :: [(String, Language -> (Q [Dec], PlutusBinary), NonEmpty String)]
+allTestScripts :: [(String, Language -> Maybe (Q [Dec], PlutusBinary), NonEmpty String)]
 allTestScripts =
   [
     ( "alwaysSucceedsNoDatum"
     , \case
-        PlutusV1 -> V1.alwaysSucceedsNoDatumBytes
-        PlutusV2 -> V2.alwaysSucceedsNoDatumBytes
-        PlutusV3 -> V3.alwaysSucceedsNoDatumBytes
+        PlutusV1 -> Just V1.alwaysSucceedsNoDatumBytes
+        PlutusV2 -> Just V2.alwaysSucceedsNoDatumBytes
+        PlutusV3 -> Just V3.alwaysSucceedsNoDatumBytes
     , pure "Script that always succeeds, unless arguments are malformed or context contains a datum"
     )
   ,
     ( "alwaysSucceedsWithDatum"
     , \case
-        PlutusV1 -> V1.alwaysSucceedsWithDatumBytes
-        PlutusV2 -> V2.alwaysSucceedsWithDatumBytes
-        PlutusV3 -> V3.alwaysSucceedsWithDatumBytes
+        PlutusV1 -> Just V1.alwaysSucceedsWithDatumBytes
+        PlutusV2 -> Just V2.alwaysSucceedsWithDatumBytes
+        PlutusV3 -> Just V3.alwaysSucceedsWithDatumBytes
     , pure
         "Script that always succeeds, unless arguments are malformed or context does not contain a datum"
     )
   ,
     ( "alwaysFailsNoDatum"
     , \case
-        PlutusV1 -> V1.alwaysFailsNoDatumBytes
-        PlutusV2 -> V2.alwaysFailsNoDatumBytes
-        PlutusV3 -> V3.alwaysFailsNoDatumBytes
+        PlutusV1 -> Just V1.alwaysFailsNoDatumBytes
+        PlutusV2 -> Just V2.alwaysFailsNoDatumBytes
+        PlutusV3 -> Just V3.alwaysFailsNoDatumBytes
     , pure "Script that always fails, unless arguments are malformed or context contains a datum"
     )
   ,
     ( "alwaysFailsWithDatum"
     , \case
-        PlutusV1 -> V1.alwaysFailsWithDatumBytes
-        PlutusV2 -> V2.alwaysFailsWithDatumBytes
-        PlutusV3 -> V3.alwaysFailsWithDatumBytes
+        PlutusV1 -> Just V1.alwaysFailsWithDatumBytes
+        PlutusV2 -> Just V2.alwaysFailsWithDatumBytes
+        PlutusV3 -> Just V3.alwaysFailsWithDatumBytes
     , pure "Script that always fails, unless arguments are malformed or context does not contain a datum"
     )
   ,
     ( "redeemerSameAsDatum"
     , \case
-        PlutusV1 -> V1.redeemerSameAsDatumBytes
-        PlutusV2 -> V2.redeemerSameAsDatumBytes
-        PlutusV3 -> V3.redeemerSameAsDatumBytes
+        PlutusV1 -> Just V1.redeemerSameAsDatumBytes
+        PlutusV2 -> Just V2.redeemerSameAsDatumBytes
+        PlutusV3 -> Just V3.redeemerSameAsDatumBytes
     , "Script that succeeds whenever redeemer equals to the datum"
         :| [ "Fails on malformed arguments"
            ]
@@ -135,9 +139,9 @@ allTestScripts =
   ,
     ( "evenDatum"
     , \case
-        PlutusV1 -> V1.evenDatumBytes
-        PlutusV2 -> V2.evenDatumBytes
-        PlutusV3 -> V3.evenDatumBytes
+        PlutusV1 -> Just V1.evenDatumBytes
+        PlutusV2 -> Just V2.evenDatumBytes
+        PlutusV3 -> Just V3.evenDatumBytes
     , "Script that succeeds whenever Integer datum is supplied and it's value is even."
         :| [ "Fails on malformed arguments"
            ]
@@ -145,9 +149,9 @@ allTestScripts =
   ,
     ( "evenRedeemerNoDatum"
     , \case
-        PlutusV1 -> V1.evenRedeemerNoDatumBytes
-        PlutusV2 -> V2.evenRedeemerNoDatumBytes
-        PlutusV3 -> V3.evenRedeemerNoDatumBytes
+        PlutusV1 -> Just V1.evenRedeemerNoDatumBytes
+        PlutusV2 -> Just V2.evenRedeemerNoDatumBytes
+        PlutusV3 -> Just V3.evenRedeemerNoDatumBytes
     , "Script that succeeds whenever Integer redeemer is supplied and it's value is even"
         :| [ "Fails on malformed arguments or whenever datum is present in the context"
            ]
@@ -155,9 +159,9 @@ allTestScripts =
   ,
     ( "evenRedeemerWithDatum"
     , \case
-        PlutusV1 -> V1.evenRedeemerWithDatumBytes
-        PlutusV2 -> V2.evenRedeemerWithDatumBytes
-        PlutusV3 -> V3.evenRedeemerWithDatumBytes
+        PlutusV1 -> Just V1.evenRedeemerWithDatumBytes
+        PlutusV2 -> Just V2.evenRedeemerWithDatumBytes
+        PlutusV3 -> Just V3.evenRedeemerWithDatumBytes
     , "Script that succeeds whenever Integer redeemer is supplied and it's value is even"
         :| [ "Fails on malformed arguments or whenever datum is missing from the context"
            ]
@@ -165,9 +169,9 @@ allTestScripts =
   ,
     ( "purposeIsWellformedNoDatum"
     , \case
-        PlutusV1 -> V1.purposeIsWellformedNoDatumBytes
-        PlutusV2 -> V2.purposeIsWellformedNoDatumBytes
-        PlutusV3 -> V3.purposeIsWellformedNoDatumBytes
+        PlutusV1 -> Just V1.purposeIsWellformedNoDatumBytes
+        PlutusV2 -> Just V2.purposeIsWellformedNoDatumBytes
+        PlutusV3 -> Just V3.purposeIsWellformedNoDatumBytes
     , "Script that succeeds when datum is not expected and purpose arguments are validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -175,9 +179,9 @@ allTestScripts =
   ,
     ( "purposeIsWellformedWithDatum"
     , \case
-        PlutusV1 -> V1.purposeIsWellformedWithDatumBytes
-        PlutusV2 -> V2.purposeIsWellformedWithDatumBytes
-        PlutusV3 -> V3.purposeIsWellformedWithDatumBytes
+        PlutusV1 -> Just V1.purposeIsWellformedWithDatumBytes
+        PlutusV2 -> Just V2.purposeIsWellformedWithDatumBytes
+        PlutusV3 -> Just V3.purposeIsWellformedWithDatumBytes
     , "Script that succeeds when datum is expected and purpose arguments are validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -185,9 +189,9 @@ allTestScripts =
   ,
     ( "datumIsWellformed"
     , \case
-        PlutusV1 -> V1.datumIsWellformedBytes
-        PlutusV2 -> V2.datumIsWellformedBytes
-        PlutusV3 -> V3.datumIsWellformedBytes
+        PlutusV1 -> Just V1.datumIsWellformedBytes
+        PlutusV2 -> Just V2.datumIsWellformedBytes
+        PlutusV3 -> Just V3.datumIsWellformedBytes
     , "Script that succeeds when datum is expected and datum is validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -195,9 +199,9 @@ allTestScripts =
   ,
     ( "inputsOutputsAreNotEmptyNoDatum"
     , \case
-        PlutusV1 -> V1.inputsOutputsAreNotEmptyNoDatumBytes
-        PlutusV2 -> V2.inputsOutputsAreNotEmptyNoDatumBytes
-        PlutusV3 -> V3.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV1 -> Just V1.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV2 -> Just V2.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV3 -> Just V3.inputsOutputsAreNotEmptyNoDatumBytes
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]
@@ -205,11 +209,19 @@ allTestScripts =
   ,
     ( "inputsOutputsAreNotEmptyWithDatum"
     , \case
-        PlutusV1 -> V1.inputsOutputsAreNotEmptyWithDatumBytes
-        PlutusV2 -> V2.inputsOutputsAreNotEmptyWithDatumBytes
-        PlutusV3 -> V3.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV1 -> Just V1.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV2 -> Just V2.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV3 -> Just V3.inputsOutputsAreNotEmptyWithDatumBytes
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]
+    )
+  ,
+    ( "inputsOverlapsWithRefInputs"
+    , \case
+        PlutusV1 -> Nothing
+        PlutusV2 -> Just V2.inputsOverlapsWithRefInputsBytes
+        PlutusV3 -> Just V3.inputsOverlapsWithRefInputsBytes
+    , "Script that succeeds only if any the inputs also appears in the reference inputs" :| []
     )
   ]
