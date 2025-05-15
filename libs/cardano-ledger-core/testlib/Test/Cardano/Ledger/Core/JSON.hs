@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Core.JSON (
   roundTripJsonEraSpec,
   roundTripJsonProperty,
   goldenJsonPParamsSpec,
+  goldenJsonPParamsUpdateSpec,
 ) where
 
 import Cardano.Ledger.Core
@@ -20,6 +21,8 @@ import qualified Data.Text.Encoding as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Stack
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Era (EraTest)
 
 -- | QuickCheck property spec that uses `roundTripJsonProperty`
 roundTripJsonSpec ::
@@ -51,8 +54,7 @@ roundTripJsonProperty original = do
 roundTripJsonEraSpec ::
   forall era.
   ( HasCallStack
-  , EraPParams era
-  , Arbitrary (PParams era)
+  , EraTest era
   ) =>
   Spec
 roundTripJsonEraSpec =
@@ -68,3 +70,14 @@ goldenJsonPParamsSpec =
   it "Golden JSON specs for PParams " $ \file -> do
     decoded <- eitherDecodeFileStrict @(PParams era) file
     void $ expectRightExpr decoded
+
+goldenJsonPParamsUpdateSpec ::
+  forall era.
+  EraTest era =>
+  SpecWith FilePath
+goldenJsonPParamsUpdateSpec =
+  it "Golden JSON specs for PParamsUpdate" $ \file -> do
+    let ppu = runGen 100 100 (arbitrary @(PParamsUpdate era))
+    let encoded = T.decodeUtf8 $ BSL.toStrict $ encodePretty ppu
+    fileContent <- T.decodeUtf8 . BSL.toStrict <$> BSL.readFile file
+    encoded `shouldBe` fileContent

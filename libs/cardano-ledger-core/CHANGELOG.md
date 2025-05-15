@@ -48,6 +48,7 @@
 
 ### `testlib`
 
+* Added `goldenJsonPParamsUpdateSpec`
 * Added `Era` module with `EraTest` class
 
 ## 1.17.0.0
