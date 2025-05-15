@@ -37,7 +37,7 @@ import Cardano.Ledger.Conway.PParams (
   emptyConwayPParamsUpdate,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Val (Val (..))

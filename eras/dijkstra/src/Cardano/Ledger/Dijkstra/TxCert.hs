@@ -29,7 +29,7 @@ import Cardano.Ledger.Conway.TxCert (
   pattern DelegStake, ConwayEraTxCert (..),
  )
 import Cardano.Ledger.Core (EraTxCert (..), PoolCert (..))
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Data.Coerce (coerce)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Void (Void)

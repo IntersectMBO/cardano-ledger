@@ -13,13 +13,12 @@ import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRati
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import Test.Cardano.Ledger.Conway.GoldenSpec as Golden
-import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
+import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
-import qualified Test.Cardano.Ledger.Conway.Spec as Spec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
@@ -27,12 +26,10 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Dijkstra" $ do
-      GoldenTranslation.spec
       Golden.spec
-      Spec.spec
       Proposals.spec
       Binary.spec
-      Cddl.spec
+      Cddl.spec @DijkstraEra
       DRepRatify.spec
       CommitteeRatify.spec
       SPORatifySpec.spec

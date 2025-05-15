@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayEraScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (EraScript (..), SafeToHash)
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
 import Cardano.Ledger.Plutus (Language (..))
