@@ -9,7 +9,7 @@ mainblock = [ "header" : blockhead
             ]
 
 ebblock = [ "header" : ebbhead
-          , "body" : [+ stakeholderid]
+          , "body" : [* stakeholderid]
           , extra : [attributes]
           ]
 
