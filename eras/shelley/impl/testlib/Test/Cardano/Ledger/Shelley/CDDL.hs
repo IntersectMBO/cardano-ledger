@@ -388,7 +388,7 @@ script_hash =
     $ "script_hash" =:= hash28
 
 metadata_hash :: Rule
-metadata_hash = "metadata_hash" =:= hash32
+metadata_hash = "metadata_hash" =:= (VBytes `sized` (2 :: Word64)) / hash32
 
 nonce :: Rule
 nonce = "nonce" =:= arr [0] / arr [1, a (VBytes `sized` (32 :: Word64))]

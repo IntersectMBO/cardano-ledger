@@ -195,7 +195,7 @@ major_protocol_version = 1 .. 9
 
 metadata = {* transaction_metadatum_label => transaction_metadatum}
 
-metadata_hash = $hash32
+metadata_hash = bytes .size 2 / $hash32
 
 mint = multiasset<int64>
 
