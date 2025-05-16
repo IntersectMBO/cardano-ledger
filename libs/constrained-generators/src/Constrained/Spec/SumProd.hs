@@ -1,26 +1,23 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -236,7 +233,7 @@ instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
 
 instance IsProd b => IsProd (Prod a b) where
   toArgs (p :: Term (Prod a b))
-    | Evidence <- prerequisites @(Prod a b) = (prodFst_ p) :> toArgs (prodSnd_ p)
+    | Evidence <- prerequisites @(Prod a b) = prodFst_ p :> toArgs (prodSnd_ p)
 
 type family Args t where
   Args (Prod a b) = a : Args b
@@ -388,10 +385,10 @@ snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
 snd_ = appTerm (ComposeW ProdSndW ToGenericW)
 
 fstW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] a
-fstW = (ComposeW ProdFstW ToGenericW)
+fstW = ComposeW ProdFstW ToGenericW
 
 sndW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] b
-sndW = (ComposeW ProdSndW ToGenericW)
+sndW = ComposeW ProdSndW ToGenericW
 
 instance
   (HasSpec a, HasSpec b, Arbitrary (FoldSpec a), Arbitrary (FoldSpec b)) =>

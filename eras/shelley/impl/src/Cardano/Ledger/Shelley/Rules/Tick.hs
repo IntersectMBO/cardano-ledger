@@ -14,9 +14,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-#endif
 
 module Cardano.Ledger.Shelley.Rules.Tick (
   ShelleyTICK,
@@ -288,8 +285,6 @@ bheadTransition ::
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , STS (ShelleyTICK era)
-  , State (ShelleyTICK era) ~ NewEpochState era
-  , BaseM (ShelleyTICK era) ~ ShelleyBase
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo

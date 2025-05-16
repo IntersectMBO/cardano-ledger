@@ -3,12 +3,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-#if __GLASGOW_HASKELL__ == 910
--- Broken in 9.10.1 but should be fixed on 9.10.2
--- https://gitlab.haskell.org/ghc/ghc/-/issues/25033
-{-# OPTIONS_GHC -fno-do-clever-arg-eta-expansion #-}
-#endif
-
 module Main where
 
 import Cardano.Crypto.Hash

@@ -64,7 +64,7 @@ library
     -Wunused-packages
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base16-bytestring,
     bytestring,
     cardano-crypto-class,
@@ -97,9 +97,6 @@ library
     unliftio,
     vector-map,
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-incomplete-patterns
-
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
@@ -128,7 +125,7 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-data,
     cardano-ledger-alonzo,
     cardano-ledger-conformance,

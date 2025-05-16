@@ -44,12 +44,7 @@ module Data.Universe (
 
 import Data.Kind (Type)
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-#if __GLASGOW_HASKELL__ < 906
-import Type.Reflection (TypeRep, pattern App, pattern Con, pattern Fun)
-#else
--- Ghc-9.6 removed the Fun constructor.
 import Type.Reflection (TypeRep, pattern App, pattern Con)
-#endif
 
 -- ==================================================
 
@@ -181,15 +176,6 @@ compareTypeRep (App x a) (App y b) =
   case compareTypeRep x y of
     EQ -> compareTypeRep a b
     other -> other
-#if __GLASGOW_HASKELL__ < 906
--- Ghc-9.6 removed the Fun constructor making these redundant.
-compareTypeRep (App _ _) _ = LT
-compareTypeRep _ (App _ _) = GT
-compareTypeRep (Fun x a) (Fun y b) =
-  case compareTypeRep x y of
-    EQ -> compareTypeRep a b
-    other -> other
-#endif
 
 instance Singleton TypeRep where
   testEql = testEquality

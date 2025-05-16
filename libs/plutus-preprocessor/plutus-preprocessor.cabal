@@ -38,7 +38,7 @@ library
     -Wpartial-fields
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     bytestring,
     cardano-ledger-binary:testlib,
     cardano-ledger-core,
@@ -68,7 +68,7 @@ executable plutus-preprocessor
 
   build-depends:
     base,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     plutus-preprocessor,
 
   if ((impl(ghc <9.6) || impl(ghc >=9.7)) || os(windows))

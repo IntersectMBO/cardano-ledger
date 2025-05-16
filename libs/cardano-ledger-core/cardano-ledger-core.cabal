@@ -99,7 +99,7 @@ library
   build-depends:
     FailT,
     aeson >=2,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base-deriving-via,
     base16-bytestring,
     base64-bytestring,
@@ -144,9 +144,6 @@ library
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
-
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
 
 library testlib
   exposed-modules:
@@ -222,9 +219,6 @@ library testlib
     unliftio,
     vector-map:{vector-map, testlib},
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
-
 executable plutus-debug
   main-is: PlutusDebug.hs
   hs-source-dirs: app
@@ -245,7 +239,7 @@ executable plutus-debug
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-ledger-binary,
     cardano-ledger-core,
     optparse-applicative,

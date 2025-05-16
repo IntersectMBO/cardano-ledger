@@ -27,7 +27,7 @@ library
     -Wredundant-constraints
     -Wunused-packages
 
-  build-depends: base >=4.14 && <5
+  build-depends: base >=4.18 && <5
 
 test-suite non-integral-test
   type: exitcode-stdio-1.0
