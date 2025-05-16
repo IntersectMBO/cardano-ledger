@@ -42,6 +42,7 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
+import Control.Exception (assert)
 import Control.State.Transition
 import Data.Default (Default, def)
 import qualified Data.Map.Strict as Map
@@ -52,8 +53,6 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
-  | CorruptRewardUpdate
-      RewardUpdate -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -265,7 +264,7 @@ updateRewards ::
   Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
-  Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
+   in assert (Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df))) (pure ())
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the
