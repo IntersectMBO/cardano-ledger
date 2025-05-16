@@ -99,6 +99,8 @@ hasError (TypeSpec x _) =
     _ -> Nothing
 hasError _ = Nothing
 
+-- | Given two 'Spec', return an 'ErrorSpec' if one or more is an 'ErrorSpec'
+--   If neither is an 'ErrorSpec' apply the continuation 'f'
 handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
 handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
   (Just m1, Just m2) -> ErrorSpec (m1 <> m2)

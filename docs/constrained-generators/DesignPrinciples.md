@@ -779,8 +779,8 @@ Recall the things an the left of the `=` are known, and we are trying to compute
    Since `boolSpec` could be either `True` or `False`,  we have two concrete visual representations of the example.
      -  `(x <=. 7) = True`, so what do we know about `x` ? We know `(x <=. 7)`
 	 -  `(x <=. 7) = False`, so what do we know about `x` ?  We know `(x > 7)`
-   Given a property about a function call, how do we translate that property to one about the variable that is
-   an input to the function call.
+
+Given a property about a function call, how do we translate that property to one about the variable that is an input to the function call.
    
 This is the code that implements this case branch above. Note `caseBoolSpec` allows us to consider
 the two cases separately.
@@ -802,13 +802,18 @@ When the output spec is a `TypeSpec` we have something like this.
 (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> 
        TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
 ```
-Lets use the same trick we did earlier by naming the hole `x`, an concretizing the constants.
-The concrete example is: `(x - 3) conformsTo (TypeSpec (Interval (Just 6) (Just 12)) [7])` 
-So the range is bewteen 6 and 12, but cannot be 7. So what does that say about `x`
-It says `x` must be bewteen 9(6+3) and 5(12+3), but cannot be 10(7+3). Which correponds to the code above.
+Lets use the same trick we did earlier by naming the hole `x`, and concretizing the constants.
+The concrete example is:
 
+```
+(x - 3) conformsTo (TypeSpec (Interval (Just 6) (Just 12)) [7])
+```
+
+So the range is bewteen 6 and 12, but cannot be 7. So what does that say about `x`
+It says `x` must be bewteen 9(6+3) and 15(12+3), but cannot be 10(7+3). Which correponds to the code above.
 
 When the code is a `MemberSpec` we have something like this
+
 ```
 (MinusW, HOLE :<| n, MemberSpec xs) ->  MemberSpec (fmap (+ n) xs)
 ```
@@ -1322,11 +1327,11 @@ The function works as follows
 5. If the final resulting `Spec` is a `SuspendedSpec`, simplify it's `Pred` and return
 6. If it is any other `Spec` just return the `Spec` 
 
-The complete defintion follows. The other (non-And) rules fall into two cases.
+The complete definition follows. The other (non-And) rules fall into two cases.
 1. A literal constant occurs, and we can compute the final `Spec` using the properties of constants.
 3. A non literal `Term` occurs. Which must mention the single variable `x` and some (possibly nested) function symbols.
-     -  We use `toCtx` to build a 1-Hole context, and then use `propagateSpecM` (which calls `propagateSpec` which makes
-        (one or more calls to `propagate`,  to compute the result.
+     -  We use `toCtx` to build a 1-Hole context, and then use `propagateSpecM` (which calls `propagateSpec`) which makes
+        (one or more calls to `propagate`),  to compute the result.
 
 
 ```
@@ -1456,6 +1461,163 @@ left_ x = App LeftW (x :> Nil)
 
 right_ :: (HasSpec a, HasSpec b) => Term b -> Term (Either a b)
 right_ x = App RightW (x :> Nil)
+```
+
+<a id="HasSpecPair"></a>
+## HasSpec (a,b) instance
+
+Pairs are the dual of `Either` having two components for a single constructor. They suggest a method for making `HasSpec` instances
+for datatypes where a single constructor has multiple components.  We will look at binary pairs first. Then look at how to generalize that
+by nesting binary pairs. The `TypeSpec` for binary pairs is the type `PairSpec`.  Which simply pairs two `Spec`. Since 
+`Spec` has a `Monoid` instance, it is trival to make a `Monoid` instance for `PairSpec`.
+
+```
+data PairSpec a b = Cartesian (Spec a) (Spec b)
+
+instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
+  show (Cartesian l r) = "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
+
+instance (HasSpec a, HasSpec b) => Semigroup (PairSpec a b) where
+  (Cartesian x y) <> (Cartesian a b) = Cartesian (x <> a) (y <> b)
+
+instance (HasSpec a, HasSpec b) => Monoid (PairSpec a b) where mempty = Cartesian mempty mempty
+```
+Grouping together two `Spec` is a common occurence. It happens in `SumSpec` (the `TypeSpec` for `Either`) above, 
+and `PairSpec` (the `TypeSpec` for `(a,b)`) here. So combining two `Spec` where one of them may be an `ErrorSpec`
+deserves a few helper functions. In a sense `hasError` lifts the `HasSpec` method `guardTypeSpec` from type specific `TypeSpec` to
+the more general type `Spec`.
+
+```
+-- | Return (Just errormessage) if the input contains an `ErrorSpec`
+hasError :: forall a. Spec a -> Maybe (NonEmpty String)
+hasError (ErrorSpec ss) = Just ss
+hasError (TypeSpec x _) =
+  case guardTypeSpec @a x of
+    ErrorSpec ss -> Just ss
+    _ -> Nothing
+hasError _ = Nothing
+
+
+-- | Given two 'Spec', return an 'ErrorSpec' if one or more is an 'ErrorSpec'
+--   If neither is an 'ErrorSpec' apply the continuation 'f'  
+handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
+handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
+  (Just m1, Just m2) -> ErrorSpec (m1 <> m2)
+  (Just m1, _) -> ErrorSpec m1
+  (_, Just m2) -> ErrorSpec m2
+  (Nothing, Nothing) -> f spec1 spec2
+
+guardPair :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (a, b)
+guardPair specA specB = handleErrors specA specB (\s t -> typeSpec (Cartesian s t))
+```
+The `HasSpec (a,b)` instance for pairs is quite simple, relying on the `HasSpec` instances for `a` and `b`.
+
+```
+instance (HasSpec a, HasSpec b) => HasSpec (a, b) where
+  type TypeSpec (a, b) = PairSpec a b
+
+  emptySpec = Cartesian mempty mempty
+
+  combineSpec (Cartesian a b) (Cartesian a' b') = guardPair (a <> a') (b <> b')
+
+  conformsTo (a, b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
+
+  guardTypeSpec (Cartesian x y) = guardPair x y
+
+  genFromTypeSpec (Cartesian sa sb) = (,) <$> genFromSpecT sa <*> genFromSpecT sb
+
+  toPreds x (Cartesian sf ss) =
+    satisfies (fst_ x) sf
+      <> satisfies (snd_ x) ss
+```
+
+The function symbols for pairs are encoded in the datatype `PairSym`. Its `Syntax` and `Semantics` instances are
+straightforward, except there are two `rewriteRules` which explain how `FstW` and `SndW` distribute over `PairW`.
+
+```
+data PairSym (dom :: [Type]) rng where
+  FstW :: PairSym '[(a, b)] a
+  SndW :: PairSym '[(a, b)] b
+  PairW :: PairSym '[a, b] (a, b)
+
+deriving instance Eq (PairSym dom rng)
+
+instance Show (PairSym dom rng) where show = name
+
+instance Syntax PairSym where
+  name FstW = "fst_"
+  name SndW = "snd_"
+  name PairW = "pair_"
+  inFix _ = False
+
+instance Semantics PairSym where
+  semantics FstW = fst
+  semantics SndW = snd
+  semantics PairW = (,)
+  rewriteRules FstW (Pair x _ :> Nil) Evidence = Just x
+  rewriteRules SndW (Pair _ y :> Nil) Evidence = Just y
+  rewriteRules t l Evidence = Lit <$> applyFunSym @PairSym (semantics t) l
+```
+The `Logic` instance for `PairSym` is a bit more complicated.
+
+```
+instance Logic PairSym where
+  propagateTypeSpec FstW (Unary HOLE) ts cant = typeSpec $ Cartesian (TypeSpec ts cant) TrueSpec
+  propagateTypeSpec SndW (Unary HOLE) ts cant = typeSpec $ Cartesian TrueSpec (TypeSpec ts cant)
+  propagateTypeSpec PairW (a :|> HOLE) sc@(Cartesian sa sb) cant
+    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show (TypeSpec sc cant)]
+          )
+  propagateTypeSpec PairW (HOLE :<| b) sc@(Cartesian sa sb) cant
+    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
+    | otherwise =
+        ErrorSpec
+          ( NE.fromList
+              ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show (TypeSpec sc cant)]
+          )
+
+  propagateMemberSpec FstW (Unary HOLE) es = typeSpec $ Cartesian (MemberSpec es) TrueSpec
+  propagateMemberSpec SndW (Unary HOLE) es = typeSpec $ Cartesian TrueSpec (MemberSpec es)
+  propagateMemberSpec PairW (a :|> HOLE) es =
+    case (nub (sameFst a (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
+            ]
+  propagateMemberSpec PairW (HOLE :<| b) es =
+    case (nub (sameSnd b (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
+            ]
+
+sameFst :: Eq a1 => a1 -> [(a1, a2)] -> [a2]
+sameFst a ps = [b | (a', b) <- ps, a == a']
+
+sameSnd :: Eq a1 => a1 -> [(a2, a1)] -> [a2]
+sameSnd b ps = [a | (a, b') <- ps, b == b']
+```
+
+Finally we introduce the actual function symbols, that create `Term`
+
+```
+fst_ :: (HasSpec a, HasSpec b) => Term (a, b) -> Term a
+fst_ x = App FstW (x :> Nil)
+
+snd_ :: (HasSpec a, HasSpec b) => Term (a, b) -> Term b
+snd_ x = App SndW (x :> Nil)
+
+pair_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a, b)
+pair_ a b = App PairW (a :> b :> Nil)
 ```
 
 ## Generalizing to N-ary Products and Sums
