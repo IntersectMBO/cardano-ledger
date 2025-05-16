@@ -2,6 +2,12 @@
 
 ## 1.18.0.0
 
+* Removed constraints from `EraPParams` for both `PParamsHKD Identity era` and `PParamsHKD StrictMaybe era`: `EncCBOR`, `DecCBOR`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`
+* Added `eraPParams` to `EraPParams`
+* Added `jsonPairsPParams` and `jsonPairsPParamsUpdate` to `EraPParams` along with their implementation
+* Replaced positional `PParam` constructor with a record-style constructor and added constraints on t: `DecCBOR`, `EncCBOR`, `FromJSON`, `ToJSON`
+* Added `PParamUpdate`
+* Added error-throwing `ToPlutusData` instance for `Nonce`
 * Rename `ppLens` and `ppuLens` to `ppLensHKD` and `ppuLensHKD`, respectively
 * Add `sumUTxO` and `sumCoinUTxO`
 * Deprecate `balance` and `coinBalance` in favor of `sumUTxO` and `sumCoinUTxO`

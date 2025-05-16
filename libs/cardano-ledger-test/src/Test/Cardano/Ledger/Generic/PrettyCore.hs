@@ -791,11 +791,11 @@ ppPParamsUpdate proof pp = ppRecord ("PParamsUpdate " <> pack (show proof)) pair
 instance Reflect era => PrettyA (PParamsUpdate era) where
   prettyA x = ppPParamsUpdate reify x
 
-ppUpdate :: PrettyA (PParamsUpdate era) => PParams.Update era -> PDoc
-ppUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
+ppPPUpdate :: PrettyA (PParamsUpdate era) => PParams.Update era -> PDoc
+ppPPUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
 
 instance PrettyA (PParamsUpdate e) => PrettyA (PParams.Update e) where
-  prettyA = ppUpdate
+  prettyA = ppPPUpdate
 
 ppProposedPPUpdates :: PrettyA (PParamsUpdate era) => ProposedPPUpdates era -> PDoc
 ppProposedPPUpdates (ProposedPPUpdates m) = ppMap pcKeyHash prettyA m
@@ -943,7 +943,7 @@ ppShelleyTxBody txBody =
         , ("withdrawals", ppWithdrawals withdrawals)
         , ("fee", pcCoin fee)
         , ("timetolive", pcSlotNo ttl)
-        , ("update", ppStrictMaybe ppUpdate upd)
+        , ("update", ppStrictMaybe ppPPUpdate upd)
         , ("metadatahash", ppStrictMaybe ppTxAuxDataHash mdh)
         ]
 

@@ -35,21 +35,12 @@ module Cardano.Ledger.Babbage.PParams (
   encodeLangViews,
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
-  babbagePParamsHKDPairs,
-  babbageCommonPParamsHKDPairs,
+  ppCoinsPerUTxOByte,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.PParams (
-  AlonzoEraPParams (..),
-  AlonzoPParams (..),
-  LangDepView (..),
-  OrdExUnits (..),
-  alonzoCommonPParamsHKDPairs,
-  encodeLangViews,
-  getLanguageView,
- )
+import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -64,46 +55,21 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
-  isSNothing,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  decodeRecordNamed,
-  encodeListLen,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Density (..),
-  Encode (..),
-  Field (..),
-  Wrapped (..),
-  decode,
-  encode,
-  field,
-  invalidField,
-  (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.Shelley.PParams (shelleyCommonPParamsHKDPairsV8)
+import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
-  Key,
-  KeyValue ((.=)),
   ToJSON (..),
-  Value,
-  object,
-  pairs,
-  withObject,
-  (.:),
  )
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
@@ -240,6 +206,31 @@ instance EraPParams BabbageEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
+  eraPParams =
+    [ ppMinFeeA
+    , ppMinFeeB
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOByte
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    ]
+
 instance AlonzoEraPParams BabbageEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens bppCostModels $ \pp x -> pp {bppCostModels = x}
@@ -272,107 +263,6 @@ instance EraGov BabbageEra where
   futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty
-
-instance Era era => EncCBOR (BabbagePParams Identity era) where
-  encCBOR BabbagePParams {..} =
-    encodeListLen 22
-      <> encCBOR bppMinFeeA
-      <> encCBOR bppMinFeeB
-      <> encCBOR bppMaxBBSize
-      <> encCBOR bppMaxTxSize
-      <> encCBOR bppMaxBHSize
-      <> encCBOR bppKeyDeposit
-      <> encCBOR bppPoolDeposit
-      <> encCBOR bppEMax
-      <> encCBOR bppNOpt
-      <> encCBOR bppA0
-      <> encCBOR bppRho
-      <> encCBOR bppTau
-      <> encCBOR bppProtocolVersion
-      <> encCBOR bppMinPoolCost
-      <> encCBOR bppCoinsPerUTxOByte
-      <> encCBOR bppCostModels
-      <> encCBOR bppPrices
-      <> encCBOR bppMaxTxExUnits
-      <> encCBOR bppMaxBlockExUnits
-      <> encCBOR bppMaxValSize
-      <> encCBOR bppCollateralPercentage
-      <> encCBOR bppMaxCollateralInputs
-
-instance Era era => ToCBOR (BabbagePParams Identity era) where
-  toCBOR = toEraCBOR @era
-
-instance Era era => DecCBOR (BabbagePParams Identity era) where
-  decCBOR =
-    decodeRecordNamed "PParams" (const 22) $ do
-      bppMinFeeA <- decCBOR
-      bppMinFeeB <- decCBOR
-      bppMaxBBSize <- decCBOR
-      bppMaxTxSize <- decCBOR
-      bppMaxBHSize <- decCBOR
-      bppKeyDeposit <- decCBOR
-      bppPoolDeposit <- decCBOR
-      bppEMax <- decCBOR
-      bppNOpt <- decCBOR
-      bppA0 <- decCBOR
-      bppRho <- decCBOR
-      bppTau <- decCBOR
-      bppProtocolVersion <- decCBOR
-      bppMinPoolCost <- decCBOR
-      bppCoinsPerUTxOByte <- decCBOR
-      bppCostModels <- decCBOR
-      bppPrices <- decCBOR
-      bppMaxTxExUnits <- decCBOR
-      bppMaxBlockExUnits <- decCBOR
-      bppMaxValSize <- decCBOR
-      bppCollateralPercentage <- decCBOR
-      bppMaxCollateralInputs <- decCBOR
-      pure BabbagePParams {..}
-
-instance Era era => FromCBOR (BabbagePParams Identity era) where
-  fromCBOR = fromEraCBOR @era
-
-instance
-  (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era, ProtVerAtMost era 8) =>
-  ToJSON (BabbagePParams Identity era)
-  where
-  toJSON = object . babbagePParamsPairs
-  toEncoding = pairs . mconcat . babbagePParamsPairs
-
-babbagePParamsPairs ::
-  forall era a e.
-  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
-  PParamsHKD Identity era ->
-  [a]
-babbagePParamsPairs pp =
-  uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
-
-instance FromJSON (BabbagePParams Identity era) where
-  parseJSON =
-    withObject "PParams" $ \obj ->
-      BabbagePParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost"
-        <*> obj .: "utxoCostPerByte"
-        <*> obj .: "costModels"
-        <*> obj .: "executionUnitPrices"
-        <*> obj .: "maxTxExecutionUnits"
-        <*> obj .: "maxBlockExecutionUnits"
-        <*> obj .: "maxValueSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
@@ -428,127 +318,6 @@ emptyBabbagePParamsUpdate =
     , bppCollateralPercentage = SNothing
     , bppMaxCollateralInputs = SNothing
     }
-
--- =======================================================
--- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
--- writing only those fields where the field is (SJust x), that is the role of
--- the local function (omitStrictMaybe key x)
-
-encodePParamsUpdate ::
-  BabbagePParams StrictMaybe era ->
-  Encode ('Closed 'Sparse) (BabbagePParams StrictMaybe era)
-encodePParamsUpdate ppup =
-  Keyed BabbagePParams
-    !> omitStrictMaybe 0 (bppMinFeeA ppup) encCBOR
-    !> omitStrictMaybe 1 (bppMinFeeB ppup) encCBOR
-    !> omitStrictMaybe 2 (bppMaxBBSize ppup) encCBOR
-    !> omitStrictMaybe 3 (bppMaxTxSize ppup) encCBOR
-    !> omitStrictMaybe 4 (bppMaxBHSize ppup) encCBOR
-    !> omitStrictMaybe 5 (bppKeyDeposit ppup) encCBOR
-    !> omitStrictMaybe 6 (bppPoolDeposit ppup) encCBOR
-    !> omitStrictMaybe 7 (bppEMax ppup) encCBOR
-    !> omitStrictMaybe 8 (bppNOpt ppup) encCBOR
-    !> omitStrictMaybe 9 (bppA0 ppup) encCBOR
-    !> omitStrictMaybe 10 (bppRho ppup) encCBOR
-    !> omitStrictMaybe 11 (bppTau ppup) encCBOR
-    !> omitStrictMaybe 14 (bppProtocolVersion ppup) encCBOR
-    !> omitStrictMaybe 16 (bppMinPoolCost ppup) encCBOR
-    !> omitStrictMaybe 17 (bppCoinsPerUTxOByte ppup) encCBOR
-    !> omitStrictMaybe 18 (bppCostModels ppup) encCBOR
-    !> omitStrictMaybe 19 (bppPrices ppup) encCBOR
-    !> omitStrictMaybe 20 (bppMaxTxExUnits ppup) encCBOR
-    !> omitStrictMaybe 21 (bppMaxBlockExUnits ppup) encCBOR
-    !> omitStrictMaybe 22 (bppMaxValSize ppup) encCBOR
-    !> omitStrictMaybe 23 (bppCollateralPercentage ppup) encCBOR
-    !> omitStrictMaybe 24 (bppMaxCollateralInputs ppup) encCBOR
-  where
-    omitStrictMaybe ::
-      Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
-    omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
-
-    fromSJust :: StrictMaybe a -> a
-    fromSJust (SJust x) = x
-    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-instance Era era => EncCBOR (BabbagePParams StrictMaybe era) where
-  encCBOR ppup = encode (encodePParamsUpdate ppup)
-
-updateField :: Word -> Field (BabbagePParams StrictMaybe era)
-updateField 0 = field (\x up -> up {bppMinFeeA = SJust x}) From
-updateField 1 = field (\x up -> up {bppMinFeeB = SJust x}) From
-updateField 2 = field (\x up -> up {bppMaxBBSize = SJust x}) From
-updateField 3 = field (\x up -> up {bppMaxTxSize = SJust x}) From
-updateField 4 = field (\x up -> up {bppMaxBHSize = SJust x}) From
-updateField 5 = field (\x up -> up {bppKeyDeposit = SJust x}) From
-updateField 6 = field (\x up -> up {bppPoolDeposit = SJust x}) From
-updateField 7 = field (\x up -> up {bppEMax = SJust x}) From
-updateField 8 = field (\x up -> up {bppNOpt = SJust x}) From
-updateField 9 = field (\x up -> up {bppA0 = SJust x}) From
-updateField 10 = field (\x up -> up {bppRho = SJust x}) From
-updateField 11 = field (\x up -> up {bppTau = SJust x}) From
-updateField 14 = field (\x up -> up {bppProtocolVersion = SJust x}) From
-updateField 16 = field (\x up -> up {bppMinPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {bppCoinsPerUTxOByte = SJust x}) From
-updateField 18 = field (\x up -> up {bppCostModels = SJust x}) From
-updateField 19 = field (\x up -> up {bppPrices = SJust x}) From
-updateField 20 = field (\x up -> up {bppMaxTxExUnits = SJust x}) From
-updateField 21 = field (\x up -> up {bppMaxBlockExUnits = SJust x}) From
-updateField 22 = field (\x up -> up {bppMaxValSize = SJust x}) From
-updateField 23 = field (\x up -> up {bppCollateralPercentage = SJust x}) From
-updateField 24 = field (\x up -> up {bppMaxCollateralInputs = SJust x}) From
-updateField k = invalidField k
-
-instance Era era => DecCBOR (BabbagePParams StrictMaybe era) where
-  decCBOR =
-    decode
-      (SparseKeyed "PParamsUpdate" emptyBabbagePParamsUpdate updateField [])
-
-instance Era era => ToCBOR (BabbagePParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
-
-instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
-
-instance
-  ( PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era
-  , BabbageEraPParams era
-  , ProtVerAtMost era 8
-  ) =>
-  ToJSON (BabbagePParams StrictMaybe era)
-  where
-  toJSON = object . babbagePParamsUpdatePairs
-  toEncoding = pairs . mconcat . babbagePParamsUpdatePairs
-
-babbagePParamsUpdatePairs ::
-  forall era a e.
-  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
-  PParamsHKD StrictMaybe era ->
-  [a]
-babbagePParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- babbagePParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-babbagePParamsHKDPairs ::
-  forall era f.
-  (BabbageEraPParams era, HKDFunctor f, ProtVerAtMost era 8) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-babbagePParamsHKDPairs px pp =
-  babbageCommonPParamsHKDPairs px pp
-    <> shelleyCommonPParamsHKDPairsV8 px pp -- for "protocolVersion"
-
--- | These are the fields that are common across all eras starting with Babbage.
-babbageCommonPParamsHKDPairs ::
-  forall era f.
-  (BabbageEraPParams era, HKDFunctor f) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-babbageCommonPParamsHKDPairs px pp =
-  alonzoCommonPParamsHKDPairs px pp
-    <> [("utxoCostPerByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
   forall f.
@@ -638,3 +407,11 @@ coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (Coin c)) = CoinPerWord $ Coin $
 -- invalid.
 coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
 coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ Coin c
+
+ppCoinsPerUTxOByte :: BabbageEraPParams era => PParam era
+ppCoinsPerUTxOByte =
+  PParam
+    { ppName = "utxoCostPerByte"
+    , ppLens = ppCoinsPerUTxOByteL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOByteL
+    }

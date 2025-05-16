@@ -558,7 +558,7 @@ votingSpec =
       gaidThreshold <- impAnn "Update StakePool thresholds" $ do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (51 %! 100)
-        let ppUpdate =
+        let ppu =
               emptyPParamsUpdate
                 & ppuPoolVotingThresholdsL
                   .~ SJust
@@ -570,7 +570,7 @@ votingSpec =
                       , pvtCommitteeNoConfidence = 65 %! 100
                       }
                 & ppuGovActionLifetimeL .~ SJust (EpochInterval 15)
-        ppUpdateGa <- mkParameterChangeGovAction SNothing ppUpdate
+        ppUpdateGa <- mkParameterChangeGovAction SNothing ppu
         gaidThreshold <- mkProposal ppUpdateGa >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidThreshold
         submitYesVoteCCs_ ccCreds gaidThreshold

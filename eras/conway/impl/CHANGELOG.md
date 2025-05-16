@@ -2,6 +2,10 @@
 
 ## 1.20.0.0
 
+* Added to `PParams`: `ppCommitteeMaxTermLength`,`ppCommitteeMinSize`,`ppDRepActivity`,`ppDRepDeposit`,`ppDRepVotingThresholds`,`ppGovActionDeposit`,`ppGovActionLifetime`,`ppGovProtocolVersion`,`ppMinFeeRefScriptCostPerByte`,`ppPoolVotingThresholds`
+* Moved `ConwayEraPlutusTxInfo` class from `Context` module to `TxInfo`
+* Removed `Cardano.Ledger.Conway.Plutus.Context` module
+* Moved orphan `ToPlutusData` instance for `PParamsUpdate` from `TxInfo` to `PParams`
 * Bump `ProtVerHigh ConwayEra` to `11`
 * Remove `ConwayTxBody`
 * Removed `era` parameter from `ConwayTxBodyRaw`
@@ -498,7 +502,7 @@
   * In the `Ratify` rule
     * Account for the tracking of enacted and expired proposals
 * Moved `ToExpr` instances out of the main library and into the testlib.
-* Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
+* Changed the type of ConwayPParams fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
 * Implement `getNextEpochCommitteeMembers` in Conway `EraGov`
 * Change argument of `validCommitteeTerm` function from `StrictMaybe Committee` to `GovAction`
