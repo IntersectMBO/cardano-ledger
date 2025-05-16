@@ -231,7 +231,8 @@ pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   , UnRegTxCert
   , DelegStakeTxCert
   , MirTxCert
-  , GenesisDelegTxCert
+  , GenesisDelegTxCert ::
+    ShelleyEra
   #-}
 
 -- | Genesis key delegation certificate
