@@ -433,7 +433,7 @@ class HasSpec a where
   guardTypeSpec ty = typeSpec ty
 ```
 
-In a later section we present `HasSpec` instances for several
+In a later sections we present `HasSpec` instances for several
 types: [Bool](#HasSpecBool), [Integer](#HasSpecInteger), [Set a](#HasSpecSet), 
 [Pair(a,b)](HasSpecPair) and [Either a b](HasSpecEither)
 
@@ -445,14 +445,18 @@ It has 5 construtors.
  ```
   data Spec a where
     -- | There are no contraints at all.
-    TrueSpec :: Spec a         
+    TrueSpec :: Spec a  
+    
     -- | The `Spec` is inconsistent
     ErrorSpec :: NonEmpty String -> Spec a
-	-- | The Spec encodes a FOTL statement, with Predicates encoded in the type `Pred`
+
+-- | The Spec encodes a FOTL statement, with Predicates encoded in the type `Pred`
     SuspendedSpec :: HasSpec a => Var a -> Pred -> Spec a
-	-- | The solution is exactly the elements in the Non empty list
+
+-- | The solution is exactly the elements in the Non empty list
     MemberSpec :: NonEmpty a -> Spec a
-	-- | The solution is embedded in the type-specific `TypeSpec a`
+
+-- | The solution is embedded in the type-specific `TypeSpec a`
     TypeSpec :: HasSpec a => TypeSpec a -> [a] -> Spec a
 ```
 
@@ -608,10 +612,10 @@ the operation `<>` leads to an inconsistent Range where lower bound is greater t
               \         \                  /        /
                \---------\---------------max       /
                           \               12      /
-				 		   \---------------------min
-						                          10
-```													 
-													 						  
+                           \---------------------min
+                                                  10
+```
+     											 						  
 The `HasSpec` instance requires an instance for the type family `TypeSpec Integer` and five other methods.
 
 ```
