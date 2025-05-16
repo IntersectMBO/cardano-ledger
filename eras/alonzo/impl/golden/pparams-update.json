@@ -1,0 +1,28 @@
+{
+    "collateralPercentage": 51,
+    "decentralization": 0.2,
+    "executionUnitPrices": {
+        "priceMemory": 6.137517258401616982e11,
+        "priceSteps": {
+            "denominator": 10000000000000000000,
+            "numerator": 1696353860530125441
+        }
+    },
+    "extraPraosEntropy": null,
+    "maxBlockBodySize": 16788200,
+    "maxBlockExecutionUnits": {
+        "memory": 5340798538510690129,
+        "steps": 4878948358509797471
+    },
+    "maxBlockHeaderSize": 34115,
+    "maxCollateralInputs": 45,
+    "maxTxSize": 881284740,
+    "maxValueSize": 39,
+    "minPoolCost": 392044,
+    "monetaryExpansion": 0.7810966919969065,
+    "poolPledgeInfluence": 8.319022570290014789e16,
+    "poolRetireMaxEpoch": 1843493333,
+    "stakePoolDeposit": 855059,
+    "stakePoolTargetNum": 10900,
+    "treasuryCut": 0.234167131785253734
+}
