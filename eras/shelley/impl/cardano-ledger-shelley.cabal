@@ -177,7 +177,7 @@ library testlib
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
     containers,
-    cuddle >=0.3.2,
+    cuddle >=0.4,
     data-default,
     generic-random,
     hedgehog-quickcheck,
