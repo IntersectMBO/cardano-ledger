@@ -1,0 +1,263 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Binary.Annotator</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-identifier">decodeFullAnnotator</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatedBytes"><span class="hs-identifier">decodeFullAnnotatedBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatorFromHexText"><span class="hs-identifier">decodeFullAnnotatorFromHexText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotated"><span class="hs-identifier">Annotated</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#decodeAnnotated"><span class="hs-identifier">decodeAnnotated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#ByteSpan"><span class="hs-identifier">ByteSpan</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Decoded"><span class="hs-identifier">Decoded</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#annotatedDecoder"><span class="hs-identifier">annotatedDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#slice"><span class="hs-identifier">slice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#decCBORAnnotated"><span class="hs-identifier">decCBORAnnotated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#reAnnotate"><span class="hs-identifier">reAnnotate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#annotatorSlice"><span class="hs-identifier">annotatorSlice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier">withSlice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#FullByteString"><span class="hs-identifier">FullByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#decodeAnnSet"><span class="hs-identifier">decodeAnnSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#translateViaCBORAnnotator"><span class="hs-identifier">translateViaCBORAnnotator</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plain</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-827534e2b26bc5e3eb5083ab41581d8dd50a140c0dace0509c43602ec64a9feb/share/doc/html/src/Codec.Serialise.html"><span class="hs-identifier">Codec.Serialise</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Serialise</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-827534e2b26bc5e3eb5083ab41581d8dd50a140c0dace0509c43602ec64a9feb/share/doc/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier">decode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Except</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Except</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">throwError</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.44.0.0-c550c7382826f1d5e315a30932c70a4ff11534d890d87910c1b9cdd9bba05dce/share/doc/html/src/PlutusLedgerApi.V1.html"><span class="hs-identifier">PlutusLedgerApi.V1</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV1</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Annotator</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Same as `decodeFullDecoder`, except it provdes the means of passing portion or all</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- of the `BSL.ByteString` input argument to the decoding `Annotator`.</span><span>
+</span><span id="line-45"></span><span id="local-6989586621679241279"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-identifier hs-type">decodeFullAnnotator</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679241278"><span class="annot"><a href="#local-6989586621679241278"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241278"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241279"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241279"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-51"></span><span id="decodeFullAnnotator"><span class="annot"><span class="annottext">decodeFullAnnotator :: forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-identifier hs-var hs-var">decodeFullAnnotator</span></a></span></span><span> </span><span id="local-6989586621679241366"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241366"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679241367"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241367"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span id="local-6989586621679241368"><span class="annot"><span class="annottext">forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679241368"><span class="hs-identifier hs-var">decoder</span></a></span></span><span> </span><span id="local-6989586621679241369"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241369"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679241370"><span class="annot"><span class="annottext">Annotator a
+</span><a href="#local-6989586621679241370"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Annotator a -&gt; FullByteString -&gt; a
+forall a. Annotator a -&gt; FullByteString -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#runAnnotator"><span class="hs-identifier hs-var">runAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator a
+</span><a href="#local-6989586621679241370"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; FullByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Full"><span class="hs-identifier hs-var">Full</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241369"><span class="hs-identifier hs-var">bytes</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Annotator a -&gt; a)
+-&gt; Either DecoderError (Annotator a) -&gt; Either DecoderError a
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError (Annotator a)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241366"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241367"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator a)
+forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679241368"><span class="hs-identifier hs-var">decoder</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241369"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-pragma hs-type">decodeFullAnnotator</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- `BSL.ByteString`, requiring that the full ByteString is consumed, and</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- replaces `ByteSpan` annotations with the corresponding slice of the input as</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- a strict `BS.ByteString`.</span><span>
+</span><span id="line-59"></span><span id="local-6989586621679241294"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatedBytes"><span class="hs-identifier hs-type">decodeFullAnnotatedBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="annot"><a href="#local-6989586621679241294"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679241295"><span class="annot"><a href="#local-6989586621679241295"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241295"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679241294"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#ByteSpan"><span class="hs-identifier hs-type">ByteSpan</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679241294"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-66"></span><span id="decodeFullAnnotatedBytes"><span class="annot"><span class="annottext">decodeFullAnnotatedBytes :: forall (f :: * -&gt; *).
+Functor f =&gt;
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (f ByteSpan))
+-&gt; ByteString
+-&gt; Either DecoderError (f ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatedBytes"><span class="hs-identifier hs-var hs-var">decodeFullAnnotatedBytes</span></a></span></span><span> </span><span id="local-6989586621679241378"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241378"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679241379"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241379"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span id="local-6989586621679241380"><span class="annot"><span class="annottext">forall s. Decoder s (f ByteSpan)
+</span><a href="#local-6989586621679241380"><span class="hs-identifier hs-var">decoder</span></a></span></span><span> </span><span id="local-6989586621679241381"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241381"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; f ByteSpan -&gt; f ByteString
+forall (f :: * -&gt; *).
+Functor f =&gt;
+ByteString -&gt; f ByteSpan -&gt; f ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#annotationBytes"><span class="hs-identifier hs-var">annotationBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241381"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="annot"><span class="annottext">(f ByteSpan -&gt; f ByteString)
+-&gt; Either DecoderError (f ByteSpan)
+-&gt; Either DecoderError (f ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (f ByteSpan))
+-&gt; ByteString
+-&gt; Either DecoderError (f ByteSpan)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241378"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241379"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (f ByteSpan)
+forall s. Decoder s (f ByteSpan)
+</span><a href="#local-6989586621679241380"><span class="hs-identifier hs-var">decoder</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679241381"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-68"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatedBytes"><span class="hs-pragma hs-type">decodeFullAnnotatedBytes</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span id="local-6989586621679241302"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatorFromHexText"><span class="hs-identifier hs-type">decodeFullAnnotatorFromHexText</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679241301"><span class="annot"><a href="#local-6989586621679241301"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241301"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241302"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241302"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-76"></span><span id="decodeFullAnnotatorFromHexText"><span class="annot"><span class="annottext">decodeFullAnnotatorFromHexText :: forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; Text
+-&gt; Either DecoderError a
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatorFromHexText"><span class="hs-identifier hs-var hs-var">decodeFullAnnotatorFromHexText</span></a></span></span><span> </span><span id="local-6989586621679241383"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241383"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679241384"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241384"><span class="hs-identifier hs-var">desc</span></a></span></span><span> </span><span id="local-6989586621679241385"><span class="annot"><span class="annottext">forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679241385"><span class="hs-identifier hs-var">dec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DecoderError a)
+-&gt; Text -&gt; Either DecoderError a
+forall b.
+(ByteString -&gt; Either DecoderError b)
+-&gt; Text -&gt; Either DecoderError b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#withHexText"><span class="hs-identifier hs-var">Plain.withHexText</span></a></span><span> </span><span class="annot"><span class="annottext">((ByteString -&gt; Either DecoderError a)
+ -&gt; Text -&gt; Either DecoderError a)
+-&gt; (ByteString -&gt; Either DecoderError a)
+-&gt; Text
+-&gt; Either DecoderError a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-identifier hs-var">decodeFullAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241383"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241384"><span class="hs-identifier hs-var">desc</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator a)
+forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679241385"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DecoderError a)
+-&gt; (ByteString -&gt; ByteString)
+-&gt; ByteString
+-&gt; Either DecoderError a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSL.fromStrict</span></span><span>
+</span><span id="line-78"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotatorFromHexText"><span class="hs-pragma hs-type">decodeFullAnnotatorFromHexText</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- | Translation function between values through a related binary representation. This</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- function allows you to translate one type into another (or the same one) through their</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- common binary format. It is possible for the source type to be encoded with a different</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- version than the version that will be used for decoding. This is useful for types that</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- build upon one another and are &quot;upgradeable&quot; through their binary representation. It is</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- important to note that the deserialization will happen with `Annotator`, since that is</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- usually the way we deserialize upgradeable types that live on chain. Moreover, encoding</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- does not require a version, because memoized types that were decoded with annotation</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- will have the bytes retained and thus will have the `ToCBOR` instance.</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679241312"><span id="local-6989586621679241314"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Annotator.html#translateViaCBORAnnotator"><span class="hs-identifier hs-type">translateViaCBORAnnotator</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241312"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241314"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Version that will be used for deserialization</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="#local-6989586621679241312"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Except</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679241314"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-96"></span><span id="translateViaCBORAnnotator"><span class="annot"><span class="annottext">translateViaCBORAnnotator :: forall a b.
+(ToCBOR a, DecCBOR (Annotator b)) =&gt;
+Version -&gt; Text -&gt; a -&gt; Except DecoderError b
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#translateViaCBORAnnotator"><span class="hs-identifier hs-var hs-var">translateViaCBORAnnotator</span></a></span></span><span> </span><span id="local-6989586621679241400"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241400"><span class="hs-identifier hs-var">versionDeserialize</span></a></span></span><span> </span><span id="local-6989586621679241401"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241401"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679241402"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679241402"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator b))
+-&gt; ByteString
+-&gt; Either DecoderError b
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="Test.Cardano.Ledger.Binary.Annotator.html#decodeFullAnnotator"><span class="hs-identifier hs-var">decodeFullAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679241400"><span class="hs-identifier hs-var">versionDeserialize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679241401"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator b)
+forall s. Decoder s (Annotator b)
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.1.0-5a76062fc0ed37687aff00d7be9d72647c71c1f900b11ff23efc597931ae7e51/share/doc/html/src/Cardano.Binary.Serialize.html#serialize"><span class="hs-identifier hs-var">Plain.serialize</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679241402"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679241406"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679241406"><span class="hs-identifier hs-var">newx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; Except DecoderError b
+forall a. a -&gt; ExceptT DecoderError Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679241406"><span class="hs-identifier hs-var">newx</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679241407"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679241407"><span class="hs-identifier hs-var">decoderError</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; Except DecoderError b
+forall a. DecoderError -&gt; ExceptT DecoderError Identity a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679241407"><span class="hs-identifier hs-var">decoderError</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679241414"><span id="local-6989586621679241418"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.44.0.0-33600e7970c3ec0db4e4cd0aa23aa7dff8a8dd5ef9243626750a878c70ac9239/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679241427"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator Data)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; Annotator Data
+forall a. a -&gt; Annotator a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; Annotator Data)
+-&gt; Decoder s Data -&gt; Decoder s (Annotator Data)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Data -&gt; Decoder s Data
+forall s a. Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#fromPlainDecoder"><span class="hs-identifier hs-var">fromPlainDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s Data
+forall s. Decoder s Data
+forall a s. Serialise a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-827534e2b26bc5e3eb5083ab41581d8dd50a140c0dace0509c43602ec64a9feb/share/doc/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier hs-var">Serialise.decode</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-pragma hs-type">decCBOR</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-104"></span></pre></body></html>
