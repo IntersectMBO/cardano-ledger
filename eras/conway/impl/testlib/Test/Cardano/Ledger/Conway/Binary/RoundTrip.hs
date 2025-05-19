@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Binary.Annotator
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 
 roundTripConwayCommonSpec ::

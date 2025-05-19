@@ -30,6 +30,7 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.MemoBytes.Internal (
   MemoBytes (.., Memo),
+  Mem,
   MemoHashIndex,
   mkMemoBytes,
   mkMemoBytesStrict,
@@ -69,6 +70,7 @@ module Cardano.Ledger.MemoBytes.Internal (
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotated (..),
+  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR,
@@ -76,6 +78,7 @@ import Cardano.Ledger.Binary (
   decodeAnnotated,
   decodeFull',
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -142,6 +145,14 @@ instance Typeable t => Plain.ToCBOR (MemoBytes t) where
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR
 
+instance
+  (Typeable t, DecCBOR (Annotator t)) =>
+  DecCBOR (Annotator (MemoBytes t))
+  where
+  decCBOR = do
+    (Annotator getT, Annotator getBytes) <- withSlice decCBOR
+    pure $ Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes))
+
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
   x == y = mbBytes x == mbBytes y && mbRawType x == mbRawType y
@@ -163,6 +174,10 @@ instance SafeToHash (MemoBytes t) where
 shorten :: BSL.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 {-# DEPRECATED shorten "As unused. Use `toShort` `.` `toStrict` instead" #-}
+
+-- | Useful when deriving DecCBOR(Annotator T)
+-- deriving via (Mem T) instance DecCBOR (Annotator T)
+type Mem t = Annotator (MemoBytes t)
 
 -- | Constructor that takes the underlying type and the original bytes as lazy
 -- `BSL.ByteString`.

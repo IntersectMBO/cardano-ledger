@@ -51,6 +51,7 @@ module Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
   ToCBOR (..),
@@ -64,6 +65,7 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
+  (<*!),
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
@@ -196,6 +198,20 @@ instance Era era => DecCBOR (TimelockRaw era) where
     5 -> SumD TimelockTimeExpire <! From
     n -> Invalid n
 
+-- This instance allows us to derive instance DecCBOR (Annotator (Timelock era)).
+-- Since Timelock is a newtype around (Memo (Timelock era)).
+instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
+  decCBOR = decode (Summands "TimelockRaw" decRaw)
+    where
+      decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
+      decRaw 0 = Ann (SumD TimelockSignature <! From)
+      decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decCBOR)
+      decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decCBOR)
+      decRaw 3 = Ann (SumD TimelockMOf) <*! Ann From <*! D (sequence <$> decCBOR)
+      decRaw 4 = Ann (SumD TimelockTimeStart <! From)
+      decRaw 5 = Ann (SumD TimelockTimeExpire <! From)
+      decRaw n = Invalid n
+
 -- =================================================================
 -- Native Scripts are Memoized TimelockRaw.
 -- The patterns give the appearence that the mutual recursion is not present.
@@ -224,6 +240,9 @@ instance Era era => EncCBOR (Timelock era)
 
 instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR
+
+instance Era era => DecCBOR (Annotator (Timelock era)) where
+  decCBOR = fmap MkTimelock <$> decCBOR
 
 instance Memoized (Timelock era) where
   type RawType (Timelock era) = TimelockRaw era

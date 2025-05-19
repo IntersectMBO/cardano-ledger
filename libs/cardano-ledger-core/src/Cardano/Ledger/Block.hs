@@ -21,6 +21,7 @@ module Cardano.Ledger.Block (
 ) where
 
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (decCBOR),
   EncCBOR (..),
   EncCBORGroup (..),
@@ -34,6 +35,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -86,6 +88,20 @@ instance
   where
   decCBOR =
     decodeRecordNamed "Block" (const blockSize) $ Block <$> decCBOR <*> decCBOR
+    where
+      blockSize = 1 + fromIntegral (numSegComponents @era)
+
+instance
+  ( EraSegWits era
+  , DecCBOR (Annotator h)
+  , Typeable h
+  ) =>
+  DecCBOR (Annotator (Block h era))
+  where
+  decCBOR = decodeRecordNamed "Block" (const blockSize) $ do
+    header <- decCBOR
+    txns <- decCBOR
+    pure $ Block <$> header <*> txns
     where
       blockSize = 1 + fromIntegral (numSegComponents @era)
 

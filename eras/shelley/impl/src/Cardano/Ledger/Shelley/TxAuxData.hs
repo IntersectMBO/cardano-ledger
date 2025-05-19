@@ -29,11 +29,12 @@ module Cardano.Ledger.Shelley.TxAuxData (
   validMetadatum,
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -65,6 +66,9 @@ deriving newtype instance Era era => EncCBOR (ShelleyTxAuxDataRaw era)
 
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxDataRaw era)
 
+instance Era era => DecCBOR (Annotator (ShelleyTxAuxDataRaw era)) where
+  decCBOR = pure <$> decCBOR
+
 deriving via
   InspectHeapNamed "ShelleyTxAuxDataRaw" (ShelleyTxAuxData era)
   instance
@@ -77,6 +81,11 @@ newtype ShelleyTxAuxData era
 
 instance Memoized (ShelleyTxAuxData era) where
   type RawType (ShelleyTxAuxData era) = ShelleyTxAuxDataRaw era
+
+deriving via
+  Mem (ShelleyTxAuxDataRaw era)
+  instance
+    Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
 
 instance EraTxAuxData ShelleyEra where
   type TxAuxData ShelleyEra = ShelleyTxAuxData ShelleyEra

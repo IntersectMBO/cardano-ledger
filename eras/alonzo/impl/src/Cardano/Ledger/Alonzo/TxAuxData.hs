@@ -60,17 +60,20 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
   ToCBOR,
   TokenType (..),
+  decodeStrictSeq,
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (RawType),
@@ -208,6 +211,44 @@ instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
       auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
       auxDataField n = invalidField n
 
+instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
+  decCBOR =
+    decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
+      decodeShelley
+      decodeAllegra
+      decodeAlonzo
+    where
+      decodeShelley =
+        decode
+          ( Ann (Emit AlonzoTxAuxDataRaw)
+              <*! Ann From
+              <*! Ann (Emit StrictSeq.empty)
+              <*! Ann (Emit Map.empty)
+          )
+      decodeAllegra =
+        decode
+          ( Ann (RecD AlonzoTxAuxDataRaw)
+              <*! Ann From
+              <*! D
+                (sequence <$> decodeStrictSeq decCBOR)
+              <*! Ann (Emit Map.empty)
+          )
+      decodeAlonzo =
+        decode $
+          TagD 259 $
+            SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
+
+      auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
+      auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
+      auxDataField 1 =
+        fieldAA
+          (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x})
+          (D (sequence <$> decodeStrictSeq decCBOR))
+      auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
+      auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
+      auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
+      auxDataField n = invalidField n
+
 decodeTxAuxDataByTokenType :: forall t s. Decoder s t -> Decoder s t -> Decoder s t -> Decoder s t
 decodeTxAuxDataByTokenType decodeShelley decodeAllegra decodeAlonzo =
   peekTokenType >>= \case
@@ -241,6 +282,11 @@ newtype AlonzoTxAuxData era = MkAlonzoTxAuxData (MemoBytes (AlonzoTxAuxDataRaw e
 
 instance Memoized (AlonzoTxAuxData era) where
   type RawType (AlonzoTxAuxData era) = AlonzoTxAuxDataRaw era
+
+deriving via
+  Mem (AlonzoTxAuxDataRaw era)
+  instance
+    Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
 
 instance EqRaw (AlonzoTxAuxData era)
 

@@ -55,6 +55,7 @@ module Cardano.Ledger.Plutus.Language (
 
 import qualified Cardano.Crypto.Hash.Class as Hash (castHash, hashWith)
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
@@ -201,6 +202,9 @@ plutusFromRunnable = Plutus . PlutusBinary . P.serialisedScript . plutusRunnable
 newtype PlutusBinary = PlutusBinary {unPlutusBinary :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
   deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks, MemPack)
+
+instance DecCBOR (Annotator PlutusBinary) where
+  decCBOR = pure <$> decCBOR
 
 instance Show PlutusBinary where
   show = show . B64.encode . fromShort . unPlutusBinary

@@ -29,12 +29,10 @@ module Test.Cardano.Ledger.Binary.Annotator (
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Codec.Serialise as Serialise (decode)
 import Control.Monad.Except (Except, MonadError (throwError))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text (Text)
-import qualified PlutusLedgerApi.V1 as PV1
 
 --------------------------------------------------------------------------------
 -- Annotator
@@ -97,7 +95,3 @@ translateViaCBORAnnotator versionDeserialize name x =
   case decodeFullAnnotator versionDeserialize name decCBOR (Plain.serialize x) of
     Right newx -> pure newx
     Left decoderError -> throwError decoderError
-
-instance DecCBOR (Annotator PV1.Data) where
-  decCBOR = pure <$> fromPlainDecoder Serialise.decode
-  {-# INLINE decCBOR #-}

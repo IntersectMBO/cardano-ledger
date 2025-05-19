@@ -92,6 +92,7 @@ import Cardano.Ledger.BaseTypes (
   isSJust,
  )
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
@@ -103,6 +104,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -210,6 +212,8 @@ instance NFData BabbageTxBodyRaw
 deriving instance Show BabbageTxBodyRaw
 
 deriving newtype instance DecCBOR (TxBody BabbageEra)
+
+deriving via Mem BabbageTxBodyRaw instance DecCBOR (Annotator (TxBody BabbageEra))
 
 instance Memoized (TxBody BabbageEra) where
   type RawType (TxBody BabbageEra) = BabbageTxBodyRaw
@@ -692,6 +696,9 @@ instance DecCBOR BabbageTxBodyRaw where
         , (2, "fee")
         ]
   {-# INLINE decCBOR #-}
+
+instance DecCBOR (Annotator BabbageTxBodyRaw) where
+  decCBOR = pure <$> decCBOR
 
 basicBabbageTxBodyRaw :: BabbageTxBodyRaw
 basicBabbageTxBodyRaw =

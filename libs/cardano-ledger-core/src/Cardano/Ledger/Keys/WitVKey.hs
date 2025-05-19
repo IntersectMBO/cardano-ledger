@@ -19,7 +19,7 @@ import Cardano.Crypto.DSIGN.Class (
   decodeSignedDSIGN,
   encodeSignedDSIGN,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (
   EraIndependentTxBody,
@@ -84,6 +84,10 @@ instance Typeable kr => Plain.FromCBOR (WitVKey kr) where
 instance Typeable kr => EncCBOR (WitVKey kr)
 
 instance Typeable kr => DecCBOR (WitVKey kr)
+
+instance Typeable kr => DecCBOR (Annotator (WitVKey kr)) where
+  decCBOR = pure <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 pattern WitVKey ::
   VKey kr ->

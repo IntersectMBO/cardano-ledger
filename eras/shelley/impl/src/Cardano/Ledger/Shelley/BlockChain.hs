@@ -38,6 +38,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotated (..),
+  Annotator,
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
@@ -47,10 +48,11 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx, segWitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -228,6 +230,16 @@ instance EraTx era => DecCBOR (ShelleyTxSeq era) where
             Seq.zipWith3 segWitTx bodies wits auxData
     pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
 
+instance
+  ( EraTx era
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  ) =>
+  DecCBOR (Annotator (ShelleyTxSeq era))
+  where
+  decCBOR = txSeqDecoder False
+
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
 
@@ -243,3 +255,39 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
       Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
+
+-- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
+--   These are exactly the parts that are SafeToHash.
+-- | Decode a TxSeq, used in decoding a Block.
+txSeqDecoder ::
+  ( EraTx era
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  ) =>
+  Bool ->
+  Decoder s (Annotator (ShelleyTxSeq era))
+txSeqDecoder lax = do
+  (bodies, bodiesAnn) <- withSlice decCBOR
+  (wits, witsAnn) <- withSlice decCBOR
+  let bodiesLength = length bodies
+      witsLength = length wits
+  (metadata, metadataAnn) <- withSlice $ do
+    auxDataMap <- decCBOR
+    auxDataSeqDecoder bodiesLength auxDataMap lax
+
+  unless
+    (lax || bodiesLength == witsLength)
+    ( fail $
+        "different number of transaction bodies ("
+          <> show bodiesLength
+          <> ") and witness sets ("
+          <> show witsLength
+          <> ")"
+    )
+
+  let txns =
+        sequenceA $
+          StrictSeq.forceToStrict $
+            Seq.zipWith3 segWitAnnTx bodies wits metadata
+  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn

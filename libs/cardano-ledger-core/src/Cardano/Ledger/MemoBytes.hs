@@ -6,6 +6,7 @@
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes (
   MemoBytes (Memo),
+  Mem,
   MemoHashIndex,
   getMemoBytesType,
   getMemoBytesHash,

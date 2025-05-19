@@ -29,6 +29,7 @@ module Cardano.Ledger.Allegra.TxAuxData (
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR,
@@ -37,6 +38,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -124,6 +126,11 @@ newtype AllegraTxAuxData era = MkAlegraTxAuxData (MemoBytes (AllegraTxAuxDataRaw
 instance Memoized (AllegraTxAuxData era) where
   type RawType (AllegraTxAuxData era) = AllegraTxAuxDataRaw era
 
+deriving via
+  (Mem (AllegraTxAuxDataRaw era))
+  instance
+    Era era => DecCBOR (Annotator (AllegraTxAuxData era))
+
 type instance MemoHashIndex (AllegraTxAuxDataRaw era) = EraIndependentTxAuxData
 
 instance HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData where
@@ -182,4 +189,28 @@ instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
           ( RecD AllegraTxAuxDataRaw
               <! From
               <! From
+          )
+
+instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
+  decCBOR =
+    peekTokenType >>= \case
+      TypeMapLen -> decodeFromMap
+      TypeMapLen64 -> decodeFromMap
+      TypeMapLenIndef -> decodeFromMap
+      TypeListLen -> decodeFromList
+      TypeListLen64 -> decodeFromList
+      TypeListLenIndef -> decodeFromList
+      _ -> fail "Failed to decode AuxiliaryDataRaw"
+    where
+      decodeFromMap =
+        decode
+          ( Ann (Emit AllegraTxAuxDataRaw)
+              <*! Ann From
+              <*! Ann (Emit StrictSeq.empty)
+          )
+      decodeFromList =
+        decode
+          ( Ann (RecD AllegraTxAuxDataRaw)
+              <*! Ann From
+              <*! D (sequence <$> decCBOR)
           )

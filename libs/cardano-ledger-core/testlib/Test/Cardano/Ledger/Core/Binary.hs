@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Core.Binary (
 
 import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
+import Cardano.Ledger.MemoBytes (EqRaw (eqRaw), Mem)
 import Data.Default (Default (def))
 import Lens.Micro
 import qualified Prettyprinter as Pretty

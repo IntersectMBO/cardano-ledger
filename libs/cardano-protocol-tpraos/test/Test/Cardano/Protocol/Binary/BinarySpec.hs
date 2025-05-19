@@ -8,7 +8,6 @@ module Test.Cardano.Protocol.Binary.BinarySpec (spec) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
@@ -22,7 +21,6 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary (decoderEquivalenceProp, decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
-import Test.Cardano.Protocol.Binary.Annotator
 import Test.Cardano.Protocol.TPraos.Arbitrary ()
 
 spec :: Spec
@@ -38,7 +36,6 @@ blockEraSpec ::
   forall era.
   ( EraSegWits era
   , Arbitrary (Tx era)
-  , DecCBOR (Annotator (TxSeq era))
   ) =>
   Spec
 blockEraSpec =

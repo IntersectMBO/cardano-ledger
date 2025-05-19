@@ -14,6 +14,7 @@ module Cardano.Ledger.Shelley.Tx (
   sizeShelleyTxF,
   wireSizeShelleyTxF,
   segWitTx,
+  segWitAnnTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,

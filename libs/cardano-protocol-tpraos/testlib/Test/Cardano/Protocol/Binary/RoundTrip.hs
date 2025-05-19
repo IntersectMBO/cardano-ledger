@@ -23,7 +23,6 @@ roundTripBlockSpec ::
   , DecCBOR (Annotator h)
   , EncCBOR h
   , EraSegWits era
-  , DecCBOR (Annotator (TxSeq era))
   , Arbitrary (Block h era)
   ) =>
   Spec

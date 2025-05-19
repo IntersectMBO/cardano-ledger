@@ -59,6 +59,7 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
@@ -93,6 +94,7 @@ import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Mary.Value (MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (..),
@@ -237,7 +239,12 @@ instance DecCBOR ConwayTxBodyRaw where
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
+instance DecCBOR (Annotator ConwayTxBodyRaw) where
+  decCBOR = pure <$> decCBOR
+
 deriving newtype instance DecCBOR (TxBody ConwayEra)
+
+deriving via Mem ConwayTxBodyRaw instance DecCBOR (Annotator (TxBody ConwayEra))
 
 deriving instance NoThunks (TxBody ConwayEra)
 
