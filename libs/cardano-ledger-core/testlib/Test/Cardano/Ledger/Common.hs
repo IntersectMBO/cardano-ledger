@@ -33,11 +33,13 @@ module Test.Cardano.Ledger.Common (
   expectRightDeep_,
   expectRightExpr,
   expectRightDeepExpr,
+  expectRightDeepExpr_,
   expectLeft,
   expectLeftExpr,
   expectLeftDeep,
   expectLeftDeep_,
   expectLeftDeepExpr,
+  expectLeftDeepExpr_,
   expectJust,
   expectJustDeep,
   expectJustDeep_,
@@ -100,14 +102,22 @@ expectRightDeepExpr = expectRightExpr >=> evaluateDeep
 shouldBeRightExpr :: (HasCallStack, ToExpr a, Eq b, ToExpr b) => Either a b -> b -> Expectation
 shouldBeRightExpr e x = expectRightExpr e >>= (`shouldBeExpr` x)
 
+-- | Same as `expectRightDeepExpr`, but discard the contents of `Right`
+expectRightDeepExpr_ :: (HasCallStack, ToExpr a, NFData b) => Either a b -> IO ()
+expectRightDeepExpr_ = void . expectRightDeepExpr
+
 -- | Same as `expectLeft`, but use `ToExpr` instead of `Show`
 expectLeftExpr :: (HasCallStack, ToExpr b) => Either a b -> IO a
 expectLeftExpr (Left l) = pure $! l
 expectLeftExpr (Right r) = assertFailure $ "Expected Left, got Right:\n" <> showExpr r
 
--- | Same as `expectLeftDeep`,  but use `ToExpr` instead of `Show`
+-- | Same as `expectLeftDeep`, but use `ToExpr` instead of `Show`
 expectLeftDeepExpr :: (HasCallStack, ToExpr b, NFData a) => Either a b -> IO a
 expectLeftDeepExpr = expectLeftExpr >=> evaluateDeep
+
+-- | Same as `expectLeftDeepExpr`, but discard the contents of `Left`
+expectLeftDeepExpr_ :: (HasCallStack, ToExpr b, NFData a) => Either a b -> IO ()
+expectLeftDeepExpr_ = void . expectLeftDeepExpr
 
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a) => Either a b -> a -> Expectation
