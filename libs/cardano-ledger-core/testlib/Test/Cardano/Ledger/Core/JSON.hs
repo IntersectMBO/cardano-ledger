@@ -68,9 +68,8 @@ goldenJsonPParamsSpec ::
   EraPParams era =>
   SpecWith FilePath
 goldenJsonPParamsSpec =
-  it "Golden JSON specs for PParams " $ \file -> do
-    decoded <- eitherDecodeFileStrict @(PParams era) file
-    void $ expectRightExpr decoded
+  it "Golden JSON specs for PParams " $
+    eitherDecodeFileStrict @(PParams era) >=> expectRightDeepExpr_
 
 goldenJsonPParamsUpdateSpec ::
   forall era.
