@@ -49,11 +49,13 @@ module Test.Cardano.Ledger.Imp.Common (
   expectRightDeep,
   expectRightExpr,
   expectRightDeepExpr,
+  expectRightDeepExpr_,
   expectLeft,
   expectLeftDeep_,
   expectLeftExpr,
   expectLeftDeep,
   expectLeftDeepExpr,
+  expectLeftDeepExpr_,
   expectJust,
   expectJustDeep,
   expectJustDeep_,
@@ -97,12 +99,14 @@ import Test.Cardano.Ledger.Common as X hiding (
   expectLeft,
   expectLeftDeep,
   expectLeftDeepExpr,
+  expectLeftDeepExpr_,
   expectLeftDeep_,
   expectLeftExpr,
   expectNothing,
   expectRight,
   expectRightDeep,
   expectRightDeepExpr,
+  expectRightDeepExpr_,
   expectRightDeep_,
   expectRightExpr,
   expectationFailure,
@@ -183,9 +187,13 @@ expectRightExpr :: (HasCallStack, ToExpr a, MonadIO m) => Either a b -> m b
 expectRightExpr (Right r) = pure $! r
 expectRightExpr (Left l) = assertFailure $ "Expected Right, got Left:\n" <> showExpr l
 
--- | Same as `expectRightDeep`,  but use `ToExpr` instead of `Show`
+-- | Same as `expectRightDeep`, but use `ToExpr` instead of `Show`
 expectRightDeepExpr :: (HasCallStack, ToExpr a, NFData b, MonadIO m) => Either a b -> m b
 expectRightDeepExpr = expectRightExpr >=> evaluateDeep
+
+-- | Same as `expectRightDeepExpr`, but discard the contents of `Right`
+expectRightDeepExpr_ :: (HasCallStack, ToExpr a, NFData b, MonadIO m) => Either a b -> m ()
+expectRightDeepExpr_ = void . expectRightDeepExpr
 
 -- | Same as `shouldBeExpr`, except it checks that the value is `Right`
 shouldBeRightExpr :: (HasCallStack, ToExpr a, Eq b, ToExpr b, MonadIO m) => Either a b -> b -> m ()
@@ -199,6 +207,10 @@ expectLeftExpr (Right r) = assertFailure $ "Expected Left, got Right:\n" <> show
 -- | Same as `expectLeftDeep`,  but use `ToExpr` instead of `Show`
 expectLeftDeepExpr :: (HasCallStack, ToExpr b, NFData a, MonadIO m) => Either a b -> m a
 expectLeftDeepExpr = expectLeftExpr >=> evaluateDeep
+
+-- | Same as `expectLeftDeepExpr`, but discard the contents of `Left`
+expectLeftDeepExpr_ :: (HasCallStack, ToExpr b, NFData a, MonadIO m) => Either a b -> m ()
+expectLeftDeepExpr_ = void . expectLeftDeepExpr
 
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a, MonadIO m) => Either a b -> a -> m ()
