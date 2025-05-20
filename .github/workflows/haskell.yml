@@ -379,13 +379,33 @@ jobs:
     - name: Install fourmolu
       run: |
         FOURMOLU_VERSION="0.17.0.0"
-        mkdir -p "$HOME/.local/bin"
-        curl -sL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$HOME/.local/bin/fourmolu"
-        chmod a+x "$HOME/.local/bin/fourmolu"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        curl -sSfL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$BINDIR/fourmolu"
+        chmod a+x "$BINDIR/fourmolu"
+        echo "$BINDIR" >> $GITHUB_PATH
 
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install shellcheck
+      run: |
+        SHELLCHECK_VERSION=0.10.0
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        curl -sSfL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o shellcheck.tar.xz
+        tar -xf shellcheck.tar.xz --strip-components=1 --wildcards -C "$BINDIR" '*/shellcheck'
+        rm shellcheck.tar.xz
+        echo "$BINDIR" >> $GITHUB_PATH
+
+    - name: Run shellcheck
+      run: scripts/shellcheck.sh
 
   codegen:
     needs: build
