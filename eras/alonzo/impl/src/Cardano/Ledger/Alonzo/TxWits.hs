@@ -691,10 +691,11 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
       decodeElement ::
         forall s. Decoder s (PlutusPurpose AsIx era, Annotator (Data era), ExUnits)
       decodeElement = do
-        decodeRecordNamed
-          "Redeemer"
-          (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
-          $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
+        decodeRecordNamed "Redeemer" (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2) $ do
+          !redeemerPtr <- decCBORGroup
+          !redeemerData <- decCBOR
+          !redeemerExUnits <- decCBOR
+          pure (redeemerPtr, redeemerData, redeemerExUnits)
       {-# INLINE decodeElement #-}
   {-# INLINE decCBOR #-}
 
