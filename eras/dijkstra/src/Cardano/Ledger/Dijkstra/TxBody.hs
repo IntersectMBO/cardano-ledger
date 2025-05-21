@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -36,6 +37,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbCurrentTreasuryValue,
     dtbTreasuryDonation
   ),
+  upgradeProposals,
+  upgradeGovAction,
   DijkstraTxBodyRaw (..),
 ) where
 
@@ -44,7 +47,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, StrictMaybe, fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -71,8 +74,17 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin, decodePositiveCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures (..))
-import Cardano.Ledger.Conway.TxBody (TxBody (..))
+import Cardano.Ledger.Conway.Governance (
+  GovAction (..),
+  ProposalProcedure (..),
+  VotingProcedures (..),
+ )
+import Cardano.Ledger.Conway.TxBody (
+  TxBody (..),
+  conwayProposalsDeposits,
+  conwayRedeemerPointer,
+  conwayRedeemerPointerInverse,
+ )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.Scripts ()
@@ -91,7 +103,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Coerce (coerce)
+import Data.Coerce (Coercible, coerce)
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -133,7 +145,27 @@ instance NFData DijkstraTxBodyRaw
 deriving instance Show DijkstraTxBodyRaw
 
 basicDijkstraTxBodyRaw :: DijkstraTxBodyRaw
-basicDijkstraTxBodyRaw = undefined
+basicDijkstraTxBodyRaw =
+  DijkstraTxBodyRaw
+    mempty
+    mempty
+    mempty
+    mempty
+    SNothing
+    SNothing
+    OSet.empty
+    (Withdrawals mempty)
+    mempty
+    (ValidityInterval SNothing SNothing)
+    mempty
+    mempty
+    SNothing
+    SNothing
+    SNothing
+    (VotingProcedures mempty)
+    OSet.empty
+    SNothing
+    mempty
 
 instance DecCBOR DijkstraTxBodyRaw where
   decCBOR =
@@ -433,7 +465,7 @@ instance EraTxBody DijkstraEra where
     pure $
       DijkstraTxBody
         { dtbSpendInputs = ctbSpendInputs
-        , dtbOutputs = undefined <$> ctbOutputs
+        , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbOutputs
         , dtbCerts = OSet.mapL coerce ctbCerts
         , dtbWithdrawals = ctbWithdrawals
         , dtbTxfee = ctbTxfee
@@ -453,12 +485,31 @@ instance EraTxBody DijkstraEra where
         , dtbTreasuryDonation = ctbTreasuryDonation
         }
 
+upgradeGovAction ::
+  Coercible (PParamsHKD StrictMaybe (PreviousEra era)) (PParamsHKD StrictMaybe era) =>
+  GovAction (PreviousEra era) -> GovAction era
+upgradeGovAction (ParameterChange x y z) = ParameterChange (coerce x) (coerce y) z
+upgradeGovAction (HardForkInitiation x y) = HardForkInitiation (coerce x) y
+upgradeGovAction (TreasuryWithdrawals x y) = TreasuryWithdrawals x y
+upgradeGovAction (NoConfidence x) = NoConfidence x
+upgradeGovAction (UpdateCommittee x y z w) = UpdateCommittee x y z w
+upgradeGovAction (NewConstitution x y) = NewConstitution x (coerce y)
+upgradeGovAction InfoAction = InfoAction
+
 upgradeProposals :: ProposalProcedure ConwayEra -> ProposalProcedure DijkstraEra
-upgradeProposals = undefined
+upgradeProposals ProposalProcedure {..} =
+  ProposalProcedure
+    { pProcDeposit = pProcDeposit
+    , pProcReturnAddr = pProcReturnAddr
+    , pProcGovAction = upgradeGovAction pProcGovAction
+    , pProcAnchor = pProcAnchor
+    }
 
 dijkstraTotalDepositsTxBody ::
   PParams DijkstraEra -> (KeyHash StakePool -> Bool) -> TxBody DijkstraEra -> Coin
-dijkstraTotalDepositsTxBody = undefined
+dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
+  getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
+    <+> conwayProposalsDeposits pp txBody
 
 instance AllegraEraTxBody DijkstraEra where
   vldtTxBodyL = lensMemoRawType @DijkstraEra dtbrVldt $
@@ -493,9 +544,9 @@ instance AlonzoEraTxBody DijkstraEra where
     \txb x -> txb {dtbrNetworkId = x}
   {-# INLINE networkIdTxBodyL #-}
 
-  redeemerPointer = undefined -- conwayRedeemerPointer
+  redeemerPointer = conwayRedeemerPointer
 
-  redeemerPointerInverse = undefined -- conwayRedeemerPointerInverse
+  redeemerPointerInverse = conwayRedeemerPointerInverse
 
 instance BabbageEraTxBody DijkstraEra where
   sizedOutputsTxBodyL = lensMemoRawType @DijkstraEra dtbrOutputs $

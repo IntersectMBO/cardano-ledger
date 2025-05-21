@@ -32,7 +32,7 @@ main =
       Spec.spec
       Proposals.spec
       Binary.spec
-      Cddl.spec
+      Cddl.spec @ConwayEra
       DRepRatify.spec
       CommitteeRatify.spec
       SPORatifySpec.spec

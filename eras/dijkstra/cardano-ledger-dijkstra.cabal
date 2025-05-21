@@ -50,18 +50,9 @@ library
     Cardano.Ledger.Dijkstra.Rules.Cert
     Cardano.Ledger.Dijkstra.Rules.Certs
     Cardano.Ledger.Dijkstra.Rules.Deleg
-    Cardano.Ledger.Dijkstra.Rules.Enact
-    Cardano.Ledger.Dijkstra.Rules.Epoch
     Cardano.Ledger.Dijkstra.Rules.Gov
-    Cardano.Ledger.Dijkstra.Rules.GovCert
-    Cardano.Ledger.Dijkstra.Rules.HardFork
     Cardano.Ledger.Dijkstra.Rules.Ledger
     Cardano.Ledger.Dijkstra.Rules.Ledgers
-    Cardano.Ledger.Dijkstra.Rules.Mempool
-    Cardano.Ledger.Dijkstra.Rules.NewEpoch
-    Cardano.Ledger.Dijkstra.Rules.Pool
-    Cardano.Ledger.Dijkstra.Rules.Ratify
-    Cardano.Ledger.Dijkstra.Rules.Tickf
     Cardano.Ledger.Dijkstra.Rules.Utxo
     Cardano.Ledger.Dijkstra.Rules.Utxos
     Cardano.Ledger.Dijkstra.Rules.Utxow

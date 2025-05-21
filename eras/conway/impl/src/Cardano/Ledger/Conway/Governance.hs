@@ -164,6 +164,7 @@ module Cardano.Ledger.Conway.Governance (
   reCommitteeStateL,
   DefaultVote (..),
   defaultStakePoolVote,
+  translateProposals,
 
   -- * Exported for testing
   pparamsUpdateThreshold,

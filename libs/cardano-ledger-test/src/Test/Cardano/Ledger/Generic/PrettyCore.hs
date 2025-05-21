@@ -2925,10 +2925,10 @@ pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txi
 instance PrettyA GovActionId where
   prettyA = pcGovActionId
 
-pcGovPurposeId :: GovPurposeId p era -> PDoc
+pcGovPurposeId :: GovPurposeId p -> PDoc
 pcGovPurposeId (GovPurposeId x) = pcGovActionId x
 
-pcPrevGovActionIds :: GovRelation StrictMaybe era -> PDoc
+pcPrevGovActionIds :: GovRelation StrictMaybe -> PDoc
 pcPrevGovActionIds GovRelation {grPParamUpdate, grHardFork, grCommittee, grConstitution} =
   ppRecord
     "PrevGovActionIds"
@@ -2938,7 +2938,7 @@ pcPrevGovActionIds GovRelation {grPParamUpdate, grHardFork, grCommittee, grConst
     , ("LastConstitution", ppStrictMaybe pcGovPurposeId grConstitution)
     ]
 
-instance PrettyA (GovRelation StrictMaybe era) where
+instance PrettyA (GovRelation StrictMaybe) where
   prettyA = pcPrevGovActionIds
 
 pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
@@ -3004,7 +3004,7 @@ pcProposals p =
     , ("pGraph", pcForest (p ^. pGraphL))
     ]
 
-pcPEdges :: PEdges (GovPurposeId purpose era) -> PDoc
+pcPEdges :: PEdges (GovPurposeId purpose) -> PDoc
 pcPEdges (PEdges x y) =
   ppRecord
     "PEdges"
@@ -3012,7 +3012,7 @@ pcPEdges (PEdges x y) =
     , ("children", ppSet pcGovPurposeId y)
     ]
 
-pcForest :: GovRelation PGraph era -> PDoc
+pcForest :: GovRelation PGraph -> PDoc
 pcForest (GovRelation a b c d) =
   ppRecord
     "Forest PGraph"

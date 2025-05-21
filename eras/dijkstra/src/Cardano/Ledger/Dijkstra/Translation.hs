@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -16,10 +17,21 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
+  DRepPulsingState (..),
+  EnactState (..),
+  GovAction (..),
+  GovActionState (..),
+  ProposalProcedure (..),
+  Proposals,
+  PulsingSnapshot,
+  RatifyState (..),
+  finishDRepPulser,
   mkEnactState,
   rsEnactStateL,
-  setCompleteDRepPulsingState, Proposals, DRepPulsingState,
+  setCompleteDRepPulsingState,
+  translateProposals,
  )
+import Cardano.Ledger.Conway.Governance.DRepPulser (PulsingSnapshot (..))
 import Cardano.Ledger.Conway.State (ConwayInstantStake (..), EraCertState (..))
 import Cardano.Ledger.Core (
   EraTx (auxDataTxL, bodyTxL, witsTxL),
@@ -37,7 +49,7 @@ import Cardano.Ledger.Dijkstra.Governance ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
-import Cardano.Ledger.Dijkstra.TxBody ()
+import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
@@ -51,10 +63,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
  )
 import qualified Cardano.Ledger.UMap as UM
+import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~), (^.))
-import Data.Coerce (coerce)
 
 type instance TranslationContext DijkstraEra = ()
 
@@ -150,11 +162,65 @@ translateCertState ctx scert =
     & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
     & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
 
+instance TranslateEra DijkstraEra GovAction where
+  translateEra _ = pure . upgradeGovAction
+
+instance TranslateEra DijkstraEra ProposalProcedure where
+  translateEra _ = pure . upgradeProposals
+
+instance TranslateEra DijkstraEra GovActionState where
+  translateEra ctxt GovActionState {..} =
+    pure $
+      GovActionState
+        { gasId = gasId
+        , gasCommitteeVotes = gasCommitteeVotes
+        , gasDRepVotes = gasDRepVotes
+        , gasStakePoolVotes = gasStakePoolVotes
+        , gasProposalProcedure = translateEra' ctxt gasProposalProcedure
+        , gasProposedIn = gasProposedIn
+        , gasExpiresAfter = gasExpiresAfter
+        }
+
 instance TranslateEra DijkstraEra Proposals where
-  translateEra _ _ = undefined
+  translateEra ctxt = pure . translateProposals @DijkstraEra ctxt
+
+instance TranslateEra DijkstraEra PulsingSnapshot where
+  translateEra ctxt PulsingSnapshot {..} =
+    pure $
+      PulsingSnapshot
+        { psProposals = translateEra' ctxt <$> psProposals
+        , psDRepDistr = psDRepDistr
+        , psDRepState = psDRepState
+        , psPoolDistr = psPoolDistr
+        }
+
+instance TranslateEra DijkstraEra EnactState where
+  translateEra _ EnactState {..} =
+    pure $
+      EnactState
+        { ensCommittee = coerce ensCommittee
+        , ensConstitution = coerce ensConstitution
+        , ensCurPParams = coerce ensCurPParams
+        , ensPrevPParams = coerce ensPrevPParams
+        , ensTreasury = ensTreasury
+        , ensWithdrawals = ensWithdrawals
+        , ensPrevGovActionIds = ensPrevGovActionIds
+        }
+
+instance TranslateEra DijkstraEra RatifyState where
+  translateEra ctxt RatifyState {..} =
+    pure $
+      RatifyState
+        { rsEnactState = translateEra' ctxt rsEnactState
+        , rsEnacted = translateEra' ctxt <$> rsEnacted
+        , rsExpired = rsExpired
+        , rsDelayed = rsDelayed
+        }
 
 instance TranslateEra DijkstraEra DRepPulsingState where
-  translateEra _ _ = undefined
+  translateEra ctxt dps = pure $ DRComplete (translateEra' ctxt x) (translateEra' ctxt y)
+    where
+      (x, y) = finishDRepPulser dps
 
 instance TranslateEra DijkstraEra ConwayGovState where
   translateEra ctxt ConwayGovState {..} =

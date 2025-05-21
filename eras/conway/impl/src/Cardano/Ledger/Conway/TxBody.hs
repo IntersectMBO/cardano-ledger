@@ -47,6 +47,8 @@ module Cardano.Ledger.Conway.TxBody (
   ConwayTxBodyRaw (..),
   conwayTotalDepositsTxBody,
   conwayProposalsDeposits,
+  conwayRedeemerPointer,
+  conwayRedeemerPointerInverse,
 ) where
 
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
