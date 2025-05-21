@@ -12,14 +12,12 @@
 module Test.Cardano.Ledger.Core.Binary.Annotator (
   decoderEquivalenceEraSpec,
   decoderEquivalenceCoreEraTypesSpec,
-  module Test.Cardano.Ledger.Binary.Annotator,
 ) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
-import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 

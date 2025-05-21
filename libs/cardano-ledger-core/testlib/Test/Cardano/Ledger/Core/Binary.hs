@@ -23,7 +23,6 @@ import Data.Default (Default (def))
 import Lens.Micro
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
-import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
