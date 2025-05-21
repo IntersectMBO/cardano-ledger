@@ -37,7 +37,7 @@ import Constrained.GenT (
   tryGenT,
  )
 import Constrained.List (List (..), ListCtx (..))
-import Constrained.NumSpec (
+import Constrained.NumOrd (
   IntW (..),
   MaybeBounded (..),
   NumSpec (..),
@@ -461,7 +461,6 @@ genListWithSize ::
   , Arbitrary a
   , MaybeBounded a
   , Complete Integer
-  , TypeSpec Integer ~ NumSpec Integer
   ) =>
   Specification Integer ->
   Specification a ->

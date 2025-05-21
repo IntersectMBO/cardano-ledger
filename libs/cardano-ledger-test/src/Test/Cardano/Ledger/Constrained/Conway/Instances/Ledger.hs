@@ -120,7 +120,7 @@ import Constrained.API
 import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
-import Constrained.NumSpec
+import Constrained.NumOrd
 import Constrained.Spec.Map
 import Constrained.Spec.Tree ()
 import Constrained.SumList (genListWithSize)

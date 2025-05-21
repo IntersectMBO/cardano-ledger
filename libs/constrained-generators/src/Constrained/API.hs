@@ -179,7 +179,7 @@ import Constrained.Conformance (
 import Constrained.Core (NonEmpty ((:|)))
 import Constrained.FunctionSymbol
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
-import Constrained.NumSpec (
+import Constrained.NumOrd (
   MaybeBounded (..),
   NumLike,
   NumSpec (..),
@@ -188,6 +188,13 @@ import Constrained.NumSpec (
   addFn,
   cardinality,
   negateFn,
+  negate_,
+  (+.),
+  (-.),
+  (<.),
+  (<=.),
+  (>.),
+  (>=.),
  )
 import Constrained.Spec.Map (
   MapSpec (..),

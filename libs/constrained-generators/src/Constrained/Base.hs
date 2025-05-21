@@ -51,6 +51,7 @@ import Constrained.GenT (
   catMessageList,
   catMessages,
   fatalError,
+  pureGen,
  )
 import Constrained.Generic (
   HasSimpleRep,
@@ -89,6 +90,7 @@ import Data.Semigroup (Max (..), getMax)
 import Data.Typeable
 import GHC.Stack
 import Prettyprinter hiding (cat)
+import Test.QuickCheck (arbitrary, shrink)
 
 newtype TypeSpecF a = TypeSpecF (TypeSpec a)
 
@@ -542,6 +544,36 @@ class
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
+------------------------------------------------------------------------
+-- Some instances of HasSpec
+------------------------------------------------------------------------
+
+-- | NOTE: this instance means we have to use `ifElse`, `whenTrue`, and `whenFalse` instead
+-- of `caseOn` for `Bool`
+instance HasSpec Bool where
+  type TypeSpec Bool = ()
+  emptySpec = ()
+  combineSpec _ _ = typeSpec ()
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = equalSpec 2
+  cardinalTrueSpec = equalSpec 2
+  shrinkWithTypeSpec _ = shrink
+  conformsTo _ _ = True
+  toPreds _ _ = toPred True
+
+instance HasSpec () where
+  type TypeSpec () = ()
+  emptySpec = ()
+  combineSpec _ _ = typeSpec ()
+  _ `conformsTo` _ = True
+  shrinkWithTypeSpec _ _ = []
+  genFromTypeSpec _ = pure ()
+  toPreds _ _ = TruePred
+  cardinalTypeSpec _ = MemberSpec (pure 1)
+  cardinalTrueSpec = equalSpec 1
+  typeSpecOpt _ [] = TrueSpec
+  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
+
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)
@@ -869,23 +901,6 @@ sameFun (Fun f) (Fun g) = case cast f of
 
 instance Eq (Fun d r) where
   (==) = sameFun
-
--- =================================================================
--- A simple but important HasSpec instances. The  other
--- instances usually come in a file of their own.
-
-instance HasSpec () where
-  type TypeSpec () = ()
-  emptySpec = ()
-  combineSpec _ _ = typeSpec ()
-  _ `conformsTo` _ = True
-  shrinkWithTypeSpec _ _ = []
-  genFromTypeSpec _ = pure ()
-  toPreds _ _ = TruePred
-  cardinalTypeSpec _ = MemberSpec (pure 1)
-  cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
-  typeSpecOpt _ [] = TrueSpec
-  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
 
 -- ========================================================================
 -- Uni-directional, Match only patterns, for the Function Symbols in BaseW.

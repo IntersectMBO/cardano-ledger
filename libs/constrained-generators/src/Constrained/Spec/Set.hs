@@ -51,7 +51,7 @@ import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.List
-import Constrained.NumSpec
+import Constrained.NumOrd
 import Constrained.PrettyUtils
 import Constrained.SumList (knownUpperBound, maxFromSpec)
 import Constrained.Syntax

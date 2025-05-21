@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,10 +18,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 -- Random Natural, Arbitrary Natural, Uniform Natural
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.NumSpec where
+module Constrained.NumOrd where
 
 import Constrained.AbstractSyntax
 import Constrained.Base (
@@ -28,9 +30,11 @@ import Constrained.Base (
   HOLE (..),
   HasSpec (..),
   Logic (..),
+  Pred,
   Specification,
   Term,
   appTerm,
+  constrained,
   equalSpec,
   explainSpecOpt,
   flipCtx,
@@ -42,8 +46,9 @@ import Constrained.Base (
   pattern Unary,
   pattern (:<:),
  )
+import Constrained.Conformance
 import Constrained.Conformance ()
-import Constrained.Core (unionWithMaybe)
+import Constrained.Core (Value (..), unionWithMaybe)
 import Constrained.FunctionSymbol
 import Constrained.GenT (
   GenT,
@@ -56,9 +61,11 @@ import Constrained.Generic (
   HasSimpleRep (..),
   SimpleRep,
  )
+import Constrained.List
 import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
+import Data.Foldable
 import Data.Kind
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -74,32 +81,32 @@ import System.Random.Stateful (Random (..), Uniform (..))
 import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
 -- ====================================================================
--- NumOrdW  witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
+-- OrdW  witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
 -- The other operations are defined in terms of these. These things
 -- will eventually get Logic instances
 -- =====================================================================
 
-data NumOrdW (dom :: [Type]) (rng :: Type) where
-  LessOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
-  LessW :: OrdLike a => NumOrdW '[a, a] Bool
-  GreaterOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
-  GreaterW :: OrdLike a => NumOrdW '[a, a] Bool
+data OrdW (dom :: [Type]) (rng :: Type) where
+  LessOrEqualW :: OrdLike a => OrdW '[a, a] Bool
+  LessW :: OrdLike a => OrdW '[a, a] Bool
+  GreaterOrEqualW :: OrdLike a => OrdW '[a, a] Bool
+  GreaterW :: OrdLike a => OrdW '[a, a] Bool
 
-deriving instance Eq (NumOrdW ds r)
+deriving instance Eq (OrdW ds r)
 
-instance Show (NumOrdW ds r) where
+instance Show (OrdW ds r) where
   show LessOrEqualW = "<=."
   show LessW = "<."
   show GreaterOrEqualW = ">=."
   show GreaterW = ">."
 
-instance Semantics NumOrdW where
+instance Semantics OrdW where
   semantics LessOrEqualW = (<=)
   semantics LessW = (<)
   semantics GreaterW = (>)
   semantics GreaterOrEqualW = (>=)
 
-instance Syntax NumOrdW where
+instance Syntax OrdW where
   isInfix _ = True
 
 -- =============================================
@@ -474,19 +481,7 @@ instance Num (NumSpec Integer) where
 --   So an ascending Sorted [T x] would all the NegInf on the left and all the PosInf on the right, with
 --   the Ok's sorted in between. I.e. [NegInf, NegInf, Ok 3, Ok 6, Ok 12, Pos Inf]
 data T x = NegInf | Ok x | PosInf
-  deriving (Show)
-
-instance Ord x => Eq (T x) where
-  x == y = compare x y == EQ
-
-instance Ord x => Ord (T x) where
-  compare NegInf NegInf = EQ
-  compare NegInf _ = LT
-  compare (Ok _) NegInf = GT
-  compare (Ok x) (Ok y) = compare x y
-  compare (Ok _) PosInf = LT
-  compare PosInf PosInf = EQ
-  compare PosInf _ = GT
+  deriving (Show, Eq, Ord)
 
 -- \| Conversion between (T x) and (Maybe x)
 unT :: T x -> Maybe x
@@ -636,18 +631,20 @@ cardinality SuspendedSpec {} = cardinalTrueSpec @a
 --   cardinalTypeSpec :: HasSpec a => TypeSpec a -> Specification Integer
 --   for types 'n' such that (TypeSpec n ~ NumSpec n)
 cardinalNumSpec ::
-  forall n. (Integral n, MaybeBounded n) => NumSpec n -> Specification Integer
+  forall n. (Integral n, MaybeBounded n, HasSpec n) => NumSpec n -> Specification Integer
 cardinalNumSpec (NumSpecInterval (Just lo) (Just hi)) =
-  if hi >= lo then MemberSpec (pure (toInteger hi - toInteger lo + 1)) else MemberSpec (pure 0)
+  if hi >= lo
+    then equalSpec (toInteger hi - toInteger lo + 1)
+    else equalSpec 0
 cardinalNumSpec (NumSpecInterval Nothing (Just hi)) =
   case lowerBound @n of
-    Just lo -> MemberSpec (pure (toInteger hi - toInteger lo))
+    Just lo -> equalSpec (toInteger hi - toInteger lo)
     Nothing -> TrueSpec
 cardinalNumSpec (NumSpecInterval (Just lo) Nothing) =
   case upperBound @n of
-    Just hi -> MemberSpec (pure (toInteger hi - toInteger lo))
+    Just hi -> equalSpec (toInteger hi - toInteger lo)
     Nothing -> TrueSpec
-cardinalNumSpec (NumSpecInterval Nothing Nothing) = TrueSpec
+cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 
 -- ====================================================================
 -- Now the operations on Numbers
@@ -771,3 +768,245 @@ addFn = appTerm AddW
 
 negateFn :: forall a. NumLike a => Term a -> Term a
 negateFn = appTerm NegateW
+
+infix 4 +.
+
+(+.) :: NumLike a => Term a -> Term a -> Term a
+(+.) = addFn
+
+negate_ :: NumLike a => Term a -> Term a
+negate_ = negateFn
+
+infix 4 -.
+
+(-.) :: Numeric n => Term n -> Term n -> Term n
+(-.) x y = addFn x (negateFn y)
+
+toPredsNumSpec ::
+  OrdLike n =>
+  Term n ->
+  NumSpec n ->
+  Pred
+toPredsNumSpec v (NumSpecInterval ml mu) =
+  fold $
+    [Assert $ Lit l <=. v | l <- maybeToList ml]
+      ++ [Assert $ v <=. Lit u | u <- maybeToList mu]
+
+infixr 4 <=.
+
+(<=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(<=.) = appTerm LessOrEqualW
+
+infixr 4 <.
+
+(<.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(<.) = appTerm LessW
+
+infixr 4 >=.
+
+(>=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(>=.) = appTerm GreaterOrEqualW
+
+infixr 4 >.
+
+(>.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(>.) = appTerm GreaterW
+
+instance Logic OrdW where
+  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
+  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
+  propagate _ _ TrueSpec = TrueSpec
+  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate GreaterW (HOLE :? x :> Nil) spec =
+    propagate LessW (x :! Unary HOLE) spec
+  propagate GreaterW (x :! Unary HOLE) spec =
+    propagate LessW (HOLE :? x :> Nil) spec
+  propagate LessOrEqualW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessOrEqualW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate LessOrEqualW (Value x :! Unary HOLE) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessOrEqualW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate LessOrEqualW (HOLE :? Value l :> Nil) spec =
+    caseBoolSpec spec $ \case True -> leqSpec l; False -> gtSpec l
+  propagate LessOrEqualW (Value l :! Unary HOLE) spec =
+    caseBoolSpec spec $ \case True -> geqSpec l; False -> ltSpec l
+  propagate GreaterOrEqualW (HOLE :? Value x :> Nil) spec =
+    propagate LessOrEqualW (Value x :! Unary HOLE) spec
+  propagate GreaterOrEqualW (x :! Unary HOLE) spec =
+    propagate LessOrEqualW (HOLE :? x :> Nil) spec
+  propagate LessW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate LessW (Value x :! Unary HOLE) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate LessW (HOLE :? Value l :> Nil) spec =
+    caseBoolSpec spec $ \case True -> ltSpec l; False -> geqSpec l
+  propagate LessW (Value l :! Unary HOLE) spec =
+    caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
+
+caseBoolSpec ::
+  HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpec spec cont = case possibleValues spec of
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+  [b] -> cont b
+  _ -> mempty
+  where
+    -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
+    -- This will always get the same result, and probably faster since running 2
+    -- conformsToSpec on True and False takes less time than simplifying the spec.
+    -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?
+    possibleValues s = filter (flip conformsToSpec s) [True, False]
+
+------------------------------------------------------------------------
+-- Instances of HasSpec for numeric types
+------------------------------------------------------------------------
+
+instance HasSpec Integer where
+  type TypeSpec Integer = NumSpec Integer
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Int where
+  type TypeSpec Int = NumSpec Int
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec (Ratio Integer) where
+  type TypeSpec (Ratio Integer) = NumSpec (Ratio Integer)
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec _ = TrueSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Natural where
+  type TypeSpec Natural = NumSpec Natural
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec (NumSpecInterval (fromMaybe 0 -> lo) (Just hi)) =
+    if lo < hi
+      then equalSpec (fromIntegral $ hi - lo + 1)
+      else equalSpec 0
+  cardinalTypeSpec _ = TrueSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Word8 where
+  type TypeSpec Word8 = NumSpec Word8
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  cardinalTrueSpec = equalSpec 256
+  typeSpecOpt = notInNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Word16 where
+  type TypeSpec Word16 = NumSpec Word16
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  cardinalTrueSpec = equalSpec 65536
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Word32 where
+  type TypeSpec Word32 = NumSpec Word32
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Word64 where
+  type TypeSpec Word64 = NumSpec Word64
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Int8 where
+  type TypeSpec Int8 = NumSpec Int8
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTrueSpec = equalSpec 256
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Int16 where
+  type TypeSpec Int16 = NumSpec Int16
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  cardinalTrueSpec = equalSpec 65536
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Int32 where
+  type TypeSpec Int32 = NumSpec Int32
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Int64 where
+  type TypeSpec Int64 = NumSpec Int64
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
+  guardTypeSpec = guardNumSpec
+
+instance HasSpec Float where
+  type TypeSpec Float = NumSpec Float
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+  cardinalTypeSpec _ = TrueSpec
+  guardTypeSpec = guardNumSpec

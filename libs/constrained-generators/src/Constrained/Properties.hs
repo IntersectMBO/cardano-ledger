@@ -51,9 +51,9 @@ import Constrained.List (
   uncurryList,
   uncurryList_,
  )
-import Constrained.NumSpec (
+import Constrained.NumOrd (
   IntW (..),
-  NumOrdW (..),
+  OrdW (..),
  )
 import Constrained.PrettyUtils
 import Constrained.Spec.Map (
@@ -288,7 +288,7 @@ instance QC.Arbitrary TestableFn where
       , TestableFn $ InjRightW @Int @Int
       , TestableFn $ InjLeftW @Int @Int
       , TestableFn $ ElemW @Int
-      , TestableFn $ FromGenericW @Bool -- These require GenericC constraints
+      , TestableFn $ FromGenericW @(Either Int Bool)
       , TestableFn $ ToGenericW @(Either Int Bool)
       , -- data SetW
         TestableFn $ SingletonW @Int
@@ -300,7 +300,7 @@ instance QC.Arbitrary TestableFn where
       , -- data BoolW
         TestableFn $ NotW
       , TestableFn $ OrW
-      , -- data NumOrdW
+      , -- data OrdW
         TestableFn $ LessW @Int
       , TestableFn $ LessOrEqualW @Int
       , -- data MapW

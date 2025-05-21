@@ -48,9 +48,8 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Constrained.API
 import Constrained.Base
 import Constrained.GenT
-import Constrained.NumSpec
+import Constrained.NumOrd
 import Constrained.SumList (genListWithSize)
-import Constrained.TheKnot
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
 import Data.Maybe
