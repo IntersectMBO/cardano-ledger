@@ -17,12 +17,20 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Plutus
+import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Plutus (
+  Language (..),
+  hashPlutusScript,
+  mkDatum,
+  withSLanguage,
+ )
 import qualified Data.Map.Strict as Map
 import Lens.Micro
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
+import Test.Cardano.Ledger.Plutus.Examples
 
 spec ::
   forall era.
@@ -86,7 +94,13 @@ spec = describe "Invalid" $ do
         else submit
 
   it "Inline datum failing script" $ do
-    const $ pendingWith "not implemented yet"
+    let scriptHash = withSLanguage PlutusV2 $ hashPlutusScript . evenDatum
+        txOut =
+          mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+            & datumTxOutL .~ mkDatum (PV1.I 1)
+        tx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
+    txIn <- txInAt (0 :: Int) <$> submitTx tx
+    submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
   it "Use a collateral output" $ do
     const $ pendingWith "not implemented yet"
