@@ -15,10 +15,10 @@ import Cardano.Ledger.Alonzo.Core (
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
-  ConwayGovState,
+  ConwayGovState (..),
   mkEnactState,
   rsEnactStateL,
-  setCompleteDRepPulsingState,
+  setCompleteDRepPulsingState, Proposals, DRepPulsingState,
  )
 import Cardano.Ledger.Conway.State (ConwayInstantStake (..), EraCertState (..))
 import Cardano.Ledger.Core (
@@ -54,6 +54,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~), (^.))
+import Data.Coerce (coerce)
 
 type instance TranslationContext DijkstraEra = ()
 
@@ -149,11 +150,24 @@ translateCertState ctx scert =
     & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
     & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
 
-instance TranslateEra DijkstraEra ConwayGovState where
+instance TranslateEra DijkstraEra Proposals where
   translateEra _ _ = undefined
 
-instance TranslateEra DijkstraEra ConwayInstantStake where
+instance TranslateEra DijkstraEra DRepPulsingState where
   translateEra _ _ = undefined
+
+instance TranslateEra DijkstraEra ConwayGovState where
+  translateEra ctxt ConwayGovState {..} =
+    pure $
+      ConwayGovState
+        { cgsCommittee = coerce cgsCommittee
+        , cgsProposals = translateEra' ctxt cgsProposals
+        , cgsConstitution = coerce cgsConstitution
+        , cgsCurPParams = coerce cgsCurPParams
+        , cgsPrevPParams = coerce cgsPrevPParams
+        , cgsFuturePParams = translateEra' ctxt cgsFuturePParams
+        , cgsDRepPulsingState = translateEra' ctxt cgsDRepPulsingState
+        }
 
 instance TranslateEra DijkstraEra UTxOState where
   translateEra ctxt us =
@@ -163,7 +177,7 @@ instance TranslateEra DijkstraEra UTxOState where
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
-        , API.utxosInstantStake = translateEra' ctxt $ API.utxosInstantStake us
+        , API.utxosInstantStake = coerce $ API.utxosInstantStake us
         , API.utxosDonation = API.utxosDonation us
         }
 

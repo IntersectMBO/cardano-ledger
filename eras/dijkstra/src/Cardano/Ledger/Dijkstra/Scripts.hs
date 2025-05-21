@@ -24,15 +24,21 @@ import Cardano.Ledger.Allegra.Scripts (
   mkRequireSignatureTimelock,
   mkTimeExpireTimelock,
   mkTimeStartTimelock,
+  translateTimelock,
  )
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoScript (..),
+  AsIx (..),
   alonzoScriptPrefixTag,
  )
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Scripts (ConwayEraScript (..), ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.Scripts (
+  ConwayEraScript (..),
+  ConwayPlutusPurpose (..),
+  PlutusScript (..),
+ )
 import Cardano.Ledger.Core (EraScript (..), SafeToHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
@@ -48,7 +54,9 @@ instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
   type NativeScript DijkstraEra = Timelock DijkstraEra
 
-  upgradeScript = undefined
+  upgradeScript = \case
+    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    PlutusScript ps -> PlutusScript $ MkDijkstraPlutusScript ps
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
@@ -58,9 +66,9 @@ instance EraScript DijkstraEra where
   fromNativeScript = TimelockScript
 
 instance MemPack (PlutusScript DijkstraEra) where
-  packedByteCount = undefined
-  packM = undefined
-  unpackM = undefined
+  packedByteCount = packedByteCount . unDijkstraPlutusScript
+  packM = packM . unDijkstraPlutusScript
+  unpackM = MkDijkstraPlutusScript <$> unpackM
 
 instance AlonzoEraScript DijkstraEra where
   newtype PlutusScript DijkstraEra = MkDijkstraPlutusScript
@@ -103,7 +111,13 @@ instance AlonzoEraScript DijkstraEra where
   toRewardingPurpose (ConwayRewarding i) = Just i
   toRewardingPurpose _ = Nothing
 
-  upgradePlutusPurposeAsIx = undefined
+  upgradePlutusPurposeAsIx = \case
+    ConwaySpending (AsIx ix) -> ConwaySpending (AsIx ix)
+    ConwayMinting (AsIx ix) -> ConwayMinting (AsIx ix)
+    ConwayCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
+    ConwayRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
+    ConwayVoting (AsIx ix) -> ConwayVoting (AsIx ix)
+    ConwayProposing (AsIx ix) -> ConwayProposing (AsIx ix)
 
 instance ConwayEraScript DijkstraEra where
   mkVotingPurpose = ConwayVoting

@@ -629,63 +629,63 @@ isGovActionWithPurpose govAction =
     NewConstitution {} -> toGovActionPurpose @p == ConstitutionPurpose
     InfoAction -> False
 
-newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
+newtype GovPurposeId (p :: GovActionPurpose) = GovPurposeId
   { unGovPurposeId :: GovActionId
   }
   deriving (Eq, Ord, Generic)
 
-type role GovPurposeId nominal nominal
+type role GovPurposeId nominal
 
 deriving newtype instance
-  (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
+  Typeable p => EncCBOR (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance
-  (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
+  Typeable p => DecCBOR (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => NoThunks (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance NoThunks (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => NFData (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance NFData (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => ToJSONKey (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance ToJSONKey (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => ToJSON (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance ToJSON (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => Show (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Show (GovPurposeId (p :: GovActionPurpose))
 
 -- | Abstract data type for representing relationship of governance action with the same purpose
-data GovRelation (f :: Type -> Type) era = GovRelation
-  { grPParamUpdate :: !(f (GovPurposeId 'PParamUpdatePurpose era))
-  , grHardFork :: !(f (GovPurposeId 'HardForkPurpose era))
-  , grCommittee :: !(f (GovPurposeId 'CommitteePurpose era))
-  , grConstitution :: !(f (GovPurposeId 'ConstitutionPurpose era))
+data GovRelation (f :: Type -> Type) = GovRelation
+  { grPParamUpdate :: !(f (GovPurposeId 'PParamUpdatePurpose))
+  , grHardFork :: !(f (GovPurposeId 'HardForkPurpose))
+  , grCommittee :: !(f (GovPurposeId 'CommitteePurpose))
+  , grConstitution :: !(f (GovPurposeId 'ConstitutionPurpose))
   }
   deriving (Generic)
 
 deriving instance
-  (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Eq (GovRelation f era)
+  (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Eq (GovRelation f)
 
 deriving instance
-  (forall p. Show (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Show (GovRelation f era)
+  (forall p. Show (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Show (GovRelation f)
 
 instance
-  (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NoThunks (GovRelation f era)
+  (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  NoThunks (GovRelation f)
 
 instance
-  (forall p. Default (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Default (GovRelation f era)
+  (forall p. Default (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Default (GovRelation f)
 
 instance
-  (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NFData (GovRelation f era)
+  (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  NFData (GovRelation f)
   where
   rnf (GovRelation a b c d) = a `deepseq` b `deepseq` c `deepseq` rnf d
 
 instance
-  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Semigroup (GovRelation f era)
+  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Semigroup (GovRelation f)
   where
   (<>) p1 p2 =
     GovRelation
@@ -696,8 +696,8 @@ instance
       }
 
 instance
-  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Monoid (GovRelation f era)
+  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Monoid (GovRelation f)
   where
   mempty =
     GovRelation
@@ -708,11 +708,10 @@ instance
       }
 
 instance
-  ( Era era
-  , Typeable f
-  , (forall p. Typeable p => DecCBOR (f (GovPurposeId (p :: GovActionPurpose) era)))
+  ( Typeable f
+  , (forall p. Typeable p => DecCBOR (f (GovPurposeId (p :: GovActionPurpose))))
   ) =>
-  DecCBOR (GovRelation f era)
+  DecCBOR (GovRelation f)
   where
   decCBOR =
     decodeRecordNamed
@@ -721,11 +720,10 @@ instance
       (GovRelation <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR)
 
 instance
-  ( Era era
-  , Typeable f
-  , (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose) era)))
+  ( Typeable f
+  , (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose))))
   ) =>
-  EncCBOR (GovRelation f era)
+  EncCBOR (GovRelation f)
   where
   encCBOR govPurpose@(GovRelation _ _ _ _) =
     let GovRelation {..} = govPurpose
@@ -737,9 +735,9 @@ instance
 
 toPrevGovActionIdsPairs ::
   ( KeyValue e a
-  , (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose) era)))
+  , (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose))))
   ) =>
-  GovRelation f era ->
+  GovRelation f ->
   [a]
 toPrevGovActionIdsPairs govPurpose@(GovRelation _ _ _ _) =
   let GovRelation {..} = govPurpose
@@ -750,25 +748,25 @@ toPrevGovActionIdsPairs govPurpose@(GovRelation _ _ _ _) =
       ]
 
 instance
-  (Era era, (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose) era)))) =>
-  ToJSON (GovRelation f era)
+  (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  ToJSON (GovRelation f)
   where
   toJSON = object . toPrevGovActionIdsPairs
   toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
 
-grPParamUpdateL :: Lens' (GovRelation f era) (f (GovPurposeId 'PParamUpdatePurpose era))
+grPParamUpdateL :: Lens' (GovRelation f) (f (GovPurposeId 'PParamUpdatePurpose))
 grPParamUpdateL = lens grPParamUpdate $ \x y -> x {grPParamUpdate = y}
 
-grHardForkL :: Lens' (GovRelation f era) (f (GovPurposeId 'HardForkPurpose era))
+grHardForkL :: Lens' (GovRelation f) (f (GovPurposeId 'HardForkPurpose))
 grHardForkL = lens grHardFork $ \x y -> x {grHardFork = y}
 
-grCommitteeL :: Lens' (GovRelation f era) (f (GovPurposeId 'CommitteePurpose era))
+grCommitteeL :: Lens' (GovRelation f) (f (GovPurposeId 'CommitteePurpose))
 grCommitteeL = lens grCommittee $ \x y -> x {grCommittee = y}
 
-grConstitutionL :: Lens' (GovRelation f era) (f (GovPurposeId 'ConstitutionPurpose era))
+grConstitutionL :: Lens' (GovRelation f) (f (GovPurposeId 'ConstitutionPurpose))
 grConstitutionL = lens grConstitution $ \x y -> x {grConstitution = y}
 
-hoistGovRelation :: (forall a. f a -> g a) -> GovRelation f era -> GovRelation g era
+hoistGovRelation :: (forall a. f a -> g a) -> GovRelation f -> GovRelation g
 hoistGovRelation f gr =
   GovRelation
     { grPParamUpdate = f (grPParamUpdate gr)
@@ -784,9 +782,9 @@ withGovActionParent ::
   a ->
   -- | Function that will be applied to a lens and a parent
   ( forall p.
-    (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
-    StrictMaybe (GovPurposeId p era) -> -- GovAction Parent
-    GovPurposeId p era ->
+    (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
+    StrictMaybe (GovPurposeId p) -> -- GovAction Parent
+    GovPurposeId p ->
     a
   ) ->
   a
@@ -806,7 +804,7 @@ data GovAction era
   = ParameterChange
       -- | Previous governance action id of `ParameterChange` type, which corresponds to
       -- `PParamUpdatePurpose`.
-      !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+      !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
       -- | Proposed changes to PParams
       !(PParamsUpdate era)
       -- | Policy hash protection
@@ -814,7 +812,7 @@ data GovAction era
   | HardForkInitiation
       -- | Previous governance action id of `HardForkInitiation` type, which corresponds
       -- to `HardForkPurpose`
-      !(StrictMaybe (GovPurposeId 'HardForkPurpose era))
+      !(StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Proposed new protocol version
       !ProtVer
   | TreasuryWithdrawals
@@ -825,11 +823,11 @@ data GovAction era
   | NoConfidence
       -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose))
   | UpdateCommittee
       -- | Previous governance action id of `UpdateCommittee` or `NoConfidence` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose))
       -- | Constitutional Committe members to be removed
       !(Set (Credential 'ColdCommitteeRole))
       -- | Constitutional committee members to be added
@@ -839,7 +837,7 @@ data GovAction era
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to
       -- `ConstitutionPurpose`
-      !(StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+      !(StrictMaybe (GovPurposeId 'ConstitutionPurpose))
       !(Constitution era)
   | InfoAction
   deriving (Generic, Ord)

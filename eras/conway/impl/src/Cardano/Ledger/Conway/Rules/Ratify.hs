@@ -360,7 +360,7 @@ ratifyTransition = do
 
 -- | Check that the previous governance action id specified in the proposal
 -- does match the last one of the same purpose that was enacted.
-prevActionAsExpected :: GovActionState era -> GovRelation StrictMaybe era -> Bool
+prevActionAsExpected :: GovActionState era -> GovRelation StrictMaybe -> Bool
 prevActionAsExpected gas prevGovActionIds =
   withGovActionParent gas True $ \govRelationL parent _ ->
     parent == prevGovActionIds ^. govRelationL

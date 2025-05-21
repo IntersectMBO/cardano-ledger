@@ -287,7 +287,7 @@ cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
 cgsFuturePParamsL =
   lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
 
-govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
+govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
