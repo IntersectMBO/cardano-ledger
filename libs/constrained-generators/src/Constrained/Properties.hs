@@ -288,7 +288,7 @@ instance QC.Arbitrary TestableFn where
       , TestableFn $ InjRightW @Int @Int
       , TestableFn $ InjLeftW @Int @Int
       , TestableFn $ ElemW @Int
-      , TestableFn $ FromGenericW @Bool -- These require GenericC constraints
+      , TestableFn $ FromGenericW @(Either Int Bool)
       , TestableFn $ ToGenericW @(Either Int Bool)
       , -- data SetW
         TestableFn $ SingletonW @Int

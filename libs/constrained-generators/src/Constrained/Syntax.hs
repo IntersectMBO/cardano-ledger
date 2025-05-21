@@ -583,7 +583,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 -- ==================================================
 
 -- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: HasSpec Bool => Pred -> Pred
+letSubexpressionElimination :: Pred -> Pred
 letSubexpressionElimination = go []
   where
     adjustSub :: HasSpec a => Var a -> Subst -> Subst
@@ -792,8 +792,7 @@ reify t f body =
     , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
 
--- | requires (HasSpec Bool)
-assertReified :: (HasSpec Bool, HasSpec a) => Term a -> (a -> Bool) -> Pred
+assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred
 -- Note, it is necessary to introduce the extra variable from the `exists` here
 -- to make things like `assertRealMultiple` work, if you don't have it then the
 -- `reifies` isn't a defining constraint for anything any more.
