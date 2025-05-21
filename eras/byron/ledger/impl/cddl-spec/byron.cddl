@@ -80,12 +80,12 @@ vssdec = bytes ; This is encoded using the 'Binary' instance
 vssproof = [bytes, bytes, bytes, [* bytes]] ; This is encoded using the
                                             ; 'Binary' instance for Scrape.Proof
 
-ssccomm = [pubkey, [{vsspubkey => vssenc},vssproof], signature]
+ssccomm = [pubkey, [{* vsspubkey => vssenc},vssproof], signature]
 ssccomms = #6.258([* ssccomm])
 
-sscopens = {stakeholderid => vsssec}
+sscopens = {* stakeholderid => vsssec}
 
-sscshares = {addressid => [addressid, [* vssdec]]}
+sscshares = {* addressid => [addressid, [* vssdec]]}
 
 ssccert = [vsspubkey, pubkey, epochid, signature]
 ssccerts = #6.258([* ssccert])
