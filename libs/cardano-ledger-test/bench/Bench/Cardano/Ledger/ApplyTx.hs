@@ -18,7 +18,7 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Binary (DecCBOR (decCBOR), decodeFull)
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), decodeFull, decodeFullAnnotator)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -37,7 +37,7 @@ import Criterion
 import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
-import Test.Cardano.Ledger.Alonzo.Binary.Annotator (Annotator, decodeFullAnnotator)
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -119,6 +119,7 @@ deserialiseTxEra ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , EraStake era
   , EraGov era
+  , DecCBOR (Tx era)
   ) =>
   Proxy era ->
   Benchmark
@@ -138,7 +139,6 @@ deserialiseAnnTxEra ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , EraStake era
   , EraGov era
-  , DecCBOR (Annotator (Tx era))
   ) =>
   Proxy era ->
   Benchmark

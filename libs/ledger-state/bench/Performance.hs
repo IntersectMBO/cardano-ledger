@@ -211,7 +211,7 @@ extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 decodeTx :: HasCallStack => ByteString -> Tx CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
-  tx <- first show $ decodeFull (eraProtVerHigh @BabbageEra) bsl
+  tx <- first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" decCBOR bsl
   -- TODO: remove this after the transactions below are updated
   first show $ upgradeTx tx
 
