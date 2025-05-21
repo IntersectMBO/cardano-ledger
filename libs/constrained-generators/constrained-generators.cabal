@@ -39,7 +39,7 @@ library
     Constrained.Generic
     Constrained.Graph
     Constrained.List
-    Constrained.NumSpec
+    Constrained.NumOrd
     Constrained.PrettyUtils
     Constrained.Properties
     Constrained.Spec.Map

@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -78,7 +79,13 @@ import Constrained.Generic (
  )
 import Constrained.Graph (
   Graph (..),
+  deleteNode,
+  dependencies,
+  nodes,
+  opGraph,
+  subtractGraph,
  )
+import Constrained.Graph qualified as Graph
 import Constrained.List (
   List (..),
   foldMapList,
@@ -90,20 +97,20 @@ import Constrained.List (
 import Constrained.PrettyUtils
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust, isNothing)
-import qualified Data.Monoid as Monoid
+import Data.Monoid qualified as Monoid
 import Data.Orphans ()
 import Data.Semigroup (Any (..))
-import qualified Data.Semigroup as Semigroup
+import Data.Semigroup qualified as Semigroup
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Typeable
-import qualified Language.Haskell.TH as TH
-import qualified Language.Haskell.TH.Quote as TH
+import Language.Haskell.TH qualified as TH
+import Language.Haskell.TH.Quote qualified as TH
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Prelude hiding (pred)
@@ -583,7 +590,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 -- ==================================================
 
 -- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: HasSpec Bool => Pred -> Pred
+letSubexpressionElimination :: Pred -> Pred
 letSubexpressionElimination = go []
   where
     adjustSub :: HasSpec a => Var a -> Subst -> Subst
@@ -792,8 +799,7 @@ reify t f body =
     , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
 
--- | requires (HasSpec Bool)
-assertReified :: (HasSpec Bool, HasSpec a) => Term a -> (a -> Bool) -> Pred
+assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred
 -- Note, it is necessary to introduce the extra variable from the `exists` here
 -- to make things like `assertRealMultiple` work, if you don't have it then the
 -- `reifies` isn't a defining constraint for anything any more.
@@ -951,3 +957,75 @@ regularizeNames (SuspendedSpec x p) =
   where
     x' :-> p' = regularizeBinder (x :-> p)
 regularizeNames spec = spec
+
+------------------------------------------------------------------------
+-- Dependency Graphs
+------------------------------------------------------------------------
+
+type DependGraph = Graph.Graph Name
+
+dependency :: HasVariables t => Name -> t -> DependGraph
+dependency x (freeVarSet -> xs) = Graph.dependency x xs
+
+irreflexiveDependencyOn ::
+  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
+irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
+
+noDependencies :: HasVariables t => t -> DependGraph
+noDependencies (freeVarSet -> xs) = Graph.noDependencies xs
+
+type Hints = DependGraph
+
+respecting :: Hints -> DependGraph -> DependGraph
+respecting hints g = g `subtractGraph` opGraph hints
+
+solvableFrom :: Name -> Set Name -> DependGraph -> Bool
+solvableFrom x s g =
+  let less = dependencies x g
+   in s `Set.isSubsetOf` less && not (x `Set.member` less)
+
+computeDependencies :: Pred -> DependGraph
+computeDependencies = \case
+  ElemPred _bool term _xs -> computeTermDependencies term
+  Monitor {} -> mempty
+  Subst x t p -> computeDependencies (substitutePred x t p)
+  Assert t -> computeTermDependencies t
+  Reifies t' t _ -> t' `irreflexiveDependencyOn` t
+  ForAll set b ->
+    let innerG = computeBinderDependencies b
+     in innerG <> set `irreflexiveDependencyOn` nodes innerG
+  x `DependsOn` y -> x `irreflexiveDependencyOn` y
+  Case t bs ->
+    let innerG = foldMapList (computeBinderDependencies . thing) bs
+     in innerG <> t `irreflexiveDependencyOn` nodes innerG
+  When b p ->
+    let pG = computeDependencies p
+        oG = nodes pG `irreflexiveDependencyOn` b
+     in oG <> pG
+  TruePred -> mempty
+  FalsePred {} -> mempty
+  And ps -> foldMap computeDependencies ps
+  Exists _ b -> computeBinderDependencies b
+  Let t b -> noDependencies t <> computeBinderDependencies b
+  GenHint _ t -> noDependencies t
+  Explain _ p -> computeDependencies p
+
+computeBinderDependencies :: Binder a -> DependGraph
+computeBinderDependencies (x :-> p) =
+  deleteNode (Name x) $ computeDependencies p
+
+computeTermDependencies :: Term a -> DependGraph
+computeTermDependencies = fst . computeTermDependencies'
+
+computeTermDependencies' :: Term a -> (DependGraph, Set Name)
+computeTermDependencies' = \case
+  (App _ args) -> go args
+  Lit {} -> (mempty, mempty)
+  (V x) -> (noDependencies (Name x), Set.singleton (Name x))
+  where
+    go :: List Term as -> (DependGraph, Set Name)
+    go Nil = (mempty, mempty)
+    go (t :> ts) =
+      let (gr, ngr) = go ts
+          (tgr, ntgr) = computeTermDependencies' t
+       in (ntgr `irreflexiveDependencyOn` ngr <> tgr <> gr, ngr <> ntgr)

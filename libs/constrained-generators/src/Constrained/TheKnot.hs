@@ -80,7 +80,6 @@ import Constrained.Base (
   toPred,
   toPreds,
   typeSpec,
-  typeSpecOpt,
   pattern FromGeneric,
   pattern TypeSpec,
   pattern Unary,
@@ -144,14 +143,9 @@ import Constrained.Generic (
  )
 import Constrained.Graph (
   deleteNode,
-  dependencies,
-  nodes,
-  opGraph,
-  subtractGraph,
   topsort,
   transitiveClosure,
  )
-import qualified Constrained.Graph as Graph
 import Constrained.List (
   -- All,
   FunTy,
@@ -165,29 +159,17 @@ import Constrained.List (
   mapMList,
   uncurryList_,
  )
-import Constrained.NumSpec (
+import Constrained.NumOrd (
   IntW (..),
   NumLike,
-  NumOrdW (..),
   NumSpec (..),
   Numeric,
-  OrdLike,
-  addFn,
   addSpecInt,
-  cardinalNumSpec,
   cardinality,
-  combineNumSpec,
-  conformsToNumSpec,
-  emptyNumSpec,
-  genFromNumSpec,
+  caseBoolSpec,
   geqSpec,
-  gtSpec,
-  guardNumSpec,
   leqSpec,
-  ltSpec,
-  negateFn,
-  notInNumSpec,
-  shrinkWithNumSpec,
+  (<=.),
  )
 import Constrained.PrettyUtils
 import Constrained.SumList
@@ -204,7 +186,6 @@ import Data.List (isPrefixOf, isSuffixOf, nub, partition, (\\))
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
-import Data.Ratio
 import Data.Semigroup (Any (..), getSum)
 import qualified Data.Semigroup as Semigroup
 import Data.Set (Set)
@@ -222,32 +203,34 @@ import Test.QuickCheck.Random hiding (left, right)
 import Prelude hiding (cycle, pred)
 
 -- ===================================================================================
--- We call this module TheKnot because it binds a mutually recursive set of things
--- The heart of TheKNot is "genFromSpecT" the user interface to generating random instances of a Spec.
--- It is mutually recursive with the 3 simplest HasSpec instances (Bool,Integer,Sum), and 'simplifySpec'.
--- Every HasSpec instance is dependant on HasSpec Integer because the Cardinality properties
--- are expressed in terms of Integer. Generic HasSpec instances (including Bool) are
--- implemented in terms of a Sum of Product Simple Rep. And every HasSpec instance has
--- a genFromTypeSpec method, on which GenFromSpecT depends. There is no avoiding the Knot.
--- The only saving grace, is that genFromTypeSpec is a HasSpec method, so new things
--- depending only on things defined here, or things defined in the same file as the
--- the HasSpec instance can escape from TheKnot.
+-- We call this module TheKnot because it binds a mutually recursive set of
+-- things The heart of TheKNot is "genFromSpecT" the user interface to
+-- generating random instances of a Spec.  It is mutually recursive with the 3
+-- simplest HasSpec instances (Bool,Integer,Sum), and 'simplifySpec'.  Every
+-- HasSpec instance is dependant on HasSpec Integer because the Cardinality
+-- properties are expressed in terms of Integer. Generic HasSpec instances are
+-- implemented in terms of a Sum of Product Simple Rep. And every HasSpec
+-- instance has a genFromTypeSpec method, on which GenFromSpecT depends. There
+-- is no avoiding the Knot.  The only saving grace, is that genFromTypeSpec is
+-- a HasSpec method, so new things depending only on things defined here, or
+-- things defined in the same file as the the HasSpec instance can escape from
+-- TheKnot.
 --
 -- Here is a graph of the dependencies.
 --
 --      +---->HasSpec Integer
---      |      ^            ^
---      |      |             \
---      |      v              \
---      |     HasSpec Bool---->HasSpec Sum
---      |        ^  \               /   ^
---      |        |   \             /    |
---      <.       |    \           /     |
---      <=.      |     \         /      |
---      |        |      v       v       |
---      |        |      genFromSpecT    |
---      |        |            |         |
---      |        |            |         |
+--      |                   ^
+--      |                    \
+--      |                     \
+--      |                      HasSpec Sum
+--      |                           /   ^
+--      |                          /    |
+--      <.                        /     |
+--      <=.                      /      |
+--      |                       v       |
+--      |               genFromSpecT    |
+--      |                     |         |
+--      |                     |         |
 --      +-------caseBoolSpec  |    caseSum
 --                      ^     |    ^
 --                      |     |    |
@@ -392,7 +375,7 @@ instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => HasSpec (Sum a b) wh
   alternateShow (SumSpec h left right) =
     BinaryShow "SumSpec" ["|" <+> sumWeightL h <+> viaShow left, "|" <+> sumWeightR h <+> viaShow right]
 
-sumType :: (Maybe String) -> String
+sumType :: Maybe String -> String
 sumType Nothing = ""
 sumType (Just x) = " type=" ++ x
 
@@ -412,8 +395,8 @@ instance (Arbitrary (Specification a), Arbitrary (Specification b)) => Arbitrary
 -- Here are the Logic Instances for Sum
 
 data SumW dom rng where
-  InjLeftW :: (HasSpec a, HasSpec b) => SumW '[a] (Sum a b)
-  InjRightW :: (HasSpec a, HasSpec b) => SumW '[b] (Sum a b)
+  InjLeftW :: SumW '[a] (Sum a b)
+  InjRightW :: SumW '[b] (Sum a b)
 
 instance Show (SumW dom rng) where
   show InjLeftW = "injLeft_"
@@ -477,29 +460,6 @@ pattern InjLeft ::
   Term c
 pattern InjLeft x <- App (getWitness -> Just InjLeftW) (x :> Nil)
 
--- ===========================================================================
--- HasSpec Bool
--- ===========================================================================
-
-instance HasSpec Bool where
-  shrinkWithTypeSpec _ = shrink
-  cardinalTypeSpec (SumSpec _ a b) =
-    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
-  cardinalTrueSpec = MemberSpec (pure 2)
-
-caseBoolSpec ::
-  HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
-caseBoolSpec spec cont = case possibleValues spec of
-  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
-  [b] -> cont b
-  _ -> mempty
-  where
-    -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
-    -- This will always get the same result, and probably faster since running 2
-    -- conformsToSpec on True and False takes less time than simplifying the spec.
-    -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?
-    possibleValues s = filter (flip conformsToSpec s) [True, False]
-
 -- | Operations on Bool
 data BoolW (dom :: [Type]) (rng :: Type) where
   NotW :: BoolW '[Bool] Bool
@@ -540,7 +500,7 @@ instance Logic BoolW where
   propagate OrW (s :>: HOLE) spec =
     caseBoolSpec spec (okOr s)
 
-  mapTypeSpec NotW (SumSpec h a b) = typeSpec $ SumSpec h b a
+  mapTypeSpec NotW () = typeSpec ()
 
 not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
@@ -620,96 +580,6 @@ pattern Equal x y <-
       (getWitness -> Just EqualW)
       (x :> y :> Nil)
     )
-
--- ===========================================================================
--- HasSpec for Integer
--- ===========================================================================
-
-toPredsNumSpec ::
-  OrdLike n =>
-  Term n ->
-  NumSpec n ->
-  Pred
-toPredsNumSpec v (NumSpecInterval ml mu) =
-  fold $
-    [assert $ Lit l <=. v | l <- maybeToList ml]
-      ++ [assert $ v <=. Lit u | u <- maybeToList mu]
-
-instance HasSpec Integer where
-  type TypeSpec Integer = NumSpec Integer
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Int where
-  type TypeSpec Int = NumSpec Int
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance Logic NumOrdW where
-  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
-  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate GreaterW (HOLE :? x :> Nil) spec =
-    propagate LessW (x :! Unary HOLE) spec
-  propagate GreaterW (x :! Unary HOLE) spec =
-    propagate LessW (HOLE :? x :> Nil) spec
-  propagate LessOrEqualW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessOrEqualW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate LessOrEqualW (Value x :! Unary HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessOrEqualW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate LessOrEqualW (HOLE :? Value l :> Nil) spec =
-    caseBoolSpec spec $ \case True -> leqSpec l; False -> gtSpec l
-  propagate LessOrEqualW (Value l :! Unary HOLE) spec =
-    caseBoolSpec spec $ \case True -> geqSpec l; False -> ltSpec l
-  propagate GreaterOrEqualW (HOLE :? Value x :> Nil) spec =
-    propagate LessOrEqualW (Value x :! Unary HOLE) spec
-  propagate GreaterOrEqualW (x :! Unary HOLE) spec =
-    propagate LessOrEqualW (HOLE :? x :> Nil) spec
-  propagate LessW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate LessW (Value x :! Unary HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate LessW (HOLE :? Value l :> Nil) spec =
-    caseBoolSpec spec $ \case True -> ltSpec l; False -> geqSpec l
-  propagate LessW (Value l :! Unary HOLE) spec =
-    caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
-
-infixr 4 <=.
-
-(<=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(<=.) = appTerm LessOrEqualW
-
-infixr 4 <.
-
-(<.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(<.) = appTerm LessW
-
-infixr 4 >=.
-
-(>=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(>=.) = appTerm GreaterOrEqualW
-
-infixr 4 >.
-
-(>.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(>.) = appTerm GreaterW
-
--- ===========================================================================
--- SimplifySpec
--- ===========================================================================
 
 simplifySpec :: HasSpec a => Specification a -> Specification a
 simplifySpec spec = case regularizeNames spec of
@@ -1173,76 +1043,6 @@ debugSpec spec = do
     FatalError xs -> mapM_ f xs
     GenError xs -> mapM_ f xs
     Result x -> print spec >> print x >> ok x
-
--- ---------------- Dependency Graphs ------------------------------------
-
-type DependGraph = Graph.Graph Name
-
-dependency :: HasVariables t => Name -> t -> DependGraph
-dependency x (freeVarSet -> xs) = Graph.dependency x xs
-
-irreflexiveDependencyOn ::
-  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
-irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
-
-noDependencies :: HasVariables t => t -> DependGraph
-noDependencies (freeVarSet -> xs) = Graph.noDependencies xs
-
-type Hints = DependGraph
-
-respecting :: Hints -> DependGraph -> DependGraph
-respecting hints g = g `subtractGraph` opGraph hints
-
-solvableFrom :: Name -> Set Name -> DependGraph -> Bool
-solvableFrom x s g =
-  let less = dependencies x g
-   in s `Set.isSubsetOf` less && not (x `Set.member` less)
-
-computeDependencies :: Pred -> DependGraph
-computeDependencies = \case
-  ElemPred _bool term _xs -> computeTermDependencies term
-  Monitor {} -> mempty
-  Subst x t p -> computeDependencies (substitutePred x t p)
-  Assert t -> computeTermDependencies t
-  Reifies t' t _ -> t' `irreflexiveDependencyOn` t
-  ForAll set b ->
-    let innerG = computeBinderDependencies b
-     in innerG <> set `irreflexiveDependencyOn` nodes innerG
-  x `DependsOn` y -> x `irreflexiveDependencyOn` y
-  Case t bs ->
-    let innerG = foldMapList (computeBinderDependencies . thing) bs
-     in innerG <> t `irreflexiveDependencyOn` nodes innerG
-  When b p ->
-    let pG = computeDependencies p
-        oG = nodes pG `irreflexiveDependencyOn` b
-     in oG <> pG
-  TruePred -> mempty
-  FalsePred {} -> mempty
-  And ps -> foldMap computeDependencies ps
-  Exists _ b -> computeBinderDependencies b
-  Let t b -> noDependencies t <> computeBinderDependencies b
-  GenHint _ t -> noDependencies t
-  Explain _ p -> computeDependencies p
-
-computeBinderDependencies :: Binder a -> DependGraph
-computeBinderDependencies (x :-> p) =
-  deleteNode (Name x) $ computeDependencies p
-
-computeTermDependencies :: Term a -> DependGraph
-computeTermDependencies = fst . computeTermDependencies'
-
-computeTermDependencies' :: Term a -> (DependGraph, Set Name)
-computeTermDependencies' = \case
-  (App _ args) -> go args
-  Lit {} -> (mempty, mempty)
-  (V x) -> (noDependencies (Name x), Set.singleton (Name x))
-  where
-    go :: List Term as -> (DependGraph, Set Name)
-    go Nil = (mempty, mempty)
-    go (t :> ts) =
-      let (gr, ngr) = go ts
-          (tgr, ntgr) = computeTermDependencies' t
-       in (ntgr `irreflexiveDependencyOn` ngr <> tgr <> gr, ngr <> ntgr)
 
 -- ----------------------- Shrinking -------------------------------
 
@@ -2651,145 +2451,3 @@ maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothin
 -- How to constrain the size of any type, with a Sized instance
 hasSize :: (HasSpec t, Sized t) => SizeSpec -> Specification t
 hasSize sz = liftSizeSpec sz []
-
--- =================================================
-infix 4 +.
-
-(+.) :: NumLike a => Term a -> Term a -> Term a
-(+.) = addFn
-
-negate_ :: NumLike a => Term a -> Term a
-negate_ = negateFn
-
-infix 4 -.
-
-(-.) :: Numeric n => Term n -> Term n -> Term n
-(-.) x y = addFn x (negateFn y)
-
-instance HasSpec (Ratio Integer) where
-  type TypeSpec (Ratio Integer) = NumSpec (Ratio Integer)
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec _ = TrueSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Natural where
-  type TypeSpec Natural = NumSpec Natural
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec (NumSpecInterval (Just lo) (Just hi)) =
-    if hi >= lo
-      then MemberSpec (pure (fromIntegral @Natural @Integer (hi - lo + 1)))
-      else MemberSpec (pure 0)
-  cardinalTypeSpec (NumSpecInterval Nothing (Just hi)) =
-    MemberSpec (pure (fromIntegral @Natural @Integer hi + 1))
-  cardinalTypeSpec _ = TrueSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Word8 where
-  type TypeSpec Word8 = NumSpec Word8
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  typeSpecOpt = notInNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Word16 where
-  type TypeSpec Word16 = NumSpec Word16
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Word32 where
-  type TypeSpec Word32 = NumSpec Word32
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Word64 where
-  type TypeSpec Word64 = NumSpec Word64
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Int8 where
-  type TypeSpec Int8 = NumSpec Int8
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Int16 where
-  type TypeSpec Int16 = NumSpec Int16
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Int32 where
-  type TypeSpec Int32 = NumSpec Int32
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Int64 where
-  type TypeSpec Int64 = NumSpec Int64
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-  guardTypeSpec = guardNumSpec
-
-instance HasSpec Float where
-  type TypeSpec Float = NumSpec Float
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec _ = TrueSpec
-  guardTypeSpec = guardNumSpec

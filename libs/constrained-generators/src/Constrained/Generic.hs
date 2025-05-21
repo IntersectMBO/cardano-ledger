@@ -150,8 +150,6 @@ class Typeable (SimpleRep a) => HasSimpleRep a where
 type family SimplifyRep f where
   SimplifyRep f = SOP (SOPOf f)
 
-instance HasSimpleRep Bool
-
 instance HasSimpleRep () where
   type SimpleRep () = ()
   toSimpleRep x = x
