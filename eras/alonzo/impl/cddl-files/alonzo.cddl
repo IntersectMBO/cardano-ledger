@@ -242,11 +242,9 @@ dns_name = text .size (0 .. 64)
 ; dns_name: An SRV DNS record
 multi_host_name = (2, dns_name)
 
-pool_metadata = [url, metadata_hash]
+pool_metadata = [url, bytes]
 
 url = text .size (0 .. 64)
-
-metadata_hash = hash32
 
 pool_retirement = (4, pool_keyhash, epoch)
 

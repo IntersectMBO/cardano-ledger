@@ -241,7 +241,7 @@ relay =
     / arr [a multi_host_name]
 
 pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a metadata_hash]
+pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
 
 url :: Rule
 url = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
