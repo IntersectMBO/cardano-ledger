@@ -65,6 +65,7 @@ import Data.Aeson (
  )
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
@@ -74,6 +75,7 @@ import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import System.Random.Stateful (Uniform (..), UniformRange (..), Random)
 
 -- | Script hash or key hash for a payment or a staking object.
 --
@@ -197,11 +199,22 @@ newtype SlotNo32 = SlotNo32 Word32
   deriving newtype
     (Eq, Ord, Num, Bounded, NFData, NoThunks, EncCBOR, DecCBOR, FromCBOR, ToCBOR, FromJSON, ToJSON)
 
+instance Random SlotNo32
+
+instance Uniform SlotNo32 where
+  uniformM g = SlotNo32 <$> uniformM g
+
+instance UniformRange SlotNo32 where
+  uniformRM r g = SlotNo32 <$> uniformRM (coerce r) g
+
 -- | Pointer to a slot number, transaction index and an index in certificate
 -- list.
 data Ptr = Ptr {-# UNPACK #-} !SlotNo32 {-# UNPACK #-} !TxIx {-# UNPACK #-} !CertIx
   deriving (Eq, Ord, Generic)
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
+
+instance Uniform Ptr where
+  uniformM g = Ptr <$> uniformM g <*> (TxIx <$> uniformM g) <*> (CertIx <$> uniformM g)
 
 instance NFData Ptr
 
