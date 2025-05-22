@@ -66,7 +66,9 @@ transaction_body =
 
 set<a0> = [* a0]
 
-transaction_input = [transaction_id : hash32, index : uint .size 2]
+transaction_input = [id : transaction_id, index : uint .size 2]
+
+transaction_id = hash32
 
 transaction_output = [address, amount : value]
 
