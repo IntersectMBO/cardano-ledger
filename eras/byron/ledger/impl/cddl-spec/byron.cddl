@@ -25,6 +25,8 @@ blake2b-256 = bytes .size 32
 txid = blake2b-256
 blockid = blake2b-256
 updid = blake2b-256
+certificateid = blake2b-256
+voteid = blake2b-256
 hash = blake2b-256
 
 blake2b-224 = bytes .size 28
