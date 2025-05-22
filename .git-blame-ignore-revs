@@ -3,6 +3,14 @@
 # from the repository's root to tell `git blame` to ignore
 # the commits below.
 
+# Apply `fourmolu` with `respectful: false`
+# CommitDate: Mon May 12 14:08:08 2025 -0600
+4b79a7a9fb54aabe567e2a4f83825616046f7ab3
+
+# Apply formatting for new version of `fourmolu-0.17.0.0`
+# CommitDate: Mon May 12 12:39:28 2025 -0600
+f62f99b170623528285ef8f3fb3437c6d3b8a0c0
+
 # Fourmolize with `column-limit` rule enabled
 # CommitDate: Sun Mar 17 21:36:58 2024 +0100
 e4a1422d3f149f9c6070ca78f253d43f2cbfb607
