@@ -1785,8 +1785,9 @@ It is possible to write a single `HasSpec` instance for all tuples. But this add
 of complexity to the system.
 
 1. It needs to handle definitions using Derive-Generics
-2. It needs to understand how to handle arbitray Sum-of-Products
-3. It needs to provide default method instances that use [Default method signatures]("https://downloads.haskell.org/ghc/9.0.1/docs/html/users_guide/exts/default_signatures.html") for every method of HasSpec.
+2. It needs to understand how to handle arbitrary Sum-of-Products
+3. It needs to provide default method instances that use 
+    [Default method signatures](https://downloads.haskell.org/ghc/9.0.1/docs/html/users_guide/exts/default_signatures.html) for every method of `HasSpec`.
 
 The amount of extra code is very large, and actually hides the the important ideas behind
 the Design Principles we discuss in this document. So we have factored it out of the code for
