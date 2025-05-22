@@ -43,6 +43,7 @@ instance
   ( Era era
   , ToExpr (TxCert era)
   , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (GovState era)
   ) =>
   ToExpr (ConwayPlutusPurpose AsItem era)
 
@@ -262,7 +263,12 @@ instance
   ) =>
   ToExpr (GovSignal era)
 
-instance (ToExpr (PParams era), ToExpr (CertState era)) => ToExpr (GovEnv era)
+instance
+  ( ToExpr (PParams era)
+  , ToExpr (CertState era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (GovEnv era)
 
 instance
   ( ToExpr (PParams era)

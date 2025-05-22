@@ -17,23 +17,17 @@ module Cardano.Ledger.Conway.Rules.Mempool (
   ConwayMEMPOOL,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ProtVer (ProtVer), ShelleyBase, natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayMEMPOOL)
-import Cardano.Ledger.Conway.Governance (
-  ConwayEraGov,
-  ConwayGovState,
-  Proposals,
-  Voter (..),
-  authorizedElectedHotCommitteeCredentials,
-  unVotingProcedures,
- )
+import Cardano.Ledger.Conway.Governance (ConwayEraGov, ConwayGovState, Proposals)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
-import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal)
+import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVoters)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv, ledgerPpL)
+import Control.Monad (when)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -54,7 +48,6 @@ import Control.State.Transition.Extended (Embed (..), trans)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import qualified Data.Set as Set
 import Data.Text as T (pack)
 import Lens.Micro ((^.))
 
@@ -100,7 +93,7 @@ mempoolTransition ::
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
-  TRC trc@(_ledgerEnv, ledgerState, tx) <-
+  TRC trc@(ledgerEnv, ledgerState, tx) <-
     judgmentContext
 
   -- This rule only gets invoked on transactions within the mempool.
@@ -117,22 +110,22 @@ mempoolTransition = do
 
   -- Skip all other checks if the transaction is probably a duplicate
   whenFailureFreeDefault ledgerState $ do
-    -- Disallow votes by unelected committee members
-    let
-      authorizedElectedHotCreds = authorizedElectedHotCommitteeCredentials ledgerState
-      collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =
-        case voter of
-          CommitteeVoter hotCred
-            | hotCred `Set.notMember` authorizedElectedHotCreds ->
-                Set.insert hotCred unelectedHotCreds
-          _ -> unelectedHotCreds
-      unelectedCommitteeVoters =
-        Map.foldlWithKey' collectUnelectedCommitteeVotes Set.empty $
-          unVotingProcedures (tx ^. bodyTxL . votingProceduresTxBodyL)
-      addPrefix =
-        ("Unelected committee members are not allowed to cast votes: " <>)
-    failOnNonEmpty unelectedCommitteeVoters $
-      ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList
+    when (ledgerEnv ^. ledgerPpL . ppProtocolVersionL < ProtVer (natVersion @11) 0) $
+      -- This check can completely be removed once mainnet switches to protocol
+      -- version 11, since the same check has been implemented in the GOV rule.
+      -- We have to also carefully make the GOV rule check consistent for all
+      -- protocol versions, even those below version 11, once we remove this
+      -- check.
+      --
+      -- Disallow votes by unelected committee members
+      let addPrefix = ("Unelected committee members are not allowed to cast votes: " <>)
+       in failOnNonEmpty
+            ( unelectedCommitteeVoters
+                (ledgerState ^. lsUTxOStateL . utxosGovStateL)
+                (ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL)
+                (tx ^. bodyTxL . votingProceduresTxBodyL)
+            )
+            (ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList)
 
     -- Continue with LEDGER rules
     trans @(EraRule "LEDGER" era) $ TRC trc

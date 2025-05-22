@@ -34,6 +34,7 @@ instance
   , SpecTranslate ctx (CertState era)
   , SpecRep (CertState era) ~ Agda.CertState
   , EraCertState era
+  , ConwayEraGov era
   ) =>
   SpecTranslate ctx (GovEnv era)
   where
@@ -46,7 +47,7 @@ instance
       <$> toSpecRep geTxId
       <*> toSpecRep geEpoch
       <*> toSpecRep gePParams
-      <*> toSpecRep gePPolicy
+      <*> toSpecRep (geGovState ^. constitutionGovStateL . constitutionScriptL)
       <*> toSpecRep enactState
       <*> toSpecRep geCertState
       <*> toSpecRep rewardAccounts

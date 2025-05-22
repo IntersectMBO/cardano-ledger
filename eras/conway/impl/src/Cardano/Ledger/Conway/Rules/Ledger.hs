@@ -61,7 +61,6 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
   Proposals,
-  constitutionScriptL,
   grCommitteeL,
   proposalsGovStateL,
   proposalsWithPurpose,
@@ -438,7 +437,7 @@ ledgerTransition = do
                   (txIdTxBody txBody)
                   curEpochNo
                   pp
-                  (govState ^. constitutionGovStateL . constitutionScriptL)
+                  govState
                   certStateAfterCERTS
               , proposals
               , govSignal
@@ -538,6 +537,8 @@ instance
 instance
   ( ConwayEraTxCert era
   , ConwayEraPParams era
+  , ConwayEraGov era
+  , GovState era ~ ConwayGovState era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era

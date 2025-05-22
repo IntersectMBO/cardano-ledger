@@ -1073,10 +1073,16 @@ instance Typeable era => HasSimpleRep (GovRelation StrictMaybe era)
 
 instance Era era => HasSpec (GovRelation StrictMaybe era)
 
-instance (Typeable (CertState era), Era era) => HasSimpleRep (GovEnv era)
+instance (Typeable (CertState era), EraGov era) => HasSimpleRep (GovEnv era)
 
 instance
-  (EraSpecPParams era, EraTxOut era, EraCertState era, EraGov era, HasSpec (CertState era)) =>
+  ( EraSpecPParams era
+  , EraTxOut era
+  , EraCertState era
+  , EraGov era
+  , HasSpec (CertState era)
+  , HasSpec (GovState era)
+  ) =>
   HasSpec (GovEnv era)
 
 instance Typeable era => HasSimpleRep (GovActionState era)
