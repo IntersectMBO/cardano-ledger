@@ -149,7 +149,7 @@ updata = [ hash, hash, hash, hash ]
 upprop = [ "blockVersion" : bver
          , "blockVersionMod" : bvermod
          , "softwareVersion" : [ text, u32 ]
-         , "data" : #6.258([text, updata])
+         , "data" : { * text => updata }
          , "attributes" : attributes
          , "from" : pubkey
          , "signature" : signature
