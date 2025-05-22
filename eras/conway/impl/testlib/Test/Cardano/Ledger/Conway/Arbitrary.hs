@@ -621,7 +621,14 @@ genConwayPlutusPurposePointer i =
 
 -- GOV
 
-instance (Era era, Arbitrary (PParamsHKD Identity era), Arbitrary (CertState era)) => Arbitrary (GovEnv era) where
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (CertState era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (GovEnv era)
+  where
   arbitrary =
     GovEnv
       <$> arbitrary

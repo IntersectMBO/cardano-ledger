@@ -45,8 +45,11 @@ govEnvSpec = constrained $ \ge ->
 govProposalsSpec ::
   GovEnv ConwayEra ->
   Specification (Proposals ConwayEra)
-govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
-  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
+govProposalsSpec GovEnv {geEpoch, geGovState, geCertState} =
+  proposalsSpec
+    (lit geEpoch)
+    (lit $ geGovState ^. constitutionGovStateL . constitutionScriptL)
+    (lit geCertState)
 
 proposalsSpec ::
   Term EpochNo ->
@@ -348,7 +351,7 @@ wfGovAction ::
   Proposals ConwayEra ->
   Term (GovAction ConwayEra) ->
   Pred
-wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
+wfGovAction GovEnv {geGovState, geEpoch, gePParams, geCertState} ps govAction =
   caseOn
     govAction
     -- ParameterChange
@@ -356,7 +359,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
         [ assert $ mPrevActionId `elem_` lit ppupIds
         , assert $ ppUpdate /=. lit emptyPParamsUpdate
         , satisfies ppUpdate wfPParamsUpdateSpec
-        , assert $ policy ==. lit gePPolicy
+        , assert $ policy ==. lit (geGovState ^. constitutionGovStateL . constitutionScriptL)
         ]
     )
     -- HardForkInitiation
@@ -390,7 +393,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
               , cred `member_` lit registeredCredentials
               ]
         , assert $ sum_ (rng_ withdrawMap) >. lit (Coin 0)
-        , assert $ policy ==. lit gePPolicy
+        , assert $ policy ==. lit (geGovState ^. constitutionGovStateL . constitutionScriptL)
         , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )

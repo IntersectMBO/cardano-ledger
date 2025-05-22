@@ -214,17 +214,13 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
-  LedgerState,
   NewEpochState (..),
   epochStateGovStateL,
   epochStatePoolParamsL,
   esLStateL,
   lsCertState,
-  lsCertStateL,
   lsUTxOState,
-  lsUTxOStateL,
   newEpochStateGovStateL,
-  utxosGovStateL,
  )
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
@@ -235,7 +231,6 @@ import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
-import qualified Data.Foldable as F (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -568,19 +563,14 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote _ = DefaultNo
 
 authorizedElectedHotCommitteeCredentials ::
-  (ConwayEraGov era, ConwayEraCertState era) =>
-  LedgerState era ->
+  ConwayEraGov era =>
+  GovState era ->
+  CommitteeState era ->
   Set.Set (Credential 'HotCommitteeRole)
-authorizedElectedHotCommitteeCredentials ledgerState =
-  case ledgerState ^. lsUTxOStateL . utxosGovStateL . committeeGovStateL of
+authorizedElectedHotCommitteeCredentials govState committeeState =
+  case govState ^. committeeGovStateL of
     SNothing -> Set.empty
     SJust electedCommiteee ->
-      collectAuthorizedHotCreds $
-        csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
-  where
-    committeeState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
-    collectAuthorizedHotCreds =
-      let toHotCredSet !acc = \case
-            CommitteeHotCredential hotCred -> Set.insert hotCred acc
-            CommitteeMemberResigned {} -> acc
-       in F.foldl' toHotCredSet Set.empty
+      authorizedHotCommitteeCredentials $
+        CommitteeState $
+          csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
