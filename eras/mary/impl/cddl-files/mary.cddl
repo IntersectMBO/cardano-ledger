@@ -54,7 +54,7 @@ transaction_body =
   {   0 : set<transaction_input>   
   ,   1 : [* transaction_output]
   ,   2 : coin                      
-  ,   3 : uint                      
+  , ? 3 : uint                      
   , ? 4 : [* certificate]       
   , ? 5 : withdrawals               
   , ? 6 : update                    
