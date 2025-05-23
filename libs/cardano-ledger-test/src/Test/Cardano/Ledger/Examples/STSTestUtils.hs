@@ -79,7 +79,6 @@ import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
-import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Era
@@ -258,7 +257,7 @@ testUTXOW ::
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
 testUTXOW wit@(UTXOW Alonzo) utxo p tx =
-  testUTXOWwith wit (genericCont (show (pcTxWithUTxO Alonzo utxo tx))) utxo p tx
+  testUTXOWwith wit (genericCont (show (utxo, tx))) utxo p tx
 testUTXOW wit@(UTXOW Babbage) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW wit@(UTXOW Conway) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)

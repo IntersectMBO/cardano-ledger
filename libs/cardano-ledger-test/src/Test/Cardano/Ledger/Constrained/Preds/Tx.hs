@@ -49,7 +49,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text, pack)
 import Data.TreeDiff (Expr, toExpr)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
@@ -90,12 +89,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (checkForSoundness, testIO)
 import Test.Cardano.Ledger.Constrained.Vars hiding (totalAda)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Fields (
-  TxBodyField (..),
-  TxField (..),
-  abstractTx,
-  abstractTxBody,
- )
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
 import Test.Cardano.Ledger.Generic.Proof
@@ -874,7 +867,7 @@ demoTx = do
 
 -- ================================================================
 
-gone :: EraTest BabbageEra => Gen (IO ())
+gone :: Gen (IO ())
 gone = do
   txIx <- arbitrary
   let proof = Babbage
@@ -892,7 +885,7 @@ gone = do
       putStrLn "SUCCESS"
     Left errs -> do
       putStrLn "FAIL"
-      print $ pgenTx proof utxo1 tx
+      print $ pcUtxoDoc utxo1
       print $ toExpr errs
       goRepl Babbage env ""
 
@@ -910,57 +903,6 @@ go :: Int -> IO ()
 go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], notElem i bad]
 
 -- ========================================
-
--- ==============================
-
--- | Pretty print the fields of a Randomly generated TxBody, except resolve the
---   inputs with the given Ut map.
-pgenTxBodyField ::
-  EraTest era =>
-  Proof era ->
-  Map TxIn (TxOutF era) ->
-  TxBodyField era ->
-  [(Text, Expr)]
-pgenTxBodyField _proof ut x = case x of
-  Inputs s -> [(pack "spend inputs", pcUtxoDoc (Map.restrictKeys ut s))]
-  Collateral s -> [(pack "coll inputs", pcUtxoDoc (Map.restrictKeys ut s))]
-  RefInputs s -> [(pack "ref inputs", pcUtxoDoc (Map.restrictKeys ut s))]
-  other -> [(pack "", toExpr other)] -- TODO
-
-pgenTxBody ::
-  EraTest era => Proof era -> TxBody era -> Map TxIn (TxOutF era) -> Expr
-pgenTxBody proof txBody ut = toExpr (pack "TxBody " <> pack (show proof), pairs)
-  where
-    fields = abstractTxBody proof txBody
-    pairs = concatMap (pgenTxBodyField proof ut) fields
-
-pgenTxField ::
-  forall era.
-  (EraTest era, Reflect era) =>
-  Proof era ->
-  Map TxIn (TxOutF era) ->
-  TxField era ->
-  [(Text, Expr)]
-pgenTxField proof ut x = case x of
-  Body b -> [(pack "txbody hash", toExpr (hashAnnotated b)), (pack "body", pgenTxBody proof b ut)]
-  BodyI xs -> [(pack "body", toExpr (pack "TxBody", (concatMap (pgenTxBodyField proof ut) xs)))]
-  _other -> case reify @era of
-    Conway -> [(pack "", toExpr x)]
-    Babbage -> [(pack "", toExpr x)]
-    Alonzo -> [(pack "", toExpr x)]
-    _ -> error "" -- TODO
-
-pgenTx :: (EraTest era, Reflect era) => Proof era -> Map TxIn (TxOutF era) -> Tx era -> Expr
-pgenTx proof ut tx = toExpr (pack "Tx", pairs)
-  where
-    fields = abstractTx proof tx
-    pairs = concatMap (pgenTxField proof ut) fields
-
-pcTxWithUTxO :: (EraTest era, Reflect era) => Proof era -> UTxO era -> Tx era -> Expr
-pcTxWithUTxO proof (UTxO ut) tx = toExpr (pack "Tx", pairs)
-  where
-    fields = abstractTx proof tx
-    pairs = concatMap (pgenTxField proof (fmap (TxOutF proof) ut)) fields
 
 -- =================================================
 -- Demos and Tests
