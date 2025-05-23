@@ -18,16 +18,11 @@ module Test.Cardano.Ledger.Shelley.Binary.Annotator (
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.Tx.Internal (
-  ShelleyTx (MkShelleyTx),
-  ShelleyTxRaw (..),
-  unsafeConstructTxWithBytes,
- )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits
@@ -127,37 +122,23 @@ mapTraverseableDecoderA ::
   Decoder s (Annotator (m b))
 mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList
 
-deriving via
-  Mem (ShelleyTxRaw era)
-  instance
-    ( EraTx era
-    , DecCBOR (Annotator (TxBody era))
-    , DecCBOR (Annotator (TxWits era))
-    , DecCBOR (Annotator (TxAuxData era))
-    ) =>
-    DecCBOR (Annotator (ShelleyTx era))
-
 instance
   ( EraTx era
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   , DecCBOR (Annotator (TxAuxData era))
   ) =>
-  DecCBOR (Annotator (ShelleyTxRaw era))
+  DecCBOR (Annotator (ShelleyTx era))
   where
   decCBOR =
     decode $
-      Ann (RecD ShelleyTxRaw)
+      Ann (RecD ShelleyTx)
         <*! From
         <*! From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
+        <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
 segWitAnnTx ::
   forall era.
-  EraTx era =>
   Annotator (TxBody era) ->
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
@@ -166,26 +147,16 @@ segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
   let body' = runAnnotator bodyAnn bytes
       witnessSet = runAnnotator witsAnn bytes
       metadata = flip runAnnotator bytes <$> metaAnn
-      wrappedMetadataBytes = case metadata of
-        Nothing -> Plain.serialize Plain.encodeNull
-        Just b -> Plain.serialize b
-      fullBytes =
-        Plain.serialize (Plain.encodeListLen 3)
-          <> Plain.serialize body'
-          <> Plain.serialize witnessSet
-          <> wrappedMetadataBytes
-   in unsafeConstructTxWithBytes
+   in ShelleyTx
         body'
         witnessSet
         (maybeToStrictMaybe metadata)
-        fullBytes
 
 -- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
-  ( EraTx era
-  , DecCBOR (Annotator (TxAuxData era))
+  ( DecCBOR (Annotator (TxAuxData era))
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   ) =>

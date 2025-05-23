@@ -21,7 +21,6 @@ import Cardano.Ledger.Shelley.Tx (
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   sizeShelleyTxF,
-  wireSizeShelleyTxF,
   witsShelleyTxL,
  )
 
@@ -43,9 +42,6 @@ instance EraTx MaryEra where
 
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
-
-  wireSizeTxF = wireSizeShelleyTxF
-  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
