@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Remove Bool argument from `auxDataSeqDecoder`
+* Move to `testlib` `DecCBOR` instances for: `ShelleyTxSeq`, `ShelleyTxRaw`, `ShelleyTx`, `TxBody ShelleyEra`, `ShelleyTxAuxData`, `ShelleyTxWitsRaw`, `ShelleyTxWits`, `MultiSigRaw`, `MultiSig`
+* Remove `segWitTx`
 * Add:
   * `unlessMajorVersion`
   * `whenMajorVersion`
@@ -18,7 +21,6 @@
 * Removed `era` parameter from `ShelleyTxBodyRaw`
 * Remove `HeapWords` instances for: #5001
   - `ShelleyTxOut`
-* Move `Annotator` instances, `txSeqDecoder` and `mapTraverseableDecoderA` to `testlib`
 * Deprecate `witsFromTxWitnesses`
 * Expose access to `ShelleyTxRaw`, `ShelleyTxAuxDataRaw`, `ShelleyTxBodyRaw`, `ShelleyTxWitsRaw`, `MkMultiSig`
 * Expose constructors `MkShelleyTx`, `MkShelleyTxAuxData`, `MkShelleyTxBody`, `MkShelleyTxWits`, `MultiSigRaw`

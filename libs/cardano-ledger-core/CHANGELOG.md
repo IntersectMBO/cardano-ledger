@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Move to `DecCBOR` instance for `Block` to `testlib`
 * Removed constraints from `EraPParams` for both `PParamsHKD Identity era` and `PParamsHKD StrictMaybe era`: `EncCBOR`, `DecCBOR`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`
 * Added `eraPParams` to `EraPParams`
 * Added `jsonPairsPParams` and `jsonPairsPParamsUpdate` to `EraPParams` along with their implementation
@@ -26,7 +27,6 @@
   in its favor
 * Move `sumCompactCoin` to `Cardano.Ledger.Coin`
 * Add `eraDecoderWithBytes`
-* Move `Annotator` instances to `testlib`
 * Expose `MkData` constructor.
 * Remove `Text` parameter from `translateEraThroughCBOR`
 * Add `keyHashWitnessesTxWits`

@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Move to `testlib` the `DecCBOR` instance for `TxBody ConwayEra`
 * Add `ReferenceInputsNotDisjointFromInputs`
 - Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
 * Added to `PParams`: `ppCommitteeMaxTermLength`,`ppCommitteeMinSize`,`ppDRepActivity`,`ppDRepDeposit`,`ppDRepVotingThresholds`,`ppGovActionDeposit`,`ppGovActionLifetime`,`ppGovProtocolVersion`,`ppMinFeeRefScriptCostPerByte`,`ppPoolVotingThresholds`
@@ -17,7 +18,6 @@
   `ctbrOutputs`, `ctbrProposalProcedures`, `ctbrReferenceInputs`, `ctbrReqSignerHashes`,
   `ctbrScriptIntegrityHash`, `ctbrSpendInputs`, `ctbrTotalCollateral`, `ctbrTreasuryDonation`,
   `ctbrVldt`, `ctbrVotingProcedures`, `ctbrWithdrawals`)
-* Move `Annotator` instances to `testlib`
 * Expose access to `ConwayTxBodyRaw`
 * Expose constructor `MkConwayTxBody`
 * Added `VState` (moved from `cardano-ledger-core`) and related functions

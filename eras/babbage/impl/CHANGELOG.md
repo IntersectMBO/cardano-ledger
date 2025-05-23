@@ -2,12 +2,12 @@
 
 ## 1.12.0.0
 
+* Move to `testlib` the `DecCBOR` instance for `TxBody BabbageEra`
 * Remove `BabbageNonDisjointRefInputs` for protocol versions >10
 * Added `ppCoinsPerUTxOByte` to `PParams`
 * Removed `babbagePParamsHKDPairs` and `babbageCommonPParamsHKDPairs` from `PParams`
 * Remove `BabbageTxBody`
 * Removed `era` parameter from `BabbageTxBodyRaw`
-* Move `Annotator` instances to `testlib`
 * Expose access to `BabbageTxBodyRaw`
 * Expose constructor `MkBabbageTxBody`
 * Deprecate `spendInputs'`, `collateralInputs'`, `referenceInputs'`, `outputs'`, `collateralReturn'`, `totalCollateral'`, `certs'`, `txfee'`, `withdrawals'`, `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`, `spendInputs'`, `txnetworkid'`.

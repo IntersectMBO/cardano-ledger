@@ -2,8 +2,8 @@
 
 ## 1.9.0.0
 
+* Move to `testlib` the `DecCBOR` instance for `TxBody MaryEra`
 * Remove `MaryTxBody`
-* Move `Annotator` instances to `testlib`
 * Converted `MaryTxBodyRaw` into a type synonym
 * Expose constructor `MkMaryTxBody`
 * Add default implementation for `mintValueTxBodyF`

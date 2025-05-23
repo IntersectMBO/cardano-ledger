@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Move to `testlib` `DecCBOR` instances for: `AlonzoTxSeq`, `AlonzoTx`, `TxBody AlonzoEra`, `AlonzoTxAuxDataRaw`, `AlonzoTxAuxData`, `AlonzoScript`, `AlonzoTxWitsRaw`, `AlonzoTxWits`, `RedeemersRaw`, `Redeemers`, `TxDatsRaw`, `TxDats`
 * Added to `PParams`: `ppCollateralPercentage`,`ppCostModels`,`ppMaxBlockExUnits`,`ppMaxCollateralInputs`,`ppMaxTxExUnits`,`ppMaxValSize`,`ppPrices`
 * Removed `alonzoCommonPParamsHKDPairs` from `PParams`
 * Added error-throwing `ToPlutusData` instance for `CoinPerWord`
@@ -10,7 +11,6 @@
 * Deprecate `inputs'`, `collateral'`, `outputs'`, `certs'`, `withdrawals'`, `txfee'`,
   `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`,
   and `txnetworkid'`
-* Move `Annotator` instances and `alonzoSegwitTx` to `testlib`
 * Expose `addScriptsTxWitsRaw`, `decodeAlonzoPlutusScript` and `asHashedScriptPair`
 * Expose `emptyAlonzoTxAuxDataRaw`, `decodeTxAuxDataByTokenType` and `addPlutusScripts`
 * Expose `alonzoEqTxWitsRaw` and `emptyTxWitsRaw`
