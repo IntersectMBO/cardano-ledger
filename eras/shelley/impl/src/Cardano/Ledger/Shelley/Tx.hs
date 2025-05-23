@@ -35,7 +35,6 @@ module Cardano.Ledger.Shelley.Tx (
   witsFromTxWitnesses,
   shelleyEqTxRaw,
   sizeShelleyTxF,
-  wireSizeShelleyTxF,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -45,7 +44,7 @@ import Cardano.Ledger.Binary (
   ToCBOR,
   decodeNullStrictMaybe,
   encodeListLen,
-  encodeNullMaybe,
+  encodeNullStrictMaybe,
   serialize,
  )
 import Cardano.Ledger.Binary.Coders
@@ -69,7 +68,6 @@ import Data.Maybe.Strict (
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
-import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -118,29 +116,29 @@ instance
 -- memoized binary representation.
 bodyShelleyTxL :: Lens' (ShelleyTx era) (TxBody era)
 bodyShelleyTxL =
-  lens stxBody $ \tx txBody -> tx {stxBody = txBody}
+  lens stBody $ \tx txBody -> tx {stBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
 witsShelleyTxL :: Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
-  lens stxWits $ \tx txWits -> tx {stxWits = txWits}
+  lens stWits $ \tx txWits -> tx {stWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
 auxDataShelleyTxL :: Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
-  lens stxAuxData $ \tx txAuxData -> tx {stxAuxData = txAuxData}
+  lens stAuxData $ \tx txAuxData -> tx {stAuxData = txAuxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
 mkBasicShelleyTx txBody =
   ShelleyTx
-    { stxBody = txBody
-    , stxWits = mkBasicTxWits
-    , stxAuxData = SNothing
+    { stBody = txBody
+    , stWits = mkBasicTxWits
+    , stAuxData = SNothing
     }
 
 toCBORForSizeComputation ::
@@ -150,11 +148,11 @@ toCBORForSizeComputation ::
   ) =>
   ShelleyTx era ->
   Encoding
-toCBORForSizeComputation ShelleyTx {stxBody, stxWits, stxAuxData} =
+toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
   encodeListLen 3
-    <> encCBOR stxBody
-    <> encCBOR stxWits
-    <> encodeNullStrictMaybe encCBOR stxAuxData
+    <> encCBOR stBody
+    <> encCBOR stWits
+    <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
 sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Integer
@@ -165,21 +163,6 @@ sizeShelleyTxF =
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation
 {-# INLINEABLE sizeShelleyTxF #-}
-
--- | txsize computes the length of the serialised bytes (actual size)
-wireSizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Word32
-wireSizeShelleyTxF =
-  to $
-    checkedFromIntegral
-      . LBS.length
-      . serialize (eraProtVerLow @era)
-      . encCBOR
-  where
-    checkedFromIntegral n =
-      if n <= fromIntegral (maxBound :: Word32)
-        then fromIntegral n
-        else error $ "Impossible: Size of the transaction is too big: " ++ show n
-{-# INLINEABLE wireSizeShelleyTxF #-}
 
 instance EraTx ShelleyEra where
   type Tx ShelleyEra = ShelleyTx ShelleyEra
@@ -192,14 +175,11 @@ instance EraTx ShelleyEra where
   witsTxL = witsShelleyTxL
   {-# INLINE witsTxL #-}
 
-  sizeTxF = sizeShelleyTxF
-  {-# INLINE sizeTxF #-}
-
-  wireSizeTxF = wireSizeShelleyTxF
-  {-# INLINE wireSizeTxF #-}
-
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
+
+  sizeTxF = sizeShelleyTxF
+  {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateMultiSig
   {-# INLINE validateNativeScript #-}
@@ -230,11 +210,11 @@ encodeShelleyTx ::
   (EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
   ShelleyTx era ->
   Encode ('Closed 'Dense) (ShelleyTx era)
-encodeShelleyTx ShelleyTx {stxBody, stxWits, stxAuxData} =
+encodeShelleyTx ShelleyTx {stBody, stWits, stAuxData} =
   Rec ShelleyTx
-    !> To stxBody
-    !> To stxWits
-    !> E (encodeNullStrictMaybe encCBOR) stxAuxData
+    !> To stBody
+    !> To stWits
+    !> E (encodeNullStrictMaybe encCBOR) stAuxData
 
 instance
   (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>

@@ -19,10 +19,10 @@ import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley (ShelleyEra, ShelleyTx)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.Tx.Internal (ShelleyTx (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits
