@@ -600,18 +600,6 @@ encodeScript = \case
       SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
       SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
 
-instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
-    where
-      decodeScript = \case
-        0 -> SumD TimelockScript <! From
-        1 -> decodePlutus SPlutusV1
-        2 -> decodePlutus SPlutusV2
-        3 -> decodePlutus SPlutusV3
-        n -> Invalid n
-      decodePlutus slang =
-        SumD PlutusScript <! D (decodePlutusScript slang)
-
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)
     where

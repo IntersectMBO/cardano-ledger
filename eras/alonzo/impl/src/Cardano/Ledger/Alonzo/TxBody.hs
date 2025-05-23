@@ -364,8 +364,6 @@ deriving instance NFData (TxBody AlonzoEra)
 
 deriving instance Show (TxBody AlonzoEra)
 
-deriving newtype instance DecCBOR (TxBody AlonzoEra)
-
 deriving via Mem AlonzoTxBodyRaw instance DecCBOR (Annotator (TxBody AlonzoEra))
 
 pattern AlonzoTxBody ::

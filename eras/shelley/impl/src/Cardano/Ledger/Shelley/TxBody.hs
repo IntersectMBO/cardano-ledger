@@ -257,8 +257,6 @@ deriving instance Show (TxBody ShelleyEra)
 
 deriving instance Eq (TxBody ShelleyEra)
 
-deriving newtype instance DecCBOR (TxBody ShelleyEra)
-
 deriving via
   Mem ShelleyTxBodyRaw
   instance

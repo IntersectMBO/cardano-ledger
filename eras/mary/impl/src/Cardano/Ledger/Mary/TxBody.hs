@@ -98,8 +98,6 @@ deriving newtype instance NoThunks (TxBody MaryEra)
 
 deriving newtype instance NFData (TxBody MaryEra)
 
-deriving newtype instance DecCBOR (TxBody MaryEra)
-
 deriving via
   Mem MaryTxBodyRaw
   instance

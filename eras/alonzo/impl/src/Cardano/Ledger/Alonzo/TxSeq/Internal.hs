@@ -32,11 +32,9 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Binary (
-  Annotated (..),
   Annotator (..),
   DecCBOR (..),
   EncCBORGroup (..),
-  decodeAnnotated,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
@@ -179,51 +177,6 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
     hashStrict :: ByteString -> Hash HASH ByteString
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
-
-instance AlonzoEraTx era => DecCBOR (AlonzoTxSeq era) where
-  decCBOR = do
-    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
-    Annotated wits witsBytes <- decodeAnnotated decCBOR
-    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
-    let bodiesLength = length bodies
-        inRange x = (0 <= x) && (x <= (bodiesLength - 1))
-        witsLength = length wits
-    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap False
-    Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
-    let validFlags = alignedValidFlags bodiesLength isValidIdxs
-    unless
-      (bodiesLength == witsLength)
-      ( fail $
-          "different number of transaction bodies ("
-            <> show bodiesLength
-            <> ") and witness sets ("
-            <> show witsLength
-            <> ")"
-      )
-    unless
-      (all inRange isValidIdxs)
-      ( fail
-          ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (bodiesLength - 1)
-              ++ ", "
-              ++ show isValidIdxs
-          )
-      )
-    let mkTx body wit isValid aData =
-          mkBasicTx body
-            & witsTxL .~ wit
-            & auxDataTxL .~ maybeToStrictMaybe aData
-            & isValidTxL .~ isValid
-    let txs =
-          StrictSeq.forceToStrict $
-            Seq.zipWith4 mkTx bodies wits validFlags auxData
-    pure $
-      AlonzoTxSeqRaw
-        txs
-        bodiesBytes
-        witsBytes
-        auxDataBytes
-        isValidBytes
 
 instance
   ( AlonzoEraTx era

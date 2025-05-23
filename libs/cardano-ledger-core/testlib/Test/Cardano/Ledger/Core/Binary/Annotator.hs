@@ -15,11 +15,24 @@ module Test.Cardano.Ledger.Core.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+
+instance
+  ( EraSegWits era
+  , DecCBOR h
+  , DecCBOR (TxSeq era)
+  ) =>
+  DecCBOR (Block h era)
+  where
+  decCBOR =
+    decodeRecordNamed "Block" (const blockSize) $ Block <$> decCBOR <*> decCBOR
+    where
+      blockSize = 1 + fromIntegral (numSegComponents @era)
 
 decoderEquivalenceEraSpec ::
   forall era t.
@@ -41,11 +54,6 @@ decoderEquivalenceCoreEraTypesSpec ::
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
-  , DecCBOR (Annotator (Tx era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (Script era))
   , HasCallStack
   ) =>
   Spec

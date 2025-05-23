@@ -89,7 +89,7 @@ specTxAuxDataUpgrade ::
   , Arbitrary (TxAuxData (PreviousEra era))
   , HasCallStack
   , ToExpr (TxAuxData era)
-  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (TxAuxData era)
   ) =>
   Spec
 specTxAuxDataUpgrade = do
@@ -117,7 +117,7 @@ specScriptUpgrade ::
   ( EraScript (PreviousEra era)
   , EraScript era
   , Arbitrary (Script (PreviousEra era))
-  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Script era)
   , HasCallStack
   ) =>
   Spec
@@ -146,7 +146,7 @@ specTxWitsUpgrade ::
   , Arbitrary (TxWits (PreviousEra era))
   , HasCallStack
   , ToExpr (TxWits era)
-  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (TxWits era)
   ) =>
   Spec
 specTxWitsUpgrade = do
@@ -176,7 +176,7 @@ specTxBodyUpgrade ::
   , Arbitrary (TxBody (PreviousEra era))
   , HasCallStack
   , ToExpr (TxBody era)
-  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (TxBody era)
   ) =>
   Spec
 specTxBodyUpgrade = do
@@ -214,7 +214,7 @@ specTxUpgrade ::
   , Arbitrary (Tx (PreviousEra era))
   , HasCallStack
   , ToExpr (Tx era)
-  , DecCBOR (Annotator (Tx era))
+  , DecCBOR (Tx era)
   ) =>
   Spec
 specTxUpgrade = do
@@ -261,11 +261,11 @@ specUpgrade ::
   , ToExpr (TxBody era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (Tx era))
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (Script era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   ) =>
   BinaryUpgradeOpts ->
   Spec

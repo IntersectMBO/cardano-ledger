@@ -72,6 +72,7 @@ import Cardano.Ledger.Address (
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR,
   DecShareCBOR (Share),
   EncCBOR,
@@ -124,7 +125,7 @@ class
   , EraPParams era
   , NFData (Tx era)
   , NoThunks (Tx era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (Tx era))
   , EncCBOR (Tx era)
   , ToCBOR (Tx era)
   , Show (Tx era)
@@ -183,7 +184,7 @@ class
   , EraTxCert era
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody
-  , DecCBOR (TxBody era)
+  , DecCBOR (Annotator (TxBody era))
   , EncCBOR (TxBody era)
   , ToCBOR (TxBody era)
   , NoThunks (TxBody era)
@@ -451,7 +452,7 @@ class
   , NoThunks (TxAuxData era)
   , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
-  , DecCBOR (TxAuxData era)
+  , DecCBOR (Annotator (TxAuxData era))
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData
   ) =>
   EraTxAuxData era
@@ -485,7 +486,7 @@ class
   , NoThunks (TxWits era)
   , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
-  , DecCBOR (TxWits era)
+  , DecCBOR (Annotator (TxWits era))
   ) =>
   EraTxWits era
   where
@@ -539,7 +540,7 @@ class
   , EqRaw (Script era)
   , ToCBOR (Script era)
   , EncCBOR (Script era)
-  , DecCBOR (Script era)
+  , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
   , Eq (NativeScript era)
@@ -547,7 +548,7 @@ class
   , NFData (NativeScript era)
   , NoThunks (NativeScript era)
   , EncCBOR (NativeScript era)
-  , DecCBOR (NativeScript era)
+  , DecCBOR (Annotator (NativeScript era))
   ) =>
   EraScript era
   where
@@ -607,7 +608,7 @@ class
   , Eq (TxSeq era)
   , Show (TxSeq era)
   , EncCBORGroup (TxSeq era)
-  , DecCBOR (TxSeq era)
+  , DecCBOR (Annotator (TxSeq era))
   ) =>
   EraSegWits era
   where

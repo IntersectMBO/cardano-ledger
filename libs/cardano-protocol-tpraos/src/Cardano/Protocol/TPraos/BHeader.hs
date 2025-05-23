@@ -279,7 +279,7 @@ instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
 
 newtype BHeader c = BHeaderConstr (MemoBytes (BHeaderRaw c))
   deriving (Generic)
-  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, DecCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, SafeToHash)
 
 type instance MemoHashIndex (BHeaderRaw c) = EraIndependentBlockHeader
 

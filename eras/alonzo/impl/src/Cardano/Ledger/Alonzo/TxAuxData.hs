@@ -185,32 +185,6 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus 
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]
 
-instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
-  decCBOR =
-    decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
-      decodeShelley
-      decodeAllegra
-      decodeAlonzo
-    where
-      decodeShelley =
-        decode
-          (Emit AlonzoTxAuxDataRaw <! From <! Emit StrictSeq.empty <! Emit Map.empty)
-      decodeAllegra =
-        decode
-          (RecD AlonzoTxAuxDataRaw <! From <! From <! Emit Map.empty)
-      decodeAlonzo =
-        decode $
-          TagD 259 $
-            SparseKeyed "AlonzoTxAuxData" emptyAlonzoTxAuxDataRaw auxDataField []
-
-      auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
-      auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
-      auxDataField 1 = field (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x}) From
-      auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
-      auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
-      auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
-      auxDataField n = invalidField n
-
 instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
   decCBOR =
     decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
@@ -278,7 +252,7 @@ emptyAlonzoTxAuxDataRaw = AlonzoTxAuxDataRaw mempty mempty mempty
 
 newtype AlonzoTxAuxData era = MkAlonzoTxAuxData (MemoBytes (AlonzoTxAuxDataRaw era))
   deriving (Generic)
-  deriving newtype (ToCBOR, SafeToHash, DecCBOR)
+  deriving newtype (ToCBOR, SafeToHash)
 
 instance Memoized (AlonzoTxAuxData era) where
   type RawType (AlonzoTxAuxData era) = AlonzoTxAuxDataRaw era

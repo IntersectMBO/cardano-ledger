@@ -77,7 +77,7 @@ deriving via
 newtype ShelleyTxAuxData era
   = MkShelleyTxAuxData (MemoBytes (ShelleyTxAuxDataRaw era))
   deriving (Eq, Show, Generic)
-  deriving newtype (NFData, Plain.ToCBOR, SafeToHash, DecCBOR)
+  deriving newtype (NFData, Plain.ToCBOR, SafeToHash)
 
 instance Memoized (ShelleyTxAuxData era) where
   type RawType (ShelleyTxAuxData era) = ShelleyTxAuxDataRaw era

@@ -58,7 +58,6 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
@@ -132,9 +131,6 @@ instance
   NFData (ShelleyTxWits era)
 
 instance EraScript era => NoThunks (ShelleyTxWits era)
-
-instance EraScript era => DecCBOR (ShelleyTxWits era) where
-  decCBOR = MkShelleyTxWits <$> decodeMemoized decCBOR
 
 -- =======================================================
 -- Accessors
@@ -227,24 +223,6 @@ shelleyEqTxWitsRaw txWits1 txWits2 =
   txWits1 ^. addrTxWitsL == txWits2 ^. addrTxWitsL
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && txWits1 ^. bootAddrTxWitsL == txWits2 ^. bootAddrTxWitsL
-
-instance EraScript era => DecCBOR (ShelleyTxWitsRaw era) where
-  decCBOR =
-    decode $
-      SparseKeyed
-        "ShelleyTxWits"
-        (ShelleyTxWitsRaw mempty mempty mempty)
-        witField
-        []
-    where
-      witField :: Word -> Field (ShelleyTxWitsRaw era)
-      witField 0 = field (\x wits -> wits {stwrAddrTxWits = x}) From
-      witField 1 =
-        field
-          (\x wits -> wits {stwrScriptTxWits = x})
-          (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
-      witField 2 = field (\x wits -> wits {stwrBootAddrTxWits = x}) From
-      witField n = invalidField n
 
 instance
   ( EraScript era

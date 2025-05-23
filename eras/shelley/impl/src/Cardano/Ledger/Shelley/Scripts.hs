@@ -52,7 +52,6 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
   pattern Memo,
  )
@@ -198,18 +197,6 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MultiSig era)
-
-instance Era era => DecCBOR (MultiSig era) where
-  decCBOR = MkMultiSig <$> decodeMemoized decCBOR
-
-instance Era era => DecCBOR (MultiSigRaw era) where
-  decCBOR = decodeRecordSum "MultiSig" $ do
-    \case
-      0 -> (,) 2 . MultiSigSignature . KeyHash <$> decCBOR
-      1 -> (,) 2 . MultiSigAllOf <$> decCBOR
-      2 -> (,) 2 . MultiSigAnyOf <$> decCBOR
-      3 -> (,) 3 <$> (MultiSigMOf <$> decCBOR <*> decCBOR)
-      k -> invalidKey k
 
 instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
   decCBOR = decodeRecordSum "MultiSig" $

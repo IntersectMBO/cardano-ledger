@@ -181,7 +181,7 @@ instance Memoized (Redeemers era) where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = MkRedeemers (MemoBytes (RedeemersRaw era))
-  deriving newtype (Generic, ToCBOR, SafeToHash, DecCBOR)
+  deriving newtype (Generic, ToCBOR, SafeToHash)
 
 deriving via
   Mem (RedeemersRaw era)
@@ -360,16 +360,6 @@ nullDats :: TxDats era -> Bool
 nullDats (getMemoRawType -> TxDatsRaw m) = Map.null m
 {-# DEPRECATED nullDats "In favor of `unTxDatsL`" #-}
 
-instance Era era => DecCBOR (TxDatsRaw era) where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      ( allowTag setTag
-          >> TxDatsRaw . Map.fromElems hashData . NE.toList <$> decodeNonEmptyList decCBOR
-      )
-      (TxDatsRaw . Map.fromElems hashData <$> decodeList decCBOR)
-  {-# INLINE decCBOR #-}
-
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
     ifDecoderVersionAtLeast
@@ -387,7 +377,7 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = MkTxDats (MemoBytes (TxDatsRaw era))
-  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData, DecCBOR)
+  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
   deriving (Generic)
 
 instance Memoized (TxDats era) where
@@ -616,43 +606,6 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
                 ++ show (plutusLanguage (Proxy @l))
           Just plutusScripts -> plutusScripts
 
-instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      ( peekTokenType >>= \case
-          TypeMapLenIndef -> decodeMapRedeemers
-          TypeMapLen -> decodeMapRedeemers
-          _ -> decodeListRedeemers
-      )
-      (RedeemersRaw . Map.fromList <$> decodeList decodeElement)
-    where
-      decodeMapRedeemers :: Decoder s (RedeemersRaw era)
-      decodeMapRedeemers =
-        RedeemersRaw . Map.fromList . NE.toList <$> do
-          (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
-            ptr <- decCBOR
-            (annData, exUnits) <- decCBOR
-            pure (ptr, (annData, exUnits))
-          case NE.nonEmpty xs of
-            Nothing -> fail "Expected redeemers map to be non-empty"
-            Just neList -> pure $ NE.reverse neList
-      {-# INLINE decodeMapRedeemers #-}
-      decodeListRedeemers :: Decoder s (RedeemersRaw era)
-      decodeListRedeemers =
-        RedeemersRaw . Map.fromList . NE.toList
-          <$> decodeNonEmptyList decodeElement
-      {-# INLINE decodeListRedeemers #-}
-      decodeElement :: Decoder s (PlutusPurpose AsIx era, (Data era, ExUnits))
-      decodeElement = do
-        decodeRecordNamed "Redeemer" (\(redeemerPtr, _) -> fromIntegral (listLen redeemerPtr) + 2) $ do
-          !redeemerPtr <- decCBORGroup
-          !redeemerData <- decCBOR
-          !redeemerExUnits <- decCBOR
-          pure (redeemerPtr, (redeemerData, redeemerExUnits))
-      {-# INLINE decodeElement #-}
-  {-# INLINE decCBOR #-}
-
 instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
     ifDecoderVersionAtLeast
@@ -701,61 +654,6 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
 
 -- | Encodes memoized bytes created upon construction.
 instance AlonzoEraScript era => EncCBOR (Redeemers era)
-
-instance AlonzoEraScript era => DecCBOR (AlonzoTxWitsRaw era) where
-  decCBOR =
-    decode $
-      SparseKeyed
-        "AlonzoTxWits"
-        emptyTxWitsRaw
-        txWitnessField
-        []
-    where
-      txWitnessField :: Word -> Field (AlonzoTxWitsRaw era)
-      txWitnessField 0 =
-        field
-          (\x wits -> wits {atwrAddrTxWits = x})
-          ( D $
-              ifDecoderVersionAtLeast
-                (natVersion @9)
-                ( allowTag setTag
-                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-                )
-                (Set.fromList <$> decodeList decCBOR)
-          )
-      txWitnessField 1 = field addScriptsTxWitsRaw (D nativeScriptsDecoder)
-      txWitnessField 2 =
-        field
-          (\x wits -> wits {atwrBootAddrTxWits = x})
-          ( D $
-              ifDecoderVersionAtLeast
-                (natVersion @9)
-                ( allowTag setTag
-                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
-                )
-                (Set.fromList <$> decodeList decCBOR)
-          )
-      txWitnessField 3 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
-      txWitnessField 4 = field (\x wits -> wits {atwrDatsTxWits = x}) From
-      txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
-      txWitnessField 7 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
-      txWitnessField n = invalidField n
-      {-# INLINE txWitnessField #-}
-
-      nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
-      nativeScriptsDecoder =
-        ifDecoderVersionAtLeast
-          (natVersion @9)
-          ( allowTag setTag
-              >> Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder
-          )
-          (Map.fromList <$> decodeList pairDecoder)
-        where
-          pairDecoder :: Decoder s (ScriptHash, Script era)
-          pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
-          {-# INLINE pairDecoder #-}
-      {-# INLINE nativeScriptsDecoder #-}
 
 instance
   (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
@@ -819,8 +717,6 @@ instance
           pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
           pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
   {-# INLINE decCBOR #-}
-
-deriving newtype instance AlonzoEraScript era => DecCBOR (AlonzoTxWits era)
 
 deriving via
   Mem (AlonzoTxWitsRaw era)

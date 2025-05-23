@@ -82,17 +82,6 @@ instance
 
 instance
   ( EraSegWits era
-  , DecCBOR h
-  ) =>
-  DecCBOR (Block h era)
-  where
-  decCBOR =
-    decodeRecordNamed "Block" (const blockSize) $ Block <$> decCBOR <*> decCBOR
-    where
-      blockSize = 1 + fromIntegral (numSegComponents @era)
-
-instance
-  ( EraSegWits era
   , DecCBOR (Annotator h)
   , Typeable h
   ) =>

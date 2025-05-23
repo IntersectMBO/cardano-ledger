@@ -37,13 +37,11 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  Annotated (..),
   Annotator,
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
-  decodeAnnotated,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
@@ -52,13 +50,12 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Functor.Identity (Identity (..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
@@ -205,31 +202,6 @@ auxDataSeqDecoder bodiesLength auxDataMap lax = do
     indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
     indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
-instance EraTx era => DecCBOR (ShelleyTxSeq era) where
-  decCBOR = do
-    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
-    Annotated wits witsBytes <- decodeAnnotated decCBOR
-    Annotated (auxDataMap :: IntMap (TxAuxData era)) auxDataBytes <- decodeAnnotated decCBOR
-    let bodiesLength = length bodies
-    auxData <-
-      fmap (fmap runIdentity)
-        <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap) False
-
-    let witsLength = length wits
-    unless
-      (bodiesLength == witsLength)
-      ( fail $
-          "different number of transaction bodies ("
-            <> show bodiesLength
-            <> ") and witness sets ("
-            <> show witsLength
-            <> ")"
-      )
-    let txs =
-          StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitTx bodies wits auxData
-    pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
-
 instance
   ( EraTx era
   , DecCBOR (Annotator (TxAuxData era))
@@ -260,11 +232,7 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
 --   These are exactly the parts that are SafeToHash.
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
-  ( EraTx era
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  ) =>
+  EraTx era =>
   Bool ->
   Decoder s (Annotator (ShelleyTxSeq era))
 txSeqDecoder lax = do

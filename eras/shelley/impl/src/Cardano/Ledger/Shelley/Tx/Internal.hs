@@ -39,7 +39,6 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   auxDataShelleyTxL,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  segWitTx,
   segWitAnnTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
@@ -54,7 +53,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   ToCBOR,
   decodeNullMaybe,
-  decodeNullStrictMaybe,
   encodeNullMaybe,
  )
 import Cardano.Ledger.Binary.Coders
@@ -297,21 +295,6 @@ instance
 instance Era era => EncCBOR (ShelleyTx era)
 
 instance
-  ( Era era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTxRaw era)
-  where
-  decCBOR =
-    decode $
-      RecD ShelleyTxRaw
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
-
-instance
   ( EraTx era
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
@@ -328,14 +311,6 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
-
-deriving newtype instance
-  ( Era era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTx era)
 
 deriving via
   Mem (ShelleyTxRaw era)
@@ -366,30 +341,6 @@ unsafeConstructTxWithBytes b w a bytes = MkShelleyTx (mkMemoBytes (ShelleyTxRaw 
 --------------------------------------------------------------------------------
 -- Segregated witness
 --------------------------------------------------------------------------------
-
-segWitTx ::
-  forall era.
-  EraTx era =>
-  TxBody era ->
-  TxWits era ->
-  Maybe (TxAuxData era) ->
-  ShelleyTx era
-segWitTx body' witnessSet auxData =
-  let
-    wrappedAuxDataBytes = case auxData of
-      Nothing -> Plain.serialize Plain.encodeNull
-      Just b -> Plain.serialize b
-    fullBytes =
-      Plain.serialize (Plain.encodeListLen 3)
-        <> Plain.serialize body'
-        <> Plain.serialize witnessSet
-        <> wrappedAuxDataBytes
-   in
-    unsafeConstructTxWithBytes
-      body'
-      witnessSet
-      (maybeToStrictMaybe auxData)
-      fullBytes
 
 segWitAnnTx ::
   forall era.

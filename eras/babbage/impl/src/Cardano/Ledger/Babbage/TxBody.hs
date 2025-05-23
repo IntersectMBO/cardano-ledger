@@ -211,8 +211,6 @@ instance NFData BabbageTxBodyRaw
 
 deriving instance Show BabbageTxBodyRaw
 
-deriving newtype instance DecCBOR (TxBody BabbageEra)
-
 deriving via Mem BabbageTxBodyRaw instance DecCBOR (Annotator (TxBody BabbageEra))
 
 instance Memoized (TxBody BabbageEra) where

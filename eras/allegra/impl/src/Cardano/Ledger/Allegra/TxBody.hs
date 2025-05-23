@@ -287,7 +287,7 @@ pattern AllegraTxBody
 
 instance EraTxBody AllegraEra where
   newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
-    deriving newtype (SafeToHash, ToCBOR, DecCBOR)
+    deriving newtype (SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
 

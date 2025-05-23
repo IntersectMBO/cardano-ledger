@@ -242,8 +242,6 @@ instance DecCBOR ConwayTxBodyRaw where
 instance DecCBOR (Annotator ConwayTxBodyRaw) where
   decCBOR = pure <$> decCBOR
 
-deriving newtype instance DecCBOR (TxBody ConwayEra)
-
 deriving via Mem ConwayTxBodyRaw instance DecCBOR (Annotator (TxBody ConwayEra))
 
 deriving instance NoThunks (TxBody ConwayEra)
