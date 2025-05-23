@@ -89,7 +89,9 @@ transaction_body =
 
 set<a0> = [* a0]
 
-transaction_input = [transaction_id : hash32, index : uint .size 2]
+transaction_input = [id : transaction_id, index : uint .size 2]
+
+transaction_id = hash32
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
 ; and can be used interchangeably.
@@ -329,11 +331,9 @@ dns_name = text .size (0 .. 64)
 ; dns_name: An SRV DNS record
 multi_host_name = (2, dns_name)
 
-pool_metadata = [url, metadata_hash]
+pool_metadata = [url, bytes]
 
 url = text .size (0 .. 64)
-
-metadata_hash = hash32
 
 pool_retirement = (4, pool_keyhash, epoch)
 

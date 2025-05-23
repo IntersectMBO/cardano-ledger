@@ -49,7 +49,7 @@ transaction_body =
       [ idx 0 ==> set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , idx 3 ==> VUInt
+      , opt (idx 3 ==> VUInt)
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
       , opt (idx 6 ==> update)

@@ -25,6 +25,8 @@ blake2b-256 = bytes .size 32
 txid = blake2b-256
 blockid = blake2b-256
 updid = blake2b-256
+certificateid = blake2b-256
+voteid = blake2b-256
 hash = blake2b-256
 
 blake2b-224 = bytes .size 28
@@ -48,8 +50,9 @@ attributes = {* any => any}
 addrdistr = [1] / [0, stakeholderid]
 
 addrtype = &("PubKey" : 0, "Script" : 1, "Redeem" : 2) / (u64 .gt 2)
-addrattr = { ? 0 : addrdistr
-           , ? 1 : bytes}
+addrattr = { ? 1 : bytes
+           , ? 2 : bytes
+           }
 address = [ #6.24(bytes .cbor ([addressid, addrattr, addrtype])), u64 ]
 
 ; Transactions
@@ -146,7 +149,7 @@ updata = [ hash, hash, hash, hash ]
 upprop = [ "blockVersion" : bver
          , "blockVersionMod" : bvermod
          , "softwareVersion" : [ text, u32 ]
-         , "data" : #6.258([text, updata])
+         , "data" : { * text => updata }
          , "attributes" : attributes
          , "from" : pubkey
          , "signature" : signature

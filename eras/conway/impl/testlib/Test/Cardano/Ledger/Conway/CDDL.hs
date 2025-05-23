@@ -308,7 +308,7 @@ gov_action_id :: Rule
 gov_action_id =
   "gov_action_id"
     =:= arr
-      [ "transaction_id" ==> hash32
+      [ "transaction_id" ==> transaction_id
       , "gov_action_index" ==> (VUInt `sized` (2 :: Word64))
       ]
 
@@ -319,7 +319,7 @@ transaction_input :: Rule
 transaction_input =
   "transaction_input"
     =:= arr
-      [ "transaction_id" ==> hash32
+      [ "transaction_id" ==> transaction_id
       , "index" ==> (VUInt `sized` (2 :: Word64))
       ]
 

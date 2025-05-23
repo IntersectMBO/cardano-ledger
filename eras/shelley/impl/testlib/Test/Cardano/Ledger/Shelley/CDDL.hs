@@ -107,9 +107,13 @@ transaction_input :: Rule
 transaction_input =
   "transaction_input"
     =:= arr
-      [ "transaction_id" ==> hash32
+      [ "id" ==> transaction_id
       , "index" ==> VUInt `sized` (2 :: Word64)
       ]
+
+transaction_id :: Rule
+transaction_id =
+  "transaction_id" =:= hash32
 
 transaction_output :: Rule
 transaction_output = "transaction_output" =:= arr [a address, "amount" ==> coin]
@@ -237,7 +241,7 @@ relay =
     / arr [a multi_host_name]
 
 pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a metadata_hash]
+pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
 
 url :: Rule
 url = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
