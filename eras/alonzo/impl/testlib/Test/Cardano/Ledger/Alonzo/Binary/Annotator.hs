@@ -59,7 +59,7 @@ instance
     let bodiesLength = length bodies
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
-    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap False
+    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap
     Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
     let validFlags = alignedValidFlags bodiesLength isValidIdxs
     unless

@@ -188,10 +188,10 @@ bbHash (TxSeq' _ bodies wits md) =
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 auxDataSeqDecoder ::
-  Int -> IntMap a -> Bool -> Decoder s (Seq (Maybe a))
-auxDataSeqDecoder bodiesLength auxDataMap lax = do
+  Int -> IntMap a -> Decoder s (Seq (Maybe a))
+auxDataSeqDecoder bodiesLength auxDataMap = do
   unless
-    (lax || getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+    (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
     (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
   pure (indexLookupSeq bodiesLength auxDataMap)
   where
@@ -210,7 +210,33 @@ instance
   ) =>
   DecCBOR (Annotator (ShelleyTxSeq era))
   where
-  decCBOR = txSeqDecoder False
+  -- \| The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
+  --   These are exactly the parts that are SafeToHash.
+  -- \| Decode a TxSeq, used in decoding a Block.
+  decCBOR = do
+    (bodies, bodiesAnn) <- withSlice decCBOR
+    (wits, witsAnn) <- withSlice decCBOR
+    let bodiesLength = length bodies
+        witsLength = length wits
+    (metadata, metadataAnn) <- withSlice $ do
+      auxDataMap <- decCBOR
+      auxDataSeqDecoder bodiesLength auxDataMap
+
+    unless
+      (bodiesLength == witsLength)
+      ( fail $
+          "different number of transaction bodies ("
+            <> show bodiesLength
+            <> ") and witness sets ("
+            <> show witsLength
+            <> ")"
+      )
+
+    let txns =
+          sequenceA $
+            StrictSeq.forceToStrict $
+              Seq.zipWith3 segWitAnnTx bodies wits metadata
+    pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
@@ -227,35 +253,3 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
       Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
-
--- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
---   These are exactly the parts that are SafeToHash.
--- | Decode a TxSeq, used in decoding a Block.
-txSeqDecoder ::
-  EraTx era =>
-  Bool ->
-  Decoder s (Annotator (ShelleyTxSeq era))
-txSeqDecoder lax = do
-  (bodies, bodiesAnn) <- withSlice decCBOR
-  (wits, witsAnn) <- withSlice decCBOR
-  let bodiesLength = length bodies
-      witsLength = length wits
-  (metadata, metadataAnn) <- withSlice $ do
-    auxDataMap <- decCBOR
-    auxDataSeqDecoder bodiesLength auxDataMap lax
-
-  unless
-    (lax || bodiesLength == witsLength)
-    ( fail $
-        "different number of transaction bodies ("
-          <> show bodiesLength
-          <> ") and witness sets ("
-          <> show witsLength
-          <> ")"
-    )
-
-  let txns =
-        sequenceA $
-          StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitAnnTx bodies wits metadata
-  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn

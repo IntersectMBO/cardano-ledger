@@ -56,7 +56,7 @@ instance
     let bodiesLength = length bodies
     auxData <-
       fmap (fmap runIdentity)
-        <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap) False
+        <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap)
 
     let witsLength = length wits
     unless

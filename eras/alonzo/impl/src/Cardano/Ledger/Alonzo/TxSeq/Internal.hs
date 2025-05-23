@@ -194,7 +194,7 @@ instance
         witsLength = length wits
     (auxData, auxDataAnn) <- withSlice $ do
       auxDataMap <- decCBOR
-      auxDataSeqDecoder bodiesLength auxDataMap False
+      auxDataSeqDecoder bodiesLength auxDataMap
 
     (isValIdxs, isValAnn) <- withSlice decCBOR
     let validFlags = alignedValidFlags bodiesLength isValIdxs
