@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
 
@@ -12,6 +13,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (UnelectedCommitteeVoters))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -34,7 +36,9 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   votingSpec
@@ -1666,7 +1670,9 @@ delayingActionsSpec =
 
 committeeMaxTermLengthSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -1723,37 +1729,50 @@ committeeMaxTermLengthSpec =
       -- ======== EPOCH e+1 ========
 
       hotCs <- mapM registerCommitteeHotKey newMembers
-      -- CC members can now vote for the hard-fork
-      submitYesVoteCCs_ hotCs gid
+      -- CC members can now vote for the hard-fork, but only up to protocol version 10
+      ifMajorVersionAtMost @10
+        ( do
+            submitYesVoteCCs_ hotCs gid
 
-      -- Although elected, new CC members are not yet active at this point
-      -- since it takes two epochs for their election to take effect, hence
-      -- the check fails
-      isCommitteeAccepted gid `shouldReturn` False
-      mapM_ expectCommitteeMemberAbsence newMembers
+            -- Although elected, new CC members are not yet active at this point
+            -- since it takes two epochs for their election to take effect, hence
+            -- the check fails
+            isCommitteeAccepted gid `shouldReturn` False
+            mapM_ expectCommitteeMemberAbsence newMembers
 
-      passEpoch
-      -- ======== EPOCH e+2 ========
+            passEpoch
+            -- ======== EPOCH e+2 ========
 
-      -- Two epochs passed since the proposal and all the governing bodies except the
-      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
-      -- vote in the next epoch, the hard-fork is not yet enacted...
-      getLastEnactedHardForkInitiation `shouldReturn` SNothing
-      -- ...but now we can see that the CC accepted the proposal...
-      isCommitteeAccepted gid `shouldReturn` True
-      -- ...and that they are elected members now, albeit already expired ones
-      expectMembers $ initialMembers <> Set.fromList newMembers
-      mapM_ ccShouldBeExpired newMembers
+            -- Two epochs passed since the proposal and all the governing bodies except the
+            -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
+            -- vote in the next epoch, the hard-fork is not yet enacted...
+            getLastEnactedHardForkInitiation `shouldReturn` SNothing
+            -- ...but now we can see that the CC accepted the proposal...
+            isCommitteeAccepted gid `shouldReturn` True
+            -- ...and that they are elected members now, albeit already expired ones
+            expectMembers $ initialMembers <> Set.fromList newMembers
+            mapM_ ccShouldBeExpired newMembers
 
-      passEpoch
-      -- ======== EPOCH e+3 ========
+            passEpoch
+            -- ======== EPOCH e+3 ========
 
-      -- Two epochs passed since the CCs also accepted the hard-fork, however
-      -- it didn't get enacted because the CCs expired by now and thus
-      -- their votes don't count
-      getLastEnactedHardForkInitiation `shouldReturn` SNothing
-      getProtVer `shouldReturn` curProtVer
-      isCommitteeAccepted gid `shouldReturn` False
+            -- Two epochs passed since the CCs also accepted the hard-fork, however
+            -- it didn't get enacted because the CCs expired by now and thus
+            -- their votes don't count
+            getLastEnactedHardForkInitiation `shouldReturn` SNothing
+            getProtVer `shouldReturn` curProtVer
+            isCommitteeAccepted gid `shouldReturn` False
+        )
+        ( for_
+            hotCs
+            ( \c ->
+                submitFailingVote
+                  (CommitteeVoter c)
+                  gid
+                  [ injectFailure $ UnelectedCommitteeVoters [c]
+                  ]
+            )
+        )
     it "maxTermLength = 1" $ whenPostBootstrap $ do
       -- ======== EPOCH e ========
 
@@ -1784,32 +1803,45 @@ committeeMaxTermLengthSpec =
       -- ======== EPOCH e+1 ========
 
       hotCs <- mapM registerCommitteeHotKey newMembers
-      -- CC members can now vote for the hard-fork
-      submitYesVoteCCs_ hotCs gid
+      -- CC members can now vote for the hard-fork, but only up to protocol version 10
+      ifMajorVersionAtMost @10
+        ( do
+            submitYesVoteCCs_ hotCs gid
 
-      -- Although elected, new CC members are not yet active at this point
-      -- since it takes two epochs for their election to take effect, hence
-      -- the check fails
-      isCommitteeAccepted gid `shouldReturn` False
-      mapM_ expectCommitteeMemberAbsence newMembers
+            -- Although elected, new CC members are not yet active at this point
+            -- since it takes two epochs for their election to take effect, hence
+            -- the check fails
+            isCommitteeAccepted gid `shouldReturn` False
+            mapM_ expectCommitteeMemberAbsence newMembers
 
-      passEpoch
-      -- ======== EPOCH e+2 ========
+            passEpoch
+            -- ======== EPOCH e+2 ========
 
-      -- Two epochs passed since the proposal and all the governing bodies except the
-      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
-      -- vote in the next epoch, the hard-fork is not yet enacted...
-      getLastEnactedHardForkInitiation `shouldReturn` SNothing
-      -- ...but now we can see that the CC accepted the proposal...
-      isCommitteeAccepted gid `shouldReturn` True
-      -- ...and that they are active elected members now
-      expectMembers $ initialMembers <> Set.fromList newMembers
-      mapM_ ccShouldNotBeExpired newMembers
+            -- Two epochs passed since the proposal and all the governing bodies except the
+            -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
+            -- vote in the next epoch, the hard-fork is not yet enacted...
+            getLastEnactedHardForkInitiation `shouldReturn` SNothing
+            -- ...but now we can see that the CC accepted the proposal...
+            isCommitteeAccepted gid `shouldReturn` True
+            -- ...and that they are active elected members now
+            expectMembers $ initialMembers <> Set.fromList newMembers
+            mapM_ ccShouldNotBeExpired newMembers
 
-      passEpoch
-      -- ======== EPOCH e+3 ========
+            passEpoch
+            -- ======== EPOCH e+3 ========
 
-      -- Two epochs passed since the CCs also accepted the hard-fork, which
-      -- is now enacted since the CCs were active during the check
-      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
-      getProtVer `shouldReturn` nextProtVer
+            -- Two epochs passed since the CCs also accepted the hard-fork, which
+            -- is now enacted since the CCs were active during the check
+            getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
+            getProtVer `shouldReturn` nextProtVer
+        )
+        ( for_
+            hotCs
+            ( \c ->
+                submitFailingVote
+                  (CommitteeVoter c)
+                  gid
+                  [ injectFailure $ UnelectedCommitteeVoters [c]
+                  ]
+            )
+        )
