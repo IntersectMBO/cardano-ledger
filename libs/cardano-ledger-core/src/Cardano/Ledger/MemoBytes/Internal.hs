@@ -76,7 +76,7 @@ import Cardano.Ledger.Binary (
   EncCBOR,
   Version,
   decodeAnnotated,
-  decodeFull',
+  decodeFullAnnotator,
   serialize,
   withSlice,
  )
@@ -93,6 +93,7 @@ import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.MemPack
 import Data.MemPack.Buffer (Buffer)
+import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
@@ -129,11 +130,28 @@ byteCountMemoBytes = packedByteCount . mbBytes
 packMemoBytesM :: MemoBytes t -> Pack s ()
 packMemoBytesM = packM . mbBytes
 
-unpackMemoBytesM :: (DecCBOR t, Buffer b) => Version -> Unpack b (MemoBytes t)
+unpackMemoBytesM ::
+  ( DecCBOR (Annotator t)
+  , Typeable t
+  , Buffer b
+  ) =>
+  Version -> Unpack b (MemoBytes t)
 unpackMemoBytesM v = unpackM >>= decodeMemoBytes v
 
-decodeMemoBytes :: (DecCBOR t, MonadFail m) => Version -> ByteString -> m (MemoBytes t)
-decodeMemoBytes v = either (fail . show) pure . decodeFull' v
+decodeMemoBytes ::
+  forall t m.
+  ( Typeable t
+  , DecCBOR (Annotator t)
+  , MonadFail m
+  ) =>
+  Version -> ByteString -> m (MemoBytes t)
+decodeMemoBytes v bs =
+  either (fail . show) pure $
+    decodeFullAnnotator
+      v
+      (T.pack (show (typeRep (Proxy @t))))
+      decCBOR
+      (BSL.fromStrict bs)
 
 type family MemoHashIndex (t :: Type) :: Type
 
