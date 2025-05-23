@@ -141,6 +141,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   -- * ImpSpec re-exports
   ImpM,
   ImpInit,
+  ifMajorVersionAtMost,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -1701,6 +1702,22 @@ unlessMajorVersion ::
 unlessMajorVersion a = do
   pv <- getProtVer
   unless (pvMajor pv == natVersion @v) a
+
+ifMajorVersionAtMost ::
+  forall (v :: Natural) era.
+  ( EraGov era
+  , KnownNat v
+  , MinVersion <= v
+  , v <= MaxVersion
+  ) =>
+  ImpTestM era () ->
+  ImpTestM era () ->
+  ImpTestM era ()
+ifMajorVersionAtMost a b = do
+  pv <- getProtVer
+  if pvMajor pv <= natVersion @v
+    then a
+    else b
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
