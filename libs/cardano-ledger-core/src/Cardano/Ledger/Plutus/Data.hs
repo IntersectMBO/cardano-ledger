@@ -38,6 +38,7 @@ module Cardano.Ledger.Plutus.Data (
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
@@ -51,6 +52,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
+  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (RawType),
@@ -85,6 +87,9 @@ instance Typeable era => EncCBOR (PlutusData era) where
 instance Typeable era => DecCBOR (PlutusData era) where
   decCBOR = fromPlainDecoder Cborg.decode
 
+instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
+  decCBOR = pure <$> fromPlainDecoder Cborg.decode
+
 newtype Data era = MkData (MemoBytes (PlutusData era))
   deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData, DecCBOR)
@@ -94,6 +99,12 @@ instance Typeable era => EncCBOR (Data era)
 
 instance Memoized (Data era) where
   type RawType (Data era) = PlutusData era
+
+deriving via
+  Mem (PlutusData era)
+  instance
+    Era era =>
+    DecCBOR (Annotator (Data era))
 
 deriving instance Show (Data era)
 

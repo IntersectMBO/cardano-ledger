@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,12 +22,14 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
+import Cardano.Ledger.MemoBytes (decodeMemoized)
 import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
-import Test.Cardano.Ledger.Core.Binary.Annotator
 import Test.Cardano.Ledger.Shelley.Binary.Annotator
 
-instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
+deriving newtype instance DecCBOR (TxBody AllegraEra)
+
+instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
   decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap
@@ -39,44 +42,28 @@ instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
     where
       decodeFromMap =
         decode
-          ( Ann (Emit AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
+          ( Emit AllegraTxAuxDataRaw
+              <! From
+              <! Emit StrictSeq.empty
           )
       decodeFromList =
         decode
-          ( Ann (RecD AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! D (sequence <$> decCBOR)
+          ( RecD AllegraTxAuxDataRaw
+              <! From
+              <! From
           )
 
-deriving via
-  (Mem (AllegraTxAuxDataRaw era))
-  instance
-    Era era => DecCBOR (Annotator (AllegraTxAuxData era))
+deriving newtype instance Era era => DecCBOR (AllegraTxAuxData era)
 
-instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
-  decCBOR = decode (Summands "TimelockRaw" decRaw)
-    where
-      decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
-      decRaw 0 = Ann (SumD TimelockSignature <! From)
-      decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD TimelockMOf) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD TimelockTimeStart <! From)
-      decRaw 5 = Ann (SumD TimelockTimeExpire <! From)
-      decRaw n = Invalid n
+instance Era era => DecCBOR (TimelockRaw era) where
+  decCBOR = decode $ Summands "TimelockRaw" $ \case
+    0 -> SumD TimelockSignature <! From
+    1 -> SumD TimelockAllOf <! From
+    2 -> SumD TimelockAnyOf <! From
+    3 -> SumD TimelockMOf <! From <! From
+    4 -> SumD TimelockTimeStart <! From
+    5 -> SumD TimelockTimeExpire <! From
+    n -> Invalid n
 
-instance Era era => DecCBOR (Annotator (Timelock era)) where
-  decCBOR = fmap MkTimelock <$> decCBOR
-
-instance
-  (DecCBOR m, Monoid m, AllegraEraTxBody era) =>
-  DecCBOR (Annotator (AllegraTxBodyRaw m era))
-  where
-  decCBOR = pure <$> decCBOR
-
-deriving via
-  Mem (AllegraTxBodyRaw () AllegraEra)
-  instance
-    DecCBOR (Annotator (TxBody AllegraEra))
+instance Era era => DecCBOR (Timelock era) where
+  decCBOR = MkTimelock <$> decodeMemoized decCBOR

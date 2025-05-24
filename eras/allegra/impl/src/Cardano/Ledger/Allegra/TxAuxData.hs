@@ -29,6 +29,7 @@ module Cardano.Ledger.Allegra.TxAuxData (
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR,
@@ -37,6 +38,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -119,10 +121,15 @@ instance NFData (AllegraTxAuxDataRaw era)
 
 newtype AllegraTxAuxData era = MkAlegraTxAuxData (MemoBytes (AllegraTxAuxDataRaw era))
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, SafeToHash, DecCBOR)
+  deriving newtype (Eq, ToCBOR, SafeToHash)
 
 instance Memoized (AllegraTxAuxData era) where
   type RawType (AllegraTxAuxData era) = AllegraTxAuxDataRaw era
+
+deriving via
+  (Mem (AllegraTxAuxDataRaw era))
+  instance
+    Era era => DecCBOR (Annotator (AllegraTxAuxData era))
 
 type instance MemoHashIndex (AllegraTxAuxDataRaw era) = EraIndependentTxAuxData
 
@@ -160,7 +167,7 @@ instance Era era => EncCBOR (AllegraTxAuxDataRaw era) where
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AllegraTxAuxData era)
 
-instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
+instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
   decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap
@@ -173,13 +180,13 @@ instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
     where
       decodeFromMap =
         decode
-          ( Emit AllegraTxAuxDataRaw
-              <! From
-              <! Emit StrictSeq.empty
+          ( Ann (Emit AllegraTxAuxDataRaw)
+              <*! Ann From
+              <*! Ann (Emit StrictSeq.empty)
           )
       decodeFromList =
         decode
-          ( RecD AllegraTxAuxDataRaw
-              <! From
-              <! From
+          ( Ann (RecD AllegraTxAuxDataRaw)
+              <*! Ann From
+              <*! D (sequence <$> decCBOR)
           )

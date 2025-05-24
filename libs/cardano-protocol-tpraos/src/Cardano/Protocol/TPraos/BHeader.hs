@@ -60,6 +60,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.BaseTypes.NonZero (nonZero, (%.))
 import Cardano.Ledger.Binary (
+  Annotator,
   Case (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
@@ -95,6 +96,7 @@ import Cardano.Ledger.Hashes (
  )
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.MemoBytes (
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -272,9 +274,12 @@ instance Crypto c => DecCBOR (BHeaderRaw c) where
     decodeRecordNamed "BHeaderRaw" (const 2) $
       BHeaderRaw <$> decCBOR <*> decodeSignedKES
 
+instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
+  decCBOR = pure <$> decCBOR
+
 newtype BHeader c = BHeaderConstr (MemoBytes (BHeaderRaw c))
   deriving (Generic)
-  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, DecCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, SafeToHash)
 
 type instance MemoHashIndex (BHeaderRaw c) = EraIndependentBlockHeader
 
@@ -285,6 +290,11 @@ instance Crypto c => EncCBOR (BHeader c)
 
 instance Memoized (BHeader c) where
   type RawType (BHeader c) = BHeaderRaw c
+
+deriving via
+  Mem (BHeaderRaw c)
+  instance
+    Crypto c => DecCBOR (Annotator (BHeader c))
 
 pattern BHeader ::
   Crypto c =>

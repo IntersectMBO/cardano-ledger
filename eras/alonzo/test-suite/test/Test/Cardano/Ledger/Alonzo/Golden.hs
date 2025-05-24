@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Rules (FailureDescription (..), TagMismatchDescript
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), alonzoMinFeeTx)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
-import Cardano.Ledger.Binary (decodeFull)
+import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -297,7 +297,7 @@ goldenMinFee =
                 Left err -> error err
                 Right val -> val
             txsSeq =
-              case decodeFull (eraProtVerHigh @AlonzoEra) cborBytesBlock of
+              case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
                 Right (Block _h txs :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
             firstTx =

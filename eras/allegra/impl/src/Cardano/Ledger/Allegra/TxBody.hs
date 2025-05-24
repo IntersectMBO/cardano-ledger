@@ -42,7 +42,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -59,6 +59,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -123,6 +124,12 @@ instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBody
           bodyFields
           [(0, "atbrInputs"), (1, "atbrOutputs"), (2, "atbrFee")]
       )
+
+instance
+  (DecCBOR m, Monoid m, AllegraEraTxBody era) =>
+  DecCBOR (Annotator (AllegraTxBodyRaw m era))
+  where
+  decCBOR = pure <$> decCBOR
 
 -- Sparse encodings of AllegraTxBodyRaw, the key values are fixed by backward compatibility
 -- concerns as we want the ShelleyTxBody to deserialise as AllegraTxBody.
@@ -195,6 +202,11 @@ emptyAllegraTxBodyRaw =
 
 instance Memoized (TxBody AllegraEra) where
   type RawType (TxBody AllegraEra) = AllegraTxBodyRaw () AllegraEra
+
+deriving via
+  Mem (AllegraTxBodyRaw () AllegraEra)
+  instance
+    DecCBOR (Annotator (TxBody AllegraEra))
 
 deriving instance Eq (TxBody AllegraEra)
 
@@ -275,7 +287,7 @@ pattern AllegraTxBody
 
 instance EraTxBody AllegraEra where
   newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
-    deriving newtype (SafeToHash, ToCBOR, DecCBOR)
+    deriving newtype (SafeToHash, ToCBOR)
 
   mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
 

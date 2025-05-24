@@ -41,6 +41,7 @@ module Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (decCBOR),
   EncCBOR (..),
   ToCBOR (..),
@@ -63,6 +64,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -127,6 +129,9 @@ instance DecCBOR ShelleyTxBodyRaw where
           boxBody
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
       )
+
+instance DecCBOR (Annotator ShelleyTxBodyRaw) where
+  decCBOR = pure <$> decCBOR
 
 -- =================================================================
 -- Composable components for building TxBody optional sparse serialisers.
@@ -252,7 +257,10 @@ deriving instance Show (TxBody ShelleyEra)
 
 deriving instance Eq (TxBody ShelleyEra)
 
-deriving newtype instance DecCBOR (TxBody ShelleyEra)
+deriving via
+  Mem ShelleyTxBodyRaw
+  instance
+    DecCBOR (Annotator (TxBody ShelleyEra))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::

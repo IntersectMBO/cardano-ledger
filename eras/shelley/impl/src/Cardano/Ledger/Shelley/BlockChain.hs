@@ -37,26 +37,25 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  Annotated (..),
+  Annotator,
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
-  decodeAnnotated,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Functor.Identity (Identity (..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
@@ -189,10 +188,10 @@ bbHash (TxSeq' _ bodies wits md) =
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 auxDataSeqDecoder ::
-  Int -> IntMap a -> Bool -> Decoder s (Seq (Maybe a))
-auxDataSeqDecoder bodiesLength auxDataMap lax = do
+  Int -> IntMap a -> Decoder s (Seq (Maybe a))
+auxDataSeqDecoder bodiesLength auxDataMap = do
   unless
-    (lax || getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+    (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
     (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
   pure (indexLookupSeq bodiesLength auxDataMap)
   where
@@ -203,17 +202,26 @@ auxDataSeqDecoder bodiesLength auxDataMap lax = do
     indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
     indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
-instance EraTx era => DecCBOR (ShelleyTxSeq era) where
+instance
+  ( EraTx era
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  ) =>
+  DecCBOR (Annotator (ShelleyTxSeq era))
+  where
+  -- \| The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
+  --   These are exactly the parts that are SafeToHash.
+  -- \| Decode a TxSeq, used in decoding a Block.
   decCBOR = do
-    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
-    Annotated wits witsBytes <- decodeAnnotated decCBOR
-    Annotated (auxDataMap :: IntMap (TxAuxData era)) auxDataBytes <- decodeAnnotated decCBOR
+    (bodies, bodiesAnn) <- withSlice decCBOR
+    (wits, witsAnn) <- withSlice decCBOR
     let bodiesLength = length bodies
-    auxData <-
-      fmap (fmap runIdentity)
-        <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap) False
+        witsLength = length wits
+    (metadata, metadataAnn) <- withSlice $ do
+      auxDataMap <- decCBOR
+      auxDataSeqDecoder bodiesLength auxDataMap
 
-    let witsLength = length wits
     unless
       (bodiesLength == witsLength)
       ( fail $
@@ -223,10 +231,12 @@ instance EraTx era => DecCBOR (ShelleyTxSeq era) where
             <> show witsLength
             <> ")"
       )
-    let txs =
-          StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitTx bodies wits auxData
-    pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
+
+    let txns =
+          sequenceA $
+            StrictSeq.forceToStrict $
+              Seq.zipWith3 segWitAnnTx bodies wits metadata
+    pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

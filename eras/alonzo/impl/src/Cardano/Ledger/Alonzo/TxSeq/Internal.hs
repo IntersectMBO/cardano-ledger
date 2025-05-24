@@ -32,16 +32,16 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Binary (
-  Annotated (..),
+  Annotator (..),
   DecCBOR (..),
   EncCBORGroup (..),
-  decodeAnnotated,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
   encodedSizeExpr,
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
@@ -178,17 +178,26 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
-instance AlonzoEraTx era => DecCBOR (AlonzoTxSeq era) where
+instance
+  ( AlonzoEraTx era
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  ) =>
+  DecCBOR (Annotator (AlonzoTxSeq era))
+  where
   decCBOR = do
-    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
-    Annotated wits witsBytes <- decodeAnnotated decCBOR
-    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
+    (bodies, bodiesAnn) <- withSlice decCBOR
+    (wits, witsAnn) <- withSlice decCBOR
     let bodiesLength = length bodies
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
-    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap False
-    Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
-    let validFlags = alignedValidFlags bodiesLength isValidIdxs
+    (auxData, auxDataAnn) <- withSlice $ do
+      auxDataMap <- decCBOR
+      auxDataSeqDecoder bodiesLength auxDataMap
+
+    (isValIdxs, isValAnn) <- withSlice decCBOR
+    let validFlags = alignedValidFlags bodiesLength isValIdxs
     unless
       (bodiesLength == witsLength)
       ( fail $
@@ -199,29 +208,26 @@ instance AlonzoEraTx era => DecCBOR (AlonzoTxSeq era) where
             <> ")"
       )
     unless
-      (all inRange isValidIdxs)
+      (all inRange isValIdxs)
       ( fail
           ( "Some IsValid index is not in the range: 0 .. "
               ++ show (bodiesLength - 1)
               ++ ", "
-              ++ show isValidIdxs
+              ++ show isValIdxs
           )
       )
-    let mkTx body wit isValid aData =
-          mkBasicTx body
-            & witsTxL .~ wit
-            & auxDataTxL .~ maybeToStrictMaybe aData
-            & isValidTxL .~ isValid
-    let txs =
-          StrictSeq.forceToStrict $
-            Seq.zipWith4 mkTx bodies wits validFlags auxData
+
+    let txns =
+          sequenceA $
+            StrictSeq.forceToStrict $
+              Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
     pure $
       AlonzoTxSeqRaw
-        txs
-        bodiesBytes
-        witsBytes
-        auxDataBytes
-        isValidBytes
+        <$> txns
+        <*> bodiesAnn
+        <*> witsAnn
+        <*> auxDataAnn
+        <*> isValAnn
 
 --------------------------------------------------------------------------------
 -- Internal utility functions
@@ -254,3 +260,20 @@ alignedValidFlags = alignedValidFlags' (-1)
       Seq.replicate (x - prev - 1) (IsValid True)
         Seq.>< IsValid False
         Seq.<| alignedValidFlags' x (n - (x - prev)) xs
+
+-- | Construct an annotated Alonzo style transaction.
+alonzoSegwitTx ::
+  AlonzoEraTx era =>
+  Annotator (TxBody era) ->
+  Annotator (TxWits era) ->
+  IsValid ->
+  Maybe (Annotator (TxAuxData era)) ->
+  Annotator (Tx era)
+alonzoSegwitTx txBodyAnn txWitsAnn txIsValid auxDataAnn = Annotator $ \bytes ->
+  let txBody = runAnnotator txBodyAnn bytes
+      txWits = runAnnotator txWitsAnn bytes
+      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
+   in mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ txAuxData
+        & isValidTxL .~ txIsValid

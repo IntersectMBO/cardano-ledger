@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,7 +19,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.Tx hiding (wits)
+import Cardano.Ledger.Alonzo.Tx hiding (body, isValid, wits)
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxSeq.Internal
@@ -41,228 +43,25 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
-instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      ( allowTag setTag
-          >> mapTraverseableDecoderA
-            (decodeNonEmptyList decCBOR)
-            (TxDatsRaw . Map.fromElems hashData . NE.toList)
-      )
-      (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . Map.fromElems hashData))
-  {-# INLINE decCBOR #-}
-
-deriving via
-  Mem (TxDatsRaw era)
-  instance
-    Era era => DecCBOR (Annotator (TxDats era))
-
-instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
-  decCBOR = do
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      ( peekTokenType >>= \case
-          TypeMapLenIndef -> decodeMapRedeemers
-          TypeMapLen -> decodeMapRedeemers
-          _ -> decodeListRedeemers
-      )
-      ( mapTraverseableDecoderA
-          (decodeList decodeAnnElement)
-          (RedeemersRaw . Map.fromList)
-      )
-    where
-      decodeRedeemersWith nonEmptyDecoder =
-        mapTraverseableDecoderA
-          nonEmptyDecoder
-          (RedeemersRaw . Map.fromList . NE.toList)
-      decodeMapRedeemers = decodeRedeemersWith $ do
-        (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
-          ptr <- decCBOR
-          (annData, exUnits) <- decCBOR
-          pure $ (\d -> (ptr, (d, exUnits))) <$> annData
-        case NE.nonEmpty xs of
-          Nothing -> fail "Expected redeemers map to be non-empty"
-          Just neList -> pure $ NE.reverse neList
-      decodeListRedeemers =
-        decodeRedeemersWith (decodeNonEmptyList decodeAnnElement)
-      decodeAnnElement ::
-        forall s. Decoder s (Annotator (PlutusPurpose AsIx era, (Data era, ExUnits)))
-      decodeAnnElement = do
-        (rdmrPtr, dat, ex) <- decodeElement
-        let f x y z = (x, (y, z))
-        pure $ f rdmrPtr <$> dat <*> pure ex
-      {-# INLINE decodeAnnElement #-}
-      decodeElement ::
-        forall s. Decoder s (PlutusPurpose AsIx era, Annotator (Data era), ExUnits)
-      decodeElement = do
-        decodeRecordNamed
-          "Redeemer"
-          (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
-          $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
-      {-# INLINE decodeElement #-}
-  {-# INLINE decCBOR #-}
-
-deriving via
-  Mem (RedeemersRaw era)
-  instance
-    AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
-
-deriving via
-  Mem (AlonzoTxWitsRaw era)
-  instance
-    ( AlonzoEraScript era
-    , DecCBOR (Annotator (NativeScript era))
-    ) =>
-    DecCBOR (Annotator (AlonzoTxWits era))
-
-instance
-  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
-  DecCBOR (Annotator (AlonzoTxWitsRaw era))
-  where
-  decCBOR =
-    decode $
-      SparseKeyed
-        "AlonzoTxWits"
-        (pure emptyTxWitsRaw)
-        txWitnessField
-        []
-    where
-      txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
-      txWitnessField 0 =
-        fieldAA
-          (\x wits -> wits {atwrAddrTxWits = x})
-          ( D $
-              ifDecoderVersionAtLeast
-                (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
-                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
-          )
-      txWitnessField 1 =
-        fieldAA
-          addScriptsTxWitsRaw
-          (D nativeScriptsDecoder)
-      txWitnessField 2 =
-        fieldAA
-          (\x wits -> wits {atwrBootAddrTxWits = x})
-          ( D $
-              ifDecoderVersionAtLeast
-                (natVersion @9)
-                ( allowTag setTag
-                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
-                )
-                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
-          )
-      txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
-      txWitnessField 4 =
-        fieldAA
-          (\x wits -> wits {atwrDatsTxWits = x})
-          From
-      txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
-      txWitnessField 7 = fieldA addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
-      txWitnessField n = invalidField n
-      {-# INLINE txWitnessField #-}
-
-      nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
-      nativeScriptsDecoder =
-        ifDecoderVersionAtLeast
-          (natVersion @9)
-          ( allowTag setTag
-              >> mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList)
-          )
-          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
-        where
-          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
-          pairDecoder = fmap (asHashedScriptPair . fromNativeScript) <$> decCBOR
-  {-# INLINE decCBOR #-}
-
-instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
-    where
-      decodeAnnPlutus slang =
-        Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
-      {-# INLINE decodeAnnPlutus #-}
-      decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
-      decodeScript = \case
-        0 -> Ann (SumD TimelockScript) <*! From
-        1 -> decodeAnnPlutus SPlutusV1
-        2 -> decodeAnnPlutus SPlutusV2
-        3 -> decodeAnnPlutus SPlutusV3
-        n -> Invalid n
-      {-# INLINE decodeScript #-}
-  {-# INLINE decCBOR #-}
-
-instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
-  decCBOR =
-    decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
-      decodeShelley
-      decodeAllegra
-      decodeAlonzo
-    where
-      decodeShelley =
-        decode
-          ( Ann (Emit AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
-              <*! Ann (Emit Map.empty)
-          )
-      decodeAllegra =
-        decode
-          ( Ann (RecD AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! D
-                (sequence <$> decodeStrictSeq decCBOR)
-              <*! Ann (Emit Map.empty)
-          )
-      decodeAlonzo =
-        decode $
-          TagD 259 $
-            SparseKeyed "AlonzoTxAuxData" (pure emptyAlonzoTxAuxDataRaw) auxDataField []
-
-      auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
-      auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
-      auxDataField 1 =
-        fieldAA
-          (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x})
-          (D (sequence <$> decodeStrictSeq decCBOR))
-      auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
-      auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
-      auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
-      auxDataField n = invalidField n
-
-deriving via
-  Mem (AlonzoTxAuxDataRaw era)
-  instance
-    Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
-
-deriving via Mem AlonzoTxBodyRaw instance DecCBOR (Annotator (TxBody AlonzoEra))
-
-instance DecCBOR (Annotator AlonzoTxBodyRaw) where
-  decCBOR = pure <$> decCBOR
-
 instance
   ( AlonzoEraTx era
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (NativeScript era)
   ) =>
-  DecCBOR (Annotator (AlonzoTxSeq era))
+  DecCBOR (AlonzoTxSeq era)
   where
   decCBOR = do
-    (bodies, bodiesAnn) <- withSlice decCBOR
-    (wits, witsAnn) <- withSlice decCBOR
+    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
+    Annotated wits witsBytes <- decodeAnnotated decCBOR
+    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
     let bodiesLength = length bodies
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
-    (auxData, auxDataAnn) <- withSlice $ do
-      auxDataMap <- decCBOR
-      auxDataSeqDecoder bodiesLength auxDataMap False
-
-    (isValIdxs, isValAnn) <- withSlice decCBOR
-    let validFlags = alignedValidFlags bodiesLength isValIdxs
+    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap
+    Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
+    let validFlags = alignedValidFlags bodiesLength isValidIdxs
     unless
       (bodiesLength == witsLength)
       ( fail $
@@ -273,63 +72,195 @@ instance
             <> ")"
       )
     unless
-      (all inRange isValIdxs)
+      (all inRange isValidIdxs)
       ( fail
           ( "Some IsValid index is not in the range: 0 .. "
               ++ show (bodiesLength - 1)
               ++ ", "
-              ++ show isValIdxs
+              ++ show isValidIdxs
           )
       )
-
-    let txns =
-          sequenceA $
-            StrictSeq.forceToStrict $
-              Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
+    let mkTx body wit isValid aData =
+          mkBasicTx body
+            & witsTxL .~ wit
+            & auxDataTxL .~ maybeToStrictMaybe aData
+            & isValidTxL .~ isValid
+    let txs =
+          StrictSeq.forceToStrict $
+            Seq.zipWith4 mkTx bodies wits validFlags auxData
     pure $
       AlonzoTxSeqRaw
-        <$> txns
-        <*> bodiesAnn
-        <*> witsAnn
-        <*> auxDataAnn
-        <*> isValAnn
+        txs
+        bodiesBytes
+        witsBytes
+        auxDataBytes
+        isValidBytes
+
+deriving newtype instance DecCBOR (TxBody AlonzoEra)
 
 instance
   ( Typeable era
-  , Typeable (TxBody era)
-  , Typeable (TxWits era)
-  , Typeable (TxAuxData era)
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
   ) =>
-  DecCBOR (Annotator (AlonzoTx era))
+  DecCBOR (AlonzoTx era)
   where
   decCBOR =
     decode $
-      Ann (RecD AlonzoTx)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
+      RecD AlonzoTx
+        <! From
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
   {-# INLINE decCBOR #-}
 
--- | Construct an annotated Alonzo style transaction.
-alonzoSegwitTx ::
-  AlonzoEraTx era =>
-  Annotator (TxBody era) ->
-  Annotator (TxWits era) ->
-  IsValid ->
-  Maybe (Annotator (TxAuxData era)) ->
-  Annotator (Tx era)
-alonzoSegwitTx txBodyAnn txWitsAnn txIsValid auxDataAnn = Annotator $ \bytes ->
-  let txBody = runAnnotator txBodyAnn bytes
-      txWits = runAnnotator txWitsAnn bytes
-      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
-   in mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ txAuxData
-        & isValidTxL .~ txIsValid
+instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
+  decCBOR =
+    decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
+      decodeShelley
+      decodeAllegra
+      decodeAlonzo
+    where
+      decodeShelley =
+        decode
+          (Emit AlonzoTxAuxDataRaw <! From <! Emit StrictSeq.empty <! Emit Map.empty)
+      decodeAllegra =
+        decode
+          (RecD AlonzoTxAuxDataRaw <! From <! From <! Emit Map.empty)
+      decodeAlonzo =
+        decode $
+          TagD 259 $
+            SparseKeyed "AlonzoTxAuxData" emptyAlonzoTxAuxDataRaw auxDataField []
+
+      auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
+      auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
+      auxDataField 1 = field (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x}) From
+      auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
+      auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
+      auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
+      auxDataField n = invalidField n
+
+deriving newtype instance Era era => DecCBOR (AlonzoTxAuxData era)
+
+instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxWitsRaw era) where
+  decCBOR =
+    decode $
+      SparseKeyed
+        "AlonzoTxWits"
+        emptyTxWitsRaw
+        txWitnessField
+        []
+    where
+      txWitnessField :: Word -> Field (AlonzoTxWitsRaw era)
+      txWitnessField 0 =
+        field
+          (\x wits -> wits {atwrAddrTxWits = x})
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                ( allowTag setTag
+                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+                )
+                (Set.fromList <$> decodeList decCBOR)
+          )
+      txWitnessField 1 = field addScriptsTxWitsRaw (D nativeScriptsDecoder)
+      txWitnessField 2 =
+        field
+          (\x wits -> wits {atwrBootAddrTxWits = x})
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                ( allowTag setTag
+                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+                )
+                (Set.fromList <$> decodeList decCBOR)
+          )
+      txWitnessField 3 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV1)
+      txWitnessField 4 = field (\x wits -> wits {atwrDatsTxWits = x}) From
+      txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
+      txWitnessField 6 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV2)
+      txWitnessField 7 = field addScriptsTxWitsRaw (decodeAlonzoPlutusScript SPlutusV3)
+      txWitnessField n = invalidField n
+      {-# INLINE txWitnessField #-}
+
+      nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
+      nativeScriptsDecoder =
+        ifDecoderVersionAtLeast
+          (natVersion @9)
+          ( allowTag setTag
+              >> Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder
+          )
+          (Map.fromList <$> decodeList pairDecoder)
+        where
+          pairDecoder :: Decoder s (ScriptHash, Script era)
+          pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
+          {-# INLINE pairDecoder #-}
+      {-# INLINE nativeScriptsDecoder #-}
+
+deriving newtype instance
+  (AlonzoEraScript era, DecCBOR (NativeScript era)) =>
+  DecCBOR (AlonzoTxWits era)
+
+instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      ( peekTokenType >>= \case
+          TypeMapLenIndef -> decodeMapRedeemers
+          TypeMapLen -> decodeMapRedeemers
+          _ -> decodeListRedeemers
+      )
+      (RedeemersRaw . Map.fromList <$> decodeList decodeElement)
+    where
+      decodeMapRedeemers :: Decoder s (RedeemersRaw era)
+      decodeMapRedeemers =
+        RedeemersRaw . Map.fromList . NE.toList <$> do
+          (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
+            ptr <- decCBOR
+            (annData, exUnits) <- decCBOR
+            pure (ptr, (annData, exUnits))
+          case NE.nonEmpty xs of
+            Nothing -> fail "Expected redeemers map to be non-empty"
+            Just neList -> pure $ NE.reverse neList
+      {-# INLINE decodeMapRedeemers #-}
+      decodeListRedeemers :: Decoder s (RedeemersRaw era)
+      decodeListRedeemers =
+        RedeemersRaw . Map.fromList . NE.toList
+          <$> decodeNonEmptyList decodeElement
+      {-# INLINE decodeListRedeemers #-}
+      decodeElement :: Decoder s (PlutusPurpose AsIx era, (Data era, ExUnits))
+      decodeElement = do
+        decodeRecordNamed "Redeemer" (\(redeemerPtr, _) -> fromIntegral (listLen redeemerPtr) + 2) $ do
+          !redeemerPtr <- decCBORGroup
+          !redeemerData <- decCBOR
+          !redeemerExUnits <- decCBOR
+          pure (redeemerPtr, (redeemerData, redeemerExUnits))
+      {-# INLINE decodeElement #-}
+  {-# INLINE decCBOR #-}
+
+deriving newtype instance AlonzoEraScript era => DecCBOR (Redeemers era)
+
+instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
+  decCBOR = decode (Summands "AlonzoScript" decodeScript)
+    where
+      decodeScript = \case
+        0 -> SumD TimelockScript <! From
+        1 -> decodePlutus SPlutusV1
+        2 -> decodePlutus SPlutusV2
+        3 -> decodePlutus SPlutusV3
+        n -> Invalid n
+      decodePlutus slang =
+        SumD PlutusScript <! D (decodePlutusScript slang)
+
+instance Era era => DecCBOR (TxDatsRaw era) where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      ( allowTag setTag
+          >> TxDatsRaw . Map.fromElems hashData . NE.toList <$> decodeNonEmptyList decCBOR
+      )
+      (TxDatsRaw . Map.fromElems hashData <$> decodeList decCBOR)
+  {-# INLINE decCBOR #-}
+
+deriving newtype instance Era era => DecCBOR (TxDats era)

@@ -100,9 +100,9 @@ instance TranslateEra ConwayEra Tx where
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR $ tx ^. witsTxL
-    auxData <- mapM translateEraThroughCBOR (tx ^. auxDataTxL)
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
+    auxData <- mapM (translateEraThroughCBOR "AuxData") (tx ^. auxDataTxL)
     let isValidTx = tx ^. isValidTxL
         newTx =
           mkBasicTx txBody

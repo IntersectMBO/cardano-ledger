@@ -61,11 +61,11 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
   , Arbitrary (InstantStake era)
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (Tx era))
+  , DecCBOR (Script era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   , RuleListEra era
   ) =>
   Spec

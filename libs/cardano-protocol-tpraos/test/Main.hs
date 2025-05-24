@@ -9,7 +9,11 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import qualified Test.Cardano.Protocol.Binary.BinarySpec as Binary
 import qualified Test.Cardano.Protocol.Binary.CddlSpec as Cddl
 import Test.Cardano.Protocol.Binary.RoundTrip

@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.Scripts (
 ) where
 
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (decCBOR),
   EncCBOR (..),
   ToCBOR,
@@ -48,9 +49,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
+  Mem,
   MemoBytes,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
   pattern Memo,
  )
@@ -113,6 +114,11 @@ newtype MultiSig era = MkMultiSig (MemoBytes (MultiSigRaw era))
 
 instance Memoized (MultiSig era) where
   type RawType (MultiSig era) = MultiSigRaw era
+
+deriving via
+  Mem (MultiSigRaw era)
+  instance
+    Era era => DecCBOR (Annotator (MultiSig era))
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
@@ -192,16 +198,20 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MultiSig era)
 
-instance Era era => DecCBOR (MultiSig era) where
-  decCBOR = MkMultiSig <$> decodeMemoized decCBOR
-
-instance Era era => DecCBOR (MultiSigRaw era) where
-  decCBOR = decodeRecordSum "MultiSig" $ do
+instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
+  decCBOR = decodeRecordSum "MultiSig" $
     \case
-      0 -> (,) 2 . MultiSigSignature . KeyHash <$> decCBOR
-      1 -> (,) 2 . MultiSigAllOf <$> decCBOR
-      2 -> (,) 2 . MultiSigAnyOf <$> decCBOR
-      3 -> (,) 3 <$> (MultiSigMOf <$> decCBOR <*> decCBOR)
+      0 -> (,) 2 . pure . MultiSigSignature . KeyHash <$> decCBOR
+      1 -> do
+        multiSigs <- sequence <$> decCBOR
+        pure (2, MultiSigAllOf <$> multiSigs)
+      2 -> do
+        multiSigs <- sequence <$> decCBOR
+        pure (2, MultiSigAnyOf <$> multiSigs)
+      3 -> do
+        m <- decCBOR
+        multiSigs <- sequence <$> decCBOR
+        pure (3, MultiSigMOf m <$> multiSigs)
       k -> invalidKey k
 
 -- | Check the equality of two underlying types, while ignoring their binary

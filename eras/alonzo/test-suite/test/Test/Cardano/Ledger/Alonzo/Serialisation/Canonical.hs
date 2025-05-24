@@ -7,11 +7,13 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Binary (
+  Annotator (..),
   Decoder,
   TokenType (..),
   decodeBool,
   decodeBytesCanonical,
   decodeDoubleCanonical,
+  decodeFullAnnotator,
   decodeIntegerCanonical,
   decodeListLenCanonical,
   decodeMapLenCanonical,
@@ -20,6 +22,7 @@ import Cardano.Ledger.Binary (
   decodeStringCanonical,
   peekTokenType,
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (Language)
@@ -30,7 +33,6 @@ import Data.Functor.Compose (Compose (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import qualified Test.QuickCheck.Property as QCP
 import Test.Tasty

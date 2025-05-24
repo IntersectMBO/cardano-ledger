@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,7 +17,4 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxBody
 import Test.Cardano.Ledger.Babbage.Binary.Annotator
 
-instance DecCBOR (Annotator ConwayTxBodyRaw) where
-  decCBOR = pure <$> decCBOR
-
-deriving via Mem ConwayTxBodyRaw instance DecCBOR (Annotator (TxBody ConwayEra))
+deriving newtype instance DecCBOR (TxBody ConwayEra)

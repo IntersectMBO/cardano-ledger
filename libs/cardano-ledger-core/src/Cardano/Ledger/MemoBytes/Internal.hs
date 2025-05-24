@@ -30,6 +30,7 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.MemoBytes.Internal (
   MemoBytes (.., Memo),
+  Mem,
   MemoHashIndex,
   mkMemoBytes,
   mkMemoBytesStrict,
@@ -69,13 +70,15 @@ module Cardano.Ledger.MemoBytes.Internal (
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotated (..),
+  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR,
   Version,
   decodeAnnotated,
-  decodeFull',
+  decodeFullAnnotator,
   serialize,
+  withSlice,
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -90,6 +93,7 @@ import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.MemPack
 import Data.MemPack.Buffer (Buffer)
+import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
@@ -126,11 +130,28 @@ byteCountMemoBytes = packedByteCount . mbBytes
 packMemoBytesM :: MemoBytes t -> Pack s ()
 packMemoBytesM = packM . mbBytes
 
-unpackMemoBytesM :: (DecCBOR t, Buffer b) => Version -> Unpack b (MemoBytes t)
+unpackMemoBytesM ::
+  ( DecCBOR (Annotator t)
+  , Typeable t
+  , Buffer b
+  ) =>
+  Version -> Unpack b (MemoBytes t)
 unpackMemoBytesM v = unpackM >>= decodeMemoBytes v
 
-decodeMemoBytes :: (DecCBOR t, MonadFail m) => Version -> ByteString -> m (MemoBytes t)
-decodeMemoBytes v = either (fail . show) pure . decodeFull' v
+decodeMemoBytes ::
+  forall t m.
+  ( Typeable t
+  , DecCBOR (Annotator t)
+  , MonadFail m
+  ) =>
+  Version -> ByteString -> m (MemoBytes t)
+decodeMemoBytes v bs =
+  either (fail . show) pure $
+    decodeFullAnnotator
+      v
+      (T.pack (show (typeRep (Proxy @t))))
+      decCBOR
+      (BSL.fromStrict bs)
 
 type family MemoHashIndex (t :: Type) :: Type
 
@@ -141,6 +162,14 @@ instance Typeable t => Plain.ToCBOR (MemoBytes t) where
 
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR
+
+instance
+  (Typeable t, DecCBOR (Annotator t)) =>
+  DecCBOR (Annotator (MemoBytes t))
+  where
+  decCBOR = do
+    (Annotator getT, Annotator getBytes) <- withSlice decCBOR
+    pure $ Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes))
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
@@ -163,6 +192,10 @@ instance SafeToHash (MemoBytes t) where
 shorten :: BSL.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 {-# DEPRECATED shorten "As unused. Use `toShort` `.` `toStrict` instead" #-}
+
+-- | Useful when deriving DecCBOR(Annotator T)
+-- deriving via (Mem T) instance DecCBOR (Annotator T)
+type Mem t = Annotator (MemoBytes t)
 
 -- | Constructor that takes the underlying type and the original bytes as lazy
 -- `BSL.ByteString`.

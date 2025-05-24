@@ -96,6 +96,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR (..),
@@ -114,6 +115,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -362,7 +364,7 @@ deriving instance NFData (TxBody AlonzoEra)
 
 deriving instance Show (TxBody AlonzoEra)
 
-deriving newtype instance DecCBOR (TxBody AlonzoEra)
+deriving via Mem AlonzoTxBodyRaw instance DecCBOR (Annotator (TxBody AlonzoEra))
 
 pattern AlonzoTxBody ::
   Set TxIn ->
@@ -590,6 +592,9 @@ instance DecCBOR AlonzoTxBodyRaw where
         , (1, "outputs")
         , (2, "fee")
         ]
+
+instance DecCBOR (Annotator AlonzoTxBodyRaw) where
+  decCBOR = pure <$> decCBOR
 
 emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw
 emptyAlonzoTxBodyRaw =

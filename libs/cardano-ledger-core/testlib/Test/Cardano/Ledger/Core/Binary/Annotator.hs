@@ -12,64 +12,27 @@
 module Test.Cardano.Ledger.Core.Binary.Annotator (
   decoderEquivalenceEraSpec,
   decoderEquivalenceCoreEraTypesSpec,
-  Mem,
-  module Test.Cardano.Ledger.Binary.Annotator,
 ) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys
-import Cardano.Ledger.MemoBytes (MemoBytes)
-import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import Cardano.Ledger.Plutus
-import Data.Typeable
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
-import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
--- | Useful when deriving DecCBOR(Annotator T)
--- deriving via (Mem T) instance DecCBOR (Annotator T)
-type Mem t = Annotator (MemoBytes t)
-
-instance
-  (Typeable t, DecCBOR (Annotator t)) =>
-  DecCBOR (Annotator (MemoBytes t))
-  where
-  decCBOR = do
-    (Annotator getT, Annotator getBytes) <- withSlice decCBOR
-    pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
-
-instance DecCBOR (Annotator BootstrapWitness) where
-  decCBOR = pure <$> decCBOR
-
-instance Typeable kr => DecCBOR (Annotator (WitVKey kr)) where
-  decCBOR = pure <$> decCBOR
-
 instance
   ( EraSegWits era
-  , DecCBOR (Annotator h)
-  , DecCBOR (Annotator (TxSeq era))
-  , Typeable h
+  , DecCBOR h
+  , DecCBOR (TxSeq era)
   ) =>
-  DecCBOR (Annotator (Block h era))
+  DecCBOR (Block h era)
   where
-  decCBOR = decodeRecordNamed "Block" (const blockSize) $ do
-    header <- decCBOR
-    txns <- decCBOR
-    pure $ Block <$> header <*> txns
+  decCBOR =
+    decodeRecordNamed "Block" (const blockSize) $ Block <$> decCBOR <*> decCBOR
     where
       blockSize = 1 + fromIntegral (numSegComponents @era)
-
-instance DecCBOR (Annotator PlutusBinary) where
-  decCBOR = pure <$> decCBOR
-
-instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
-  decCBOR = pure <$> decCBOR
-
-instance Era era => DecCBOR (Annotator (Data era)) where
-  decCBOR = fmap MkData <$> decCBOR
 
 decoderEquivalenceEraSpec ::
   forall era t.
@@ -91,11 +54,6 @@ decoderEquivalenceCoreEraTypesSpec ::
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
-  , DecCBOR (Annotator (Tx era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (Script era))
   , HasCallStack
   ) =>
   Spec

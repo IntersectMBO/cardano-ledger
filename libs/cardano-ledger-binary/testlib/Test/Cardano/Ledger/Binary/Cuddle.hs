@@ -20,6 +20,7 @@ import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR,
   Version,
+  decodeFullAnnotator,
   decodeFullDecoder,
   toPlainEncoding,
  )
@@ -44,7 +45,6 @@ import Prettyprinter (Pretty (pretty))
 import Prettyprinter.Render.Text (hPutDoc)
 import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
-import Test.Cardano.Ledger.Binary.Annotator (decodeFullAnnotator)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),

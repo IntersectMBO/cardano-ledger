@@ -30,7 +30,6 @@ spec ::
   forall era.
   ( EraPlutusContext era
   , Arbitrary (NativeScript era)
-  , DecCBOR (Annotator (NativeScript era))
   ) =>
   Spec
 spec = do
@@ -41,9 +40,7 @@ spec = do
       nativeScriptsProp @era
 
 emptyFieldsProps ::
-  forall era.
-  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
-  Spec
+  forall era. AlonzoEraScript era => Spec
 emptyFieldsProps = do
   prop "fails to deserialize if fields contain an empty collection" $
     conjoin $
@@ -59,11 +56,7 @@ emptyFieldsProps = do
     emptyEnc k = encCBOR $ Map.singleton k (encCBOR ([] :: [Encoding]))
 
 plutusScriptsProp ::
-  forall era.
-  ( EraPlutusContext era
-  , DecCBOR (Annotator (NativeScript era))
-  ) =>
-  Spec
+  forall era. EraPlutusContext era => Spec
 plutusScriptsProp = do
   prop "fails to deserialize if empty or if it contains duplicates, starting with Conway" $
     conjoin $
@@ -100,7 +93,6 @@ nativeScriptsProp ::
   forall era.
   ( AlonzoEraScript era
   , Arbitrary (NativeScript era)
-  , DecCBOR (Annotator (NativeScript era))
   ) =>
   Spec
 nativeScriptsProp = do
@@ -132,7 +124,7 @@ nativeScriptsProp = do
 
 expectDeserialiseSuccess ::
   forall era.
-  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era)), HasCallStack) =>
+  (AlonzoEraScript era, HasCallStack) =>
   Encoding ->
   IO ()
 expectDeserialiseSuccess enc =
@@ -141,7 +133,7 @@ expectDeserialiseSuccess enc =
 
 expectDeserialiseFailureFromVersion ::
   forall era.
-  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era)), HasCallStack) =>
+  (AlonzoEraScript era, HasCallStack) =>
   Version ->
   Encoding ->
   String ->
@@ -167,7 +159,7 @@ expectDeserialiseFailure e errMsgPrefix = do
 
 encodeAndCheckDecoded ::
   forall era.
-  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
+  AlonzoEraScript era =>
   Encoding ->
   (Either DecoderError (Annotator (AlonzoTxWits era)) -> IO ()) ->
   IO ()

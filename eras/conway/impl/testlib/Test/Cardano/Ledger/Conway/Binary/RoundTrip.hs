@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Binary.Annotator
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 
 roundTripConwayCommonSpec ::
@@ -55,11 +54,11 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (InstantStake era)
   , Arbitrary (CertState era)
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (Tx era))
+  , DecCBOR (Script era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   , RuleListEra era
   ) =>
   Spec

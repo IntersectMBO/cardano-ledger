@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,7 +17,4 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Binary
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 
-deriving via Mem BabbageTxBodyRaw instance DecCBOR (Annotator (TxBody BabbageEra))
-
-instance DecCBOR (Annotator BabbageTxBodyRaw) where
-  decCBOR = pure <$> decCBOR
+deriving newtype instance DecCBOR (TxBody BabbageEra)

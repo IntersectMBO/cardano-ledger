@@ -32,10 +32,13 @@ module Cardano.Ledger.Shelley.TxWits (
   bootAddrShelleyTxWitsL,
   addrWits',
   shelleyEqTxWitsRaw,
+  mapTraverseableDecoderA,
 ) where
 
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR (encCBOR),
   decodeList,
  )
@@ -52,9 +55,9 @@ import Cardano.Ledger.Hashes (SafeToHash (..))
 import Cardano.Ledger.Keys (BootstrapWitness, KeyRole (Witness), WitVKey (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
+  Mem,
   MemoBytes,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
@@ -69,6 +72,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records ()
 import Lens.Micro (Lens', (^.))
@@ -106,6 +110,14 @@ newtype ShelleyTxWits era = MkShelleyTxWits (MemoBytes (ShelleyTxWitsRaw era))
 instance Memoized (ShelleyTxWits era) where
   type RawType (ShelleyTxWits era) = ShelleyTxWitsRaw era
 
+deriving via
+  Mem (ShelleyTxWitsRaw era)
+  instance
+    ( EraScript era
+    , DecCBOR (Annotator (Script era))
+    ) =>
+    DecCBOR (Annotator (ShelleyTxWits era))
+
 deriving newtype instance EraScript era => Eq (ShelleyTxWits era)
 
 deriving newtype instance EraScript era => Show (ShelleyTxWits era)
@@ -119,9 +131,6 @@ instance
   NFData (ShelleyTxWits era)
 
 instance EraScript era => NoThunks (ShelleyTxWits era)
-
-instance EraScript era => DecCBOR (ShelleyTxWits era) where
-  decCBOR = MkShelleyTxWits <$> decodeMemoized decCBOR
 
 -- =======================================================
 -- Accessors
@@ -215,20 +224,43 @@ shelleyEqTxWitsRaw txWits1 txWits2 =
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && txWits1 ^. bootAddrTxWitsL == txWits2 ^. bootAddrTxWitsL
 
-instance EraScript era => DecCBOR (ShelleyTxWitsRaw era) where
+instance
+  ( EraScript era
+  , DecCBOR (Annotator (Script era))
+  ) =>
+  DecCBOR (Annotator (ShelleyTxWitsRaw era))
+  where
   decCBOR =
     decode $
       SparseKeyed
-        "ShelleyTxWits"
-        (ShelleyTxWitsRaw mempty mempty mempty)
+        "ShelleyTxWitsRaw"
+        (pure emptyWitnessSet)
         witField
         []
     where
-      witField :: Word -> Field (ShelleyTxWitsRaw era)
-      witField 0 = field (\x wits -> wits {stwrAddrTxWits = x}) From
+      emptyWitnessSet = ShelleyTxWitsRaw mempty mempty mempty
+      witField :: Word -> Field (Annotator (ShelleyTxWitsRaw era))
+      witField 0 =
+        fieldAA
+          (\x wits -> wits {stwrAddrTxWits = x})
+          (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
       witField 1 =
-        field
+        fieldAA
           (\x wits -> wits {stwrScriptTxWits = x})
-          (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
-      witField 2 = field (\x wits -> wits {stwrBootAddrTxWits = x}) From
-      witField n = invalidField n
+          ( D $
+              mapTraverseableDecoderA
+                (decodeList decCBOR)
+                (Map.fromElems (hashScript @era))
+          )
+      witField 2 =
+        fieldAA
+          (\x wits -> wits {stwrBootAddrTxWits = x})
+          (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+      witField n = fieldAA (\(_ :: Void) wits -> wits) (Invalid n)
+
+mapTraverseableDecoderA ::
+  Traversable f =>
+  Decoder s (f (Annotator a)) ->
+  (f a -> m b) ->
+  Decoder s (Annotator (m b))
+mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList

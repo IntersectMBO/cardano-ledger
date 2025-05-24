@@ -33,6 +33,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
   allowTag,
   decodeList,
   decodeWithByteSpan,
+  fromPlainDecoder,
   getOriginalBytes,
   setTag,
   whenDecoderVersionAtLeast,
@@ -40,6 +41,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
 import Cardano.Ledger.Binary.Encoding (EncCBOR, Version, serialize')
 import Cardano.Ledger.Binary.Version (natVersion)
 import Codec.CBOR.Read (ByteOffset)
+import qualified Codec.Serialise as Serialise (decode)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Bifunctor (Bifunctor (first, second))
@@ -51,6 +53,7 @@ import Data.Kind (Type)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
+import qualified PlutusLedgerApi.V1 as PV1
 
 -------------------------------------------------------------------------
 -- ByteSpan
@@ -210,3 +213,7 @@ decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
 {-# INLINE decodeAnnSet #-}
+
+instance DecCBOR (Annotator PV1.Data) where
+  decCBOR = pure <$> fromPlainDecoder Serialise.decode
+  {-# INLINE decCBOR #-}

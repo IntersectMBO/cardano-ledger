@@ -38,7 +38,7 @@ module Cardano.Ledger.Mary.TxBody (
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxCert ()
@@ -46,6 +46,7 @@ import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -97,7 +98,10 @@ deriving newtype instance NoThunks (TxBody MaryEra)
 
 deriving newtype instance NFData (TxBody MaryEra)
 
-deriving newtype instance DecCBOR (TxBody MaryEra)
+deriving via
+  Mem MaryTxBodyRaw
+  instance
+    DecCBOR (Annotator (TxBody MaryEra))
 
 type instance MemoHashIndex MaryTxBodyRaw = EraIndependentTxBody
 

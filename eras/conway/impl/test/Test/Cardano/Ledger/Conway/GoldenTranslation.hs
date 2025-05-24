@@ -22,6 +22,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Translation.TranslatableGen ()
 import Test.HUnit (Assertion)
 

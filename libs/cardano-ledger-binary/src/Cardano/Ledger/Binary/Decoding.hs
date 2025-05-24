@@ -11,6 +11,9 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullDecoder,
   decodeFullDecoder',
   decodeFullFromHexText,
+  decodeFullAnnotator,
+  decodeFullAnnotatedBytes,
+  decodeFullAnnotatorFromHexText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -158,6 +161,47 @@ supplyAllInput bs (Read.Partial k) = case bs of
   BSL.Empty -> k Nothing >>= supplyAllInput BSL.Empty
 supplyAllInput _ (Read.Fail bs _ exn) = return (Left (exn, bs))
 {-# INLINE supplyAllInput #-}
+
+--------------------------------------------------------------------------------
+-- Annotator
+--------------------------------------------------------------------------------
+
+-- | Same as `decodeFullDecoder`, except it provdes the means of passing portion or all
+-- of the `BSL.ByteString` input argument to the decoding `Annotator`.
+decodeFullAnnotator ::
+  Version ->
+  Text ->
+  (forall s. Decoder s (Annotator a)) ->
+  BSL.ByteString ->
+  Either DecoderError a
+decodeFullAnnotator v lbl decoder bytes =
+  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
+{-# INLINE decodeFullAnnotator #-}
+
+-- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy
+-- `BSL.ByteString`, requiring that the full ByteString is consumed, and
+-- replaces `ByteSpan` annotations with the corresponding slice of the input as
+-- a strict `BS.ByteString`.
+decodeFullAnnotatedBytes ::
+  Functor f =>
+  Version ->
+  Text ->
+  (forall s. Decoder s (f ByteSpan)) ->
+  BSL.ByteString ->
+  Either DecoderError (f BS.ByteString)
+decodeFullAnnotatedBytes v lbl decoder bytes =
+  annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
+{-# INLINE decodeFullAnnotatedBytes #-}
+
+decodeFullAnnotatorFromHexText ::
+  Version ->
+  Text ->
+  (forall s. Decoder s (Annotator a)) ->
+  Text ->
+  Either DecoderError a
+decodeFullAnnotatorFromHexText v desc dec =
+  Plain.withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
+{-# INLINE decodeFullAnnotatorFromHexText #-}
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR

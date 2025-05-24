@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,10 +16,4 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader
 import Test.Cardano.Ledger.Conway.Binary.Annotator
 
-instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
-  decCBOR = pure <$> decCBOR
-
-deriving via
-  Mem (BHeaderRaw c)
-  instance
-    Crypto c => DecCBOR (Annotator (BHeader c))
+deriving newtype instance Crypto c => DecCBOR (BHeader c)

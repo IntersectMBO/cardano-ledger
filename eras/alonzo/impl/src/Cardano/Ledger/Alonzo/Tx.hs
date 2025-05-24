@@ -96,11 +96,12 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDatsL,
  )
 import Cardano.Ledger.Binary (
+  Annotator,
   DecCBOR (..),
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
-  decodeNullStrictMaybe,
+  decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
   serialize,
@@ -121,6 +122,7 @@ import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe.Strict (
   StrictMaybe (..),
+  maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
@@ -406,19 +408,25 @@ instance
 
 instance
   ( Typeable era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
+  , Typeable (TxBody era)
+  , Typeable (TxWits era)
+  , Typeable (TxAuxData era)
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxAuxData era))
   ) =>
-  DecCBOR (AlonzoTx era)
+  DecCBOR (Annotator (AlonzoTx era))
   where
   decCBOR =
     decode $
-      RecD AlonzoTx
-        <! From
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
+      Ann (RecD AlonzoTx)
+        <*! From
+        <*! From
+        <*! Ann From
+        <*! D
+          ( sequence . maybeToStrictMaybe
+              <$> decodeNullMaybe decCBOR
+          )
   {-# INLINE decCBOR #-}
 
 alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool

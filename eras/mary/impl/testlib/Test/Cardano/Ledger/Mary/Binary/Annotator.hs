@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -9,8 +10,7 @@ module Test.Cardano.Ledger.Mary.Binary.Annotator (
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody
 import Test.Cardano.Ledger.Allegra.Binary.Annotator
 
-deriving via Mem MaryTxBodyRaw instance DecCBOR (Annotator (TxBody MaryEra))
+deriving newtype instance DecCBOR (TxBody MaryEra)

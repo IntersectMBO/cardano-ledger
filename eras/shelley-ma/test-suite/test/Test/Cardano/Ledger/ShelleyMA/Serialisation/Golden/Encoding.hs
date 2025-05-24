@@ -53,7 +53,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
-import Test.Cardano.Ledger.Mary.Binary.Annotator
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
@@ -129,7 +129,7 @@ scriptGoldenTest ::
   forall era.
   ( AllegraEraScript era
   , ToCBOR (NativeScript era)
-  , DecCBOR (Annotator (NativeScript era))
+  , DecCBOR (NativeScript era)
   ) =>
   TestTree
 scriptGoldenTest =
