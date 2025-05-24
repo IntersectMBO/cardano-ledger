@@ -729,6 +729,7 @@ assert ::
 assert p = toPred p
 
 forAll ::
+  forall p t a.
   ( Forallable t a
   , HasSpec t
   , HasSpec a
