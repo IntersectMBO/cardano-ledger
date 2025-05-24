@@ -79,7 +79,7 @@ import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import System.Random.Stateful (Uniform (..), UniformRange (..), Random)
+import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
 
 -- | Script hash or key hash for a payment or a staking object.
 --

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -26,6 +27,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayHARDFORK, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
@@ -90,10 +92,9 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
-import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -189,25 +190,24 @@ instance
   transitionRules = [epochTransition]
 
 returnProposalDeposits ::
-  Foldable f =>
+  (Foldable f, EraAccounts era) =>
   f (GovActionState era) ->
-  UMap ->
-  (UMap, Map.Map GovActionId Coin)
-returnProposalDeposits removedProposals oldUMap =
-  foldr' processProposal (oldUMap, mempty) removedProposals
+  Accounts era ->
+  (Accounts era, Map.Map GovActionId Coin)
+returnProposalDeposits removedProposals oldAccounts =
+  foldr' processProposal (oldAccounts, mempty) removedProposals
   where
-    processProposal gas (um, unclaimed)
-      | UMap.member (raCredential (gasReturnAddr gas)) (RewDepUView um) =
-          ( UMap.adjust
-              (addReward (gasDeposit gas))
-              (raCredential (gasReturnAddr gas))
-              (RewDepUView um)
-          , unclaimed
-          )
-      | otherwise = (um, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
-    addReward c rd =
-      -- Deposits have been validated at this point
-      rd {rdReward = rdReward rd <> compactCoinOrError c}
+    processProposal gas (!accounts, !unclaimed)
+      | Just accountState <- lookupAccountState cred accounts =
+          let accountState' =
+                -- Deposits have been validated at this point, so they are safe to compact
+                accountState & balanceAccountStateL <>~ compactCoinOrError (gasDeposit gas)
+           in ( accounts & accountsMapL %~ Map.insert cred accountState'
+              , unclaimed
+              )
+      | otherwise = (accounts, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
+      where
+        cred = raCredential (gasReturnAddr gas)
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.
@@ -224,14 +224,23 @@ updateNumDormantEpochs currentEpoch ps vState =
 --
 -- The utxo fees and donations are applied in the remaining body of EPOCH transition
 applyEnactedWithdrawals ::
+  EraAccounts era =>
   ChainAccountState ->
   DState era ->
   EnactState era ->
   (ChainAccountState, DState era, EnactState era)
 applyEnactedWithdrawals chainAccountState dState enactedState =
   let enactedWithdrawals = enactedState ^. ensWithdrawalsL
-      rewardsUView = RewDepUView $ dState ^. dsUnifiedL
-      successfulWithdrawls = rewardsUView ◁ enactedWithdrawals
+      accounts = dState ^. accountsL
+      -- The use of the partial function `compactCoinOrError` is justified here because
+      -- 1. the decoder for coin at the proposal-submission boundary has already
+      --    confirmed we have a compactible value
+      -- 2. the refunds and unsuccessful refunds together do not exceed the
+      --    current treasury value, as enforced by the `ENACT` rule.
+      successfulWithdrawls =
+        Map.mapMaybeWithKey
+          (\cred w -> compactCoinOrError w <$ guard (isAccountRegistered cred accounts))
+          enactedWithdrawals
       chainAccountState' =
         chainAccountState
           -- Subtract `successfulWithdrawals` from the treasury, and add them to the rewards UMap
@@ -240,15 +249,8 @@ applyEnactedWithdrawals chainAccountState dState enactedState =
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
           --   - refunds
-          & casTreasuryL %~ (<-> fold successfulWithdrawls)
-      -- The use of the partial function `compactCoinOrError` is justified here because
-      -- 1. the decoder for coin at the proposal-submission boundary has already
-      --    confirmed we have a compactible value
-      -- 2. the refunds and unsuccessful refunds together do not exceed the
-      --    current treasury value, as enforced by the `ENACT` rule.
-      dState' =
-        dState
-          & dsUnifiedL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulWithdrawls))
+          & casTreasuryL %~ (<-> fromCompact (fold successfulWithdrawls))
+      dState' = dState & accountsL %~ addToBalanceAccounts successfulWithdrawls
       -- Reset enacted withdrawals:
       enactedState' =
         enactedState
@@ -350,10 +352,8 @@ epochTransition = do
         & cgsFuturePParamsL .~ PotentialPParamsUpdate Nothing
 
     allRemovedGovActions = Map.unions [expiredActions, enactedActions, removedDueToEnactment]
-    (newUMap, unclaimed) =
-      returnProposalDeposits allRemovedGovActions $
-        dState2 ^. dsUnifiedL
-
+    (newAccounts, unclaimed) =
+      returnProposalDeposits allRemovedGovActions $ dState2 ^. accountsL
   tellEvent $
     GovInfoEvent
       (Set.fromList $ Map.elems enactedActions)
@@ -370,7 +370,7 @@ epochTransition = do
             & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         )
         (certState1 ^. certPStateL)
-        (dState2 & dsUnifiedL .~ newUMap)
+        (dState2 & accountsL .~ newAccounts)
     chainAccountState3 =
       chainAccountState2
         -- Move donations and unclaimed rewards from proposals to treasury:

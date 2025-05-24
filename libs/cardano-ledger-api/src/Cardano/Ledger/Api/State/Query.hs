@@ -5,7 +5,6 @@
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
-  filterStakePoolDelegsAndRewards,
   queryStakePoolDelegsAndRewards,
 
   -- * @GetGovState@
@@ -95,21 +94,10 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  vsCommitteeStateL,
-  vsDRepsL,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
-import Cardano.Ledger.UMap (
-  StakeCredentials (scRewards, scSPools),
-  UMap,
-  dRepMap,
-  domRestrictedStakeCredentials,
- )
 import Control.Monad (guard)
 import Data.Foldable (foldMap')
 import Data.Map (Map)
@@ -123,16 +111,6 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Extras (view)
 
--- | Filter out stake pool delegations and rewards for a set of stake credentials
-filterStakePoolDelegsAndRewards ::
-  UMap ->
-  Set (Credential 'Staking) ->
-  (Map (Credential 'Staking) (KeyHash 'StakePool), Map (Credential 'Staking) Coin)
-filterStakePoolDelegsAndRewards umap creds =
-  (scSPools stakeCredentials, scRewards stakeCredentials)
-  where
-    stakeCredentials = domRestrictedStakeCredentials creds umap
-
 -- | Uses `filterStakePoolDelegsAndRewards` to get the same information from the `NewEpochState`
 --
 -- Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
@@ -143,10 +121,12 @@ queryStakePoolDelegsAndRewards ::
   ( Map (Credential 'Staking) (KeyHash 'StakePool)
   , Map (Credential 'Staking) Coin
   )
-queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified (getDState nes))
-
-getDState :: EraCertState era => NewEpochState era -> DState era
-getDState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+queryStakePoolDelegsAndRewards nes creds =
+  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      accountsMapFiltered = accountsMap `Map.restrictKeys` creds
+   in ( Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
+      , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
+      )
 
 queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
 queryConstitution = (^. constitutionGovStateL) . queryGovState
@@ -396,10 +376,11 @@ finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drep
 -- in absence of an explicit vote. Note that this is different from the delegatee determined
 -- by the credential of the stake pool itself.
 queryStakePoolDefaultVote ::
-  EraCertState era =>
+  (EraCertState era, ConwayEraAccounts era) =>
   NewEpochState era ->
   -- | Specify the key hash of the pool whose default vote should be returned.
   KeyHash 'StakePool ->
   DefaultVote
 queryStakePoolDefaultVote nes poolId =
-  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) (dRepMap $ nes ^. unifiedL)
+  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) $
+    nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL

@@ -15,20 +15,20 @@ import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core (AlonzoEraTxWits (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential, Ptr (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.State hiding (balance)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Control.Iterate.Exp (dom, (∈))
-import Control.Iterate.SetAlgebra (eval)
 import Data.Foldable (fold, toList)
 import qualified Data.List as List
 import Data.Map (Map)
@@ -39,7 +39,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Era ()
+import Test.Cardano.Ledger.Conway.Era (EraTest, registerTestAccount)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
@@ -115,7 +115,8 @@ applyTx proof count slot model tx = ans
       Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
       Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
 
-epochBoundary :: forall era. Proof era -> EpochNo -> EpochNo -> Model era -> Model era
+epochBoundary ::
+  forall era. EraTest era => Proof era -> EpochNo -> EpochNo -> Model era -> Model era
 epochBoundary proof transactionEpoch modelEpoch model =
   if transactionEpoch > modelEpoch
     then
@@ -141,7 +142,7 @@ applyTxBody proof count model tx = List.foldl' (applyField proof count) model (a
 
 applyField :: Reflect era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
 applyField proof count model field = case field of
-  Inputs txins -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
+  Inputs txIns -> model {mUTxO = Map.withoutKeys (mUTxO model) txIns}
   Outputs seqo -> case Map.lookup count (mIndex model) of
     Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
     Just (TxId hash) -> model {mUTxO = Map.union newstuff (mUTxO model)}
@@ -152,9 +153,15 @@ applyField proof count model field = case field of
   Withdrawals' (Withdrawals m) -> Map.foldlWithKey' (applyWithdrawals proof) model m
   _other -> model
 
-applyWithdrawals :: Proof era -> Model era -> RewardAccount -> Coin -> Model era
+applyWithdrawals :: EraAccounts era => Proof era -> Model era -> RewardAccount -> Coin -> Model era
 applyWithdrawals _proof model (RewardAccount _network cred) coin =
-  model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
+  model
+    { mAccounts =
+        adjustAccountState
+          (balanceAccountStateL %~ (\balance -> compactCoinOrError (fromCompact balance <-> coin)))
+          cred
+          (mAccounts model)
+    }
 
 applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era
 applyCert = case reify @era of
@@ -165,29 +172,37 @@ applyCert = case reify @era of
   Babbage -> applyShelleyCert
   Conway -> error "applyCert, not yet in Conway"
 
-applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
+applyShelleyCert :: forall era. EraTest era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of
-  ShelleyTxCertDelegCert (ShelleyRegCert x) ->
+  ShelleyTxCertDelegCert (ShelleyRegCert cred) ->
     model
-      { mRewards = Map.insert x (Coin 0) (mRewards model)
-      , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
+      { mAccounts =
+          registerTestAccount
+            cred
+            (Just (Ptr minBound minBound minBound))
+            (compactCoinOrError (pp ^. ppKeyDepositL))
+            Nothing
+            Nothing
+            (mAccounts model)
       , mDeposited = mDeposited model <+> pp ^. ppKeyDepositL
       }
     where
       pp = mPParams model
-  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (toExpr x))
-    Just (Coin 0) ->
-      model
-        { mRewards = Map.delete x (mRewards model)
-        , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keyDeposit
-        }
-      where
-        keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
-    Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
-    model {mDelegations = Map.insert cred hash (mDelegations model)}
+  ShelleyTxCertDelegCert (ShelleyUnRegCert cred) ->
+    case unregisterAccount cred (mAccounts model) of
+      (Nothing, _) -> error ("DeRegKey not in rewards: " <> show (toExpr cred))
+      (Just accountState, accounts)
+        | accountState ^. balanceAccountStateL == mempty ->
+            model
+              { mAccounts = accounts
+              , mDeposited = mDeposited model <-> fromCompact (accountState ^. depositAccountStateL)
+              }
+      _ -> error "DeRegKey with non-zero balance"
+  ShelleyTxCertDelegCert (ShelleyDelegCert cred poolId) ->
+    model
+      { mAccounts =
+          adjustAccountState (stakePoolDelegationAccountStateL ?~ poolId) cred (mAccounts model)
+      }
   ShelleyTxCertPool (RegPool poolparams) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
@@ -195,7 +210,7 @@ applyShelleyCert model dcert = case dcert of
           if Map.member hk (mPoolDeposits model)
             then mDeposited model
             else mDeposited model <+> pp ^. ppPoolDepositL
-      , mPoolDeposits -- Only add if it isn't already there
+      , mPoolDeposits -- Only add if it i[sn't already there
         =
           if Map.member hk (mPoolDeposits model)
             then mPoolDeposits model
@@ -304,7 +319,7 @@ filterRewards pp rewards =
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 filterAllRewards ::
-  EraPParams era =>
+  (EraPParams era, EraAccounts era) =>
   Map (Credential 'Staking) (Set Reward) ->
   Model era ->
   ( Map (Credential 'Staking) (Set Reward)
@@ -318,7 +333,7 @@ filterAllRewards rs' m =
     pp = mPParams m
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\k _ -> eval (k ∈ dom (mRewards m)))
+        (\cred _ -> isAccountRegistered cred (mAccounts m))
         rs'
     totalUnregistered = fold $ aggregateRewards (pp ^. ppProtocolVersionL) unregRU
     unregistered = Map.keysSet unregRU
@@ -327,13 +342,14 @@ filterAllRewards rs' m =
 
 applyRUpd ::
   forall era.
+  EraAccounts era =>
   RewardUpdateOld ->
   Model era ->
   Model era
 applyRUpd ru m =
   m
     { mFees = mFees m `addDeltaCoin` deltaFOld ru
-    , mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    , mAccounts = addToBalanceAccounts (Map.map compactCoinOrError $ rsOld ru) (mAccounts m)
     }
 
 notValidatingTx ::

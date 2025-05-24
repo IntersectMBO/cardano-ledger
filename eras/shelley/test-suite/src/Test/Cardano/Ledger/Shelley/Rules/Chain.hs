@@ -73,7 +73,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
   HashHeader,
@@ -245,7 +244,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     dState :: DState era
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = GenDelegs genDelegs
         , dsIRewards = def

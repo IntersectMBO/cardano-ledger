@@ -29,16 +29,14 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (
   ConwayBbodyPredFailure (..),
   ConwayCertPredFailure (..),
  )
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeCredential,
- )
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -63,8 +61,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMap (UView (RewDepUView))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<->))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -132,10 +128,10 @@ alonzoBBODYexamplesP ::
   forall era.
   ( HasTokens era
   , PostShelley era
+  , AlonzoEraTxWits era
   , Value era ~ MaryValue
   , Reflect era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , AlonzoEraTest era
   ) =>
   Proof era ->
   TestTree
@@ -160,12 +156,9 @@ alonzoBBODYexamplesP proof =
 
 initialBBodyState ::
   forall era.
-  ( EraTxOut era
-  , PostShelley era
-  , EraGov era
-  , EraStake era
+  ( PostShelley era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraCertState era
+  , EraTest era
   ) =>
   Proof era ->
   UTxO era ->
@@ -174,16 +167,16 @@ initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
     initialUtxoSt =
-      smartUTxOState (pp pf) utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
+      smartUTxOState (pp pf) utxo (fromCompact successDeposit) (Coin 0) def mempty
+    ptr = Just (Ptr minBound minBound minBound)
+    cred = scriptStakeCredSuceed pf
     dpstate =
       def
         & certDStateL
           .~ DState
-            { dsUnified =
-                UM.insert
-                  (scriptStakeCredSuceed pf)
-                  (UM.RDPair (UM.CompactCoin 1000) successDeposit)
-                  (RewDepUView UM.empty)
+            { dsAccounts =
+                addToBalanceAccounts (Map.singleton cred (CompactCoin 1000)) $
+                  registerTestAccount cred ptr successDeposit Nothing Nothing def
             , dsFutureGenDelegs = Map.empty
             , dsGenDelegs = GenDelegs Map.empty
             , dsIRewards = def
@@ -425,7 +418,7 @@ validatingTxWithCertOut pf =
   newTxOut
     pf
     [ Address (someAddr pf)
-    , Amount (inject $ Coin 995 <> UM.fromCompact successDeposit)
+    , Amount (inject $ Coin 995 <> fromCompact successDeposit)
     ]
 
 notValidatingTxWithCert ::
@@ -713,8 +706,8 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
 -- | The deposit made when 'scriptStakeCredSuceed' was registered. It is also
 --   The Refund when 'scriptStakeCredSuceed' is de-registered.
-successDeposit :: UM.CompactForm Coin
-successDeposit = UM.CompactCoin 7
+successDeposit :: CompactForm Coin
+successDeposit = CompactCoin 7
 
 hashsize :: Int
 hashsize = fromIntegral $ sizeHash (Proxy @HASH)

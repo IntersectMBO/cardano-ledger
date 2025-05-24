@@ -6,7 +6,7 @@
 
 module Main where
 
-import BenchUTxOAggregate (expr, genTestCase)
+import BenchUTxOAggregate (expr)
 import BenchValidation (
   applyBlock,
   benchValidate,
@@ -181,26 +181,8 @@ profileCreateRegPools size = do
 -- ==========================================
 -- Epoch Boundary
 
-profileEpochBoundary :: Benchmark
-profileEpochBoundary =
-  bgroup "aggregate stake" $ epochAt <$> benchParameters
-  where
-    benchParameters :: [Int]
-    benchParameters = [5000, 50000, 500000]
-
-epochAt :: Int -> Benchmark
-epochAt x =
-  env (QC.generate (genTestCase x n)) $ \arg ->
-    bgroup
-      ("UTxO=" ++ show x ++ ",  address=" ++ show n)
-      [ bench "stakeDistr" (nf action2m arg)
-      , bench "instantStake" (nf benchInstantStake arg)
-      ]
-  where
-    n = 10000 :: Int
-
 action2m ::
-  EraTxOut era =>
+  (EraTxOut era, ShelleyEraAccounts era) =>
   (DState era, PState era, UTxO era) ->
   SnapShot
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
@@ -443,7 +425,6 @@ main = do
             ledgerStateWithNkeysMpools
             ledgerDelegateManyKeysOnePool
         ]
-    , profileEpochBoundary
     , bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
     , validGroup
     , -- Benchmarks for the various generators
