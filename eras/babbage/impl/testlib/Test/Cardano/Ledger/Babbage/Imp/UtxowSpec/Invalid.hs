@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,11 +13,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusTxInfo, mkSu
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus
 import qualified Data.Map.Strict as Map
@@ -98,7 +100,23 @@ spec = describe "Invalid" $ do
     submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
   it "Use a collateral output" $ do
-    const $ pendingWith "not implemented yet"
+    let scriptHash = withSLanguage PlutusV2 (hashPlutusScript . alwaysFailsWithDatum)
+        datum = Data $ PV1.B "abcde"
+        datumHash = hashData @era datum
+        txOut =
+          mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+            & datumTxOutL .~ DatumHash datumHash
+        tx = mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut]
+    txIn <- txInAt (0 :: Int) <$> submitTx tx
+    addr <- freshKeyAddr_
+    coll <- sendCoinTo addr $ Coin 5_000_000
+    let collReturn = mkBasicTxOut addr . inject $ Coin 2_000_000
+    submitPhase2Invalid_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . inputsTxBodyL .~ [txIn]
+        & bodyTxL . collateralInputsTxBodyL .~ [coll]
+        & bodyTxL . collateralReturnTxBodyL .~ SJust collReturn
+        & witsTxL . datsTxWitsL .~ TxDats [(datumHash, datum)]
 
   it "Incorrect collateral total" $ do
     const $ pendingWith "not implemented yet"
