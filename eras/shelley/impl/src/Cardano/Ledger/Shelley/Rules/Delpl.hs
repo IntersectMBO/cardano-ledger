@@ -32,11 +32,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState,
-  DState,
-  PState,
- )
 import Cardano.Ledger.Shelley.Rules.Deleg (
   DelegEnv (..),
   ShelleyDELEG,
@@ -45,9 +40,9 @@ import Cardano.Ledger.Shelley.Rules.Deleg (
  )
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq
 import Control.State.Transition
 import Data.Typeable (Typeable)
@@ -234,7 +229,8 @@ instance
   wrapEvent = PoolEvent
 
 instance
-  ( ShelleyEraTxCert era
+  ( ShelleyEraAccounts era
+  , ShelleyEraTxCert era
   , EraPParams era
   , ProtVerAtMost era 8
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era

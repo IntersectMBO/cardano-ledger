@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.AdaPots (
 ) where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (
   EpochState (..),
@@ -32,7 +31,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (sumRewardsUView)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)
 import GHC.Generics (Generic)
@@ -70,7 +68,7 @@ totalAdaPotsES (EpochState (ChainAccountState {casTreasury, casReserves}) ls _ _
   where
     UTxOState u _ fees_ _ _ _ = lsUTxOState ls
     certState = ls ^. lsCertStateL
-    rewards_ = fromCompact $ sumRewardsUView (rewards $ certState ^. certDStateL)
+    rewards_ = sumBalancesAccounts (certState ^. certDStateL . accountsL)
     coins = sumCoinUTxO u
     govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
 

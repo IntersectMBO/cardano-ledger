@@ -22,7 +22,7 @@ instance EraTransition AllegraEra where
 
   mkTransitionConfig NoGenesis = AllegraTransitionConfig
 
-  injectIntoTestState = registerInitialFundsThenStaking
+  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens atcShelleyTransitionConfig (\atc pc -> atc {atcShelleyTransitionConfig = pc})

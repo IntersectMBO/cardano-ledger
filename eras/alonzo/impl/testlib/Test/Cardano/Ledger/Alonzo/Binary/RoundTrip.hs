@@ -61,6 +61,7 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
   , Arbitrary (InstantStake era)
+  , Arbitrary (Accounts era)
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)

@@ -623,12 +623,12 @@ votingSpec =
           (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
           _ <- setupSingleDRep 1_000_000_000
-          (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+          (spoC, _, _) <- setupPoolWithStake =<< arbitrary
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
-          submitVote_ VoteYes (DRepVoter drep1) addCCGaid
+          submitYesVote_ (DRepVoter drep1) addCCGaid
           submitYesVote_ (StakePoolVoter spoC) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
@@ -637,7 +637,7 @@ votingSpec =
           -- Bump up the UTxO delegated
           -- to barely make the threshold (65 %! 100)
           stakingKP1 <- getKeyPair stakingKH1
-          sendCoinTo_ (mkAddr paymentKP1 stakingKP1) (inject $ Coin 858_000_000)
+          sendCoinTo_ (mkAddr paymentKP1 stakingKP1) (inject $ Coin 857_142_858)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -646,25 +646,22 @@ votingSpec =
           (drep1, staking1, _) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
           _ <- setupSingleDRep 1_000_000_000
-          (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+          (spoC, _, _) <- setupPoolWithStake =<< arbitrary
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
-          submitVote_ VoteYes (DRepVoter drep1) addCCGaid
+          submitYesVote_ (DRepVoter drep1) addCCGaid
           submitYesVote_ (StakePoolVoter spoC) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
           isDRepAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Add to the rewards of the delegator to this DRep
-          -- to barely make the threshold (61 %! 100)
+          -- to barely make the `dvtCommitteeNormal` threshold (65 %! 100)
           modifyNES $
-            nesEsL . epochStateUMapL
-              %~ UM.adjust
-                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 858_000_000) d)
-                staking1
-                . UM.RewDepUView
+            nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+              %~ addToBalanceAccounts (Map.singleton staking1 (UM.CompactCoin 857_142_858))
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -683,13 +680,13 @@ votingSpec =
           (drepKH1, stakingKH1) <- setupDRepWithoutStake
           -- Add rewards to delegation #1
           submitAndExpireProposalToMakeReward $ KeyHashObj stakingKH1
-          getReward (KeyHashObj stakingKH1) `shouldReturn` govActionDeposit
+          getBalance (KeyHashObj stakingKH1) `shouldReturn` govActionDeposit
           -- Setup DRep delegation #2
           (_drepKH2, stakingKH2) <- setupDRepWithoutStake
           (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
           -- Add rewards to delegation #2
           submitAndExpireProposalToMakeReward $ KeyHashObj stakingKH2
-          getReward (KeyHashObj stakingKH2) `shouldReturn` govActionDeposit
+          getBalance (KeyHashObj stakingKH2) `shouldReturn` govActionDeposit
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           Positive extra <- arbitrary
@@ -705,7 +702,7 @@ votingSpec =
           -- Increase the rewards of the delegator to this DRep
           -- to barely make the threshold (65 %! 100)
           registerAndRetirePoolToMakeReward $ KeyHashObj stakingKH1
-          getReward (KeyHashObj stakingKH1) `shouldReturn` poolDeposit <> govActionDeposit
+          getBalance (KeyHashObj stakingKH1) `shouldReturn` poolDeposit <> govActionDeposit
           isDRepAccepted addCCGaid `shouldReturn` True
           -- The same vote should now successfully ratify the proposal
           passEpoch
@@ -970,11 +967,8 @@ votingSpec =
           -- Add to the rewards of the delegator to this SPO
           -- to barely make the threshold (51 %! 100)
           modifyNES $
-            nesEsL . epochStateUMapL
-              %~ UM.adjust
-                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000_000) d)
-                delegatorCStaking1
-                . UM.RewDepUView
+            nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+              %~ addToBalanceAccounts (Map.singleton delegatorCStaking1 (UM.CompactCoin 200_000_000))
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -1001,12 +995,12 @@ votingSpec =
             (poolKH1, delegatorCStaking1) <- setupPoolWithoutStake
             -- Add rewards to delegation #1
             submitAndExpireProposalToMakeReward delegatorCStaking1
-            getReward delegatorCStaking1 `shouldReturn` govActionDeposit
+            getBalance delegatorCStaking1 `shouldReturn` govActionDeposit
             -- Setup Pool delegation #2
             (poolKH2, delegatorCStaking2) <- setupPoolWithoutStake
             -- Add rewards to delegation #2
             submitAndExpireProposalToMakeReward delegatorCStaking2
-            getReward delegatorCStaking2 `shouldReturn` govActionDeposit
+            getBalance delegatorCStaking2 `shouldReturn` govActionDeposit
             -- Submit a committee proposal
             Positive extra <- arbitrary
             cc <- KeyHashObj <$> freshKeyHash
@@ -1027,7 +1021,7 @@ votingSpec =
             -- Add to the rewards of the delegator to this SPO
             -- to barely make the threshold (51 %! 100)
             registerAndRetirePoolToMakeReward delegatorCStaking1
-            getReward delegatorCStaking1 `shouldReturn` poolDeposit <> govActionDeposit
+            getBalance delegatorCStaking1 `shouldReturn` poolDeposit <> govActionDeposit
             -- The same vote should now successfully ratify the proposal
             -- NOTE: It takes 2 epochs for SPO votes as opposed to 1 epoch
             -- for DRep votes to ratify a proposal.
