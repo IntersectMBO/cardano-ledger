@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,20 +19,19 @@ module Cardano.Ledger.Conway.Transition (
 import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
+import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..), toConwayGenesisPairs)
 import Cardano.Ledger.Conway.Rules.Deleg (processDelegation)
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  vsDRepsL,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Translation ()
-import Cardano.Ledger.Conway.TxCert (Delegatee)
-import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRepState)
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
+  curPParamsEpochStateL,
   esLStateL,
   lsCertStateL,
   nesEsL,
@@ -48,7 +49,9 @@ import Data.Aeson (
  )
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
+import qualified Data.Map.Strict as Map
 import GHC.Generics
+import GHC.Stack
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -77,9 +80,7 @@ instance EraTransition ConwayEra where
 
   mkTransitionConfig = ConwayTransitionConfig
 
-  injectIntoTestState cfg =
-    registerDRepsThenDelegs cfg
-      . registerInitialFundsThenStaking cfg
+  injectIntoTestState = conwayRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})
@@ -117,6 +118,46 @@ instance FromJSON (TransitionConfig ConwayEra) where
     pc <- parseJSON (Object o)
     ag <- o .: "conway"
     pure $ mkTransitionConfig pc ag
+
+conwayRegisterInitialFundsThenStaking ::
+  ConwayEraTransition era =>
+  TransitionConfig era ->
+  NewEpochState era ->
+  NewEpochState era
+conwayRegisterInitialFundsThenStaking cfg =
+  -- We must first register the initial funds, because the stake
+  -- information depends on it.
+  resetStakeDistribution
+    . registerDRepsThenDelegs cfg
+    . conwayRegisterInitialAccounts (cfg ^. tcInitialStakingL)
+    . registerInitialStakePools (cfg ^. tcInitialStakingL)
+    . registerInitialFunds cfg
+
+-- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
+-- delegated to are already registered, which can be done with `registerInitialStakePools`.
+conwayRegisterInitialAccounts ::
+  forall era.
+  (HasCallStack, EraTransition era, ConwayEraAccounts era) =>
+  ShelleyGenesisStaking ->
+  NewEpochState era ->
+  NewEpochState era
+conwayRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
+  nes
+    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
+      foldr registerAndDelegate initAccounts $ ListMap.toList sgsStake
+  where
+    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
+    registerAndDelegate (stakeKeyHash, stakePool) !accounts
+      | stakePool `Map.member` stakePools =
+          registerConwayAccount (KeyHashObj stakeKeyHash) deposit (Just (DelegStake stakePool)) accounts
+      | otherwise =
+          error $
+            "Invariant of a delegation of "
+              ++ show stakeKeyHash
+              ++ " to an unregistered stake pool "
+              ++ show stakePool
+              ++ " is being violated."
 
 registerInitialDReps ::
   ConwayEraTransition era =>

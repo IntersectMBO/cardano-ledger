@@ -91,25 +91,14 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  VState (..),
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
-import Cardano.Ledger.State (
-  CommitteeState (..),
-  EraCertState (..),
-  PState (..),
-  authorizedHotCommitteeCredentials,
- )
 import Cardano.Ledger.TxIn (TxId (..))
-import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
@@ -483,13 +472,13 @@ govTransition = do
         unless (HF.bootstrapPhase $ pp ^. ppProtocolVersionL) $ do
           let refundAddress = proposal ^. pProcReturnAddrL
               govAction = proposal ^. pProcGovActionL
-          UMap.member' (raCredential refundAddress) (certDState ^. dsUnifiedL)
+          isAccountRegistered (raCredential refundAddress) (certDState ^. accountsL)
             ?! ProposalReturnAccountDoesNotExist refundAddress
           case govAction of
             TreasuryWithdrawals withdrawals _ -> do
               let nonRegisteredAccounts =
                     flip Map.filterWithKey withdrawals $ \withdrawalAddress _ ->
-                      not $ UMap.member' (raCredential withdrawalAddress) (certDState ^. dsUnifiedL)
+                      not $ isAccountRegistered (raCredential withdrawalAddress) (certDState ^. accountsL)
               failOnNonEmpty (Map.keys nonRegisteredAccounts) TreasuryWithdrawalReturnAccountsDoNotExist
             _ -> pure ()
 

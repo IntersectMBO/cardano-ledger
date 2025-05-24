@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -32,6 +35,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.State.Account (ConwayEraAccounts)
 import Cardano.Ledger.Conway.State.VState
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -52,7 +56,11 @@ data ConwayCertState era = ConwayCertState
   , conwayCertPState :: !(PState era)
   , conwayCertDState :: !(DState era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving instance Eq (Accounts era) => Eq (ConwayCertState era)
+
+deriving instance Show (Accounts era) => Show (ConwayCertState era)
 
 -- ===================================
 -- VState
@@ -65,7 +73,7 @@ epochStateRegDrepL ::
   ConwayEraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-class EraCertState era => ConwayEraCertState era where
+class (EraCertState era, ConwayEraAccounts era) => ConwayEraCertState era where
   certVStateL :: Lens' (CertState era) (VState era)
 
 mkConwayCertState ::
@@ -85,7 +93,7 @@ conwayCertVStateL :: Lens' (ConwayCertState era) (VState era)
 conwayCertVStateL = lens conwayCertVState (\ds u -> ds {conwayCertVState = u})
 {-# INLINE conwayCertVStateL #-}
 
-toCertStatePairs :: KeyValue e a => ConwayCertState era -> [a]
+toCertStatePairs :: (ToJSON (Accounts era), KeyValue e a) => ConwayCertState era -> [a]
 toCertStatePairs certState@(ConwayCertState _ _ _) =
   let ConwayCertState {..} = certState
    in [ "dstate" .= conwayCertDState
@@ -106,7 +114,7 @@ conwayCertsTotalDepositsTxBody pp ConwayCertState {conwayCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePoolParams conwayCertPState)
 
 conwayCertsTotalRefundsTxBody ::
-  EraTxBody era => PParams era -> ConwayCertState era -> TxBody era -> Coin
+  (EraTxBody era, EraAccounts era) => PParams era -> ConwayCertState era -> TxBody era -> Coin
 conwayCertsTotalRefundsTxBody pp ConwayCertState {conwayCertDState, conwayCertVState} =
   getTotalRefundsTxBody
     pp
@@ -132,18 +140,18 @@ instance ConwayEraCertState ConwayEra where
   certVStateL = conwayCertVStateL
   {-# INLINE certVStateL #-}
 
-instance ToJSON (ConwayCertState era) where
+instance ToJSON (Accounts era) => ToJSON (ConwayCertState era) where
   toJSON = object . toCertStatePairs
   toEncoding = pairs . mconcat . toCertStatePairs
 
-instance Era era => EncCBOR (ConwayCertState era) where
+instance EraAccounts era => EncCBOR (ConwayCertState era) where
   encCBOR ConwayCertState {conwayCertPState, conwayCertDState, conwayCertVState} =
     encodeListLen 3
       <> encCBOR conwayCertVState
       <> encCBOR conwayCertPState
       <> encCBOR conwayCertDState
 
-instance Era era => DecShareCBOR (ConwayCertState era) where
+instance EraAccounts era => DecShareCBOR (ConwayCertState era) where
   type
     Share (ConwayCertState era) =
       ( Interns (Credential 'Staking)
@@ -161,9 +169,9 @@ instance Era era => DecShareCBOR (ConwayCertState era) where
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
     pure ConwayCertState {..}
 
-instance Default (ConwayCertState era) where
+instance Default (Accounts era) => Default (ConwayCertState era) where
   def = ConwayCertState def def def
 
-instance Era era => NoThunks (ConwayCertState era)
+instance (Era era, NoThunks (Accounts era)) => NoThunks (ConwayCertState era)
 
-instance Era era => NFData (ConwayCertState era)
+instance (Era era, NFData (Accounts era)) => NFData (ConwayCertState era)

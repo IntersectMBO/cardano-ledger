@@ -55,6 +55,7 @@ commonTests ::
   forall era ledger.
   ( EraGen era
   , EraStake era
+  , ShelleyEraAccounts era
   , InstantStake era ~ ShelleyInstantStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)

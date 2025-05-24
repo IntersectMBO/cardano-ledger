@@ -7,7 +7,6 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.JsonSpec as JsonSpec
 import qualified Test.Cardano.Ledger.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.ToolsSpec as ToolsSpec
-import qualified Test.Cardano.Ledger.UMapSpec as UMapSpec
 
 main :: IO ()
 main =
@@ -17,6 +16,5 @@ main =
       BaseTypesSpec.spec
       BinarySpec.spec
       JsonSpec.spec
-      UMapSpec.spec
       PlutusSpec.spec
       ToolsSpec.spec

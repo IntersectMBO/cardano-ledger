@@ -24,8 +24,6 @@ import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
-import Cardano.Ledger.UMap (ptrMap, rewardMap, sPoolMap, unify)
-import qualified Cardano.Ledger.UMap as UM
 import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad
@@ -42,6 +40,7 @@ import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
 import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Conway.Era (EraTest, accountsFromAccountsMap, mkTestAccountState)
 
 -- Populate database
 
@@ -100,16 +99,18 @@ insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves dsIRewards
   let irDeltaTreasury = Shelley.deltaTreasury dsIRewards
   dstateId <- insert $ DState (Enc dsFutureGenDelegs) dsGenDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList (rewardMap dsUnified)) $ \(cred, c) -> do
+  forM_ (Map.toList (dsAccounts ^. State.accountsMapL)) $ \(cred, accountState) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (Reward dstateId credId c)
-  forM_ (Map.toList (sPoolMap dsUnified)) $ \(cred, spKeyHash) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
-    insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (ptrMap dsUnified)) $ \(ptr, cred) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (Ptr dstateId credId ptr)
+    insert_ $ -- TODO: fix insertion of DRep and StakePool delegation
+      Account
+        dstateId
+        credId
+        Nothing
+        (accountState ^. State.balanceAccountStateL)
+        (accountState ^. State.depositAccountStateL)
+        Nothing
+        DRepDelegationNone
+        Nothing
   forM_ (Map.toList (Shelley.iRReserves dsIRewards)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (IRReserves dstateId credId c)
@@ -527,37 +528,13 @@ getDStateNoSharing ::
   MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateNoSharing dstateId = do
   DState {..} <- getJust dstateId
-  rewards <-
-    Map.fromList <$> do
-      rws <- selectList [RewardDstateId ==. dstateId] []
-      forM rws $ \(Entity _ Reward {..}) -> do
-        Credential credential <- getJust rewardCredentialId
-        pure
-          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
-  -- FIXME the deposit is not accounted for ^
-  -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the CertState data type.
-  -- https://github.com/intersectmbo/cardano-ledger/pull/3217
-  -- All the FIXME-s in this file will have to be addressed in a follow on PR
-  delegations <-
-    Map.fromList <$> do
-      ds <- selectList [DelegationDstateId ==. dstateId] []
-      forM ds $ \(Entity _ Delegation {..}) -> do
-        Credential credential <- getJust delegationCredentialId
-        KeyHash keyHash <- getJust delegationStakePoolId
-        pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
-  dreps <- pure mempty
+  accountsMap <- getAccountsMap dstateId
   -- Map.fromList <$> do
   --  ds <- selectList [DRepDstateId ==. dstateId] []
   --  forM ds $ \(Entity _ DRep {..}) -> do
   --    Credential credential <- getJust dRepCredentialId
   --    Credential dRepCredential <- getJust dRepDRepCredentialId
   --    pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole dRepCredential)
-  ptrs <-
-    Map.fromList <$> do
-      ps <- selectList [PtrDstateId ==. dstateId] []
-      forM ps $ \(Entity _ Ptr {..}) -> do
-        Credential credential <- getJust ptrCredentialId
-        pure (ptrPtr, Keys.coerceKeyRole credential)
   iRReserves <-
     Map.fromList <$> do
       ds <- selectList [IRReservesDstateId ==. dstateId] []
@@ -572,7 +549,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards ptrs delegations dreps
+      { dsAccounts = accountsFromAccountsMap accountsMap
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =
@@ -584,27 +561,28 @@ getDStateNoSharing dstateId = do
             }
       }
 
+getAccountsMap ::
+  (MonadIO m, EraTest era) =>
+  DStateId ->
+  ReaderT SqlBackend m (Map.Map (Credential.Credential r') (State.AccountState era))
+getAccountsMap dstateId =
+  Map.fromList <$> do
+    rws <- selectList [AccountDstateId ==. dstateId] []
+    forM rws $ \(Entity _ Account {..}) -> do
+      Credential credential <- getJust accountCredentialId
+      mStakePool <- forM accountKeyHashStakePoolId (fmap (Keys.coerceKeyRole . keyHashWitness) . getJust)
+      -- mDRep <- forM accountCredentialDRepId (fmap (Keys.coerceKeyRole . credentialWitness) . getJust)
+      pure
+        ( Keys.coerceKeyRole credential
+        , mkTestAccountState accountPtr accountDeposit mStakePool Nothing
+            & State.balanceAccountStateL .~ accountBalance
+        )
+
 getDStateWithSharing ::
   MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateWithSharing dstateId = do
   DState {..} <- getJust dstateId
-  rewards <-
-    Map.fromList <$> do
-      rws <- selectList [RewardDstateId ==. dstateId] []
-      forM rws $ \(Entity _ Reward {..}) -> do
-        Credential credential <- getJust rewardCredentialId
-        pure
-          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
-  -- FIXME the deposit is not accounted for ^
-  delegations <-
-    Map.fromList <$> do
-      ds <- selectList [DelegationDstateId ==. dstateId] []
-      forM ds $ \(Entity _ Delegation {..}) -> do
-        Credential credential <- getJust delegationCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
-        KeyHash keyHash <- getJust delegationStakePoolId
-        pure (cred, Keys.coerceKeyRole keyHash)
-  dreps <- pure mempty
+  accountsMap <- getAccountsMap dstateId
   -- Map.fromList <$> do
   --  ds <- selectList [DRepDstateId ==. dstateId] []
   --  forM ds $ \(Entity _ DRep {..}) -> do
@@ -612,30 +590,23 @@ getDStateWithSharing dstateId = do
   --    let !cred = intern (Keys.coerceKeyRole credential) rewards
   --    Credential dRepCredential <- getJust dRepDRepCredentialId
   --    pure (cred, Keys.coerceKeyRole dRepCredential)
-  ptrs <-
-    Map.fromList <$> do
-      ps <- selectList [PtrDstateId ==. dstateId] []
-      forM ps $ \(Entity _ Ptr {..}) -> do
-        Credential credential <- getJust ptrCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
-        pure (ptrPtr, cred)
   iRReserves <-
     Map.fromList <$> do
       ds <- selectList [IRReservesDstateId ==. dstateId] []
       forM ds $ \(Entity _ IRReserves {..}) -> do
         Credential credential <- getJust iRReservesCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
+        let !cred = intern (Keys.coerceKeyRole credential) accountsMap
         pure (cred, iRReservesCoin)
   iRTreasury <-
     Map.fromList <$> do
       ds <- selectList [IRTreasuryDstateId ==. dstateId] []
       forM ds $ \(Entity _ IRTreasury {..}) -> do
         Credential credential <- getJust iRTreasuryCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
+        let !cred = intern (Keys.coerceKeyRole credential) accountsMap
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards ptrs delegations dreps
+      { dsAccounts = accountsFromAccountsMap accountsMap
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =

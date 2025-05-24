@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -77,6 +78,6 @@ goldenJsonPParamsUpdateSpec ::
 goldenJsonPParamsUpdateSpec =
   it "Golden JSON specs for PParamsUpdate" $ \file -> do
     let ppu = runGen 100 100 (arbitrary @(PParamsUpdate era))
-    let encoded = T.decodeUtf8 $ BSL.toStrict $ encodePretty ppu
+    let encoded = T.decodeUtf8 (BSL.toStrict (encodePretty ppu)) <> "\n"
     fileContent <- T.decodeUtf8 . BSL.toStrict <$> BSL.readFile file
     encoded `shouldBe` fileContent

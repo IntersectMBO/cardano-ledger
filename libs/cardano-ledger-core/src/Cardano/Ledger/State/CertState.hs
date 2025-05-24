@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -31,15 +32,11 @@ module Cardano.Ledger.State.CertState (
   AnchorData,
   lookupDepositDState,
   lookupRewardDState,
-  rewards,
-  delegations,
-  ptrsMap,
   payPoolDeposit,
   refundPoolDeposit,
   Obligations (..),
   sumObligation,
   -- Lenses
-  dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,
   dsFutureGenDelegsL,
@@ -69,13 +66,12 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
+import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State.Account
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -152,7 +148,7 @@ toInstantaneousRewardsPair InstantaneousRewards {..} =
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
 data DState era = DState
-  { dsUnified :: !UMap
+  { dsAccounts :: !(Accounts era)
   -- ^ Unified Reward Maps. This contains the reward map (which is the source
   -- of truth regarding the registered stake credentials, the deposit map,
   -- the delegation map, and the stake credential pointer map.
@@ -163,13 +159,24 @@ data DState era = DState
   , dsIRewards :: !InstantaneousRewards
   -- ^ Instantaneous Rewards
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
 
-instance NoThunks (DState era)
+instance CanGetAccounts DState
 
-instance NFData (DState era)
+instance CanSetAccounts DState where
+  accountsL =
+    lens dsAccounts (\dState accounts -> dState {dsAccounts = accounts})
+  {-# INLINE accountsL #-}
 
-instance Era era => EncCBOR (DState era) where
+deriving instance Eq (Accounts era) => Eq (DState era)
+
+deriving instance Show (Accounts era) => Show (DState era)
+
+instance NoThunks (Accounts era) => NoThunks (DState era)
+
+instance NFData (Accounts era) => NFData (DState era)
+
+instance (Era era, EncCBOR (Accounts era)) => EncCBOR (DState era) where
   encCBOR (DState unified fgs gs ir) =
     encodeListLen 4
       <> encCBOR unified
@@ -177,7 +184,7 @@ instance Era era => EncCBOR (DState era) where
       <> encCBOR gs
       <> encCBOR ir
 
-instance DecShareCBOR (DState era) where
+instance EraAccounts era => DecShareCBOR (DState era) where
   type
     Share (DState era) =
       (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
@@ -189,33 +196,33 @@ instance DecShareCBOR (DState era) where
       ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
-instance ToJSON (DState era) where
+instance ToJSON (Accounts era) => ToJSON (DState era) where
   toJSON = object . toDStatePair
   toEncoding = pairs . mconcat . toDStatePair
 
-toDStatePair :: KeyValue e a => DState era -> [a]
+toDStatePair :: ToJSON (Accounts era) => KeyValue e a => DState era -> [a]
 toDStatePair DState {..} =
-  [ "unified" .= dsUnified
+  [ "accounts" .= dsAccounts
   , "fGenDelegs" .= Map.toList dsFutureGenDelegs
   , "genDelegs" .= dsGenDelegs
   , "irwd" .= dsIRewards
   ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
-lookupDepositDState :: DState era -> (StakeCredential -> Maybe Coin)
-lookupDepositDState dstate =
-  let currentRewardDeposits = RewDepUView $ dsUnified dstate
-   in \k -> do
-        RDPair _ deposit <- UM.lookup k currentRewardDeposits
-        Just $! fromCompact deposit
+lookupDepositDState :: EraAccounts era => DState era -> (StakeCredential -> Maybe Coin)
+lookupDepositDState DState {dsAccounts} =
+  let accounStatesMap = dsAccounts ^. accountsMapL
+   in \cred -> do
+        accountState <- Map.lookup cred accounStatesMap
+        Just $! fromCompact (accountState ^. depositAccountStateL)
 
 -- | Function that looks up curret reward for the delegated staking credential.
-lookupRewardDState :: DState era -> (StakeCredential -> Maybe Coin)
-lookupRewardDState dstate =
-  let currentRewardDeposits = RewDepUView $ dsUnified dstate
-   in \k -> do
-        RDPair reward _ <- UM.lookup k currentRewardDeposits
-        Just $! fromCompact reward
+lookupRewardDState :: EraAccounts era => DState era -> (StakeCredential -> Maybe Coin)
+lookupRewardDState DState {dsAccounts} =
+  let accounStatesMap = dsAccounts ^. accountsMapL
+   in \cred -> do
+        accountState <- Map.lookup cred accounStatesMap
+        Just $! fromCompact (accountState ^. balanceAccountStateL)
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
@@ -323,7 +330,7 @@ instance Era era => ToCBOR (CommitteeState era) where
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
 class
-  ( Era era
+  ( EraAccounts era
   , ToJSON (CertState era)
   , EncCBOR (CertState era)
   , DecShareCBOR (CertState era)
@@ -383,10 +390,10 @@ instance DecShareCBOR InstantaneousRewards where
 instance Default InstantaneousRewards where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
-instance Default (DState era) where
+instance Default (Accounts era) => Default (DState era) where
   def =
     DState
-      UM.empty
+      def
       Map.empty
       (GenDelegs Map.empty)
       def
@@ -394,18 +401,6 @@ instance Default (DState era) where
 instance Default (PState era) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
-
-rewards :: DState era -> UView (Credential 'Staking) RDPair
-rewards = RewDepUView . dsUnified
-
-delegations ::
-  DState era ->
-  UView (Credential 'Staking) (KeyHash 'StakePool)
-delegations = SPoolUView . dsUnified
-
--- | get the actual ptrs map, we don't need a view
-ptrsMap :: DState era -> Map Ptr (Credential 'Staking)
-ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
 -- Functions that handle Deposits
@@ -476,9 +471,6 @@ instance Show Obligations where
 
 -- ===================================
 -- DState
-
-dsUnifiedL :: Lens' (DState era) UMap
-dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
 
 dsGenDelegsL :: Lens' (DState era) GenDelegs
 dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})

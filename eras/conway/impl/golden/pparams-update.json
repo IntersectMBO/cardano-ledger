@@ -802,12 +802,12 @@
         }
     },
     "dRepActivity": 830854752,
-    "dRepDeposit": 549969,
+    "dRepDeposit": 499083,
     "executionUnitPrices": {
         "priceMemory": 456411.0245701989455,
         "priceSteps": 8.244625910634850235e14
     },
-    "govActionDeposit": 601034,
+    "govActionDeposit": 2,
     "maxBlockBodySize": 1193023799,
     "maxBlockExecutionUnits": {
         "memory": 5823152866589440656,
@@ -821,7 +821,7 @@
     "maxTxSize": 1059901121,
     "maxValueSize": 2469828094,
     "minFeeRefScriptCostPerByte": 97.34972487671157032,
-    "minPoolCost": 855059,
+    "minPoolCost": 275624,
     "monetaryExpansion": 0.939453736446081,
     "poolPledgeInfluence": 690.2596006993073937,
     "poolVotingThresholds": {
@@ -831,10 +831,10 @@
         "motionNoConfidence": 0.631973357,
         "ppSecurityGroup": 0.4
     },
-    "stakeAddressDeposit": 479647,
-    "stakePoolDeposit": 569,
+    "stakeAddressDeposit": 23,
+    "stakePoolDeposit": 301450,
     "treasuryCut": 0.5,
-    "txFeeFixed": 203771,
-    "txFeePerByte": 379061,
-    "utxoCostPerByte": 664860
+    "txFeeFixed": 66,
+    "txFeePerByte": 67,
+    "utxoCostPerByte": 11
 }

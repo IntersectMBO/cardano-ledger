@@ -36,7 +36,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams, ppId, ppRewardAccount)
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Functor.Identity (Identity)
+import Data.Default (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromKeys)
@@ -44,9 +44,7 @@ import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era
 
 spec :: forall era. ConwayEraTest era => Spec
 spec = do
@@ -58,15 +56,7 @@ spec = do
     allYesProp @era
     noConfidenceProp @era
 
-acceptedRatioProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+acceptedRatioProp :: forall era. ConwayEraTest era => Spec
 acceptedRatioProp = do
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
     "SPO vote count for arbitrary vote ratios"
@@ -78,7 +68,11 @@ acceptedRatioProp = do
               protVer = rs ^. rsEnactStateL . ensProtVerL
               actual =
                 spoAcceptedRatio @era
-                  re {reStakePoolDistr = distr, reDelegatees = delegatees, rePoolParams = poolParams}
+                  re
+                    { reStakePoolDistr = distr
+                    , reAccounts = accountsFromDelegatees delegatees
+                    , rePoolParams = poolParams
+                    }
                   gas {gasStakePoolVotes = votes}
                   protVer
               expected =
@@ -98,15 +92,7 @@ acceptedRatioProp = do
             actual `shouldBe` expected
         )
 
-noStakeProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+noStakeProp :: forall era. ConwayEraTest era => Spec
 noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
@@ -116,15 +102,7 @@ noStakeProp =
               `shouldBe` (votingStakePoolThreshold @era rs (gasAction gas) == SJust minBound)
     )
 
-allAbstainProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+allAbstainProp :: forall era. ConwayEraTest era => Spec
 allAbstainProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
     "If all votes are abstain, accepted ratio is zero"
@@ -135,20 +113,16 @@ allAbstainProp =
       $ \TestData {..} ->
         spoAcceptedRatio
           @era
-          re {reStakePoolDistr = distr, reDelegatees = delegatees, rePoolParams = poolParams}
+          re
+            { reStakePoolDistr = distr
+            , reAccounts = accountsFromDelegatees delegatees
+            , rePoolParams = poolParams
+            }
           gas {gasStakePoolVotes = votes}
           (rs ^. rsEnactStateL . ensProtVerL)
           `shouldBe` 0
 
-noVotesProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+noVotesProp :: forall era. ConwayEraTest era => Spec
 noVotesProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
     "If there are no votes, accepted ratio is zero"
@@ -164,15 +138,7 @@ noVotesProp =
           (rs ^. rsEnactStateL . ensProtVerL)
           `shouldBe` 0
 
-allYesProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+allYesProp :: forall era. ConwayEraTest era => Spec
 allYesProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
     "If all vote yes, accepted ratio is 1 (unless there is no stake) "
@@ -194,15 +160,7 @@ allYesProp =
           )
     )
 
-noConfidenceProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+noConfidenceProp :: forall era. ConwayEraTest era => Spec
 noConfidenceProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> Property)
     "If all votes are no confidence, accepted ratio is zero"
@@ -347,3 +305,7 @@ genPctsOf100 = do
   f <- choose (0, 100) -- stake that didn't participate
   let s = a + b + c + d + e + f
   pure (a % s, b % s, c % s, d % s, e % s)
+
+accountsFromDelegatees :: ShelleyEraTest era => Map (Credential 'Staking) DRep -> Accounts era
+accountsFromDelegatees =
+  Map.foldrWithKey' (\cred drep -> registerTestAccount cred Nothing mempty Nothing (Just drep)) def

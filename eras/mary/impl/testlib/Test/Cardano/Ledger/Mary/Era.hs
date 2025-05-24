@@ -18,7 +18,12 @@ class
   ) =>
   MaryEraTest era
 
-instance EraTest MaryEra
+instance EraTest MaryEra where
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest MaryEra
 

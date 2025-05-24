@@ -22,15 +22,12 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
   PredicateFailure,
-  validateZeroRewards,
   validateStakePoolDelegateeRegistered,
-  drainWithdrawals,
 ) where
 
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
   EpochNo,
-  Network,
   ShelleyBase,
   TxIx (..),
   invalidKey,
@@ -42,18 +39,11 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
+import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState,
-  DState (..),
-  PState (..),
-  psStakePoolParams,
-  rewards,
- )
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (
   DelplEnv (..),
@@ -62,16 +52,8 @@ import Cardano.Ledger.Shelley.Rules.Delpl (
   ShelleyDelplPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
-import Cardano.Ledger.Shelley.TxBody (
-  RewardAccount (..),
-  ShelleyEraTxBody (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.State (EraCertState (..))
-import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
@@ -80,19 +62,17 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   liftSTS,
   trans,
   validateTrans,
  )
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
@@ -118,7 +98,7 @@ data ShelleyDelegsPredFailure era
       (KeyHash 'StakePool)
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsDELEGS
-      (Map RewardAccount Coin)
+      Withdrawals
   | -- | Subtransition Failures
     DelplFailure (PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
@@ -246,9 +226,12 @@ delegsTransition = do
     Empty -> do
       let dState = certState ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-      validateTrans WithdrawalsNotInRewardsDELEGS $
-        validateZeroRewards dState withdrawals network
-      pure $ certState & certDStateL .~ drainWithdrawals dState withdrawals
+          accounts = dState ^. accountsL
+      failOnJust
+        (whichWithdrawalsDoNotDrainAccounts withdrawals network accounts)
+        WithdrawalsNotInRewardsDELEGS
+      -- validateZeroRewards dState withdrawals network
+      pure $ certState & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
@@ -271,45 +254,18 @@ validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePoolParams pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
 
--- @withdrawals_@ is small and @rewards@ big, better to transform the former
--- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-isSubmapOfUM ::
-  Map RewardAccount Coin ->
-  UView (Credential 'Staking) UM.RDPair ->
-  Bool
-isSubmapOfUM ws (RewDepUView (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
-  where
-    withdrawalMap :: Map.Map (Credential 'Staking) Coin
-    withdrawalMap = Map.mapKeys (\(RewardAccount _ cred) -> cred) ws
-    f :: Coin -> UMElem -> Bool
-    f coin1 (UMElem (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == fromCompact coin2
-    f _ _ = False
-
-drainWithdrawals :: DState era -> Withdrawals -> DState era
-drainWithdrawals dState (Withdrawals wdrls) =
-  dState {dsUnified = rewards dState UM.⨃ drainedRewardAccounts}
-  where
-    drainedRewardAccounts =
-      Map.foldrWithKey
-        ( \(RewardAccount _ cred) _coin ->
-            Map.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0))
-            -- Note that the deposit (CompactCoin 0) will be ignored.
-        )
-        Map.empty
-        wdrls
-
-validateZeroRewards ::
-  forall era.
-  DState era ->
-  Withdrawals ->
-  Network ->
-  Test (Map RewardAccount Coin)
-validateZeroRewards dState (Withdrawals wdrls) network = do
-  failureUnless (isSubmapOfUM wdrls (rewards dState)) $ -- withdrawals_ ⊆ rewards
-    Map.differenceWith
-      (\x y -> if x /= y then Just x else Nothing)
-      wdrls
-      (Map.mapKeys (RewardAccount network) (UM.rewardMap (dsUnified dState)))
+-- validateZeroRewards ::
+--   forall era.
+--   DState era ->
+--   Withdrawals ->
+--   Network ->
+--   Test (Map RewardAccount Coin)
+-- validateZeroRewards dState withdrawals@(Withdrawals wdrls) network = do
+--   failureUnless (doWithdrawalsDrainAccounts withdrawals (rewards dState)) $ -- withdrawals_ ⊆ rewards
+--     Map.differenceWith
+--       (\x y -> if x /= y then Just x else Nothing)
+--       wdrls
+--       (Map.mapKeys (RewardAccount network) (UM.rewardMap (dsUnified dState)))
 
 instance
   ( Era era

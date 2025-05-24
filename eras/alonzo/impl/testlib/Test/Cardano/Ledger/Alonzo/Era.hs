@@ -32,7 +32,12 @@ class
   ) =>
   AlonzoEraTest era
 
-instance EraTest AlonzoEra
+instance EraTest AlonzoEra where
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest AlonzoEra
 

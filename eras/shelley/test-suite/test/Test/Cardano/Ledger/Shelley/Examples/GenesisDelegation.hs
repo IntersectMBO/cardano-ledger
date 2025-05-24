@@ -174,7 +174,7 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce @ShelleyEra blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] []
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
     . C.setFutureGenDeleg newGenDeleg
     $ initStGenesisDeleg

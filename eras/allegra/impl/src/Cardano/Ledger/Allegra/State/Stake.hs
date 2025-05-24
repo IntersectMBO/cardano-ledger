@@ -5,6 +5,7 @@ module Cardano.Ledger.Allegra.State.Stake () where
 
 import Cardano.Ledger.Allegra.Core ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State.Account ()
 import Cardano.Ledger.Shelley.State (
   EraStake (..),
   ShelleyInstantStake,

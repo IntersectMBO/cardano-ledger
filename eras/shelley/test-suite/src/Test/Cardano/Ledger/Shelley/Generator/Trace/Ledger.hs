@@ -75,6 +75,8 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
+  , EraCertState era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -90,7 +92,6 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
-  , EraCertState era
   , Crypto c
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)
@@ -114,6 +115,7 @@ instance
   , EraUTxO era
   , EraStake era
   , EraCertState era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era

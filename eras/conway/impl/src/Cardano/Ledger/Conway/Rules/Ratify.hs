@@ -65,16 +65,10 @@ import Cardano.Ledger.Conway.Governance (
   withGovActionParent,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.State (
-  CommitteeAuthorization (..),
-  CommitteeState (csCommitteeCreds),
-  PoolDistr (..),
-  individualTotalPoolStake,
- )
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
   Embed (..),
@@ -95,6 +89,7 @@ import Lens.Micro
 
 instance
   ( ConwayEraPParams era
+  , ConwayEraAccounts era
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
@@ -168,7 +163,11 @@ committeeAcceptedRatio members votes committeeState currentEpoch =
     (yesVotes, totalExcludingAbstain) = Map.foldlWithKey' accumVotes (0, 0) members
 
 spoAccepted ::
-  ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+  (ConwayEraPParams era, ConwayEraAccounts era) =>
+  RatifyEnv era ->
+  RatifyState era ->
+  GovActionState era ->
+  Bool
 spoAccepted re rs gas =
   case votingStakePoolThreshold rs (gasAction gas) of
     -- Short circuit on zero threshold in order to avoid redundant computation.
@@ -193,11 +192,12 @@ spoAccepted re rs gas =
 -- In those cases, behaviour is as expected: vote `Yes` on `NoConfidence` proposals in case of the former and
 -- and vote `Abstain` by default in case of the latter. For `HardForkInitiation`, behaviour is the same as
 -- during the bootstrap period: if an SPO didn't vote, their vote will always count as `No`.
-spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> ProtVer -> Rational
+spoAcceptedRatio ::
+  ConwayEraAccounts era => RatifyEnv era -> GovActionState era -> ProtVer -> Rational
 spoAcceptedRatio
   RatifyEnv
     { reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)
-    , reDelegatees
+    , reAccounts
     , rePoolParams
     }
   GovActionState
@@ -214,7 +214,7 @@ spoAcceptedRatio
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
                 | bootstrapPhase pv -> (yes, abstain + stake)
-                | otherwise -> case defaultStakePoolVote poolId rePoolParams reDelegatees of
+                | otherwise -> case defaultStakePoolVote poolId rePoolParams reAccounts of
                     DefaultNoConfidence
                       | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
                     DefaultAbstain -> (yes, abstain + stake)
@@ -295,7 +295,7 @@ withdrawalCanWithdraw (TreasuryWithdrawals m _) treasury =
 withdrawalCanWithdraw _ _ = True
 
 acceptedByEveryone ::
-  ConwayEraPParams era =>
+  (ConwayEraPParams era, ConwayEraAccounts era) =>
   RatifyEnv era ->
   RatifyState era ->
   GovActionState era ->
@@ -312,6 +312,7 @@ ratifyTransition ::
   , Environment (EraRule "ENACT" era) ~ ()
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , ConwayEraPParams era
+  , ConwayEraAccounts era
   ) =>
   TransitionRule (ConwayRATIFY era)
 ratifyTransition = do

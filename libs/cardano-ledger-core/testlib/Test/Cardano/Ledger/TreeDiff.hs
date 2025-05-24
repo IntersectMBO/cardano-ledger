@@ -235,7 +235,7 @@ deriving newtype instance ToExpr Stake
 
 instance ToExpr (PState era)
 
-instance ToExpr (DState era)
+instance ToExpr (Accounts era) => ToExpr (DState era)
 
 instance ToExpr FutureGenDeleg
 
