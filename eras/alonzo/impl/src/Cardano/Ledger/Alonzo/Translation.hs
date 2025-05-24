@@ -100,8 +100,13 @@ instance TranslateEra AlonzoEra EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
+instance TranslateEra AlonzoEra ShelleyAccounts where
+  translateEra _ = pure . coerce
+
 instance TranslateEra AlonzoEra DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra ctx DState {dsAccounts = accountsShelley, ..} = do
+    dsAccounts <- translateEra ctx accountsShelley
+    pure DState {..}
 
 instance TranslateEra AlonzoEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -24,7 +25,6 @@ import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
   ShelleyBase,
-  StrictMaybe (..),
   addEpochInterval,
   epochInfoPure,
   invalidKey,
@@ -35,7 +35,14 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+  addDeltaCoin,
+  compactCoinOrError,
+  toDeltaCoin,
+ )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
@@ -50,8 +57,6 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
-import Cardano.Ledger.UMap (RDPair (..), UView (..), compactCoinOrError)
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
@@ -65,7 +70,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
@@ -125,7 +130,10 @@ newtype ShelleyDelegEvent era = DelegNewEpoch EpochNo
 
 instance NFData (ShelleyDelegEvent era)
 
-instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (ShelleyDELEG era) where
+instance
+  (EraPParams era, ShelleyEraAccounts era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  STS (ShelleyDELEG era)
+  where
   type State (ShelleyDELEG era) = DState era
   type Signal (ShelleyDELEG era) = TxCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
@@ -237,36 +245,36 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
+  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot epochNo ptr chainAccountState pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
-    RegTxCert hk -> do
+    RegTxCert cred -> do
       -- (hk ∉ dom (rewards ds))
-      UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
-      let u1 = dsUnified ds
-          deposit = compactCoinOrError (pp ^. ppKeyDepositL)
-          u2 = RewDepUView u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
-          u3 = PtrUView u2 UM.∪ (ptr, hk)
-      pure (ds {dsUnified = u3})
+      not (isAccountRegistered cred (ds ^. accountsL)) ?! StakeKeyAlreadyRegisteredDELEG cred
+      let compactDeposit = compactCoinOrError (pp ^. ppKeyDepositL)
+      pure (ds & accountsL %~ registerShelleyAccount cred ptr compactDeposit Nothing)
     UnRegTxCert cred -> do
-      -- (hk ∈ dom (rewards ds))
-      let (mUMElem, umap) = UM.extractStakingCredential cred (dsUnified ds)
+      let !(mAccountState, !accounts) = unregisterShelleyAccount cred (ds ^. accountsL)
           checkStakeKeyHasZeroRewardBalance = do
-            UM.UMElem (SJust rd) _ _ _ <- mUMElem
-            guard (UM.rdReward rd /= mempty)
-            Just $ UM.fromCompact (UM.rdReward rd)
-      isJust mUMElem ?! StakeKeyNotRegisteredDELEG cred
+            accountState <- mAccountState
+            let accountBalance = accountState ^. balanceAccountStateL
+            guard (accountBalance /= mempty)
+            Just $ fromCompact accountBalance
+      -- (hk ∈ dom (rewards ds))
+      isJust mAccountState ?! StakeKeyNotRegisteredDELEG cred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyNonZeroAccountBalanceDELEG
-      pure $ ds {dsUnified = umap}
-    DelegStakeTxCert hk dpool -> do
+      pure $ ds & accountsL .~ accounts
+    DelegStakeTxCert cred stakePool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
-      UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
-
-      pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
+      isAccountRegistered cred (ds ^. accountsL) ?! StakeDelegationImpossibleDELEG cred
+      pure $
+        ds
+          & accountsL . accountsMapL
+            %~ Map.adjust (stakePoolDelegationAccountStateL .~ Just stakePool) cred
     GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
@@ -363,7 +371,7 @@ delegationTransition = do
       pure ds
 
 checkSlotNotTooLate ::
-  (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
+  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   SlotNo ->
   EpochNo ->
   Rule (ShelleyDELEG era) 'Transition ()

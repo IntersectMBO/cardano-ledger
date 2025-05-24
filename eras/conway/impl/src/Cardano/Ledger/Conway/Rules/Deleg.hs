@@ -32,25 +32,17 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra, hardforkConwayBootstrapPhase)
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  vsDRepsL,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.State (
-  EraCertState (..),
-  dsUnifiedL,
- )
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)
 import Control.State.Transition (
@@ -172,20 +164,18 @@ conwayDelegTransition = do
       ) <-
     judgmentContext
   let
-    dsUnified = certState ^. certDStateL . dsUnifiedL
+    accounts = certState ^. certDStateL . accountsL
     ppKeyDeposit = pp ^. ppKeyDepositL
+    ppKeyDepositCompact = compactCoinOrError ppKeyDeposit
     pv = pp ^. ppProtocolVersionL
     checkDepositAgainstPParams deposit =
       deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
-    registerStakeCredential stakeCred =
-      let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
-       in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
     checkStakeKeyNotRegistered stakeCred =
-      UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
+      not (isAccountRegistered stakeCred accounts) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred = do
-      let mUMElem = Map.lookup stakeCred (UM.umElems dsUnified)
-      isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
-      pure $ mUMElem >>= umElemToDelegatee
+      let mAccountState = Map.lookup stakeCred (accounts ^. accountsMapL)
+      isJust mAccountState ?! StakeKeyNotRegisteredDELEG stakeCred
+      pure $ mAccountState >>= accountStateDelegatee
     checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
             targetPool `Map.member` pools ?! DelegateeStakePoolNotRegisteredDELEG targetPool
@@ -205,27 +195,31 @@ conwayDelegTransition = do
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
       checkStakeKeyNotRegistered stakeCred
-      pure $ certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
+      pure $
+        certState
+          & certDStateL . accountsL
+            %~ registerConwayAccount stakeCred ppKeyDepositCompact Nothing
     ConwayUnRegCert stakeCred sMayRefund -> do
-      let (mUMElem, umap) = UM.extractStakingCredential stakeCred dsUnified
-          mCurDelegatee = mUMElem >>= umElemToDelegatee
+      let (mAccountState, newAccounts) = unregisterConwayAccount stakeCred accounts
+          mCurDelegatee = mAccountState >>= accountStateDelegatee
           checkInvalidRefund = do
             SJust suppliedRefund <- Just sMayRefund
             -- we don't want to report invalid refund when stake credential is not registered:
-            UM.UMElem (SJust rd) _ _ _ <- mUMElem
+            accountState <- mAccountState
             -- we return offending refund only when it doesn't match the expected one:
-            guard (suppliedRefund /= UM.fromCompact (UM.rdDeposit rd))
+            guard (suppliedRefund /= fromCompact (accountState ^. depositAccountStateL))
             Just suppliedRefund
           checkStakeKeyHasZeroRewardBalance = do
-            UM.UMElem (SJust rd) _ _ _ <- mUMElem
-            guard (UM.rdReward rd /= mempty)
-            Just $ UM.fromCompact (UM.rdReward rd)
+            accountState <- mAccountState
+            let balanceCompact = accountState ^. balanceAccountStateL
+            guard (balanceCompact /= mempty)
+            Just $ fromCompact balanceCompact
       failOnJust checkInvalidRefund IncorrectDepositDELEG
-      isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
+      isJust mAccountState ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
       pure $
         processDRepUnDelegation stakeCred mCurDelegatee $
-          certState & certDStateL . dsUnifiedL .~ umap
+          certState & certDStateL . accountsL .~ newAccounts
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
@@ -237,7 +231,9 @@ conwayDelegTransition = do
       checkStakeDelegateeRegistered delegatee
       pure $
         processDelegationInternal (pvMajor pv < natVersion @10) stakeCred Nothing delegatee $
-          certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
+          certState
+            & certDStateL . accountsL
+              %~ registerConwayAccount stakeCred ppKeyDepositCompact (Just delegatee)
 
 -- | Apply new delegation, while properly cleaning up older delegations. This function
 -- does not enforce that delegatee is registered, that has to be handled by the caller.
@@ -252,8 +248,8 @@ processDelegation ::
 processDelegation stakeCred newDelegatee !certState = certState'
   where
     !certState' = processDelegationInternal False stakeCred mCurDelegatee newDelegatee certState
-    mUMElem = Map.lookup stakeCred (UM.umElems (certState ^. certDStateL . dsUnifiedL))
-    mCurDelegatee = mUMElem >>= umElemToDelegatee
+    mAccountState = Map.lookup stakeCred (certState ^. certDStateL . accountsL . accountsMapL)
+    mCurDelegatee = mAccountState >>= accountStateDelegatee
 
 -- | Same as `processDelegation`, except it expects the current delegation supplied as an
 -- argument, because in ledger rules we already have it readily available.
@@ -275,15 +271,15 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
     DelegVote dRep -> delegVote dRep
     DelegStakeVote sPool dRep -> delegVote dRep . delegStake sPool
   where
-    delegStake sPool cState =
+    delegStake stakePool cState =
       cState
-        & certDStateL . dsUnifiedL %~ \umap ->
-          UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
+        & certDStateL . accountsL . accountsMapL
+          %~ Map.adjust (stakePoolDelegationAccountStateL .~ Just stakePool) stakeCred
     delegVote dRep cState =
       let cState' =
             processDRepUnDelegation stakeCred mCurDelegatee cState
-              & certDStateL . dsUnifiedL %~ \umap ->
-                UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+              & certDStateL . accountsL . accountsMapL
+                %~ Map.adjust (dRepDelegationAccountStateL .~ Just dRep) stakeCred
           dReps
             | preserveIncorrectDelegation = cState ^. certVStateL . vsDRepsL
             | otherwise = cState' ^. certVStateL . vsDRepsL
@@ -293,14 +289,6 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
                   let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
                    in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
             _ -> cState'
-
-umElemToDelegatee :: UM.UMElem -> Maybe Delegatee
-umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
-  case (mPool, mDRep) of
-    (SNothing, SNothing) -> Nothing
-    (SJust pool, SNothing) -> Just $ DelegStake pool
-    (SNothing, SJust dRep) -> Just $ DelegVote dRep
-    (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
 
 processDRepUnDelegation ::
   ConwayEraCertState era =>

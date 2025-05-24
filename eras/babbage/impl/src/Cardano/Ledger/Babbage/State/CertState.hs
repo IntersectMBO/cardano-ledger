@@ -5,6 +5,7 @@
 module Cardano.Ledger.Babbage.State.CertState () where
 
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.State.Account ()
 import Cardano.Ledger.Shelley.State
 
 instance EraCertState BabbageEra where

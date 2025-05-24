@@ -5,6 +5,7 @@ module Cardano.Ledger.Mary.State.Stake () where
 
 import Cardano.Ledger.Mary.Core ()
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.State.Account ()
 import Cardano.Ledger.Shelley.State (
   EraStake (..),
   ShelleyInstantStake,

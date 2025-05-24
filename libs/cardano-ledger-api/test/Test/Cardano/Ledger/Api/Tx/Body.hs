@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -15,10 +16,10 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
 import Cardano.Ledger.State hiding (consumed)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Foldable
 import qualified Data.Map.Strict as Map
+import Data.MapExtras as Map (extract)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
@@ -50,21 +51,26 @@ keyTxRefunds ::
   CertState era ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
+keyTxRefunds pp dpstate tx =
+  case foldl' accum (initAccountsMap, Set.empty, mempty) certs of
+    (_, _, res) -> res
   where
     certs = tx ^. certsTxBodyL
-    initialKeys = UM.RewDepUView $ dpstate ^. certDStateL . dsUnifiedL
-    keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
-    accum (!keys, !ans) (RegTxCert k) =
-      -- Deposit is added locally to the growing 'keys'
-      (UM.RewDepUView $ UM.insert k (UM.RDPair mempty keyDeposit) keys, ans)
-    accum (!keys, !ans) (UnRegTxCert k) =
-      -- If the key is registered, lookup the deposit in the locally growing 'keys'
-      -- if it is not registered, then just return ans
-      case UM.lookup k keys of
-        Just (UM.RDPair _ deposit) -> (keys, ans <+> fromCompact deposit)
-        Nothing -> (keys, ans)
-    accum ans _ = ans
+    initAccountsMap = dpstate ^. certDStateL . accountsL . accountsMapL
+    keyDeposit = pp ^. ppKeyDepositL
+    accum acc@(!accountsMap, !newlyRegistered, !ans) = \case
+      RegTxCert cred
+        | Map.member cred accountsMap || Set.member cred newlyRegistered -> acc
+        | otherwise -> (accountsMap, Set.insert cred newlyRegistered, ans)
+      UnRegTxCert cred ->
+        case Map.extract cred accountsMap of
+          (Just accountState, newAccountsMap) ->
+            (newAccountsMap, newlyRegistered, ans <> fromCompact (accountState ^. depositAccountStateL))
+          (Nothing, newAccountsMap)
+            | Set.member cred newlyRegistered ->
+                (newAccountsMap, Set.delete cred newlyRegistered, ans <> keyDeposit)
+            | otherwise -> acc
+      _ -> acc
 
 -- | This is the old implementation of `evalBodyTxBody`. We keep it around to ensure that
 -- the produced result hasn't changed
@@ -106,8 +112,7 @@ genTxBodyFrom ::
 genTxBodyFrom certState (UTxO u) = do
   txBody <- arbitrary
   inputs <- sublistOf (Map.keys u)
-  unDelegCreds <-
-    sublistOf (toList (UM.domain (UM.RewDepUView $ certState ^. certDStateL . dsUnifiedL)))
+  unDelegCreds <- sublistOf (Map.keys (certState ^. certDStateL . accountsL . accountsMapL))
   deRegKeys <- sublistOf (Map.elems (certState ^. certPStateL . psStakePoolParamsL))
   certs <-
     shuffle $

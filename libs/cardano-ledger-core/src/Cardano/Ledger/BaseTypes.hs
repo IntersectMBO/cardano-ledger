@@ -826,7 +826,7 @@ newtype BlocksMade = BlocksMade
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Default)
 
 -- | Transaction index.
 newtype TxIx = TxIx {unTxIx :: Word16}

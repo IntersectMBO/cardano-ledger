@@ -135,7 +135,8 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] [Cast.alicePoolParams]
+    . C.addFees feeTx1
+    . C.addPoolDeposits ppEx [Cast.alicePoolParams]
     . C.newUTxO txbodyEx1
     . C.newPool Cast.alicePoolParams
     $ initStPoolReReg
@@ -214,7 +215,8 @@ blockEx2A = blockEx2 20
 
 expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
-  C.feesAndDeposits ppEx feeTx2 [] [newPoolParams] -- The deposit should be ignored because the poolId is already registered
+  C.addFees feeTx2
+    . C.addPoolDeposits ppEx [newPoolParams] -- The deposit should be ignored because the poolId is already registered
     . C.newUTxO txbodyEx2
     . C.reregPool newPoolParams
     $ expectedStEx1

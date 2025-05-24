@@ -18,11 +18,11 @@
     "maxCollateralInputs": 45,
     "maxTxSize": 881284740,
     "maxValueSize": 39,
-    "minPoolCost": 392044,
+    "minPoolCost": 855261,
     "monetaryExpansion": 0.7810966919969065,
     "poolPledgeInfluence": 8.319022570290014789e16,
     "poolRetireMaxEpoch": 1843493333,
-    "stakePoolDeposit": 855059,
+    "stakePoolDeposit": 275624,
     "stakePoolTargetNum": 10900,
     "treasuryCut": 0.234167131785253734
 }

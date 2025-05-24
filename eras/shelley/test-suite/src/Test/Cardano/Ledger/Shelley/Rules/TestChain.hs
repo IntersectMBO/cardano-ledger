@@ -207,6 +207,7 @@ delegTraceFromBlock ::
   forall era.
   ( ChainProperty era
   , ShelleyEraTxBody era
+  , ShelleyEraAccounts era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->

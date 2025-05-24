@@ -127,8 +127,13 @@ instance TranslateEra AllegraEra UTxOState where
 instance TranslateEra AllegraEra ShelleyInstantStake where
   translateEra _ = pure . coerce
 
+instance TranslateEra AllegraEra ShelleyAccounts where
+  translateEra _ = pure . coerce
+
 instance TranslateEra AllegraEra DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra ctx DState {dsAccounts = accountsShelley, ..} = do
+    dsAccounts <- translateEra ctx accountsShelley
+    pure DState {..}
 
 instance TranslateEra AllegraEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}

@@ -99,7 +99,6 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -537,7 +536,7 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ls ss nm) maxSupply =
   createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
   where
     ds = ls ^. lsCertStateL . certDStateL
-    rs = UM.domain $ rewards ds
+    rs = Map.keysSet (ds ^. accountsL . accountsMapL)
     reserves = casReserves acnt
     totalStake = circulation es maxSupply
     pr = es ^. prevPParamsEpochStateL
