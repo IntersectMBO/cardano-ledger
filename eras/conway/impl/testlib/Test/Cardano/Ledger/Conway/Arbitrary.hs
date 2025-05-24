@@ -258,8 +258,8 @@ _uniqueIdGovActions ::
 _uniqueIdGovActions = SSeq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
 
 instance
-  (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Arbitrary (GovRelation f era)
+  (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Arbitrary (GovRelation f)
   where
   arbitrary = GovRelation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
@@ -315,7 +315,7 @@ instance
     where
       -- Starting from the root select a path in the tree until a leaf is reached.
       chooseLineage ::
-        (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+        (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
         Proposals era ->
         Seq.Seq (GovActionState era) ->
         Gen (Seq.Seq (GovActionState era))
@@ -409,8 +409,8 @@ genGovAction ps =
     ]
   where
     genWithParent ::
-      (StrictMaybe (GovPurposeId p era) -> Gen (GovAction era)) ->
-      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+      (StrictMaybe (GovPurposeId p) -> Gen (GovAction era)) ->
+      (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
       Gen (GovAction era)
     genWithParent gen govRelL =
       gen
@@ -423,17 +423,17 @@ genPParamUpdateGovAction ::
   ( Era era
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
-  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   Gen (GovAction era)
 genPParamUpdateGovAction parent = ParameterChange parent <$> arbitrary <*> arbitrary
 
 genHardForkGovAction ::
-  StrictMaybe (GovPurposeId 'HardForkPurpose era) ->
+  StrictMaybe (GovPurposeId 'HardForkPurpose) ->
   Gen (GovAction era)
 genHardForkGovAction parent = HardForkInitiation parent <$> arbitrary
 
 genCommitteeGovAction ::
-  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
+  StrictMaybe (GovPurposeId 'CommitteePurpose) ->
   Gen (GovAction era)
 genCommitteeGovAction parent =
   oneof
@@ -443,7 +443,7 @@ genCommitteeGovAction parent =
 
 genConstitutionGovAction ::
   Era era =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   Gen (GovAction era)
 genConstitutionGovAction parent = NewConstitution parent <$> arbitrary
 
@@ -526,7 +526,7 @@ instance Arbitrary GovActionId where
 
 deriving instance Arbitrary GovActionIx
 
-deriving instance Arbitrary (GovPurposeId p era)
+deriving instance Arbitrary (GovPurposeId p)
 
 instance Arbitrary Voter where
   arbitrary =

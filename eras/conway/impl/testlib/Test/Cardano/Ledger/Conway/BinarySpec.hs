@@ -30,10 +30,10 @@ spec = do
   specUpgrade @ConwayEra def
   describe "RoundTrip" $ do
     roundTripCborSpec @GovActionId
-    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'HardForkPurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'CommitteePurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose ConwayEra)
+    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose)
+    roundTripCborSpec @(GovPurposeId 'HardForkPurpose)
+    roundTripCborSpec @(GovPurposeId 'CommitteePurpose)
+    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose)
     roundTripCborSpec @Vote
     roundTripCborSpec @Voter
     roundTripConwayCommonSpec @ConwayEra

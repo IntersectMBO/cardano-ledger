@@ -345,11 +345,11 @@ data Rep era t where
   UnitIntervalR :: Rep era UnitInterval
   CommitteeR :: Era era => Rep era (Committee era)
   ConstitutionR :: Era era => Rep era (Constitution era)
-  PrevGovActionIdsR :: Era era => Rep era (GovRelation StrictMaybe era)
-  PrevPParamUpdateR :: Era era => Rep era (GovPurposeId 'PParamUpdatePurpose era)
-  PrevHardForkR :: Era era => Rep era (GovPurposeId 'HardForkPurpose era)
-  PrevCommitteeR :: Era era => Rep era (GovPurposeId 'CommitteePurpose era)
-  PrevConstitutionR :: Era era => Rep era (GovPurposeId 'ConstitutionPurpose era)
+  PrevGovActionIdsR :: Era era => Rep era (GovRelation StrictMaybe)
+  PrevPParamUpdateR :: Era era => Rep era (GovPurposeId 'PParamUpdatePurpose)
+  PrevHardForkR :: Era era => Rep era (GovPurposeId 'HardForkPurpose)
+  PrevCommitteeR :: Era era => Rep era (GovPurposeId 'CommitteePurpose)
+  PrevConstitutionR :: Era era => Rep era (GovPurposeId 'ConstitutionPurpose)
   RatifyStateR :: Reflect era => Rep era (RatifyState era)
   NumDormantEpochsR :: Era era => Rep era EpochNo
   DRepHashR :: Era era => Rep era (KeyHash 'DRepRole)

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -92,7 +93,7 @@ data OMap k v = OMap
   { omSSeq :: !(SSeq.StrictSeq k)
   , omMap :: !(Map.Map k v)
   }
-  deriving (Generic, Eq)
+  deriving (Generic, Eq, Functor)
 
 instance (Show v, Ord k, Show k) => Show (OMap k v) where
   show = show . toStrictSeqOfPairs

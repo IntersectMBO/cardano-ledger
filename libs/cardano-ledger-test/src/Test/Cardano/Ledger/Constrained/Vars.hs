@@ -2147,7 +2147,7 @@ currProposals :: Era era => Proof era -> Term era (Proposals era)
 currProposals p = Var $ V "currProposals" (ProposalsR p) No
 
 -- | Part of the EnactState, it is computed by selecting from currProposals
-prevGovActionIds :: forall era. Reflect era => Term era (GovRelation StrictMaybe era)
+prevGovActionIds :: forall era. Reflect era => Term era (GovRelation StrictMaybe)
 prevGovActionIds = Var $ V "prevGovActionIds" PrevGovActionIdsR No
 
 -- | This is a view of currProposals, so will compute it once
@@ -2320,11 +2320,11 @@ govActionStateTarget =
 -- targets provide the coercions to produce the real data from the Model
 
 -- | Lift the Model to the real type
-liftId :: Maybe GovActionId -> StrictMaybe (GovPurposeId p era)
+liftId :: Maybe GovActionId -> StrictMaybe (GovPurposeId p)
 liftId x = GovPurposeId <$> (maybeToStrictMaybe x)
 
 -- | Drop the real type back to the Model
-dropId :: StrictMaybe (GovPurposeId p era) -> Maybe GovActionId
+dropId :: StrictMaybe (GovPurposeId p) -> Maybe GovActionId
 dropId x = unGovPurposeId <$> (strictMaybeToMaybe x)
 
 -- =====================

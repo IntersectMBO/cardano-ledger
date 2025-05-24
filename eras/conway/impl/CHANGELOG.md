@@ -2,8 +2,9 @@
 
 ## 1.20.0.0
 
+* Remove era parametrization from `GovPurposeId`, `GovRelation`
 * Add `ReferenceInputsNotDisjointFromInputs`
-- Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
+* Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
 * Added to `PParams`: `ppCommitteeMaxTermLength`,`ppCommitteeMinSize`,`ppDRepActivity`,`ppDRepDeposit`,`ppDRepVotingThresholds`,`ppGovActionDeposit`,`ppGovActionLifetime`,`ppGovProtocolVersion`,`ppMinFeeRefScriptCostPerByte`,`ppPoolVotingThresholds`
 * Moved `ConwayEraPlutusTxInfo` class from `Context` module to `TxInfo`
 * Removed `Cardano.Ledger.Conway.Plutus.Context` module
