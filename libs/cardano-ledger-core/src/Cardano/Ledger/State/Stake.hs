@@ -3,6 +3,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -26,10 +27,10 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.SnapShots
-import Cardano.Ledger.State.UTxO
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State.UTxO hiding (balance)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON)
@@ -38,12 +39,13 @@ import Data.Functor.Identity
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 class
-  ( Era era
+  ( EraAccounts era
   , Eq (InstantStake era)
   , Show (InstantStake era)
   , Monoid (InstantStake era)
@@ -78,15 +80,29 @@ class
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
   -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
-  resolveInstantStake :: InstantStake era -> UM.UMap -> Stake
+  resolveInstantStake :: InstantStake era -> Accounts era -> Stake
 
-snapShotFromInstantStake :: EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
+snapShotFromInstantStake ::
+  forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
 snapShotFromInstantStake iStake dState PState {psStakePoolParams} =
-  SnapShot stake delegs (VMap.fromMap psStakePoolParams)
+  SnapShot
+    { ssStake = resolveInstantStake iStake accounts
+    , ssDelegations = VMap.fromAscListN delegsCount delegsAscList
+    , ssPoolParams = VMap.fromMap psStakePoolParams
+    }
   where
-    !stake = resolveInstantStake iStake um
-    !delegs = UM.unUnifyToVMap (UM.SPoolUView um)
-    !um = dsUnified dState
+    accounts = dsAccounts dState
+    keepAndCountDelegations ::
+      Credential 'Staking ->
+      AccountState era ->
+      ([(Credential 'Staking, KeyHash 'StakePool)], Int) ->
+      ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+    keepAndCountDelegations cred accountState acc@(!delegs, !count) =
+      case accountState ^. stakePoolDelegationAccountStateL of
+        Nothing -> acc
+        Just deleg -> ((cred, deleg) : delegs, count + 1)
+    (delegsAscList, delegsCount) =
+      Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
 {-# INLINEABLE snapShotFromInstantStake #-}
 
 class CanGetInstantStake t where
@@ -103,28 +119,31 @@ class CanGetInstantStake t => CanSetInstantStake t where
 -- a stake pool.
 resolveActiveInstantStakeCredentials ::
   EraStake era =>
-  InstantStake era -> UM.UMap -> Map (Credential 'Staking) (CompactForm Coin)
-resolveActiveInstantStakeCredentials instantStake (UM.UMap triplesMap _) =
+  InstantStake era ->
+  Accounts era ->
+  Map (Credential 'Staking) (CompactForm Coin)
+resolveActiveInstantStakeCredentials instantStake accounts =
   Map.merge
     Map.dropMissing -- ignore non-registered stake credentials
-    (Map.mapMaybeMissing (const getNonZeroActiveReward)) -- use the reward amount, unless it is zero
-    (Map.zipWithMaybeAMatched addInstantActiveStake) -- combine the stake with the reward amount
+    (Map.mapMaybeMissing (const getNonZeroActiveBalance)) -- use the account balance, unless it is zero
+    (Map.zipWithMaybeAMatched addInstantActiveStake) -- combine the stake with the account balance
     (instantStake ^. instantStakeCredentialsL)
-    triplesMap
+    (accounts ^. accountsMapL)
   where
-    -- Retain any non-zero reward
-    getActiveReward umElem = do
-      rd <- UM.umElemRDActive umElem
-      pure $! UM.rdReward rd
-    {-# INLINE getActiveReward #-}
-    getNonZeroActiveReward umElem = do
-      reward <- getActiveReward umElem
-      reward <$ guard (reward > mempty)
-    {-# INLINE getNonZeroActiveReward #-}
+    -- Only return balance for accounts that have an active delegation to a stake pool.
+    getActiveBalance accountState = do
+      _ <- accountState ^. stakePoolDelegationAccountStateL
+      pure $! accountState ^. balanceAccountStateL
+    {-# INLINE getActiveBalance #-}
+    -- Retain any non-zero balance
+    getNonZeroActiveBalance accountState = do
+      balance <- getActiveBalance accountState
+      balance <$ guard (balance > mempty)
+    {-# INLINE getNonZeroActiveBalance #-}
     -- Adds instant stake to any active staking credential
-    addInstantActiveStake _ stake umElem = Identity $ do
-      reward <- getActiveReward umElem
+    addInstantActiveStake _ stake accountState = Identity $ do
+      balance <- getActiveBalance accountState
       -- instant stake is guaranteed to be non-zero due to minUTxO, so no need to guard against mempty
-      pure $! stake <> reward
+      pure $! stake <> balance
     {-# INLINE addInstantActiveStake #-}
 {-# INLINEABLE resolveActiveInstantStakeCredentials #-}

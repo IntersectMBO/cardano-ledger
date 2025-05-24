@@ -47,25 +47,11 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  VState (..),
-  csCommitteeCredsL,
-  vsCommitteeStateL,
-  vsDRepsL,
-  vsNumDormantEpochsL,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.State (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  EraCertState (..),
-  dsUnifiedL,
- )
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -250,13 +236,15 @@ conwayGovCertTransition = do
       let
         certState' =
           certState & certVStateL . vsDRepsL %~ Map.delete cred
+        clearDRepDelegations delegs accountsMap =
+          foldr (Map.adjust (dRepDelegationAccountStateL .~ Nothing)) accountsMap delegs
       pure $
         case mDRepState of
           Nothing -> certState'
           Just dRepState ->
             certState'
-              & certDStateL . dsUnifiedL
-                .~ drepDelegs dRepState UM.⋪ UM.DRepUView (certState ^. certDStateL . dsUnifiedL)
+              & certDStateL . accountsL . accountsMapL
+                %~ clearDRepDelegations (drepDelegs dRepState)
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
       Map.member cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepNotRegistered cred

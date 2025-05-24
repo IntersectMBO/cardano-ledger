@@ -54,23 +54,9 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, computeDRepExpiry)
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  VState,
-  vsDRepsL,
-  vsNumDormantEpochsL,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.DRep (drepExpiryL)
-import Cardano.Ledger.Shelley.API (
-  Coin,
-  RewardAccount,
- )
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  drainWithdrawals,
-  validateZeroRewards,
- )
-import Cardano.Ledger.State (EraCertState (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -78,10 +64,10 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   liftSTS,
   trans,
-  validateTrans,
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -118,9 +104,8 @@ deriving instance (EraPParams era, Show (Tx era)) => Show (CertsEnv era)
 instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 
 data ConwayCertsPredFailure era
-  = -- | Withdrawals that are missing or do not withdrawal the entire amount
-    WithdrawalsNotInRewardsCERTS
-      (Map.Map RewardAccount Coin)
+  = -- | Withdrawals that are missing or do not withdraw the entire amount
+    WithdrawalsNotInRewardsCERTS Withdrawals
   | -- | CERT rule subtransition Failures
     CertFailure (PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
@@ -272,9 +257,11 @@ conwayCertsTransition = do
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
       -- Validate withdrawals and rewards and drain withdrawals
-      validateTrans WithdrawalsNotInRewardsCERTS $ validateZeroRewards dState withdrawals network
+      failOnJust
+        (whichWithdrawalsDoNotDrainAccounts withdrawals network (dState ^. accountsL))
+        WithdrawalsNotInRewardsCERTS
 
-      pure $ certStateWithDRepExpiryUpdated & certDStateL .~ drainWithdrawals dState withdrawals
+      pure $ certStateWithDRepExpiryUpdated & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)

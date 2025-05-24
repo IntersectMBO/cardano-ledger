@@ -68,7 +68,6 @@ import Cardano.Ledger.Shelley.Rewards (
  )
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -117,7 +116,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = acnt ^. casReservesL
-      ds = ls ^. lsCertStateL . certDStateL
+      accountsMap = ls ^. lsCertStateL . certDStateL . accountsL . accountsMapL
       -- reserves and rewards change
       pr = es ^. prevPParamsEpochStateL
       deltaR1 =
@@ -182,16 +181,11 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let rewardAccount = raCredential . ppRewardAccount . poolPs $ poolRI
+        let account = raCredential . ppRewardAccount $ poolPs poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
          in if HardForks.forgoRewardPrefilter (pr ^. ppProtocolVersionL)
-              || rewardAccount `UM.member` rewards ds
-              then
-                Map.insertWith
-                  Set.union
-                  rewardAccount
-                  (packageLeaderReward poolRI)
-                  acc
+              || account `Map.member` accountsMap
+              then Map.insertWith Set.union account (packageLeaderReward poolRI) acc
               else acc
       -- The data in 'RewardSnapShot' will be used to finish up the reward calculation
       -- once all the member rewards are complete.
@@ -211,7 +205,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       free =
         FreeVars
           delegs
-          (UM.domain $ rewards ds)
+          (Map.keysSet accountsMap) -- TODO optimize. This is an expensive operation
           totalStake
           (pr ^. ppProtocolVersionL)
           blockProducingPoolInfo
