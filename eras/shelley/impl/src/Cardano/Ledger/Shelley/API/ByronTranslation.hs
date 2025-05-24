@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPPar
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default (def)
@@ -175,7 +174,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     dState :: DState ShelleyEra
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = genDelegs
         , dsIRewards = def

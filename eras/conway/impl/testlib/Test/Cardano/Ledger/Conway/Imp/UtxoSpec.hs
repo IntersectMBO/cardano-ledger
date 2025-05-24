@@ -118,8 +118,7 @@ spec = do
         `shouldBe` inject (totalFees <+> stakePoolDeposit <+> accountDeposit)
       passEpoch
       -- Check for successfull pool refund
-      getReward cred0 `shouldReturn` stakePoolDeposit
-
+      getBalance cred0 `shouldReturn` stakePoolDeposit
   describe "Reference scripts" $ do
     let
       nativeScript = RequireSignature @era <$> freshKeyHash

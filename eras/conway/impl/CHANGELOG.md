@@ -2,6 +2,12 @@
 
 ## 1.20.0.0
 
+* Change type in `WithdrawalsNotInRewardsCERTS` from `Map RewardAccount Coin` to `Withdrawals`
+* Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
+* Change the type of `authorizedELectedCommitteeCredentials` to
+* Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
+  * `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
+  * `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.

@@ -80,9 +80,9 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
-    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, reward)]
+    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     pv <- getProtVer
     if hardforkConwayBootstrapPhase pv
@@ -97,7 +97,7 @@ spec = do
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [(ra, if hardforkConwayBootstrapPhase pv then mempty else reward)]
+              [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
 
   it "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -105,7 +105,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -118,8 +118,8 @@ spec = do
             mkBasicTxBody
               & withdrawalsTxBodyL
                 .~ Withdrawals
-                  [(ra, reward)]
-    ifBootstrap (submitTx_ tx >> (getReward cred `shouldReturn` mempty)) $ do
+                  [(ra, balance)]
+    ifBootstrap (submitTx_ tx >> (getBalance cred `shouldReturn` mempty)) $ do
       submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
   it "Withdraw and unregister staking credential in the same transaction" $ do
@@ -134,7 +134,7 @@ spec = do
         & ppKeyDepositL .~ Coin newDeposit
 
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -144,7 +144,7 @@ spec = do
           mkBasicTx $
             mkBasicTxBody
               & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
-              & (withdrawalsTxBodyL .~ Withdrawals [(ra, reward)])
+              & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
     submitTx_ tx
 
   it "Withdraw from a key delegated to an expired DRep" $ do
@@ -156,7 +156,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -172,7 +172,7 @@ spec = do
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [(ra, reward)]
+              [(ra, balance)]
 
   it "Withdraw from a key delegated to a DRep that expired after delegation" $ do
     modifyPParams $ \pp ->
@@ -183,7 +183,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -200,7 +200,7 @@ spec = do
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [(ra, reward)]
+              [(ra, balance)]
 
   it "Withdraw from delegated and non-delegated staking script" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -208,11 +208,11 @@ spec = do
     let cred = ScriptHashObj scriptHash
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- getReward cred
+    balance <- getBalance cred
 
     submitTx_ $
       mkBasicTx $
-        mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, reward)]
+        mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitTx_ $
