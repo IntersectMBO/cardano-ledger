@@ -22,7 +22,6 @@ import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default (def)
 import Data.Foldable (fold)
@@ -78,7 +77,7 @@ genesisState genDelegs0 utxo0 =
     dState :: DState era
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
         , dsIRewards = def

@@ -9,19 +9,19 @@
 
 module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 
+import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
-  filterStakePoolDelegsAndRewards,
   getNextEpochCommitteeMembers,
   queryCommitteeMembersState,
+  queryStakePoolDelegsAndRewards,
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -52,20 +52,34 @@ import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Api.State.Query
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Core.Arbitrary (genValidUMapWithCreds)
+import Test.Cardano.Ledger.Era (accountsFromUMap)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do
-  describe "GetFilteredDelegationsAndRewardAccounts" $ do
-    prop "filterStakePoolDelegsAndRewards same as getFilteredDelegationsAndRewardAccounts" $
-      forAll genValidUMapWithCreds $ \(umap :: UMap, creds) ->
-        filterStakePoolDelegsAndRewards umap creds
-          `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
-
+  queryStakePoolDelegsAndRewardsSpec @ShelleyEra
+  queryStakePoolDelegsAndRewardsSpec @AllegraEra
+  queryStakePoolDelegsAndRewardsSpec @MaryEra
+  queryStakePoolDelegsAndRewardsSpec @AlonzoEra
+  queryStakePoolDelegsAndRewardsSpec @BabbageEra
+  queryStakePoolDelegsAndRewardsSpec @ConwayEra
   describe "GetCommitteeMembersState" $ do
     committeeMembersStateSpec @ConwayEra
+    committeeMembersStateSpec @DijkstraEra
+
+queryStakePoolDelegsAndRewardsSpec :: forall era. ShelleyEraTest era => Spec
+queryStakePoolDelegsAndRewardsSpec =
+  describe (eraName @era) $ do
+    describe "GetFilteredDelegationsAndRewardAccounts" $ do
+      prop "queryStakePoolDelegsAndRewards same as getFilteredDelegationsAndRewardAccounts" $
+        forAll (genValidUMapWithCreds @era) $ \(umap :: UMap, creds) ->
+          let nes :: NewEpochState era
+              nes = def & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accountsFromUMap umap
+           in queryStakePoolDelegsAndRewards nes creds
+                `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
 
 committeeMembersStateSpec ::
   forall era.

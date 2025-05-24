@@ -744,8 +744,16 @@ instance Arbitrary RawSeed where
       <*> chooseAny
       <*> chooseAny
 
-instance Era era => Arbitrary (ShelleyCertState era) where
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (ShelleyCertState era) where
   arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary (ShelleyAccountState era) where
+  arbitrary = ShelleyAccountState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary (ShelleyAccounts era) where
+  arbitrary = ShelleyAccounts <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Arbitrary FromByronTranslationContext where

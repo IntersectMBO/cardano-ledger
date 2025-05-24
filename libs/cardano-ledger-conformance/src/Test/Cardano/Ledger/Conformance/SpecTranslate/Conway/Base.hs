@@ -49,7 +49,7 @@ import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
-import Cardano.Ledger.Compactible (Compactible)
+import Cardano.Ledger.Compactible (Compactible, fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
@@ -61,9 +61,9 @@ import Cardano.Ledger.Conway.Rules (
   maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (refScriptCostMultiplier, refScriptCostStride)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
@@ -77,15 +77,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  UTxO (..),
- )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (fromCompact)
 import Cardano.Ledger.Val (Val (..))
 import Constrained.API (HasSimpleRep, HasSpec)
 import Control.DeepSeq (NFData)
@@ -1016,7 +1008,7 @@ instance SpecTranslate ctx PoolDistr where
     pure . Agda.MkHSMap $ first (Agda.CredVoter Agda.SPO . Agda.KeyHashObj) <$> l
 
 instance
-  Inject ctx Coin =>
+  (Inject ctx Coin, ConwayEraAccounts era) =>
   SpecTranslate ctx (RatifyEnv era)
   where
   type SpecRep (RatifyEnv era) = Agda.RatifyEnv
@@ -1036,7 +1028,7 @@ instance
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
       <*> toSpecRep rePoolParams
-      <*> toSpecRep reDelegatees
+      <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance SpecTranslate ctx Bool where
   type SpecRep Bool = Bool

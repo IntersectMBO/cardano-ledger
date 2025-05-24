@@ -30,11 +30,11 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Era
+import Cardano.Ledger.Conway.State.Account ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.State
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Coerce
@@ -123,8 +123,8 @@ applyUTxOConwayInstantStake f (UTxO u) instantInstantStake =
 resolveConwayInstantStake ::
   (EraStake era, InstantStake era ~ ConwayInstantStake era) =>
   ConwayInstantStake era ->
-  UM.UMap ->
+  Accounts era ->
   Stake
-resolveConwayInstantStake instantStake umap =
-  Stake $ VMap.fromMap $ resolveActiveInstantStakeCredentials instantStake umap
+resolveConwayInstantStake instantStake accounts =
+  Stake $ VMap.fromMap $ resolveActiveInstantStakeCredentials instantStake accounts
 {-# INLINE resolveConwayInstantStake #-}

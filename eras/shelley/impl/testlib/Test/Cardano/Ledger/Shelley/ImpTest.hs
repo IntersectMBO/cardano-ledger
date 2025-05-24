@@ -76,6 +76,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerPool,
   registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
+  getBalance,
+  lookupBalance,
+  getAccountBalance,
+  lookupAccountBalance,
   getRewardAccountAmount,
   shelleyFixupTx,
   getImpRootTxOut,
@@ -156,6 +160,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
@@ -181,7 +186,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   curPParamsEpochStateL,
-  epochStateUMapL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -204,15 +208,14 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.State hiding (balance)
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
-  setMinCoinTxOut,
+  ensureMinCoinTxOut,
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
@@ -800,13 +803,45 @@ runShelleyBase act = do
   globals <- use impGlobalsL
   pure $ runIdentity $ runReaderT act globals
 
-getRewardAccountAmount :: EraCertState era => RewardAccount -> ImpTestM era Coin
-getRewardAccountAmount rewardAccount = do
-  umap <- getsNES $ nesEsL . epochStateUMapL
-  let cred = raCredential rewardAccount
-  case UMap.lookup cred (RewDepUView umap) of
-    Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
-    Just RDPair {rdReward} -> pure $ fromCompact rdReward
+getRewardAccountAmount :: (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era Coin
+getRewardAccountAmount = getAccountBalance
+{-# DEPRECATED getRewardAccountAmount "In favor of `getAccountBalance`" #-}
+
+lookupBalance :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
+lookupBalance cred = do
+  accountsMap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+  pure $
+    (\accountState -> fromCompact (accountState ^. balanceAccountStateL))
+      <$> Map.lookup cred accountsMap
+
+lookupAccountBalance ::
+  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era (Maybe Coin)
+lookupAccountBalance ra@RewardAccount {raNetwork, raCredential} = do
+  networkId <- use (impGlobalsL . to networkId)
+  when (raNetwork /= networkId) $
+    error $
+      "Reward Account with an unexpected NetworkId: " ++ show ra
+  lookupBalance raCredential
+
+getBalance :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
+getBalance cred =
+  lookupBalance cred >>= \case
+    Nothing ->
+      assertFailure $
+        "Expected a registered account: "
+          ++ show cred
+          ++ ". Use `registerRewardAccount` to register a new account in ImpSpec"
+    Just balance -> pure balance
+
+getAccountBalance :: (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era Coin
+getAccountBalance ra =
+  lookupAccountBalance ra >>= \case
+    Nothing ->
+      assertFailure $
+        "Expected a registered account: "
+          ++ show ra
+          ++ ". Use `registerRewardAccount` to register a new account in ImpSpec"
+    Just balance -> pure balance
 
 getImpRootTxOut :: ImpTestM era (TxIn, TxOut era)
 getImpRootTxOut = do
@@ -922,7 +957,8 @@ fixupTxOuts tx = do
   fixedUpTxOuts <- forM txOuts $ \txOut -> do
     if txOut ^. coinTxOutL == zero
       then do
-        let txOut' = setMinCoinTxOut pp txOut
+        amount <- arbitrary
+        let txOut' = ensureMinCoinTxOut pp (txOut & coinTxOutL .~ amount)
         logDoc $
           "Fixed up the amount in the TxOut to " <> ansiExpr (txOut' ^. coinTxOutL)
         pure txOut'
@@ -1473,21 +1509,12 @@ registerRewardAccount = do
   registerStakeCredential (KeyHashObj khDelegator)
 
 lookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
-lookupReward stakingCredential = do
-  umap <- getsNES (nesEsL . epochStateUMapL)
-  pure $ fromCompact . rdReward <$> UMap.lookup stakingCredential (RewDepUView umap)
+lookupReward = lookupBalance
+{-# DEPRECATED lookupReward "In favor of `lookupBalance`" #-}
 
 getReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
-getReward stakingCredential = do
-  mbyRwd <- lookupReward stakingCredential
-  case mbyRwd of
-    Just c -> pure c
-    Nothing ->
-      error $
-        "Staking Credential is not found in the state: "
-          <> show stakingCredential
-          <> "\nMake sure you have the reward account registered with `registerRewardAccount` "
-          <> "or by some other means."
+getReward = getBalance
+{-# DEPRECATED getReward "In favor of `getBalance`" #-}
 
 freshPoolParams ::
   ShelleyEraImp era =>
@@ -1592,21 +1619,36 @@ expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
     expectationFailure $
       "UTxO content failed predicate:\n" <> ansiExprString txIn <> " -> " <> ansiExprString result
 
-expectRegisteredRewardAddress :: EraCertState era => RewardAccount -> ImpTestM era ()
-expectRegisteredRewardAddress (RewardAccount _ cred) = do
-  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-  Map.member cred (rdPairMap umap) `shouldBe` True
+expectRegisteredRewardAddress ::
+  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era ()
+expectRegisteredRewardAddress ra@RewardAccount {raNetwork, raCredential} = do
+  networkId <- use (impGlobalsL . to networkId)
+  unless (raNetwork == networkId) $
+    assertFailure $
+      "Reward Account with an unexpected NetworkId: " ++ show ra
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  unless (isAccountRegistered raCredential accounts) $
+    assertFailure $
+      "Expected account "
+        ++ show ra
+        ++ " to be registered, but it is not."
 
-expectNotRegisteredRewardAddress :: EraCertState era => RewardAccount -> ImpTestM era ()
-expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
-  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-  Map.member cred (rdPairMap umap) `shouldBe` False
+expectNotRegisteredRewardAddress ::
+  (HasCallStack, EraCertState era) => RewardAccount -> ImpTestM era ()
+expectNotRegisteredRewardAddress ra@RewardAccount {raNetwork, raCredential} = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  networkId <- use (impGlobalsL . to networkId)
+  when (raNetwork == networkId && isAccountRegistered raCredential accounts) $
+    assertFailure $
+      "Expected account "
+        ++ show ra
+        ++ " to not be registered, but it is."
 
 expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
 expectTreasury c =
   impAnn "Checking treasury amount" $ do
-    treasuryAmt <- getsNES treasuryL
-    c `shouldBe` treasuryAmt
+    treasuryAmount <- getsNES treasuryL
+    c `shouldBe` treasuryAmount
 
 -- Ensure no fees reach the treasury since that complicates withdrawal checks
 disableTreasuryExpansion :: ShelleyEraImp era => ImpTestM era ()

@@ -73,7 +73,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   genRetirementHash,
   initStableFields,
   modifyGenStateInitialUtxo,
-  modifyGenStateInitialRewards,
+  modifyGenStateInitialAccounts,
   modifyModelCount,
   modifyModelIndex,
   modifyModelUTxO,
@@ -89,20 +89,19 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Plutus (CostModels, ExUnits, Language (..))
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   LedgerState (..),
-  PState (..),
   smartUTxOState,
   totalObligation,
   utxosGovStateL,
@@ -115,18 +114,17 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (EraCertState (..), IndividualPoolStake (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, zipWithM_)
+import Control.Monad (forM, join, replicateM, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
-import Control.SetAlgebra (eval, (⨃))
 import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
@@ -151,7 +149,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
   genDelegsZero,
   instantaneousRewardsZero,
-  mKeyDeposits,
   mNewEpochStateZero,
   mPoolDeposits,
  )
@@ -266,9 +263,7 @@ data GenState era = GenState
   , gsVI :: !(Map ValidityInterval (Set ScriptHash))
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map TxIn (TxOut era))
-  , gsInitialRewards :: !(Map (Credential 'Staking) Coin)
-  , gsInitialDelegations ::
-      !(Map (Credential 'Staking) (KeyHash 'StakePool))
+  , gsInitialAccounts :: !(Map (Credential 'Staking) (AccountState era))
   , gsInitialPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   , gsInitialPoolDistr ::
       !(Map (KeyHash 'StakePool) IndividualPoolStake)
@@ -294,7 +289,6 @@ emptyGenState genv =
     mempty
     mempty
     (mNewEpochStateZero {mPParams = gePParams genv})
-    Map.empty
     Map.empty
     Map.empty
     Map.empty
@@ -399,12 +393,12 @@ modifyGenStateVI ::
   GenRS era ()
 modifyGenStateVI f = modify (\x -> x {gsVI = f (gsVI x)})
 
-modifyGenStateInitialRewards ::
-  ( Map.Map (Credential 'Staking) Coin ->
-    Map.Map (Credential 'Staking) Coin
+modifyGenStateInitialAccounts ::
+  ( Map.Map (Credential 'Staking) (AccountState era) ->
+    Map.Map (Credential 'Staking) (AccountState era)
   ) ->
   GenRS era ()
-modifyGenStateInitialRewards f = modify $ \st -> st {gsInitialRewards = f (gsInitialRewards st)}
+modifyGenStateInitialAccounts f = modify $ \st -> st {gsInitialAccounts = f (gsInitialAccounts st)}
 
 modifyGenStateInitialUtxo ::
   ( Map TxIn (TxOut era) ->
@@ -449,13 +443,6 @@ modifyGenStateStableDelegators ::
   GenRS era ()
 modifyGenStateStableDelegators f = modify (\gs -> gs {gsStableDelegators = f (gsStableDelegators gs)})
 
-modifyGenStateInitialDelegations ::
-  ( Map.Map (Credential 'Staking) (KeyHash 'StakePool) ->
-    Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-  ) ->
-  GenRS era ()
-modifyGenStateInitialDelegations f = modify (\gs -> gs {gsInitialDelegations = f (gsInitialDelegations gs)})
-
 modifyGenStateScripts ::
   ( Map.Map ScriptHash (Script era) ->
     Map.Map ScriptHash (Script era)
@@ -477,26 +464,11 @@ modifyPlutusScripts f = modify (\gs -> gs {gsPlutusScripts = f (gsPlutusScripts 
 modifyModel :: (ModelNewEpochState era -> ModelNewEpochState era) -> GenRS era ()
 modifyModel f = modify (\gstate -> gstate {gsModel = f (gsModel gstate)})
 
-modifyModelDelegations ::
-  ( Map.Map (Credential 'Staking) (KeyHash 'StakePool) ->
-    Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-  ) ->
-  GenRS era ()
-modifyModelDelegations f = modifyModel (\ms -> ms {mDelegations = f (mDelegations ms)})
-
-modifyModelRewards ::
-  ( Map.Map (Credential 'Staking) Coin ->
-    Map.Map (Credential 'Staking) Coin
-  ) ->
-  GenRS era ()
-modifyModelRewards f = modifyModel (\ms -> ms {mRewards = f (mRewards ms)})
+modifyModelAccounts :: (Accounts era -> Accounts era) -> GenRS era ()
+modifyModelAccounts f = modifyModel (\ms -> ms {mAccounts = f (mAccounts ms)})
 
 modifyModelDeposited :: (Coin -> Coin) -> GenRS era ()
 modifyModelDeposited f = modifyModel (\ms -> ms {mDeposited = f (mDeposited ms)})
-
-modifyKeyDeposits :: Credential 'Staking -> Coin -> GenRS era ()
-modifyKeyDeposits cred c =
-  modifyModel (\ms -> ms {mKeyDeposits = Map.insert cred c (mKeyDeposits ms)})
 
 modifyModelPoolParams ::
   ( Map.Map (KeyHash 'StakePool) PoolParams ->
@@ -692,12 +664,6 @@ instance (Reflect era, ShelleyEraTest era) => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap =
-      UM.unify
-        (Map.map rdpair (gsInitialRewards gstate))
-        Map.empty
-        (gsInitialDelegations gstate)
-        Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
     dpstate =
       def
@@ -705,7 +671,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         & certDStateL .~ dstate
     dstate =
       DState
-        umap
+        (accountsFromAccountsMap (gsInitialAccounts gstate))
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
@@ -714,9 +680,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
     deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
     pools = gsInitialPoolParams gstate
     pp = mPParams (gsModel gstate)
-    keyDeposit = pp ^. ppKeyDepositL
-    !poolDeposit = pp ^. ppPoolDepositCompactL
-    rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keyDeposit)
+    poolDeposit = pp ^. ppPoolDepositCompactL
 
 -- =============================================
 -- Generators of inter-related items
@@ -897,10 +861,16 @@ genCredential tag =
     , (20, pickExistingScript)
     ]
   where
+    genNewAccountState = do
+      ptr <- lift arbitrary
+      deposit <- lift arbitrary
+      pure $ mkTestAccountState (Just ptr) deposit Nothing Nothing
     genKeyHash' = do
       kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
-        Rewarding -> modifyGenStateInitialRewards (Map.insert (KeyHashObj kh) (Coin 0))
+        Rewarding -> do
+          accountState <- genNewAccountState
+          modifyGenStateInitialAccounts (Map.insert (KeyHashObj kh) accountState)
         _ -> pure ()
       return $ coerceKeyRole kh
     genScript' = f (100 :: Int)
@@ -909,13 +879,15 @@ genCredential tag =
           | n <= 0 = error "Failed to generate a fresh script hash"
           | otherwise = do
               sh <- genScript @era tag
-              initialRewards <- gets gsInitialRewards
+              initialRewards <- gets gsInitialAccounts
               avoidCredentials <- gets gsAvoidCred
               let newcred = ScriptHashObj sh
               if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
                 then do
                   case tag of
-                    Rewarding -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
+                    Rewarding -> do
+                      accountState <- genNewAccountState
+                      modifyGenStateInitialAccounts (Map.insert newcred accountState)
                     _ -> pure ()
                   return sh
                 else f $ n - 1
@@ -967,9 +939,9 @@ genFreshCredential tries0 tag old = go tries0
 genFreshRegCred ::
   Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking)
 genFreshRegCred tag = do
-  old <- gets (Map.keysSet . gsInitialRewards)
+  old <- gets (Map.keysSet . gsInitialAccounts)
   avoid <- gets gsAvoidCred
-  rewards <- gets $ Map.keysSet . mRewards . gsModel
+  rewards <- gets $ Map.keysSet . (^. accountsMapL) . mAccounts . gsModel
   cred <- genFreshCredential 100 tag $ old <> avoid <> rewards
   modifyGenStateAvoidCred (Set.insert cred)
   pure cred
@@ -1044,22 +1016,26 @@ initStableFields = do
 
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM (maxStablePools geSize) $ do
-    old' <- gets (Map.keysSet . gsInitialRewards)
+    old' <- gets (Map.keysSet . gsInitialAccounts)
     prev <- gets gsAvoidCred
     cred <- genFreshCredential 100 Rewarding (Set.union old' prev)
-    modifyGenStateStableDelegators (Set.insert cred)
-    modifyGenStateInitialRewards (Map.insert cred (Coin 0))
     return cred
-  let f :: Credential 'Staking -> KeyHash 'StakePool -> GenRS era ()
-      f cred kh = do
-        pp <- asks gePParams
-        let keyDeposit = pp ^. ppKeyDepositL
-        modifyModelDelegations (Map.insert cred kh)
-        modifyModelRewards (Map.insert cred (Coin 0))
-        modifyModelDeposited (<+> keyDeposit)
-        modifyKeyDeposits cred keyDeposit
-        modifyGenStateInitialDelegations (Map.insert cred kh)
-  zipWithM_ f credentials hashes
+  let registerNewAccount' cred poolId = do
+        registerNewAccount cred (Just poolId)
+  zipWithM_ registerNewAccount' credentials hashes
+  modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
+
+registerNewAccount ::
+  EraTest era => Credential 'Staking -> Maybe (KeyHash 'StakePool) -> GenRS era ()
+registerNewAccount cred mPoolId = do
+  pp <- asks gePParams
+  let deposit = pp ^. ppKeyDepositL
+  ptr <- lift arbitrary
+  modifyModelAccounts $
+    registerTestAccount cred (Just ptr) (compactCoinOrError deposit) mPoolId Nothing
+  accountState <- fromJust . lookupAccountState cred . mAccounts . gsModel <$> get
+  modifyModelDeposited (<+> deposit)
+  modifyGenStateInitialAccounts (Map.insert cred accountState)
 
 -- =============================================
 -- Generators of inter-related items
@@ -1072,16 +1048,20 @@ genRewards = do
   n <- lift $ choose (1, wmax)
   -- we need a fresh credential, one that was not previously
   -- generated here, or one that arose from gsAvoidCred (i.e. prev)
-  old <- gets (Map.keysSet . gsInitialRewards)
+  old <- gets (Map.keysSet . gsInitialAccounts)
   prev <- gets gsAvoidCred
   credentials <- genFreshCredentials n 100 Rewarding (Set.union old prev) []
-  newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
-  modifyModelRewards (\rewards -> eval (rewards ⨃ newRewards)) -- Prefers coins in newrewards
-  pp <- asks gePParams
-  sequence_ (map (\cred -> modifyKeyDeposits cred (pp ^. ppKeyDepositL)) credentials)
-  modifyGenStateInitialRewards (\rewards -> eval (rewards ⨃ newRewards))
-  modifyGenStateAvoidCred (Set.union (Set.fromList credentials))
-  pure newRewards
+  balances <- forM credentials $ \cred -> do
+    registerNewAccount cred Nothing
+    (,) cred <$> lift genRewardVal
+  let balanceMap = Map.fromList balances
+      compactBalanceMap = Map.map compactCoinOrError balanceMap
+      replaceBalances acc =
+        Map.foldrWithKey' (\cred b -> Map.adjust (balanceAccountStateL .~ b) cred) acc compactBalanceMap
+  modifyModelAccounts (addToBalanceAccounts compactBalanceMap)
+  modifyGenStateInitialAccounts replaceBalances
+  modifyGenStateAvoidCred (Set.union (Map.keysSet balanceMap))
+  pure balanceMap
 
 genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool)
 genRetirementHash = do

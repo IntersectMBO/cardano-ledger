@@ -25,28 +25,22 @@ import Cardano.Ledger.BaseTypes (
   Globals (epochInfo),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState,
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
-import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), sumCoinUTxO, unScriptsProvided)
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
@@ -54,7 +48,6 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Default (Default (def))
 import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
-import Data.Map (Map, keysSet, restrictKeys)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -74,18 +67,18 @@ import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::
-  (EraPParams era, ShelleyEraTxCert era) =>
+  (EraAccounts era, EraPParams era, ShelleyEraTxCert era) =>
   PParams era ->
   [TxCert era] ->
-  Map (Credential 'Staking) Coin ->
+  Accounts era ->
   Coin
-depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
+depositsAndRefunds pp certificates accounts = List.foldl' accum (Coin 0) certificates
   where
     accum ans (RegTxCert _) = pp ^. ppKeyDepositL <+> ans
-    accum ans (UnRegTxCert hk) =
-      case Map.lookup hk keydeposits of
+    accum ans (UnRegTxCert cred) =
+      case lookupAccountState cred accounts of
         Nothing -> ans
-        Just c -> ans <-> c
+        Just accountState -> ans <-> fromCompact (accountState ^. depositAccountStateL)
     accum ans (RegPoolTxCert _) = pp ^. ppPoolDepositL <+> ans
     accum ans (RetirePoolTxCert _ _) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
@@ -97,13 +90,13 @@ scriptWitsNeeded' Conway utxo txBody = regularScripts `Set.difference` inlineScr
   where
     theUtxo = UTxO utxo
     inputs = txBody ^. inputsTxBodyL
-    inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
+    inlineScripts = Map.keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' Babbage utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
     inputs = (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. referenceInputsTxBodyL)
-    inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
+    inlineScripts = Map.keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' Alonzo utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
@@ -126,7 +119,7 @@ txInBalance ::
   Set TxIn ->
   MUtxo era ->
   Coin
-txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
+txInBalance txinSet m = sumCoinUTxO (UTxO (Map.restrictKeys m txinSet))
 
 injectFee :: EraTxOut era => Coin -> TxOut era -> TxOut era
 injectFee fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
@@ -251,7 +244,9 @@ certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
 createRUpdNonPulsing' ::
   forall era.
-  EraPParams era =>
+  ( EraPParams era
+  , EraAccounts era
+  ) =>
   Model era ->
   RewardUpdateOld
 createRUpdNonPulsing' model =
@@ -260,8 +255,8 @@ createRUpdNonPulsing' model =
       as = mChainAccountState model
       reserves = casReserves as
       pp = mPParams model
-      totalStake = Map.foldr (<+>) (Coin 0) $ mRewards model
-      rs = Map.keysSet $ mRewards model -- TODO or should we look at delegated keys instead?
+      totalStake = fromCompact $ foldMap (^. balanceAccountStateL) (mAccounts model ^. accountsMapL)
+      rs = Map.keysSet (mAccounts model ^. accountsMapL) -- TODO or should we look at delegated keys instead?
       en = mEL model
 
       -- We use testGlobals here, since this generic function is used only in tests.
@@ -326,10 +321,11 @@ instance Reflect era => TotalAda (UTxO era) where
     where
       accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
-instance TotalAda (DState era) where
-  totalAda dstate =
-    (UM.fromCompact $ UM.sumRewardsUView (UM.RewDepUView (dsUnified dstate)))
-      <> (UM.fromCompact $ UM.sumDepositUView (UM.RewDepUView (dsUnified dstate)))
+instance EraAccounts era => TotalAda (DState era) where
+  totalAda dState =
+    fromCompact $
+      foldMap (\as -> (as ^. balanceAccountStateL) <> (as ^. depositAccountStateL)) $
+        dState ^. accountsL . accountsMapL
 
 instance TotalAda (PState era) where
   totalAda pstate = Fold.fold (fromCompact <$> psDeposits pstate)
@@ -337,7 +333,7 @@ instance TotalAda (PState era) where
 instance TotalAda (VState era) where
   totalAda _ = mempty
 
-instance TotalAda (ShelleyCertState era) where
+instance EraAccounts era => TotalAda (ShelleyCertState era) where
   totalAda (ShelleyCertState ps ds) = totalAda ds <> totalAda ps
 
 instance TotalAda (ShelleyGovState era) where

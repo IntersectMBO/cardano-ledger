@@ -20,12 +20,13 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
-import qualified Cardano.Ledger.UMap as UM
 import Control.State.Transition.Extended hiding (Assertion)
+import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   applySTSTest,
@@ -82,7 +83,7 @@ testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
 dStateWithRewards :: InstantaneousRewards -> DState ShelleyEra
 dStateWithRewards ir =
   DState
-    { dsUnified = UM.empty
+    { dsAccounts = def
     , dsFutureGenDelegs = Map.empty
     , dsGenDelegs = GenDelegs Map.empty
     , dsIRewards = ir

@@ -32,30 +32,10 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraPParams,
-  AlonzoEraScript,
-  AlonzoEraTx (..),
-  AlonzoEraTxBody (..),
-  AlonzoEraTxOut (..),
-  AlonzoEraTxWits (..),
-  AsIx (..),
-  MaryEraTxBody (..),
-  ppCollateralPercentageL,
-  ppCostModelsL,
-  ppMaxBlockExUnitsL,
-  ppMaxTxExUnitsL,
-  ppMaxValSizeL,
-  pattern CertifyingPurpose,
-  pattern MintingPurpose,
-  pattern RewardingPurpose,
-  pattern SpendingPurpose,
- )
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeCredential,
- )
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -67,7 +47,6 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   ProtVer (..),
  )
-import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -81,8 +60,6 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMap (UView (RewDepUView))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<->))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -98,6 +75,7 @@ import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
+import Test.Cardano.Ledger.Era (registerTestAccount)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
   alwaysFailsHash,
@@ -185,16 +163,16 @@ initialBBodyState utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
     initialUtxoSt =
-      smartUTxOState defaultPParams utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
+      smartUTxOState defaultPParams utxo (fromCompact successDeposit) (Coin 0) def mempty
+    ptr = Just (Ptr minBound minBound minBound)
+    cred = scriptStakeCredSucceed @era
     dpstate =
       def
         & certDStateL
           .~ DState
-            { dsUnified =
-                UM.insert
-                  (scriptStakeCredSucceed @era)
-                  (UM.RDPair (UM.CompactCoin 1000) successDeposit)
-                  (RewDepUView UM.empty)
+            { dsAccounts =
+                addToBalanceAccounts (Map.singleton cred (CompactCoin 1000)) $
+                  registerTestAccount cred ptr successDeposit Nothing Nothing def
             , dsFutureGenDelegs = Map.empty
             , dsGenDelegs = GenDelegs Map.empty
             , dsIRewards = def
@@ -400,7 +378,7 @@ validatingRedeemersWithCert = mkSingleRedeemer (CertifyingPurpose $ AsIx 0) (Dat
 
 validatingTxWithCertOut :: EraTxOut era => TxOut era
 validatingTxWithCertOut =
-  mkBasicTxOut someAddr . inject $ Coin 995 <> UM.fromCompact successDeposit
+  mkBasicTxOut someAddr . inject $ Coin 995 <> fromCompact successDeposit
 
 notValidatingTxWithCert ::
   forall era.
@@ -639,8 +617,8 @@ scriptStakeCredSucceed = ScriptHashObj (alwaysSucceedsHash @era 2)
 
 -- | The deposit made when 'scriptStakeCredSucceed' was registered. It is also
 --   The Refund when 'scriptStakeCredSucceed' is de-registered.
-successDeposit :: UM.CompactForm Coin
-successDeposit = UM.CompactCoin 7
+successDeposit :: CompactForm Coin
+successDeposit = CompactCoin 7
 
 -- ============================== PParams ===============================
 

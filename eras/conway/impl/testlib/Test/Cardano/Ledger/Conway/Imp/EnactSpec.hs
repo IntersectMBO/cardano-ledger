@@ -185,7 +185,7 @@ treasuryWithdrawalsSpec =
           -- check that the sum of the rewards matches what was spent from the treasury
           sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
+    sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
       forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount

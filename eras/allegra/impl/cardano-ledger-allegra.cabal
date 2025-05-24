@@ -47,6 +47,7 @@ library
     Cardano.Ledger.Allegra.Rules.Ppup
     Cardano.Ledger.Allegra.Rules.Utxo
     Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.State.Account
     Cardano.Ledger.Allegra.State.CertState
     Cardano.Ledger.Allegra.State.Stake
     Cardano.Ledger.Allegra.TxCert

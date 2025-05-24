@@ -103,6 +103,7 @@ genTriple ::
   , EraGov era
   , EraStake era
   , EraUTxO era
+  , ShelleyEraAccounts era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era

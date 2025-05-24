@@ -45,6 +45,7 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (InstantStake era)
+  , Arbitrary (Accounts era)
   , RuleListEra era
   , EraCertState era
   , Arbitrary (CertState era)

@@ -244,7 +244,8 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [Cast.alicePoolParams]
+    . C.addFees feeTx1
+    . C.addPoolDeposits ppEx [Cast.alicePoolParams]
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
@@ -353,7 +354,7 @@ expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
-    . C.feesAndDeposits ppEx feeTx2 [] []
+    . C.addFees feeTx2
     . C.newUTxO txbodyEx2
     . C.delegation Cast.aliceSHK (ppId Cast.alicePoolParams)
     . C.delegation Cast.bobSHK (ppId Cast.alicePoolParams)
@@ -487,7 +488,7 @@ expectedStEx4 :: ChainState ShelleyEra
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce blockEx4)
     . C.newLab blockEx4
-    . C.feesAndDeposits ppEx feeTx4 [] []
+    . C.addFees feeTx4
     . C.newUTxO txbodyEx4
     . C.delegation Cast.carlSHK (ppId Cast.alicePoolParams)
     . C.pulserUpdate pulserEx4
@@ -864,8 +865,7 @@ expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx10)
     . C.newLab blockEx10
     . C.deregStakeCred Cast.bobSHK
-    . C.feesAndKeyRefund feeTx10 Cast.bobSHK -- We must zero out the refund, before we deregister
-    -- because we loose the refund amount otherwise
+    . C.addFees feeTx10
     . C.newUTxO txbodyEx10
     $ expectedStEx9
 
@@ -967,7 +967,7 @@ expectedStEx11 :: ChainState ShelleyEra
 expectedStEx11 =
   C.evolveNonceFrozen (getBlockNonce blockEx11)
     . C.newLab blockEx11
-    . C.feesAndDeposits ppEx feeTx11 [] []
+    . C.addFees feeTx11
     . C.newUTxO txbodyEx11
     . C.pulserUpdate pulserEx11
     . C.stageRetirement (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch

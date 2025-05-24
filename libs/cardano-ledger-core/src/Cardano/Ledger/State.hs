@@ -1,4 +1,5 @@
 module Cardano.Ledger.State (
+  module Cardano.Ledger.State.Account,
   module Cardano.Ledger.State.ChainAccount,
   module Cardano.Ledger.State.CertState,
   module Cardano.Ledger.State.UTxO,
@@ -8,6 +9,7 @@ module Cardano.Ledger.State (
   module Cardano.Ledger.State.Governance,
 ) where
 
+import Cardano.Ledger.State.Account
 import Cardano.Ledger.State.CertState
 import Cardano.Ledger.State.ChainAccount
 import Cardano.Ledger.State.Governance

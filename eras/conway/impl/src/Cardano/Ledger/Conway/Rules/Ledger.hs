@@ -105,8 +105,6 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.UMap (UView (..))
-import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.State.Transition.Extended (
@@ -123,9 +121,9 @@ import Control.State.Transition.Extended (
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
@@ -406,14 +404,15 @@ ledgerTransition = do
         -- because otherwise it would not be possible to unregister a reward account and withdraw
         -- all funds from it in the same transaction.
         unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $ do
-          let dUnified = certState ^. certDStateL . dsUnifiedL
+          let accounts = certState ^. certDStateL . accountsL
               wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-              delegatedAddrs = DRepUView dUnified
               wdrlsKeyHashes =
-                Set.fromList
-                  [kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ raCredential ra]]
+                [kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ raCredential ra]]
+              isNotDRepDelegated keyHash = isNothing $ do
+                accountState <- lookupAccountState (KeyHashObj keyHash) accounts
+                accountState ^. dRepDelegationAccountStateL
               nonExistentDelegations =
-                Set.filter (not . (`UMap.member` delegatedAddrs) . KeyHashObj) wdrlsKeyHashes
+                filter isNotDRepDelegated wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
         certStateAfterCERTS <-

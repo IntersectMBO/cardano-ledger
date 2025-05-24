@@ -2,6 +2,12 @@
 
 ## 1.20.0.0
 
+* Add `mkDelegatee` and `getDRepDelegatee`
+* Depercated `getVoteDelegatee` in favor of `getDRepDelegatee`
+* Add `conwayRegisterInitialFundsThenStaking`
+* Add `ConwayEraAccounts`, `ConwayAccountState`, `ConwayAccounts`, `lookupDRepDelegation`,
+  `registerConwayAccount`, `unregisterConwayAccount` and `accountStateDelegatee`
+* Change type in `WithdrawalsNotInRewardsCERTS` from `Map RewardAccount Coin` to `Withdrawals`
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
@@ -60,7 +66,8 @@
 
 ### `testlib`
 
-- Rename `electCommittee` to `submitCommitteeElection` #5091
+* Add `mkConwayTestAccountState` and `conwayAccountsToUMap`
+* Rename `electCommittee` to `submitCommitteeElection` #5091
 * Fixed `Arbitrary` instance for `ConwayGenesis`
 * Added `Arbitrary` instance for `TransitionConfig ConwayEra`
 * Added `ToExpr` instances for:

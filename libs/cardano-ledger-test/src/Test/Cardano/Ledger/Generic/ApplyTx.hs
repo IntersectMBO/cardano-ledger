@@ -15,33 +15,22 @@ module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsIx (..), ExUnits (ExUnits))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, natVersion)
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraPParams,
-  AlonzoEraTxBody (..),
-  AlonzoEraTxWits (..),
-  Withdrawals (..),
-  ppCollateralPercentageL,
-  ppCostModelsL,
-  ppMaxBlockExUnitsL,
-  ppMaxTxExUnitsL,
-  ppMaxValSizeL,
- )
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
+import Cardano.Ledger.State hiding (balance)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..))
-import Control.Iterate.Exp (dom, (∈))
-import Control.Iterate.SetAlgebra (eval)
-import Data.Foldable (Foldable (..), fold)
+import Data.Foldable (Foldable (..), fold, toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -51,7 +40,6 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
@@ -129,7 +117,7 @@ pparams :: AlonzoEraPParams era => PParams era
 pparams = defaultPPs emptyPParams
 
 epochBoundary ::
-  forall era. EraPParams era => EpochNo -> EpochNo -> Model era -> Model era
+  forall era. (EraPParams era, EraStake era) => EpochNo -> EpochNo -> Model era -> Model era
 epochBoundary transactionEpoch modelEpoch model =
   if transactionEpoch > modelEpoch
     then
@@ -159,9 +147,15 @@ applyTxBody count model txbody =
         , mFees = mFees model <+> (txbody ^. feeTxBodyL)
         }
 
-applyWithdrawals :: Model era -> RewardAccount -> Coin -> Model era
+applyWithdrawals :: EraAccounts era => Model era -> RewardAccount -> Coin -> Model era
 applyWithdrawals model (RewardAccount _network cred) coin =
-  model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
+  model
+    { mAccounts =
+        adjustAccountState
+          (balanceAccountStateL %~ (\balance -> compactCoinOrError (fromCompact balance <-> coin)))
+          cred
+          (mAccounts model)
+    }
 
 -- =========================================================
 -- What to do if the second phase does not validatate.
@@ -212,7 +206,7 @@ filterRewards pp rewards =
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 filterAllRewards ::
-  EraPParams era =>
+  (EraPParams era, EraAccounts era) =>
   Map (Credential 'Staking) (Set Reward) ->
   Model era ->
   ( Map (Credential 'Staking) (Set Reward)
@@ -226,7 +220,7 @@ filterAllRewards rs' m =
     pp = mPParams m
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\k _ -> eval (k ∈ dom (mRewards m)))
+        (\cred _ -> isAccountRegistered cred (mAccounts m))
         rs'
     totalUnregistered = fold $ aggregateRewards (pp ^. ppProtocolVersionL) unregRU
     unregistered = Map.keysSet unregRU
@@ -235,13 +229,14 @@ filterAllRewards rs' m =
 
 applyRUpd ::
   forall era.
+  EraAccounts era =>
   RewardUpdateOld ->
   Model era ->
   Model era
 applyRUpd ru m =
   m
     { mFees = mFees m `addDeltaCoin` deltaFOld ru
-    , mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    , mAccounts = addToBalanceAccounts (Map.map compactCoinOrError $ rsOld ru) (mAccounts m)
     }
 
 notValidatingTx ::

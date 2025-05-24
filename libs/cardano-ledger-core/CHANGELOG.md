@@ -2,6 +2,13 @@
 
 ## 1.18.0.0
 
+* Remove `AccountState` type synonym for `ChainAccountState`
+* Remove `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`
+* Replace `dsUnified` with `dsAccounts` in `DState`
+* Add `Default` instance to `BlocksMade` and `PoolDistr`
+* Add `Random`, `Uniform` and `UniformRange` instances for `TxIx`, `CertIx` and `SlotNo32`
+* Add `Uniform` instances for `Ptr`
+* Add `CanGetAccounts`, `CanSetAccounts`, `EraAccounts`, `lookupAccountState`, `updateLookupAccountState`, `isAccountRegistered`, `adjustAccountState`, `lookupStakePoolDelegation`, `sumBalancesAccounts`, `sumDepositsAccounts`, `addToBalanceAccounts`, `withdrawalsThatDoNotDrainAccounts`, `drainAccounts`, `removeStakePoolDelegations`
 * Add `mkInlineDatum`, `mkHashedDatum`
 * Rename `EraSegWits` to `EraBlockBody`. #5156
   * Rename `TxSeq` to `BlockBody`
@@ -76,6 +83,8 @@
 
 ### `testlib`
 
+* Add `registerTestAccount` and `accountsFromUMap`
+* Add `mkTestAccountState`, `accountsFromAccountsMap` and `accountsToUMap` to `EraTest`
 * Add `expectLeftDeepExpr_` and `expectRightDeepExpr_`
 * Add `expectJust`, `expectJustDeep`, `expectJustDeep_`, `expectNothing`
 * Change argument of `txInAt` from `Integral` to `Int`

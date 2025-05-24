@@ -199,6 +199,7 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
+  , Arbitrary (Accounts era)
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)

@@ -37,11 +37,8 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxOut (..),
-  AlonzoTxOut (..),
- )
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
@@ -49,12 +46,9 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), ShelleyBase, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraTxWits (..),
-  BabbageEraTxOut (..),
- )
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
@@ -63,7 +57,6 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   RewardAccount (..),
   ShelleyDelegCert (..),
-  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
@@ -73,14 +66,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.TxCert (
-  ShelleyTxCert (..),
-  pattern DelegStakeTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State hiding (balance)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -142,7 +130,6 @@ import Test.Cardano.Ledger.Generic.GenState (
   getUtxoChoicesMax,
   getUtxoElem,
   getUtxoTest,
-  modifyGenStateInitialRewards,
   modifyGenStateInitialUtxo,
   modifyModelCount,
   modifyModelIndex,
@@ -664,13 +651,13 @@ genTxCerts slot = do
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
-  reward <- gets (mRewards . gsModel)
+  accounts <- gets (mAccounts . gsModel)
   let initSets ::
         ( [TxCert era]
         , Set (ScriptHash, Maybe (KeyHash 'StakePool))
         , Map (Credential 'Staking) Coin
         )
-      initSets = ([], Set.empty, reward)
+      initSets = ([], Set.empty, Map.map (fromCompact . (^. balanceAccountStateL)) (accounts ^. accountsMapL))
   (dcs, _, _) <- F.foldlM genUniqueScript initSets ([1 .. n] :: [Int])
   pure $ reverse dcs
 
@@ -815,14 +802,14 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Ju
 getConwayTxCertCredential (ConwayTxCertGov _) = Nothing
 
 genWithdrawals ::
-  Reflect era => SlotNo -> GenRS era (Withdrawals, Map (Credential 'Staking) Coin)
+  Reflect era => SlotNo -> GenRS era (Withdrawals)
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards, newRewards)
-    else pure (Withdrawals Map.empty, Map.empty)
+      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards)
+    else pure (Withdrawals Map.empty)
 
 -- ============================================================================
 
@@ -898,7 +885,7 @@ genAlonzoTxAndInfo slot = do
 
   -- generate Withdrawals before TxCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain TxCerts if they conflict with existing Rewards
-  (withdrawals@(Withdrawals wdrlMap), newRewards) <- genWithdrawals slot
+  withdrawals@(Withdrawals wdrlMap) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
   rewardsWithdrawalTxOut <-
@@ -996,8 +983,8 @@ genAlonzoTxAndInfo slot = do
       fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
   -- traceM $ "noFeeWits:\n" <> showExpr noFeeWits
 
-  keyDeposits <- gets (mKeyDeposits . gsModel)
-  let deposits = depositsAndRefunds gePParams dcerts keyDeposits
+  accounts <- gets (mAccounts . gsModel)
+  let deposits = depositsAndRefunds gePParams dcerts accounts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
@@ -1036,7 +1023,6 @@ genAlonzoTxAndInfo slot = do
           mkBasicTx txBody
             & witsTxL .~ wits
   count <- gets (mCount . gsModel)
-  modifyGenStateInitialRewards (`Map.union` newRewards)
   modifyGenStateInitialUtxo (`Map.union` minus utxo maybeoldpair)
   modifyModelCount (const (count + 1))
   modifyModelIndex (Map.insert count (TxId txBodyHash))

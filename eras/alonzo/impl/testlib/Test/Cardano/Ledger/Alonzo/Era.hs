@@ -36,6 +36,12 @@ class
 instance EraTest AlonzoEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1]
 
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
+
 instance ShelleyEraTest AlonzoEra
 
 instance AllegraEraTest AlonzoEra

@@ -149,6 +149,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -189,14 +190,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesPdL,
   newEpochStateGovStateL,
   produced,
-  unifiedL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
-import Cardano.Ledger.UMap (dRepMap)
-import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -379,14 +377,13 @@ genUnRegTxCert ::
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 genUnRegTxCert stakingCredential = do
-  umap <- getsNES unifiedL
-  let mumapDeposit = UMap.rdDepositCoin <$> UMap.lookup stakingCredential (UMap.RewDepUView umap)
-  case mumapDeposit of
+  accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
+  case lookupAccountState stakingCredential accounts of
     Nothing -> pure $ UnRegTxCert stakingCredential
-    Just umapDeposit ->
+    Just accountState ->
       elements
         [ UnRegTxCert stakingCredential
-        , UnRegDepositTxCert stakingCredential umapDeposit
+        , UnRegDepositTxCert stakingCredential (fromCompact (accountState ^. depositAccountStateL))
         ]
 
 genRegTxCert ::
@@ -831,7 +828,8 @@ mkParameterChangeGovAction parent ppu =
 
 mkMinFeeUpdateGovAction ::
   ConwayEraImp era =>
-  StrictMaybe GovActionId -> ImpTestM era (GovAction era)
+  StrictMaybe GovActionId ->
+  ImpTestM era (GovAction era)
 mkMinFeeUpdateGovAction p = do
   minFeeValue <- uniformRM (30, 1000)
   mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin minFeeValue))
@@ -978,7 +976,7 @@ getRatifyEnv = do
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-  umap <- getsNES unifiedL
+  accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
   poolPs <- getsNES $ nesEsL . epochStatePoolParamsL
   pure
     RatifyEnv
@@ -988,7 +986,7 @@ getRatifyEnv = do
       , reDRepDistr = drepDistr
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
-      , reDelegatees = dRepMap umap
+      , reAccounts = accounts
       , rePoolParams = poolPs
       }
 
@@ -1564,7 +1562,9 @@ lastEpochProposals =
           . pulsingStateSnapshotL
       )
 
-pulsingStateSnapshotL :: EraStake era => Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL ::
+  (EraStake era, ConwayEraAccounts era) =>
+  Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingStateSnapshotL = lens getter setter
   where
     getter (DRComplete x _) = x
@@ -1653,7 +1653,8 @@ donateToTreasury amount =
 
 expectMembers ::
   (HasCallStack, ConwayEraGov era) =>
-  Set.Set (Credential 'ColdCommitteeRole) -> ImpTestM era ()
+  Set.Set (Credential 'ColdCommitteeRole) ->
+  ImpTestM era ()
 expectMembers expKhs = do
   committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   let members = Map.keysSet $ foldMap' committeeMembers committee

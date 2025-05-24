@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTICK,
   UtxoEnv (..),
  )
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochNo, SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -39,7 +39,6 @@ import Data.Default (Default (def))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence (Seq)
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.ImpTest ()
@@ -47,6 +46,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 import Test.Cardano.Ledger.Common (ToExpr (..), showExpr)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Era (EraTest)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState (
   EraGenericGen,
@@ -72,7 +72,6 @@ import Test.Cardano.Ledger.Generic.TxGen (
   genUTxO,
   runSTSWithContext,
  )
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace (Trace (..), lastState)
@@ -184,6 +183,7 @@ adaIsPreserved ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->
@@ -216,6 +216,7 @@ incrementStakeInvariant ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   GenSize ->
   TestTree
@@ -261,15 +262,22 @@ epochPreserveAda genSize =
 
 adaIsPreservedInEachEpoch ::
   forall era.
-  ( ShelleyEraImp era
+  ( ShelleyEraAccounts era
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "TICK" era) ~ ()
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   , BaseM (EraRule "NEWEPOCH" era) ~ ShelleyBase
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
@@ -278,6 +286,9 @@ adaIsPreservedInEachEpoch ::
   , EraGenericGen era
   , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
   , ToExpr (PredicateFailure (EraRule "RUPD" era))
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   GenSize ->
   TestTree

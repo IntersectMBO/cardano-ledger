@@ -2,6 +2,11 @@
 
 ## 1.17.0.0
 
+* Add `Default` instance for `NewEpochState`
+* Remove `epochStateUMapL`, `unifiedL`, `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`
+* Add `ShelleyEraAccounts` with `mkShelleyAccountState`, `accountsPtrsMapG`, `ptrAccountStateG`
+* Add `ShelleyAccounts`, `ShelleyAccountState`, `shelleyAddAccountState`,  `registerShelleyAccount` and ` unregisterShelleyAccount`
+* Rename `registerInitialFundsThenStaking` to `shelleyRegisterInitialFundsThenStaking`
 * Deprecate `Cardano.Ledger.Shelley.BlockChain` in favor of `Cardano.Ledger.Shelley.BlockBody`. #5156
   * Rename `ShelleyTxSeq` to `ShelleyBlockBody`
 * Rename `shelleyEqTxRaw` to `shelleyTxEqRaw`
@@ -56,6 +61,9 @@
 
 ### `testlib`
 
+* Deprecated `getRewardAccountAmount`, `lookupReward` and `getReward`
+* Add `getBalance`, `lookupBalance`, `getAccountBalance`, `lookupAccountBalance`
+* Add `mkShelleyTestAccountState`, `shelleyAccountsFromAccountsMap`, `shelleyAccountsToUMap`
 * Add `ToExpr` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
 * Move `EncCBOR` instance for `RawSeed` from `cardano-ledger-shelley-test`
 * Added `Arbitrary` instance for `TransitionConfig ShelleyEra`

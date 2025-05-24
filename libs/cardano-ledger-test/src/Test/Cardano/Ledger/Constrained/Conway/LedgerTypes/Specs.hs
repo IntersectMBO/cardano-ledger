@@ -25,7 +25,7 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
@@ -39,20 +39,21 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   lsCertStateL,
  )
-import Cardano.Ledger.UMap (CompactForm (..))
-import qualified Cardano.Ledger.UMap as UMap
 import Constrained.API
 import Data.Foldable
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraSpecDeleg (hasGenDelegs))
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (
+  conwayAccountsSpec,
+  dRepDelegationsSpec,
+  stakePoolDelegationsSpec,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
@@ -73,8 +74,10 @@ import Test.QuickCheck hiding (forAll, witness)
 class
   ( EraSpecTxOut era
   , EraStake era
+  , HasSpec (Accounts era)
   , HasSpec (GovState era)
   , HasSpec (CertState era)
+  , IsNormalType (Accounts era)
   , IsNormalType (CertState era)
   , EraCertState era
   ) =>
@@ -85,35 +88,10 @@ class
   certStateSpec ::
     WitUniv era -> Term ChainAccountState -> Term EpochNo -> Specification (CertState era)
 
-instance EraSpecLedger ShelleyEra where
-  govStateSpec = shelleyGovStateSpec
-  newEpochStateSpec = newEpochStateSpecUTxO
-  certStateSpec = shelleyCertStateSpec
-
-instance EraSpecLedger AllegraEra where
-  govStateSpec = shelleyGovStateSpec
-  newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = shelleyCertStateSpec
-
-instance EraSpecLedger MaryEra where
-  govStateSpec = shelleyGovStateSpec
-  newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = shelleyCertStateSpec
-
-instance EraSpecLedger AlonzoEra where
-  govStateSpec = shelleyGovStateSpec
-  newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = shelleyCertStateSpec
-
-instance EraSpecLedger BabbageEra where
-  govStateSpec = shelleyGovStateSpec
-  newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = shelleyCertStateSpec
-
 instance EraSpecLedger ConwayEra where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = conwayCertStateSpec
+  certStateSpec univ _ = conwayCertStateSpec univ
 
 -- This is a hack, neccessitated by the fact that conwayGovStateSpec,
 -- written for the conformance tests, requires an actual GovEnv as an input.
@@ -214,14 +192,14 @@ goodDrep univ =
 --   'eraUniv' as the actual parameter for the formal parameter 'univ'
 --   Note, that in certStateSpec, the call to vstateSpec is passed a witnessed 'delegated'
 --   that comes from the dstateSpec.
-vstateSpec ::
+vStateSpec ::
   forall era.
   Era era =>
   WitUniv era ->
   Term EpochNo ->
   Term (Map (Credential 'DRepRole) (Set (Credential 'Staking))) ->
   Specification (VState era)
-vstateSpec univ epoch delegated = constrained $ \ [var|vstate|] ->
+vStateSpec univ epoch delegated = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|comstate|] [var|numdormant|] ->
     [ dependsOn dreps delegated
     , witness univ (dom_ dreps)
@@ -237,18 +215,13 @@ vstateSpec univ epoch delegated = constrained $ \ [var|vstate|] ->
                 , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. drepDdeposit
                 ]
           ]
-    , assertExplain (pure "num dormant epochs should not be too large") $
-        [epoch <=. numdormant, numdormant <=. epoch + (lit (EpochNo 10))]
+    , assertExplain
+        (pure "num dormant epochs should not be too large")
+        [epoch <=. numdormant, numdormant <=. epoch + lit (EpochNo 10)]
     , dependsOn numdormant epoch -- Solve epoch first.
     , match comstate $ \ [var|commap|] ->
         [witness univ (dom_ commap), satisfies commap (hasSize (rangeSize 1 4))]
     ]
-
--- Extract the map of DReps, to those that delegate to them, from the DState
-getDelegatees ::
-  DState era ->
-  Map (Credential 'DRepRole) (Set (Credential 'Staking))
-getDelegatees dstate = aggregateDRep (UMap.dRepMap (dsUnified dstate))
 
 -- | Compute the map of DReps, to those that delegate to them,
 --   from the delegation map (Map (Credential 'Staking) Drep) which is stored in the DState
@@ -262,71 +235,35 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
     accum ans cred (DRepScriptHash sh) = Map.insertWith Set.union (ScriptHashObj sh) (Set.singleton cred) ans
     accum ans _ _ = ans
 
-dstateSpec ::
+conwayDStateSpec ::
   forall era.
-  EraSpecLedger era =>
+  (EraSpecLedger era, Accounts era ~ ConwayAccounts era) =>
   WitUniv era ->
-  Term ChainAccountState ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Term (Map (Credential 'Staking) DRep) ->
   Specification (DState era)
-dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
-  match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
-    match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
-      [ dependsOn dRepMap rdMap
-      , -- The dRepMap depends on the rdMap, so it is computed afterwards, forced by the reify
-        reify rdMap id $ \ [var|rdm|] ->
-          [ witness univ (dom_ dRepMap)
-          , witness univ (rng_ dRepMap)
-          , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
-          , forAll dRepMap $ \ [var|pair|] ->
-              match pair $ \ [var|_stakecred|] [var|drep|] ->
-                (caseOn drep)
-                  (branchW 3 $ \keyhash -> witness univ keyhash)
-                  (branchW 3 $ \scripthash -> witness univ scripthash)
-                  (branchW 1 $ \_abstain -> True)
-                  (branchW 1 $ \_noconfidence -> True)
-          ]
-      , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
-      , whenTrue
-          (hasPtrs (Proxy @era))
-          [ witness univ (rng_ ptrmap)
-          , dependsOn rdMap ptrmap
-          , -- reify here, forces us to solve for ptrmap, before solving for rdMap
-            -- If there are Ptrs, then the range of the Ptrs must equal the domain of the rdMap
-            reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap)
-          ]
-      , witness univ (dom_ rdMap) -- rdMap must be witnessed, whether of not there are Ptrs
-      , dependsOn sPoolMap rdMap
-      , -- reify here, forces us to solve for rdMap, before solving for sPoolMap
-        reify rdMap Map.keysSet $ \ [var|rdcreds|] ->
-          [ genHint 5 sPoolMap
-          , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` rdcreds
-          , assertExplain (pure "The delegations delegate to actual pools") $
-              forAll (rng_ sPoolMap) (\ [var|keyhash|] -> mapMember_ keyhash poolreg)
-          ]
-      , -- futureGenDelegs and genDelegs and irewards can be solved in any order
-        satisfies irewards (irewardSpec @era univ acct)
-      , satisfies
-          futureGenDelegs
-          (hasSize (if hasGenDelegs @era [] then (rangeSize 0 3) else (rangeSize 0 0)))
-      , match genDelegs $ \ [var|gdmap|] ->
-          [ if hasGenDelegs @era []
-              then satisfies gdmap (hasSize (rangeSize 1 4))
-              else satisfies gdmap (hasSize (rangeSize 0 0))
-          , witness univ (dom_ gdmap)
-          , witness univ (rng_ gdmap)
-          ]
+conwayDStateSpec univ stakePoolDelegations dRepDelegations =
+  constrained $ \ [var| ds |] ->
+    match ds $ \ [var|accounts|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+      [ satisfies accounts (conwayAccountsSpec univ stakePoolDelegations dRepDelegations)
+      , -- futureGenDelegs
+        assert $ sizeOf_ futureGenDelegs ==. 0
+      , -- genDelegs
+        match genDelegs $ \gd -> [assert $ sizeOf_ gd ==. 0]
+      , -- irewards
+        match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
       ]
 
 epochNoSpec :: Specification EpochNo
 epochNoSpec = constrained $ \epoch -> epoch >=. 99
 
-pstateSpec ::
+pStateSpec ::
   Era era =>
   WitUniv era ->
+  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term EpochNo ->
   Specification (PState era)
-pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
+pStateSpec univ stakePoolDelegations curEpoch = constrained $ \ [var|pState|] ->
   match pState $ \ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
     [ witness univ (dom_ stakePoolParams)
     , witness univ (rng_ stakePoolParams)
@@ -334,6 +271,8 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , witness univ (rng_ futureStakePoolParams)
     , witness univ (dom_ retiring)
     , witness univ (dom_ pooldeposits)
+    , reify stakePoolDelegations (Set.fromList . Map.elems) $ \ [var|delegatedStakePool|] ->
+        delegatedStakePool `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
@@ -344,10 +283,11 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assertExplain (pure "retiring after current epoch") $
-        forAll (rng_ retiring) (\ [var|epoch|] -> currepoch <=. epoch)
-    , assert $ sizeOf_ (futureStakePoolParams) <=. 4
-    , assert $ 3 <=. sizeOf_ stakePoolParams
-    , assert $ sizeOf_ stakePoolParams <=. 8
+        forAll (rng_ retiring) (\ [var|epoch|] -> curEpoch <=. epoch)
+    , assert $ sizeOf_ (dom_ futureStakePoolParams) <=. 4
+    , assert $ 3 <=. sizeOf_ (dom_ stakePoolParams)
+    , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
+    -- TODO: restrict majority of reward accounts in PoolParams to be present in dom stakePoolDelegations
     ]
 
 accountStateSpec :: Specification ChainAccountState
@@ -359,43 +299,23 @@ accountStateSpec =
           (\ [var|reserves|] [var|treasury|] -> [lit (Coin 100) <=. treasury, lit (Coin 100) <=. reserves])
     )
 
--- | The CertState spec
---   Note, that in order to be self consistent, parts of the pState is passed as an argument
---   the spec for DState spec (every stake delegation is to a registered pool)
---   and parts of the DState are passed as an argument to the spec for VState
---   (every voting delegation is to a registered DRep)
-shelleyCertStateSpec ::
-  forall era.
-  EraSpecLedger era =>
-  WitUniv era ->
-  Term ChainAccountState ->
-  Term EpochNo ->
-  Specification (ShelleyCertState era)
-shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
-  match shellCertState $ \ [var|pState|] [var|dState|] ->
-    [ satisfies pState (pstateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
-        [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ acct poolreg)
-        ]
-    ]
-
 conwayCertStateSpec ::
   EraSpecLedger ConwayEra =>
   WitUniv ConwayEra ->
-  Term ChainAccountState ->
   Term EpochNo ->
   Specification (ConwayCertState ConwayEra)
-conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
-  match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
-    [ satisfies pState (pstateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
-        [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ acct poolreg)
-        ]
-    , reify dState getDelegatees $ \ [var|delegatees|] ->
-        satisfies vState (vstateSpec univ epoch delegatees)
-    ]
+conwayCertStateSpec univ epoch = constrained $ \ [var|certState|] ->
+  unsafeExists $ \ [var|stakePoolDelegations|] ->
+    unsafeExists $ \ [var|dRepDelegations|] ->
+      [ satisfies stakePoolDelegations (stakePoolDelegationsSpec univ)
+      , satisfies dRepDelegations (dRepDelegationsSpec univ)
+      , match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
+          [ satisfies pState (pStateSpec univ stakePoolDelegations epoch)
+          , satisfies dState (conwayDStateSpec univ stakePoolDelegations dRepDelegations)
+          , reify dRepDelegations aggregateDRep $ \ [var|dRepsDelegatees|] ->
+              satisfies vState (vStateSpec univ epoch dRepsDelegatees)
+          ]
+      ]
 
 -- ==============================================================
 -- Specs for UTxO and UTxOState
@@ -403,7 +323,6 @@ conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
 
 utxoSpecWit ::
   forall era.
-  -- EraSpecLedger era =>
   EraSpecTxOut era =>
   WitUniv era ->
   Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
@@ -439,7 +358,10 @@ getDelegs ::
   EraCertState era =>
   CertState era ->
   Map (Credential 'Staking) (KeyHash 'StakePool)
-getDelegs cs = UMap.sPoolMap $ cs ^. certDStateL . dsUnifiedL
+getDelegs cs =
+  Map.mapMaybe
+    (^. stakePoolDelegationAccountStateL)
+    (cs ^. certDStateL . accountsL . accountsMapL)
 
 -- ====================================================================
 -- Specs for LedgerState
@@ -524,9 +446,8 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
     markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
-    markDelegations ::
-      VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
-    markDelegations = VMap.fromMap (UMap.sPoolMap (ls ^. lsCertStateL . certDStateL . dsUnifiedL))
+    markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+    markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
     markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
     markPoolParams = VMap.fromMap (psStakePoolParams (ls ^. lsCertStateL . certPStateL))
 

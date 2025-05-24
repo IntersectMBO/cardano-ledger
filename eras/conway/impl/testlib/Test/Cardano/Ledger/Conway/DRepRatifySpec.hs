@@ -33,16 +33,15 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Val ((<+>), (<->))
+import Data.Default (def)
 import Data.Foldable (fold)
-import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Rational ((%!))
 
@@ -197,15 +196,7 @@ allYesProp =
         then activeDRepAcceptedRatio drepTestData `shouldBe` 0
         else activeDRepAcceptedRatio drepTestData `shouldBe` 1
 
-noStakeProp ::
-  forall era.
-  ( Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  , ConwayEraPParams era
-  ) =>
-  Spec
+noStakeProp :: forall era. ConwayEraTest era => Spec
 noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
@@ -325,5 +316,5 @@ emptyRatifyEnv =
     Map.empty
     (EpochNo 0)
     (CommitteeState Map.empty)
-    Map.empty
+    def
     Map.empty

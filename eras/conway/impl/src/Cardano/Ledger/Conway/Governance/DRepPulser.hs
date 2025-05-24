@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -64,21 +63,21 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..), addCompactCoin)
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
+import Cardano.Ledger.Conway.State hiding (balance)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.State
-import Cardano.Ledger.UMap
-import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
+import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -180,7 +179,7 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
   fromCBOR = fromEraCBOR @era
 
--- | We iterate over a pulse-sized chunk of the UMap.
+-- | We iterate over a pulse-sized chunk of the Accounts.
 --
 -- For each staking credential in the chunk that has delegated to a DRep, add
 -- the stake distribution, rewards, and proposal deposits for that credential to
@@ -199,58 +198,54 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   O (a * (log(b) + log(c) + log(d) + log(e) + log(f)))
 -- @
 -- complexity, where,
---   (a) is the size of the chunk of the UMap, which is the pulse-size, iterate over
+--   (a) is the size of the chunk of the Accounts, which is the pulse-size, iterate over
 --   (b) is the size of the StakeDistr, lookup
 --   (c) is the size of the DRepDistr, insertWith
 --   (d) is the size of the dpProposalDeposits, lookup
 --   (e) is the size of the registered DReps, lookup
 --   (f) is the size of the PoolDistr, insert
 computeDRepDistr ::
-  EraStake era =>
+  (EraStake era, ConwayEraAccounts era) =>
   InstantStake era ->
   Map (Credential 'DRepRole) DRepState ->
   Map (Credential 'Staking) (CompactForm Coin) ->
   PoolDistr ->
   Map DRep (CompactForm Coin) ->
-  Map (Credential 'Staking) UMElem ->
+  Map (Credential 'Staking) (AccountState era) ->
   (Map DRep (CompactForm Coin), PoolDistr)
 computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
   Map.foldlWithKey' go (dRepDistr, poolDistr)
   where
-    go (!drepAccum, !poolAccum) stakeCred umElem =
+    go (!drepAccum, !poolAccum) stakeCred accountState =
       let instantStakeCredentials = instantStake ^. instantStakeCredentialsL
-          stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred instantStakeCredentials
+          mInstantStake = Map.lookup stakeCred instantStakeCredentials
           mProposalDeposit = Map.lookup stakeCred proposalDeposits
-          stakeAndDeposits = maybe stake (addCompactCoin stake) mProposalDeposit
-       in case umElemDelegations umElem of
-            Nothing -> (drepAccum, poolAccum)
-            Just (RewardDelegationSPO spo _r) ->
-              ( drepAccum
-              , addToPoolDistr spo mProposalDeposit poolAccum
-              )
-            Just (RewardDelegationDRep drep r) ->
-              ( addToDRepDistr drep (addCompactCoin stakeAndDeposits r) drepAccum
-              , poolAccum
-              )
-            Just (RewardDelegationBoth spo drep r) ->
-              ( addToDRepDistr drep (addCompactCoin stakeAndDeposits r) drepAccum
-              , addToPoolDistr spo mProposalDeposit poolAccum
-              )
-    addToPoolDistr spo mProposalDeposit distr = fromMaybe distr $ do
+          stakeAndDeposits = fold $ mInstantStake <> mProposalDeposit
+       in ( addToDRepDistr accountState stakeAndDeposits drepAccum
+          , addToPoolDistr accountState mProposalDeposit poolAccum
+          )
+    addToPoolDistr accountState mProposalDeposit distr = fromMaybe distr $ do
+      stakePool <- accountState ^. stakePoolDelegationAccountStateL
       proposalDeposit <- mProposalDeposit
-      ips <- Map.lookup spo $ distr ^. poolDistrDistrL
+      ips <- Map.lookup stakePool $ distr ^. poolDistrDistrL
       pure $
         distr
-          & poolDistrDistrL %~ Map.insert spo (ips & individualTotalPoolStakeL <>~ proposalDeposit)
+          & poolDistrDistrL %~ Map.insert stakePool (ips & individualTotalPoolStakeL <>~ proposalDeposit)
           & poolDistrTotalL <>~ proposalDeposit
-    addToDRepDistr drep ccoin distr =
-      let updatedDistr = Map.insertWith addCompactCoin drep ccoin distr
-       in case drep of
-            DRepAlwaysAbstain -> updatedDistr
-            DRepAlwaysNoConfidence -> updatedDistr
-            DRepCredential cred
-              | Map.member cred regDReps -> updatedDistr
-              | otherwise -> distr
+    addToDRepDistr accountState stakeAndDeposits distr = fromMaybe distr $ do
+      dRep <- accountState ^. dRepDelegationAccountStateL
+      let
+        balance = accountState ^. balanceAccountStateL
+        updatedDistr = Map.insertWith (<>) dRep (stakeAndDeposits <> balance) distr
+      Just $ case dRep of
+        DRepAlwaysAbstain -> updatedDistr
+        DRepAlwaysNoConfidence -> updatedDistr
+        DRepCredential cred
+          -- TODO: Potential optimization. Avoid this membership check, since delegation is
+          -- guaranteed to exist. I believe it would also be safe for PV9, but we need to verify
+          -- that it is in fact true due to #4772
+          | Map.member cred regDReps -> updatedDistr
+          | otherwise -> distr
 
 -- | The type of a Pulser which uses 'computeDRepDistr' as its underlying
 -- function. Note that we use two type equality (~) constraints to fix both
@@ -263,11 +258,11 @@ data DRepPulser era (m :: Type -> Type) ans where
     forall era ans m.
     (ans ~ RatifyState era, m ~ Identity, RunConwayRatify era) =>
     { dpPulseSize :: !Int
-    -- ^ How many elements of 'dpUMap' to consume each pulse.
-    , dpUMap :: !UMap
+    -- ^ How many elements of 'dpAccounts' to consume each pulse.
+    , dpAccounts :: !(Accounts era)
     -- ^ Snapshot containing the mapping of stake credentials to DReps, Pools and Rewards.
     , dpIndex :: !Int
-    -- ^ The index of the iterator over `dpUMap`. Grows with each pulse.
+    -- ^ The index of the iterator over `dpAccounts`. Grows with each pulse.
     , dpInstantStake :: !(InstantStake era)
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
     , dpStakePoolDistr :: PoolDistr
@@ -294,18 +289,21 @@ data DRepPulser era (m :: Type -> Type) ans where
     } ->
     DRepPulser era m ans
 
-instance (EraPParams era, EraStake era) => Eq (DRepPulser era Identity (RatifyState era)) where
+instance
+  (EraPParams era, EraStake era, ConwayEraAccounts era) =>
+  Eq (DRepPulser era Identity (RatifyState era))
+  where
   x == y = finishDRepPulser (DRPulsing x) == finishDRepPulser (DRPulsing y)
 
-instance EraStake era => Pulsable (DRepPulser era) where
-  done DRepPulser {dpUMap, dpIndex} = dpIndex >= Map.size (UMap.umElems dpUMap)
+instance (EraStake era, ConwayEraAccounts era) => Pulsable (DRepPulser era) where
+  done DRepPulser {dpAccounts, dpIndex} = dpIndex >= Map.size (dpAccounts ^. accountsMapL)
 
   current x@(DRepPulser {}) = snd $ finishDRepPulser (DRPulsing x)
 
   pulseM pulser@(DRepPulser {..})
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
-        let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
+        let !chunk = Map.take dpPulseSize $ Map.drop dpIndex (dpAccounts ^. accountsMapL)
             (dRepDistr, poolDistr) =
               computeDRepDistr dpInstantStake dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr chunk
          in pure $
@@ -317,17 +315,19 @@ instance EraStake era => Pulsable (DRepPulser era) where
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
-deriving instance (EraPParams era, Show (InstantStake era), Show ans) => Show (DRepPulser era m ans)
+deriving instance
+  (EraPParams era, Show (InstantStake era), Show (Accounts era), Show ans) =>
+  Show (DRepPulser era m ans)
 
 instance
-  (EraPParams era, NoThunks (InstantStake era)) =>
+  (EraPParams era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
   NoThunks (DRepPulser era Identity (RatifyState era))
   where
   showTypeOf _ = "DRepPulser"
   wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
-      , noThunks ctxt (dpUMap drp)
+      , noThunks ctxt (dpAccounts drp)
       , noThunks ctxt (dpIndex drp)
       , noThunks ctxt (dpInstantStake drp)
       , -- dpStakePoolDistr is allowed to have thunks
@@ -342,7 +342,10 @@ instance
       , noThunks ctxt (dpPoolParams drp)
       ]
 
-instance (EraPParams era, NFData (InstantStake era)) => NFData (DRepPulser era Identity (RatifyState era)) where
+instance
+  (EraPParams era, NFData (InstantStake era), NFData (Accounts era)) =>
+  NFData (DRepPulser era Identity (RatifyState era))
+  where
   rnf (DRepPulser n um bal stake pool drep dstate ep cs es as pds gs poolps) =
     n `deepseq`
       um `deepseq`
@@ -382,7 +385,10 @@ class
           Left (x :| _) -> absurd x
           Right ratifyState' -> ratifyState'
 
-finishDRepPulser :: EraStake era => DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
+finishDRepPulser ::
+  (EraStake era, ConwayEraAccounts era) =>
+  DRepPulsingState era ->
+  (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   ( PulsingSnapshot
@@ -393,7 +399,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
   , ratifyState'
   )
   where
-    !leftOver = Map.drop dpIndex $ umElems dpUMap
+    !leftOver = Map.drop dpIndex (dpAccounts ^. accountsMapL)
     (finalDRepDistr, finalStakePoolDistr) =
       computeDRepDistr dpInstantStake dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr leftOver
     !ratifyEnv =
@@ -404,7 +410,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
         , reDRepState = dpDRepState
         , reCurrentEpoch = dpCurrentEpoch
         , reCommitteeState = dpCommitteeState
-        , reDelegatees = dRepMap dpUMap
+        , reAccounts = dpAccounts
         , rePoolParams = dpPoolParams
         }
     !ratifySig = RatifySignal dpProposals
@@ -428,27 +434,32 @@ data DRepPulsingState era
       !(RatifyState era)
   deriving (Generic)
 
-instance (EraPParams era, NFData (InstantStake era)) => NFData (DRepPulsingState era)
+instance
+  (EraPParams era, NFData (InstantStake era), NFData (Accounts era)) =>
+  NFData (DRepPulsingState era)
 
-instance (EraPParams era, NoThunks (InstantStake era)) => NoThunks (DRepPulsingState era)
+instance
+  (EraPParams era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
+  NoThunks (DRepPulsingState era)
 
 -- | This is potentially an expensive getter. Make sure not to use it in the first 80% of
 -- the epoch.
 psDRepDistrG ::
-  EraStake era => SimpleGetter (DRepPulsingState era) (Map DRep (CompactForm Coin))
+  (EraStake era, ConwayEraAccounts era) =>
+  SimpleGetter (DRepPulsingState era) (Map DRep (CompactForm Coin))
 psDRepDistrG = to get
   where
     get (DRComplete x _) = psDRepDistr x
     get x = psDRepDistr . fst $ finishDRepPulser x
 
-instance (EraStake era, EraPParams era) => Eq (DRepPulsingState era) where
+instance (ConwayEraAccounts era, EraStake era, EraPParams era) => Eq (DRepPulsingState era) where
   x == y = finishDRepPulser x == finishDRepPulser y
 
-instance (EraStake era, EraPParams era) => Show (DRepPulsingState era) where
+instance (ConwayEraAccounts era, EraStake era, EraPParams era) => Show (DRepPulsingState era) where
   show (DRComplete x m) = "(DRComplete " ++ show x ++ " " ++ show m ++ ")"
   show x = show (uncurry DRComplete (finishDRepPulser x))
 
-instance (EraStake era, EraPParams era) => EncCBOR (DRepPulsingState era) where
+instance (ConwayEraAccounts era, EraStake era, EraPParams era) => EncCBOR (DRepPulsingState era) where
   encCBOR (DRComplete x y) = encode (Rec DRComplete !> To x !> To y)
   encCBOR x@(DRPulsing (DRepPulser {})) = encode (Rec DRComplete !> To snap !> To ratstate)
     where
@@ -474,7 +485,10 @@ instance EraPParams era => DecCBOR (DRepPulsingState era) where
 -- =====================================
 -- High level operations of DRepDistr
 
-pulseDRepPulsingState :: EraStake era => DRepPulsingState era -> DRepPulsingState era
+pulseDRepPulsingState ::
+  (EraStake era, ConwayEraAccounts era) =>
+  DRepPulsingState era ->
+  DRepPulsingState era
 pulseDRepPulsingState x@(DRComplete _ _) = x
 pulseDRepPulsingState (DRPulsing x@(DRepPulser {})) =
   let x2 = pulse x
@@ -482,10 +496,16 @@ pulseDRepPulsingState (DRPulsing x@(DRepPulser {})) =
         then uncurry DRComplete (finishDRepPulser (DRPulsing x2))
         else DRPulsing x2
 
-completeDRepPulsingState :: EraStake era => DRepPulsingState era -> DRepPulsingState era
+completeDRepPulsingState ::
+  (EraStake era, ConwayEraAccounts era) =>
+  DRepPulsingState era ->
+  DRepPulsingState era
 completeDRepPulsingState x@(DRPulsing _) = uncurry DRComplete (finishDRepPulser x)
 completeDRepPulsingState x@(DRComplete {}) = x
 
-extractDRepPulsingState :: EraStake era => DRepPulsingState era -> RatifyState era
+extractDRepPulsingState ::
+  (EraStake era, ConwayEraAccounts era) =>
+  DRepPulsingState era ->
+  RatifyState era
 extractDRepPulsingState x@(DRPulsing _) = snd (finishDRepPulser x)
 extractDRepPulsingState (DRComplete _ x) = x

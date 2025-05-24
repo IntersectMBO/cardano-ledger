@@ -27,13 +27,10 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UMap (rewardMap, sPoolMap)
-import qualified Cardano.Ledger.UMap as UM (ptrMap)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
 import Control.Monad ((<=<))
-import Control.SetAlgebra (range)
 import Data.Bifunctor (first)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as LBS
@@ -450,25 +447,23 @@ instance AggregateStat DStateStats where
       }
 
 countDStateStats :: DState CurrentEra -> DStateStats
-countDStateStats DState {..} =
-  DStateStats
-    { dssCredentialStaking =
-        statMapKeys (rewardMap dsUnified)
-          <> statMapKeys (sPoolMap dsUnified)
-          <> statSet (range (UM.ptrMap dsUnified))
-    , dssDelegations = statFoldable (sPoolMap dsUnified)
-    , dssKeyHashGenesis =
-        statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
-          <> statMapKeys (unGenDelegs dsGenDelegs)
-    , dssKeyHashGenesisDelegate =
-        statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
-          <> statFoldable
-            (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs))
-    , dssHashVerKeyVRF =
-        statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
-          <> statFoldable
-            (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
-    }
+countDStateStats ds@DState {..} =
+  let accountsMap = ds ^. accountsL . accountsMapL
+   in DStateStats
+        { dssCredentialStaking = statMapKeys accountsMap
+        , dssDelegations = statFoldable (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
+        , dssKeyHashGenesis =
+            statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
+              <> statMapKeys (unGenDelegs dsGenDelegs)
+        , dssKeyHashGenesisDelegate =
+            statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
+              <> statFoldable
+                (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs))
+        , dssHashVerKeyVRF =
+            statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
+              <> statFoldable
+                (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
+        }
 
 data PStateStats = PStateStats
   { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool))

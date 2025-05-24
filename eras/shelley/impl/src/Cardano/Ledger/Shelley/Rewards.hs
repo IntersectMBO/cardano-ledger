@@ -42,6 +42,7 @@ import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm,
   coinToRational,
+  compactCoinOrError,
   rationalToCoinViaFloor,
  )
 import Cardano.Ledger.Compactible (fromCompact)
@@ -53,7 +54,6 @@ import Cardano.Ledger.Shelley.Era (
   hardforkBabbageForgoRewardPrefilter,
  )
 import Cardano.Ledger.State (Stake (..), maxPool')
-import Cardano.Ledger.UMap (compactCoinOrError)
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)

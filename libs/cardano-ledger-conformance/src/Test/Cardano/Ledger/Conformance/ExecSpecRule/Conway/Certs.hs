@@ -11,6 +11,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs (nameCerts) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
 import Constrained.API
@@ -22,7 +23,8 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert ()
-import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway hiding (conwayCertStateSpec)
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Imp.Common hiding (context)
 
@@ -36,14 +38,8 @@ instance ExecSpecRule "CERTS" ConwayEra where
 
   environmentSpec _ = certsEnvSpec
 
-  stateSpec (univ, context) _ =
-    constrained $ \x ->
-      match x $ \vstate pstate dstate ->
-        [ satisfies vstate (vStateSpec @ConwayEra univ (ccecDelegatees context))
-        , satisfies pstate (pStateSpec @ConwayEra univ)
-        , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
-          satisfies dstate (bootstrapDStateSpec univ (ccecDelegatees context) (ccecWithdrawals context))
-        ]
+  stateSpec (univ, _context) _ =
+    conwayCertStateSpec univ (lit (EpochNo 100))
 
   signalSpec (univ, _) env state = txCertsSpec @ConwayEra univ env state
 

@@ -22,6 +22,12 @@ class
 instance EraTest MaryEra where
   zeroCostModels = emptyCostModels
 
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
+
 instance ShelleyEraTest MaryEra
 
 instance AllegraEraTest MaryEra

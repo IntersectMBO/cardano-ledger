@@ -5,6 +5,7 @@ module Cardano.Ledger.Babbage.State.Stake () where
 
 import Cardano.Ledger.Babbage.Core ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.State.Account ()
 import Cardano.Ledger.Shelley.State (
   EraStake (..),
   ShelleyInstantStake,

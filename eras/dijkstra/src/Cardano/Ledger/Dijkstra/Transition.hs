@@ -1,11 +1,6 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Transition (
@@ -15,7 +10,7 @@ module Cardano.Ledger.Dijkstra.Transition (
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Transition (
   ConwayEraTransition,
-  registerDRepsThenDelegs,
+  conwayRegisterInitialFundsThenStaking,
  )
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Genesis
@@ -34,9 +29,7 @@ instance EraTransition DijkstraEra where
 
   mkTransitionConfig = DijkstraTransitionConfig
 
-  injectIntoTestState cfg =
-    registerDRepsThenDelegs cfg
-      . registerInitialFundsThenStaking cfg
+  injectIntoTestState = conwayRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens dtcConwayTransitionConfig (\dtc pc -> dtc {dtcConwayTransitionConfig = pc})

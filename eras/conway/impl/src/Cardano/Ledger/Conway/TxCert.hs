@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
   Delegatee (..),
+  mkDelegatee,
   ConwayEraTxCert (..),
   fromShelleyDelegCert,
   toShelleyDelegCert,
@@ -28,6 +29,7 @@ module Cardano.Ledger.Conway.TxCert (
   getVKeyWitnessConwayTxCert,
   getDelegateeTxCert,
   getStakePoolDelegatee,
+  getDRepDelegatee,
   getVoteDelegatee,
   conwayDRepDepositsTxCerts,
   conwayDRepRefundsTxCerts,
@@ -396,16 +398,28 @@ instance DecCBOR Delegatee where
       2 -> SumD DelegStakeVote <! From <! From
       k -> Invalid k
 
+mkDelegatee :: Maybe (KeyHash StakePool) -> Maybe DRep -> Maybe Delegatee
+mkDelegatee mStakePool mDRep =
+  case (mStakePool, mDRep) of
+    (Nothing, Nothing) -> Nothing
+    (Just pool, Nothing) -> Just $ DelegStake pool
+    (Nothing, Just dRep) -> Just $ DelegVote dRep
+    (Just pool, Just dRep) -> Just $ DelegStakeVote pool dRep
+
 getStakePoolDelegatee :: Delegatee -> Maybe (KeyHash 'StakePool)
 getStakePoolDelegatee = \case
   DelegStake targetPool -> Just targetPool
   DelegVote {} -> Nothing
   DelegStakeVote targetPool _ -> Just targetPool
 
+getDRepDelegatee :: Delegatee -> Maybe DRep
+getDRepDelegatee DelegStake {} = Nothing
+getDRepDelegatee (DelegVote x) = Just x
+getDRepDelegatee (DelegStakeVote _ x) = Just x
+
 getVoteDelegatee :: Delegatee -> Maybe DRep
-getVoteDelegatee DelegStake {} = Nothing
-getVoteDelegatee (DelegVote x) = Just x
-getVoteDelegatee (DelegStakeVote _ x) = Just x
+getVoteDelegatee = getDRepDelegatee
+{-# DEPRECATED getVoteDelegatee "In favor of `getDRepDelegatee`" #-}
 
 instance NFData Delegatee
 
