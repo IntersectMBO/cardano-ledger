@@ -3,6 +3,7 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -117,7 +118,6 @@ import Constrained.TheKnot (
   PairSpec (..),
   ProdW (..),
   SumW (..),
-  ifElse,
   injLeft_,
   injRight_,
   preMapFoldSpec,
@@ -127,6 +127,7 @@ import Constrained.TheKnot (
  )
 import Constrained.TypeErrors
 import Data.Typeable (Typeable)
+import GHC.Generics
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
 import Test.QuickCheck (Arbitrary (..), oneof)
@@ -710,13 +711,14 @@ chooseSpec ::
   Specification a
 chooseSpec (w, s) (w', s') =
   constrained $ \x ->
-    exists (\eval -> pure $ eval x `conformsToSpec` s) $ \b ->
-      [ ifElse
-          b
-          (x `satisfies` s)
-          (x `satisfies` s')
-      , caseOn
-          b
-          (branchW w' $ \_ -> True)
-          (branchW w $ \_ -> True)
-      ]
+    exists (\eval -> pure $ if eval x `conformsToSpec` s then PickFirst else PickSecond) $ \p ->
+      caseOn
+        p
+        (branchW w' $ \_ -> (x `satisfies` s))
+        (branchW w $ \_ -> (x `satisfies` s'))
+
+data Picky = PickFirst | PickSecond deriving (Ord, Eq, Show, Generic)
+
+instance HasSimpleRep Picky
+
+instance HasSpec Picky

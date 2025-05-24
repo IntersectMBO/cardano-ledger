@@ -222,32 +222,34 @@ import Test.QuickCheck.Random hiding (left, right)
 import Prelude hiding (cycle, pred)
 
 -- ===================================================================================
--- We call this module TheKnot because it binds a mutually recursive set of things
--- The heart of TheKNot is "genFromSpecT" the user interface to generating random instances of a Spec.
--- It is mutually recursive with the 3 simplest HasSpec instances (Bool,Integer,Sum), and 'simplifySpec'.
--- Every HasSpec instance is dependant on HasSpec Integer because the Cardinality properties
--- are expressed in terms of Integer. Generic HasSpec instances (including Bool) are
--- implemented in terms of a Sum of Product Simple Rep. And every HasSpec instance has
--- a genFromTypeSpec method, on which GenFromSpecT depends. There is no avoiding the Knot.
--- The only saving grace, is that genFromTypeSpec is a HasSpec method, so new things
--- depending only on things defined here, or things defined in the same file as the
--- the HasSpec instance can escape from TheKnot.
+-- We call this module TheKnot because it binds a mutually recursive set of
+-- things The heart of TheKNot is "genFromSpecT" the user interface to
+-- generating random instances of a Spec.  It is mutually recursive with the 3
+-- simplest HasSpec instances (Bool,Integer,Sum), and 'simplifySpec'.  Every
+-- HasSpec instance is dependant on HasSpec Integer because the Cardinality
+-- properties are expressed in terms of Integer. Generic HasSpec instances are
+-- implemented in terms of a Sum of Product Simple Rep. And every HasSpec
+-- instance has a genFromTypeSpec method, on which GenFromSpecT depends. There
+-- is no avoiding the Knot.  The only saving grace, is that genFromTypeSpec is
+-- a HasSpec method, so new things depending only on things defined here, or
+-- things defined in the same file as the the HasSpec instance can escape from
+-- TheKnot.
 --
 -- Here is a graph of the dependencies.
 --
 --      +---->HasSpec Integer
---      |      ^            ^
---      |      |             \
---      |      v              \
---      |     HasSpec Bool---->HasSpec Sum
---      |        ^  \               /   ^
---      |        |   \             /    |
---      <.       |    \           /     |
---      <=.      |     \         /      |
---      |        |      v       v       |
---      |        |      genFromSpecT    |
---      |        |            |         |
---      |        |            |         |
+--      |                   ^
+--      |                    \
+--      |                     \
+--      |                      HasSpec Sum
+--      |                           /   ^
+--      |                          /    |
+--      <.                        /     |
+--      <=.                      /      |
+--      |                       v       |
+--      |               genFromSpecT    |
+--      |                     |         |
+--      |                     |         |
 --      +-------caseBoolSpec  |    caseSum
 --                      ^     |    ^
 --                      |     |    |
@@ -477,16 +479,6 @@ pattern InjLeft ::
   Term c
 pattern InjLeft x <- App (getWitness -> Just InjLeftW) (x :> Nil)
 
--- ===========================================================================
--- HasSpec Bool
--- ===========================================================================
-
-instance HasSpec Bool where
-  shrinkWithTypeSpec _ = shrink
-  cardinalTypeSpec (SumSpec _ a b) =
-    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
-  cardinalTrueSpec = MemberSpec (pure 2)
-
 caseBoolSpec ::
   HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
 caseBoolSpec spec cont = case possibleValues spec of
@@ -540,7 +532,7 @@ instance Logic BoolW where
   propagate OrW (s :>: HOLE) spec =
     caseBoolSpec spec (okOr s)
 
-  mapTypeSpec NotW (SumSpec h a b) = typeSpec $ SumSpec h b a
+  mapTypeSpec NotW () = typeSpec ()
 
 not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
