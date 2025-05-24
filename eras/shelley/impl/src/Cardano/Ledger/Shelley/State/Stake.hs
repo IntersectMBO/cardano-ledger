@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -31,9 +32,9 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.Era
+import Cardano.Ledger.Shelley.State.Account
 import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Coerce
@@ -142,19 +143,28 @@ applyUTxOShelleyInstantStake f (UTxO u) instantStake =
 
 -- The invariant in `InstantStake` is that stake is never zero.
 resolveShelleyInstantStake ::
-  (EraStake era, InstantStake era ~ ShelleyInstantStake era) =>
-  ShelleyInstantStake era -> UM.UMap -> Stake
-resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} umap@(UM.UMap triplesMap ptrMap) =
+  forall era.
+  ( EraStake era
+  , InstantStake era ~ ShelleyInstantStake era
+  , AccountState era ~ ShelleyAccountState era
+  , Accounts era ~ ShelleyAccounts era
+  ) =>
+  ShelleyInstantStake era ->
+  ShelleyAccounts era ->
+  Stake
+resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} sas =
   Stake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
   where
-    !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake umap
+    ShelleyAccounts {saStates, saPtrs} = sas
+    !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake sas
     addPtrStake !acc ptr ptrStake = fromMaybe acc $ do
-      cred <- Map.lookup ptr ptrMap
-      -- Ensure only active staking credential receive Ptr delegations
-      _ <- UM.umElemRDActive =<< Map.lookup cred triplesMap
+      cred <- Map.lookup ptr saPtrs
+      -- Ensure only staking credential that delegates to a pool receive Ptr delegations
+      accountState :: AccountState era <- Map.lookup cred saStates
+      _ <- accountState ^. stakePoolDelegationAccountStateL
       let plusPtrStake =
             Just . \case
               Nothing -> ptrStake
               Just curStake -> curStake <> ptrStake
       -- instant stake is guaranteed to be non-zero due to minUTxO, so no need to guard against mempty
-      pure $! Map.alter plusPtrStake cred acc
+      pure $ Map.alter plusPtrStake cred acc

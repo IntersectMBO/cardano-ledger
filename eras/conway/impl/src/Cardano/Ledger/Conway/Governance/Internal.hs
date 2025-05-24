@@ -49,7 +49,6 @@ module Cardano.Ledger.Conway.Governance.Internal (
   rsDelayedL,
   epochStateStakeDistrL,
   epochStateRegDrepL,
-  epochStateUMapL,
   ratifySignalL,
   reStakePoolDistrL,
   reDRepDistrL,
@@ -110,10 +109,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.Shelley.LedgerState (
-  epochStateStakeDistrL,
-  epochStateUMapL,
- )
+import Cardano.Ledger.Shelley.LedgerState (epochStateStakeDistrL)
 import Cardano.Ledger.UMap
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -568,7 +564,7 @@ data RatifyEnv era = RatifyEnv
   , reDRepState :: Map (Credential 'DRepRole) DRepState
   , reCurrentEpoch :: EpochNo
   , reCommitteeState :: CommitteeState era
-  , reDelegatees :: Map (Credential 'Staking) DRep
+  , reAccounts :: Accounts era
   , rePoolParams :: Map (KeyHash 'StakePool) PoolParams
   }
   deriving (Generic)
@@ -594,11 +590,11 @@ reCurrentEpochL = lens reCurrentEpoch (\x y -> x {reCurrentEpoch = y})
 reCommitteeStateL :: Lens' (RatifyEnv era) (CommitteeState era)
 reCommitteeStateL = lens reCommitteeState (\x y -> x {reCommitteeState = y})
 
-deriving instance Show (InstantStake era) => Show (RatifyEnv era)
+deriving instance (Show (InstantStake era), Show (Accounts era)) => Show (RatifyEnv era)
 
-deriving instance Eq (InstantStake era) => Eq (RatifyEnv era)
+deriving instance (Eq (InstantStake era), Eq (Accounts era)) => Eq (RatifyEnv era)
 
-instance Default (InstantStake era) => Default (RatifyEnv era) where
+instance (Default (InstantStake era), Default (Accounts era)) => Default (RatifyEnv era) where
   def =
     RatifyEnv
       def
@@ -607,10 +603,13 @@ instance Default (InstantStake era) => Default (RatifyEnv era) where
       Map.empty
       (EpochNo 0)
       def
-      Map.empty
+      def
       Map.empty
 
-instance (Typeable era, NoThunks (InstantStake era)) => NoThunks (RatifyEnv era) where
+instance
+  (Typeable era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
+  NoThunks (RatifyEnv era)
+  where
   showTypeOf _ = "RatifyEnv"
   wNoThunks ctxt (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     allNoThunks
@@ -624,7 +623,7 @@ instance (Typeable era, NoThunks (InstantStake era)) => NoThunks (RatifyEnv era)
       , noThunks ctxt poolps
       ]
 
-instance (Era era, NFData (InstantStake era)) => NFData (RatifyEnv era) where
+instance (Era era, NFData (InstantStake era), NFData (Accounts era)) => NFData (RatifyEnv era) where
   rnf (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     stake `deepseq`
       pool `deepseq`
@@ -635,7 +634,10 @@ instance (Era era, NFData (InstantStake era)) => NFData (RatifyEnv era) where
                 delegatees `deepseq`
                   rnf poolps
 
-instance (Era era, EncCBOR (InstantStake era)) => EncCBOR (RatifyEnv era) where
+instance
+  (Era era, EncCBOR (InstantStake era), EncCBOR (Accounts era)) =>
+  EncCBOR (RatifyEnv era)
+  where
   encCBOR env@(RatifyEnv _ _ _ _ _ _ _ _) =
     let RatifyEnv {..} = env
      in encode $
@@ -646,10 +648,13 @@ instance (Era era, EncCBOR (InstantStake era)) => EncCBOR (RatifyEnv era) where
             !> To reDRepState
             !> To reCurrentEpoch
             !> To reCommitteeState
-            !> To reDelegatees
+            !> To reAccounts
             !> To rePoolParams
 
-instance (Era era, DecCBOR (InstantStake era)) => DecCBOR (RatifyEnv era) where
+instance
+  (Era era, DecCBOR (InstantStake era), DecCBOR (Accounts era)) =>
+  DecCBOR (RatifyEnv era)
+  where
   decCBOR =
     decode $
       RecD RatifyEnv

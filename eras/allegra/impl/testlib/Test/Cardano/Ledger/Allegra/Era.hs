@@ -22,7 +22,12 @@ class
   ) =>
   AllegraEraTest era
 
-instance EraTest AllegraEra
+instance EraTest AllegraEra where
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest AllegraEra
 

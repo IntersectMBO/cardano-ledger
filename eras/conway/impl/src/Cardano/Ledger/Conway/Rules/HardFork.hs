@@ -16,12 +16,11 @@ module Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHardForkEvent (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   BaseM,
@@ -73,26 +72,26 @@ hardforkTransition = do
       pure $
         epochState
           & esLStateL . lsCertStateL %~ \certState ->
-            let umap = certState ^. certDStateL . dsUnifiedL
+            let accountsMap = certState ^. certDStateL . accountsL . accountsMapL
                 dReps =
                   -- Reset all delegations in order to remove any inconsistencies
                   -- Delegations will be reset accordingly below.
                   Map.map (\dRepState -> dRepState {drepDelegs = Set.empty}) $
                     certState ^. certVStateL . vsDRepsL
-                (dRepsWithDelegations, elemsWithoutUnknownDRepDelegations) =
-                  Map.mapAccumWithKey adjustDelegations dReps (UM.umElems umap)
-                adjustDelegations ds stakeCred umElem@(UM.UMElem rd ptr stakePool mDrep) =
-                  case mDrep of
-                    SJust (DRepCredential dRep) ->
+                (dRepsWithDelegations, accountsWithoutUnknownDRepDelegations) =
+                  Map.mapAccumWithKey adjustDelegations dReps accountsMap
+                adjustDelegations ds stakeCred accountState =
+                  case accountState ^. dRepDelegationAccountStateL of
+                    Just (DRepCredential dRep) ->
                       let addDelegation _ dRepState =
                             Just $ dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
                        in case Map.updateLookupWithKey addDelegation dRep ds of
-                            (Nothing, _) -> (ds, UM.UMElem rd ptr stakePool SNothing)
-                            (Just _, ds') -> (ds', umElem)
-                    _ -> (ds, umElem)
+                            (Nothing, _) -> (ds, accountState & dRepDelegationAccountStateL .~ Nothing)
+                            (Just _, ds') -> (ds', accountState)
+                    _ -> (ds, accountState)
              in certState
                   -- Remove dangling delegations to non-existent DReps:
-                  & (certDStateL . dsUnifiedL .~ umap {UM.umElems = elemsWithoutUnknownDRepDelegations})
+                  & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
                   -- Populate DRep delegations with delegatees
-                  & (certVStateL . vsDRepsL .~ dRepsWithDelegations)
+                  & certVStateL . vsDRepsL .~ dRepsWithDelegations
     else pure epochState
