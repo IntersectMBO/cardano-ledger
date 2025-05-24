@@ -756,8 +756,19 @@ votingSpec =
       let ProtVer major minor = pp ^. ppProtocolVersionL
       gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
       hotCred <- KeyHashObj <$> freshKeyHash
-      submitFailingVote (CommitteeVoter hotCred) gaId $
-        [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
+      ifMajorVersionAtMost @10
+        ( submitFailingVote
+            (CommitteeVoter hotCred)
+            gaId
+            [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
+        )
+        ( submitFailingVote
+            (CommitteeVoter hotCred)
+            gaId
+            [ injectFailure $ UnelectedCommitteeVoters [hotCred]
+            , injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]
+            ]
+        )
       poolId <- freshKeyHash
       submitFailingVote (StakePoolVoter poolId) gaId $
         [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]

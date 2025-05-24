@@ -411,7 +411,7 @@ failOnNonEmpty :: Foldable f => f a -> (NonEmpty a -> PredicateFailure sts) -> R
 failOnNonEmpty cond onNonEmpty = liftF $ Predicate (failureOnNonEmpty cond onNonEmpty) id ()
 
 -- | Produce a failure when supplied foldable is not empty, contents of which will be
--- converted to a NonEmpty list and theh can be used inside the  failure.
+-- converted to a NonEmpty list and theh can be used inside the failure.
 failureOnNonEmpty :: Foldable f => f a -> (NonEmpty a -> e) -> Validation (NonEmpty e) ()
 failureOnNonEmpty cond = failureOnJust (NE.nonEmpty (F.toList cond))
 

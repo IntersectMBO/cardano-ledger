@@ -14,6 +14,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure (UnelectedCommitteeVoters),
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (BadInputsUTxO),
   maxRefScriptSizePerTx,
@@ -43,6 +44,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , ApplyTx era
   ) =>
@@ -291,11 +293,9 @@ spec = do
                       (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
                   )
 
-      txFixed <-
-        submitFailingMempoolTx "unallowed votes" tx $
-          pure . injectFailure . ConwayMempoolFailure $
-            "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
-
-      -- The tx should pass all other rules
-      withNoFixup $
-        submitTx_ txFixed
+      ifMajorVersionAtMost @10
+        ( submitFailingMempoolTx_ "unallowed votes" tx $
+            pure . injectFailure . ConwayMempoolFailure $
+              "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
+        )
+        (submitFailingTx tx [injectFailure $ UnelectedCommitteeVoters [ccHot]])
