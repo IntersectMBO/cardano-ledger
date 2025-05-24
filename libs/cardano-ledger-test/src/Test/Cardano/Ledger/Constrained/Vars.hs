@@ -72,6 +72,7 @@ import Cardano.Ledger.Conway.State (
  )
 import Cardano.Ledger.Core (
   Era,
+  EraPParams,
   PParams,
   TxOut,
   TxWits,
@@ -134,6 +135,7 @@ import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
+import Data.TreeDiff (toExpr)
 import qualified Data.VMap as VMap
 import Data.Word (Word16, Word32, Word64)
 import GHC.Stack (HasCallStack)
@@ -178,12 +180,12 @@ import Test.Cardano.Ledger.Constrained.Env (
  )
 import Test.Cardano.Ledger.Constrained.Lenses
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
-import Test.Cardano.Ledger.Generic.PrettyCore (ppString, withEraPParams)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody, newWitnesses)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
@@ -197,7 +199,7 @@ import Type.Reflection (Typeable, typeRep)
 -- Where fooPart1 :: Term era a, and fooPart2 :: Term era b
 -- And fooPart1 has an (Access foo a)
 -- And fooPart2 has an (Access foo b)
-field :: Era era => Rep era s -> Term era t -> AnyF era s
+field :: (EraTest era, Reflect era) => Rep era s -> Term era t -> AnyF era s
 field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> AnyF (Field name rept repS2 l)
   Nothing ->
@@ -210,7 +212,7 @@ field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
       )
 field _ term = error ("field can only be applied to variable terms: " ++ show term)
 
-getName :: Term era t -> Name era
+getName :: (EraTest era, Reflect era) => Term era t -> Name era
 getName (Var v) = Name v
 getName x = error ("nameOf can't find the name in: " ++ show x)
 
@@ -481,7 +483,8 @@ govL = lens f g
     g (GovState p@Babbage _) y = GovState p y
     g (GovState p@Conway _) y = GovState p y
 
-govStateT :: forall era. Era era => Proof era -> RootTarget era (GovState era) (GovState era)
+govStateT ::
+  forall era. EraTest era => Proof era -> RootTarget era (GovState era) (GovState era)
 govStateT p@Shelley = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@Allegra = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@Mary = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
@@ -1007,7 +1010,8 @@ newEpochStateConstr
 
 -- | Target for NewEpochState
 newEpochStateT ::
-  forall era. Reflect era => Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
+  forall era.
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
 newEpochStateT proof =
   Invert "NewEpochState" (typeRep @(NewEpochState era)) (newEpochStateConstr proof)
     :$ Lensed currentEpoch nesELL
@@ -1018,7 +1022,8 @@ newEpochStateT proof =
 
 -- | Target for EpochState
 epochStateT ::
-  forall era. Reflect era => Proof era -> RootTarget era (EpochState era) (EpochState era)
+  forall era.
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (EpochState era) (EpochState era)
 epochStateT proof =
   Invert "EpochState" (typeRep @(EpochState era)) epochStateFun
     :$ Shift accountStateT chainAccountStateL
@@ -1036,7 +1041,8 @@ accountStateT =
 
 -- | Target for LedgerState
 ledgerStateT ::
-  forall era. Reflect era => Proof era -> RootTarget era (LedgerState era) (LedgerState era)
+  forall era.
+  (Reflect era, EraTest era) => Proof era -> RootTarget era (LedgerState era) (LedgerState era)
 ledgerStateT proof =
   Invert "LedgerState" (typeRep @(LedgerState era)) ledgerStateFun
     :$ Shift (utxoStateT proof) lsUTxOStateL
@@ -1053,7 +1059,8 @@ ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
 utxoStateT ::
-  forall era. Gov.EraGov era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
+  forall era.
+  EraTest era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
 utxoStateT p =
   Invert "UTxOState" (typeRep @(UTxOState era)) (unReflect utxofun p)
     :$ Lensed (utxo p) (utxoL . unUtxoL p)
@@ -1186,74 +1193,74 @@ instantaneousRewardsT =
 allvars :: String
 allvars = show (ppTarget (newEpochStateT Conway))
 
-printTarget :: RootTarget era root t -> IO ()
+printTarget :: (EraTest era, Reflect era) => RootTarget era root t -> IO ()
 printTarget t = putStrLn (show (ppTarget t))
 
 -- =====================================================================
 -- PParams fields
 
 -- | ProtVer in pparams
-protVer :: Era era => Proof era -> Term era ProtVer
+protVer :: EraPParams era => Proof era -> Term era ProtVer
 protVer proof =
   Var
     ( pV
         proof
         "protVer"
         (ProtVerR proof)
-        (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppProtocolVersionL))
+        (Yes (PParamsR proof) (pparamsWrapperL . ppProtocolVersionL))
     )
 
 -- | ProtVer in prevPParams
-prevProtVer :: Era era => Proof era -> Term era ProtVer
+prevProtVer :: EraPParams era => Proof era -> Term era ProtVer
 prevProtVer proof =
   Var
     ( pV
         proof
         "prevProtVer"
         (ProtVerR proof)
-        (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppProtocolVersionL))
+        (Yes (PParamsR proof) (pparamsWrapperL . ppProtocolVersionL))
     )
 
-minFeeA :: Era era => Proof era -> Term era Coin
+minFeeA :: EraPParams era => Proof era -> Term era Coin
 minFeeA proof =
   Var
     ( pV
         proof
         "minFeeA"
         CoinR
-        (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppMinFeeAL))
+        (Yes (PParamsR proof) (pparamsWrapperL . ppMinFeeAL))
     )
 
-minFeeB :: Era era => Proof era -> Term era Coin
+minFeeB :: EraPParams era => Proof era -> Term era Coin
 minFeeB proof =
   Var
     ( pV
         proof
         "minFeeB"
         CoinR
-        (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppMinFeeBL))
+        (Yes (PParamsR proof) (pparamsWrapperL . ppMinFeeBL))
     )
 
 -- | Max Block Body Size
-maxBBSize :: Era era => Proof era -> Term era Natural
+maxBBSize :: EraPParams era => Proof era -> Term era Natural
 maxBBSize p =
   Var
     ( pV
         p
         "maxBBSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBBSizeL . word32NaturalL)))
+        (Yes (PParamsR p) ((pparamsWrapperL . ppMaxBBSizeL . word32NaturalL)))
     )
 
 -- | Max Tx Size
-maxTxSize :: Era era => Proof era -> Term era Natural
+maxTxSize :: EraPParams era => Proof era -> Term era Natural
 maxTxSize p =
   Var
     ( pV
         p
         "maxTxSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxTxSizeL . word32NaturalL)))
+        (Yes (PParamsR p) ((pparamsWrapperL . ppMaxTxSizeL . word32NaturalL)))
     )
 
 fromIntegralBounded ::
@@ -1280,33 +1287,33 @@ word16NaturalL :: Lens' Word16 Natural
 word16NaturalL = lens fromIntegral (\_ y -> fromIntegralBounded "word16NaturalL" (toInteger y))
 
 -- | Max Block Header Size
-maxBHSize :: Era era => Proof era -> Term era Natural
+maxBHSize :: EraPParams era => Proof era -> Term era Natural
 maxBHSize p =
   Var
     ( pV
         p
         "maxBHSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL . word16NaturalL)))
+        (Yes (PParamsR p) ((pparamsWrapperL . ppMaxBHSizeL . word16NaturalL)))
     )
 
-poolDepAmt :: Era era => Proof era -> Term era Coin
+poolDepAmt :: EraPParams era => Proof era -> Term era Coin
 poolDepAmt p =
   Var $
     pV
       p
       "poolDepAmt"
       CoinR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppPoolDepositL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppPoolDepositL)))
 
-keyDepAmt :: Era era => Proof era -> Term era Coin
+keyDepAmt :: EraPParams era => Proof era -> Term era Coin
 keyDepAmt p =
   Var $
     pV
       p
       "keyDepAmt"
       CoinR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppKeyDepositL)))
 
 proposalDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
 proposalDeposit p =
@@ -1315,7 +1322,7 @@ proposalDeposit p =
       p
       "proposalDeposit"
       CoinR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppGovActionDepositL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppGovActionDepositL)))
 
 maxTxExUnits :: AlonzoEraPParams era => Proof era -> Term era ExUnits
 maxTxExUnits p =
@@ -1324,7 +1331,7 @@ maxTxExUnits p =
       p
       "maxTxExUnits"
       ExUnitsR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxTxExUnitsL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppMaxTxExUnitsL)))
 
 collateralPercentage :: AlonzoEraPParams era => Proof era -> Term era Natural
 collateralPercentage p =
@@ -1333,12 +1340,12 @@ collateralPercentage p =
       p
       "collateralPercentage"
       NaturalR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppCollateralPercentageL)))
 
 drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
 drepDeposit p =
   Var $
-    pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+    pV p "drepDeposit" CoinR (Yes (PParamsR p) ((pparamsWrapperL . ppDRepDepositL)))
 
 drepActivity :: ConwayEraPParams era => Proof era -> Term era Base.EpochInterval
 drepActivity p =
@@ -1347,16 +1354,16 @@ drepActivity p =
       p
       "drepActivty"
       EpochIntervalR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppDRepActivityL)))
 
-maxEpoch :: Era era => Proof era -> Term era Base.EpochInterval
+maxEpoch :: EraPParams era => Proof era -> Term era Base.EpochInterval
 maxEpoch p =
   Var $
     pV
       p
       "maxEpoch"
       EpochIntervalR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppEMaxL)))
+      (Yes (PParamsR p) ((pparamsWrapperL . ppEMaxL)))
 
 -- =================================================================
 -- TxBody vars
@@ -1798,14 +1805,14 @@ pulsingPairT proof =
     (typeRep @(UtxoPulse era))
     (\utx a b c d e f g h -> (utx, initPulser proof utx a b c d e f g h))
     :$ Lensed (utxo proof) _1
-    :$ Virtual drepDelegation (ppString "prevDRepDelegations") (_2 . prevDRepDelegationsL)
-    :$ Virtual poolDistr (ppString "prevPoolDistr") (_2 . prevPoolDistrL)
-    :$ Virtual currentDRepState (ppString "prevDRepState") (_2 . prevDRepStateL)
-    :$ Virtual currentEpoch (ppString "prevEpoch") (_2 . prevEpochL)
-    :$ Virtual committeeState (ppString "prevCommitteeState") (_2 . prevCommitteeStateL)
+    :$ Virtual drepDelegation (toExpr "prevDRepDelegations") (_2 . prevDRepDelegationsL)
+    :$ Virtual poolDistr (toExpr "prevPoolDistr") (_2 . prevPoolDistrL)
+    :$ Virtual currentDRepState (toExpr "prevDRepState") (_2 . prevDRepStateL)
+    :$ Virtual currentEpoch (toExpr "prevEpoch") (_2 . prevEpochL)
+    :$ Virtual committeeState (toExpr "prevCommitteeState") (_2 . prevCommitteeStateL)
     :$ Shift enactStateT (_2 . prevEnactStateL)
-    :$ Virtual currGovStates (ppString "prevProposals") (_2 . ratifyGovActionStatesL)
-    :$ Virtual regPools (ppString "prevPoolParams") (_2 . prevRegPoolsL)
+    :$ Virtual currGovStates (toExpr "prevProposals") (_2 . ratifyGovActionStatesL)
+    :$ Virtual regPools (toExpr "prevPoolParams") (_2 . prevRegPoolsL)
 
 -- TODO access prevTreasury from the EnactState
 --  :$ Virtual treasury (ppString "prevTreasury") (_2 . prevTreasuryL)
@@ -1820,14 +1827,14 @@ justPulser ::
     (DRepPulser era Identity (RatifyState era))
 justPulser p =
   Invert "DRepPulser" (typeRep @(DRepPulser era Identity (RatifyState era))) (initPulser p Map.empty)
-    :$ Virtual drepDelegation (ppString "prevDRepDelegations") prevDRepDelegationsL
-    :$ Virtual poolDistr (ppString "prevPoolDistr") prevPoolDistrL
-    :$ Virtual currentDRepState (ppString "prevDRepState") prevDRepStateL
-    :$ Virtual currentEpoch (ppString "prevEpoch") prevEpochL
-    :$ Virtual committeeState (ppString "prevCommitteeState") prevCommitteeStateL
+    :$ Virtual drepDelegation (toExpr "prevDRepDelegations") prevDRepDelegationsL
+    :$ Virtual poolDistr (toExpr "prevPoolDistr") prevPoolDistrL
+    :$ Virtual currentDRepState (toExpr "prevDRepState") prevDRepStateL
+    :$ Virtual currentEpoch (toExpr "prevEpoch") prevEpochL
+    :$ Virtual committeeState (toExpr "prevCommitteeState") prevCommitteeStateL
     :$ Shift enactStateT prevEnactStateL
-    :$ Virtual currGovStates (ppString "prevProposals") ratifyGovActionStatesL
-    :$ Virtual regPools (ppString "prevPoolParams") prevRegPoolsL
+    :$ Virtual currGovStates (toExpr "prevProposals") ratifyGovActionStatesL
+    :$ Virtual regPools (toExpr "prevPoolParams") prevRegPoolsL
 
 -- TODO access prevTreasury from the EnactState
 -- :$ Virtual treasury (ppString "prevTreasury") (prevTreasuryL)
@@ -1867,7 +1874,7 @@ prevPulsingPreds p =
 --   from 'drepPulser' :: forall era. Term era (DRepPulser era Identity (RatifyState era))
 pulsingPulsingStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, ConwayEraCertState era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraTest era) =>
   RootTarget era (DRepPulsingState era) (DRepPulsingState era)
 pulsingPulsingStateT =
   Invert "DRPulsing" (typeRep @(DRepPulsingState era)) DRPulsing
@@ -2115,7 +2122,7 @@ prevRegPoolsL =
 
 conwayGovStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, ConwayEraCertState era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraTest era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =

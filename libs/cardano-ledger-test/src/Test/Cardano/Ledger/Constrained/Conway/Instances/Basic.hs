@@ -2,6 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -62,6 +63,7 @@ import Numeric.Natural (Natural)
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Era ()
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 import Text.PrettyPrint.HughesPJ (Doc)
 
@@ -294,10 +296,14 @@ data SimplePParams era = SimplePParams
   , dRepActivity :: EpochInterval
   , minFeeRefScriptCostPerByte :: NonNegativeInterval
   }
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, ToExpr)
+
+instance ToExpr PoolVotingThresholds
+
+instance ToExpr DRepVotingThresholds
 
 instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
-  show x = show (subsetToPP @era x)
+  show x = show (toExpr (subsetToPP @era x))
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
@@ -393,6 +399,7 @@ instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (FuturePParam
 class
   ( Eq (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , EraPParams era

@@ -85,7 +85,11 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
+import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Conway.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 -- ============================================
 

@@ -26,10 +26,12 @@ import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
+import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Fields (
   abstractTx,
@@ -50,7 +52,6 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), pcLedgerState, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (
   Gen1,
@@ -70,6 +71,7 @@ import Test.Cardano.Ledger.Generic.TxGen (
   genUTxO,
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace (Trace (..), lastState)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Test.QuickCheck
@@ -148,7 +150,8 @@ testTxValidForLEDGER ::
   ( Reflect era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , PrettyA (PredicateFailure (EraRule "LEDGER" era))
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , EraTest era
   ) =>
   Proof era ->
   Box era ->
@@ -162,11 +165,11 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
         totalAda ledgerState' === totalAda ledgerState
     Left errs ->
       counterexample
-        ( show (pcLedgerState proof ledgerState)
+        ( show (toExpr ledgerState)
             ++ "\n\n"
-            ++ show (pcTx proof vtx)
+            ++ show (toExpr vtx)
             ++ "\n\n"
-            ++ show (prettyA errs)
+            ++ show (toExpr errs)
         )
         (property False)
 
@@ -409,14 +412,14 @@ makeGen :: Reflect era => Proof era -> (Proof era -> GenRS era b) -> Gen b
 makeGen proof computeWith = fst <$> runGenRS proof def (computeWith proof)
 
 runTest ::
-  (Reflect era, PrettyA a) =>
+  (Reflect era, ToExpr a) =>
   (Proof era -> GenRS era a) ->
   (a -> IO ()) ->
   Proof era ->
   IO ()
 runTest computeWith action proof = do
   ans <- generate (makeGen proof computeWith)
-  print (prettyA ans)
+  print (toExpr ans)
   action ans
 
 main2 :: IO ()

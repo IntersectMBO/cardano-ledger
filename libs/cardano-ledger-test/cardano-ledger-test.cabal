@@ -92,11 +92,8 @@ library
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.MockChain
     Test.Cardano.Ledger.Generic.ModelState
-    Test.Cardano.Ledger.Generic.PrettyCore
-    Test.Cardano.Ledger.Generic.PrettyTest
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Properties
-    Test.Cardano.Ledger.Generic.Same
     Test.Cardano.Ledger.Generic.Scriptic
     Test.Cardano.Ledger.Generic.Trace
     Test.Cardano.Ledger.Generic.TxGen
@@ -123,7 +120,6 @@ library
     QuickCheck,
     array,
     base >=4.18 && <5,
-    bech32,
     bytestring,
     cardano-crypto,
     cardano-crypto-class,

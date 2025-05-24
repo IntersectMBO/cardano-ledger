@@ -24,6 +24,7 @@ import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
+import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
@@ -31,7 +32,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
-import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck hiding (witness)
 import Test.Tasty
@@ -49,7 +49,7 @@ genContext ::
 genContext = do
   univ <- genWitUniv @ConwayEra 200
   delegatees <- genFromSpec (delegateeSpec univ)
-  wdrls <- genFromSpec (constrained $ \x -> (witness univ x))
+  wdrls <- genFromSpec (constrained $ \x -> witness univ x)
   pure (univ, delegatees, wdrls)
 
 ------------------------------------------------------------------------
@@ -70,14 +70,14 @@ stsPropertyV2 ::
   , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
   , BaseM (EraRule r era) ~ ReaderT Globals Identity
-  , PrettyA st
-  , PrettyA sig
-  , PrettyA env
-  , PrettyA fail
   , Testable p
   , HasSpec env
   , HasSpec st
   , HasSpec sig
+  , ToExpr env
+  , ToExpr st
+  , ToExpr sig
+  , ToExpr fail
   ) =>
   Specification env ->
   (env -> Specification st) ->
@@ -95,14 +95,14 @@ stsPropertyV2' ::
   , PredicateFailure (EraRule r ConwayEra) ~ fail
   , STS (EraRule r ConwayEra)
   , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Identity
-  , PrettyA st
-  , PrettyA sig
-  , PrettyA env
-  , PrettyA fail
   , Testable p
   , HasSpec env
   , HasSpec st
   , HasSpec sig
+  , ToExpr env
+  , ToExpr st
+  , ToExpr sig
+  , ToExpr fail
   ) =>
   Specification env ->
   (env -> Specification st) ->
@@ -114,15 +114,15 @@ stsPropertyV2' ::
   Property
 stsPropertyV2' specEnv specState specSig specPostState prop =
   uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
-    counterexample (show $ ppString "env = " <> prettyA env) $
+    counterexample (show $ toExpr env) $
       uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
-        counterexample (show $ ppString "st = " <> prettyA st) $
+        counterexample (show $ toExpr st) $
           uncurry forAllShrinkBlind (genShrinkFromSpec $ specSig env st) $ \sig ->
-            counterexample (show $ ppString "sig = " <> prettyA sig) $
+            counterexample (show $ toExpr sig) $
               runShelleyBase $ do
                 res <- applySTS @(EraRule r ConwayEra) $ TRC (env, st, sig)
                 pure $ case res of
-                  Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
+                  Left pfailures -> counterexample (show $ toExpr pfailures) $ property False
                   Right st' ->
                     case conformsToSpecE
                       st
@@ -131,10 +131,8 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
                       Just es -> counterexample (unlines (NE.toList es)) False
                       Nothing ->
                         counterexample
-                          ( show $
-                              ppString "st' = "
-                                <> prettyA st'
-                                <> ppString ("\nspec = \n" ++ show (specState env))
+                          ( show
+                              (toExpr st', show (specState env))
                           )
                           $ prop env st sig st'
 

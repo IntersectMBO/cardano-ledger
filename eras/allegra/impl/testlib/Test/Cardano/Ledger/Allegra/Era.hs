@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,6 +20,7 @@ class
   , AllegraEraTxBody era
   , AllegraEraTxAuxData era
   , AllegraEraScript era
+  , NativeScript era ~ Timelock era
   ) =>
   AllegraEraTest era
 

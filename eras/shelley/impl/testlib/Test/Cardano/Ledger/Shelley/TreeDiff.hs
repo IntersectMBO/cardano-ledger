@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.Shelley.UTxO
 import Test.Cardano.Ledger.TreeDiff
 
 -- PParams
@@ -159,6 +160,8 @@ instance
 
 instance ToExpr (ShelleyInstantStake era)
 
+instance ToExpr (ShelleyScriptsNeeded era)
+
 -- Rules/Utxo
 instance
   ( ToExpr (EraRuleFailure "PPUP" era)
@@ -279,3 +282,40 @@ instance
   ToExpr (ShelleyLedgersPredFailure era)
 
 instance EraCertState era => ToExpr (ShelleyCertState era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyPredFailure era)
+
+instance
+  ToExpr (State (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyState era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
+  ) =>
+  ToExpr (ShelleyTickPredFailure era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "EPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "MIR" era))
+  ) =>
+  ToExpr (ShelleyNewEpochPredFailure era)
+
+instance
+  ( ToExpr (UpecPredFailure era)
+  , ToExpr (PredicateFailure (EraRule "POOLREAP" era))
+  , ToExpr (PredicateFailure (EraRule "SNAP" era))
+  ) =>
+  ToExpr (ShelleyEpochPredFailure era)
+
+instance ToExpr (ShelleyUpecPredFailure era)
+
+instance ToExpr (ShelleyPoolreapPredFailure era)
+
+instance ToExpr (ShelleySnapPredFailure era)
+
+instance ToExpr (ShelleyMirPredFailure era)
+
+instance ToExpr (ShelleyRupdPredFailure era)

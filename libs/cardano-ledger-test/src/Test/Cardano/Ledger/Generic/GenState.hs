@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -132,12 +134,15 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (Expr, ToExpr (toExpr))
+import GHC.Generics (Generic)
 import GHC.Word (Word32, Word64)
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
@@ -153,27 +158,10 @@ import Test.Cardano.Ledger.Generic.ModelState (
   mKeyDeposits,
   mNewEpochStateZero,
   mPoolDeposits,
-  pcModelNewEpochState,
- )
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcCoin,
-  pcCredential,
-  pcIndividualPoolStake,
-  pcKeyHash,
-  pcPoolParams,
-  pcTxIn,
-  pcTxOut,
-  ppInt,
-  ppMap,
-  ppRecord,
-  ppSet,
-  ppString,
-  ppValidityInterval,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
+import Test.Cardano.Ledger.Shelley.Era
 import Test.Tasty.QuickCheck (
   Gen,
   Positive (..),
@@ -206,12 +194,15 @@ data GenSize = GenSize
   , regCertFreq :: !Int
   , delegCertFreq :: !Int
   }
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToExpr GenSize
 
 data GenEnv era = GenEnv
   { gePParams :: PParams era
   , geSize :: GenSize
   }
+  deriving (Generic)
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
@@ -237,6 +228,9 @@ data GenState era = GenState
   , gsGenEnv :: !(GenEnv era)
   , gsSeedIdx :: !Int
   }
+  deriving (Generic)
+
+instance EraTest era => ToExpr (GenEnv era)
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
 emptyGenState proof genv =
@@ -311,7 +305,9 @@ data PlutusPurposeTag
   | Rewarding
   | Voting
   | Proposing
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Show, Enum, Bounded, Generic)
+
+instance ToExpr PlutusPurposeTag
 
 plutusPurposeTags :: Proof era -> [PlutusPurposeTag]
 plutusPurposeTags = \case
@@ -775,39 +771,19 @@ genValidityInterval (SlotNo s) = do
 
 -- =================================================================
 
-pcGenState :: forall era. Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof gs =
-  ppRecord
-    "GenState Summary"
-    [ ("ValidityInterval", ppValidityInterval (gsValidityInterval gs))
-    , ("Keymap", ppInt (Map.size (gsKeys gs)))
-    , ("Scriptmap", ppInt (Map.size (gsScripts gs)))
-    , ("PlutusScripts", ppInt (Map.size (gsPlutusScripts gs)))
-    , ("Datums", ppInt (Map.size (gsDatums gs)))
-    , ("VI-ScriptMap", ppInt (Map.size (gsVI gs)))
-    , ("Model", pcModelNewEpochState @era proof (gsModel gs))
-    , ("Initial Utxo", ppMap pcTxIn (pcTxOut @era proof) (gsInitialUtxo gs))
-    , ("Initial Rewards", ppMap pcCredential pcCoin (gsInitialRewards gs))
-    , ("Initial SPoolUView", ppMap pcCredential pcKeyHash (gsInitialDelegations gs))
-    , ("Initial PoolParams", ppMap pcKeyHash pcPoolParams (gsInitialPoolParams gs))
-    , ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake (gsInitialPoolDistr gs))
-    , ("Stable PoolParams", ppSet pcKeyHash (gsStablePools gs))
-    , ("Stable Delegators", ppSet pcCredential (gsStableDelegators gs))
-    , ("Previous RegKey", ppSet pcCredential (gsAvoidCred gs))
-    , ("GenEnv", ppString "GenEnv ...")
-    , ("Proof", ppString (show (gsProof gs)))
-    ]
+pcGenState :: ShelleyEraTest era => GenState era -> Expr
+pcGenState = toExpr
 
 -- | Helper function for development and debugging in ghci
-viewGenState :: Reflect era => Proof era -> GenSize -> Bool -> IO ()
+viewGenState :: (Reflect era, ShelleyEraTest era) => Proof era -> GenSize -> Bool -> IO ()
 viewGenState proof gsize verbose = do
   st <- generate (genGenState proof gsize)
-  when verbose $ print (pcGenState proof st)
+  when verbose $ print (pcGenState st)
 
-instance Reflect era => PrettyA (GenState era) where prettyA = pcGenState reify
+instance ShelleyEraTest era => ToExpr (GenState era)
 
-instance Reflect era => Show (GenState era) where
-  show x = show (pcGenState reify x)
+instance (Reflect era, ShelleyEraTest era) => Show (GenState era) where
+  show x = show (pcGenState x)
 
 -- =====================================================================
 -- Build an Initial LedgerState for a Trace from a GenState, after

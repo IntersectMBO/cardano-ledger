@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -63,13 +64,14 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Set as Set
 import Data.Word (Word32)
+import GHC.Generics
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
 -- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash)]
-  deriving (Monoid, Semigroup)
+  deriving (Monoid, Semigroup, Generic)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
 

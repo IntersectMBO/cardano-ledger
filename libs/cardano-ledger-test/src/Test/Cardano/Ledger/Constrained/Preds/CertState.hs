@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default (Default (def))
+import Data.TreeDiff (toExpr)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), unCertStateF)
@@ -31,14 +32,11 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Conway.TreeDiff ()
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  pcCertState,
-  pcDState,
-  pcPState,
-  pcVState,
- )
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.TreeDiff ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
@@ -97,7 +95,7 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -115,7 +113,7 @@ demoV mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   vstate <- monadTyped $ runTarget env vstateT
-  when (mode == Interactive) $ putStrLn (show (pcVState vstate))
+  when (mode == Interactive) . print $ toExpr vstate
   modeRepl mode proof env ""
 
 demoTestV :: TestTree
@@ -168,7 +166,7 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -185,8 +183,7 @@ demoP mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   pstate <- monadTyped $ runTarget env pstateT
-  when (mode == Interactive) $ do
-    putStrLn (show (pcPState pstate))
+  when (mode == Interactive) . print $ toExpr pstate
   modeRepl mode proof env ""
 
 demoTestP :: TestTree
@@ -309,7 +306,7 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -327,7 +324,7 @@ demoD mode seed = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   dState <- monadTyped $ runTarget env dstateT
-  when (mode == Interactive) $ putStrLn (show (pcDState dState))
+  when (mode == Interactive) . print $ toExpr dState
   modeRepl mode proof env ""
 
 demoTestD :: TestTree
@@ -352,7 +349,7 @@ demoC mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   certState <- monadTyped . runTarget env $ certStateT
-  when (mode == Interactive) $ putStrLn (show (pcCertState (unCertStateF certState)))
+  when (mode == Interactive) . print . toExpr $ unCertStateF certState
   modeRepl mode proof env ""
 
 demoTestC :: TestTree

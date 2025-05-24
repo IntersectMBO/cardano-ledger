@@ -2,15 +2,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | A 'Spec' is a first order data structure that denotes a random generator
@@ -77,7 +74,8 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   synopsis,
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra)
+import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Reflect)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
@@ -258,13 +256,13 @@ relSuperset r set = RelOper r set Nothing Set.empty
 relDisjoint r set = RelOper r Set.empty Nothing set
 relEqual r set = RelOper r set (Just set) Set.empty
 
-instance Monoid (RelSpec era dom) where
+instance (EraTest era, Reflect era) => Monoid (RelSpec era dom) where
   mempty = RelAny
 
-instance Semigroup (RelSpec era dom) where
+instance (EraTest era, Reflect era) => Semigroup (RelSpec era dom) where
   (<>) = mergeRelSpec
 
-instance Show (RelSpec era dom) where
+instance (EraTest era, Reflect era) => Show (RelSpec era dom) where
   show = showRelSpec
 
 instance LiftT (RelSpec era a) where
@@ -273,7 +271,7 @@ instance LiftT (RelSpec era a) where
   dropT (Typed (Left s)) = RelNever s
   dropT (Typed (Right x)) = x
 
-showRelSpec :: RelSpec era dom -> String
+showRelSpec :: (EraTest era, Reflect era) => RelSpec era dom -> String
 showRelSpec RelAny = "RelAny"
 showRelSpec (RelOper r x (Just s) y) | Set.null y && x == s = sepsP ["RelEqual", synopsis (SetR r) x]
 showRelSpec (RelOper r x (Just s) y) | Set.null x && Set.null y = sepsP ["RelSubset", synopsis (SetR r) s]
@@ -284,7 +282,7 @@ showRelSpec (RelOper r x (Just y) z) = sepsP ["RelOper", synopsis (SetR r) x, sy
 showRelSpec (RelLens _ repd repb relsp) = sepsP ["RelLens", "(Lens' " ++ show repd ++ " " ++ show repb ++ ")", show relsp]
 showRelSpec (RelNever _) = "RelNever"
 
-mergeRelSpec :: RelSpec era d -> RelSpec era d -> RelSpec era d
+mergeRelSpec :: (EraTest era, Reflect era) => RelSpec era d -> RelSpec era d -> RelSpec era d
 mergeRelSpec (RelNever xs) (RelNever ys) = RelNever (xs ++ ys)
 mergeRelSpec d@(RelNever _) _ = d
 mergeRelSpec _ d@(RelNever _) = d
@@ -357,18 +355,20 @@ sizeForRel (RelOper _ must (Just may) _) | Set.null must = SzMost (Set.size may)
 sizeForRel (RelOper _ must (Just may) cant) = SzRng (Set.size must) (Set.size (Set.difference may cant))
 sizeForRel (RelLens _ _ _ spec) = sizeForRel spec
 
-maybeSynopsis :: Rep e t -> Maybe t -> String
+maybeSynopsis :: (EraTest e, Reflect e) => Rep e t -> Maybe t -> String
 maybeSynopsis r (Just x) = format r x
 maybeSynopsis _ _ = ""
 
-synSet :: Ord t => Rep era t -> Set t -> String
+synSet :: (Ord t, EraTest era, Reflect era) => Rep era t -> Set t -> String
 synSet r s = synopsis (SetR r) s
 
 -- | Check that RelSpec invariants on the constructor RelOper hold on: spec@(RelOper must may cant)
 --   1)  must ⊆ may, checked by 'univSubset must may'
 --   2)  (must ∩ cant = ∅), checked by 'Set.disjoint must cant'
 --   3)  Set.size must <= Set.size (Set.difference may cant), checked by 'okSize spec'
-relOper :: Ord d => Rep era d -> Set d -> Maybe (Set d) -> Set d -> Typed (RelSpec era d)
+relOper ::
+  (Ord d, EraTest era, Reflect era) =>
+  Rep era d -> Set d -> Maybe (Set d) -> Set d -> Typed (RelSpec era d)
 relOper r must may cant =
   let potential = RelOper r must may cant
    in explain
@@ -432,7 +432,8 @@ runRelSpec s (RelLens lensdb _ _ spec) = runRelSpec (Set.map (\x -> x ^. lensdb)
 
 -- | return a generator that always generates things that meet the RelSpec
 genFromRelSpec ::
-  forall era t. (Era era, Ord t) => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
+  forall era t.
+  (Ord t, EraTest era, Reflect era) => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
 genFromRelSpec msgs g n spec =
   let msg = "genFromRelSpec " ++ show n ++ " " ++ show spec
    in case spec of
@@ -472,7 +473,9 @@ genFromRelSpec msgs g n spec =
 
 -- | Generate a random RelSpec
 --   We deliberately do NOT generate RelLens, as it is inconsistent with everything.
-genRelSpec :: Ord dom => [String] -> Gen dom -> Rep era dom -> Int -> Gen (RelSpec era dom)
+genRelSpec ::
+  (Ord dom, EraTest era, Reflect era) =>
+  [String] -> Gen dom -> Rep era dom -> Int -> Gen (RelSpec era dom)
 genRelSpec _ _ r 0 = pure $ relEqual r Set.empty
 genRelSpec msg genD r n = do
   smaller <- choose (1, min 2 (n - 1))
@@ -522,7 +525,8 @@ genDisjoint set gen = help atLeastDelta Set.empty
 -- | Generate another RelSpec, guaranteed to be consistent with the input
 --   Where (consistent a b) means:  (a <> b) =/= (RelNever _)
 --   See the property test 'genConsistent'
-genConsistentRelSpec :: [String] -> Gen dom -> RelSpec era dom -> Gen (RelSpec era dom)
+genConsistentRelSpec ::
+  (EraTest era, Reflect era) => [String] -> Gen dom -> RelSpec era dom -> Gen (RelSpec era dom)
 genConsistentRelSpec msg g x = case x of
   r@(RelLens {}) -> error ("Can't generate a consistent spec for " ++ show r)
   RelOper r must Nothing cant ->
@@ -571,10 +575,10 @@ genConsistentRelSpec msg g x = case x of
 -- ==================
 -- Actual property tests for Relpec
 
-testConsistentRel :: Gen Property
+testConsistentRel :: forall era. (EraTest era, Reflect era) => Gen Property
 testConsistentRel = do
   n <- chooseInt (3, 10)
-  s1 <- genRelSpec ["testConsistentRel " ++ show n] (choose (1, 10000)) IntR n
+  s1 <- genRelSpec @_ @era ["testConsistentRel " ++ show n] (choose (1, 10000)) IntR n
   s2 <- genConsistentRelSpec ["testConsistentRel " ++ show n ++ " " ++ show s1] (choose (1, 1000)) s1
   case s1 <> s2 of
     RelNever ms -> pure $ counterexample (unlines (["genConsistent fails", show s1, show s2] ++ ms)) False
@@ -702,13 +706,13 @@ data RngSpec era rng where
   -- | Something was inconsistent
   RngNever :: [String] -> RngSpec era rng
 
-instance Show (RngSpec era t) where
+instance (EraTest era, Reflect era) => Show (RngSpec era t) where
   show = showRngSpec
 
-instance Era era => Monoid (RngSpec era rng) where
+instance (EraTest era, Reflect era) => Monoid (RngSpec era rng) where
   mempty = RngAny
 
-instance Era era => Semigroup (RngSpec era rng) where
+instance (EraTest era, Reflect era) => Semigroup (RngSpec era rng) where
   (<>) = mergeRngSpec
 
 instance LiftT (RngSpec era a) where
@@ -717,7 +721,7 @@ instance LiftT (RngSpec era a) where
   dropT (Typed (Left s)) = RngNever s
   dropT (Typed (Right x)) = x
 
-showRngSpec :: RngSpec era t -> String
+showRngSpec :: (EraTest era, Reflect era) => RngSpec era t -> String
 showRngSpec (RngSum small sz) = sepsP ["RngSum", show small, show sz]
 showRngSpec (RngProj small xrep _l sz) = sepsP ["RngProj", show small, show xrep, show sz]
 showRngSpec (RngElem r cs) = sepsP ["RngElem", show r, synopsis (ListR r) cs]
@@ -725,7 +729,8 @@ showRngSpec (RngRel x) = sepsP ["RngRel", show x]
 showRngSpec RngAny = "RngAny"
 showRngSpec (RngNever _) = "RngNever"
 
-mergeRngSpec :: forall r era. RngSpec era r -> RngSpec era r -> RngSpec era r
+mergeRngSpec ::
+  forall r era. (EraTest era, Reflect era) => RngSpec era r -> RngSpec era r -> RngSpec era r
 mergeRngSpec RngAny x = x
 mergeRngSpec x RngAny = x
 mergeRngSpec (RngRel RelAny) x = x
@@ -770,7 +775,8 @@ sizeForRng (RngNever _) = SzAny
 
 -- | Generate an arbitrary size [r] for a particular size 'n'
 --   The generated list is consistent with the RngSpec given as input.
-genFromRngSpec :: forall era r. Era era => [String] -> Gen r -> Int -> RngSpec era r -> Gen [r]
+genFromRngSpec ::
+  forall era r. (EraTest era, Reflect era) => [String] -> Gen r -> Int -> RngSpec era r -> Gen [r]
 genFromRngSpec msgs genr n x = case x of
   (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ (msg : msgs))
   RngAny -> vectorOf n genr
@@ -790,7 +796,7 @@ genFromRngSpec msgs genr n x = case x of
 --   (EQL, LTH, LTE, GTE, GTH) in RngSum and RngProj, we make the total a bit larger than 'n'
 genRngSpec ::
   forall w era.
-  (Ord w, Adds w) =>
+  (Ord w, Adds w, EraTest era, Reflect era) =>
   Gen w ->
   Rep era w ->
   -- Rep era c ->
@@ -832,7 +838,7 @@ runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 genConsistentRngSpec ::
   forall era w c.
-  (Ord w, Adds w) =>
+  (Ord w, Adds w, EraTest era, Reflect era) =>
   Int ->
   Gen w ->
   Rep era w ->
@@ -915,7 +921,7 @@ testMergeRngSpec = do
               ++ "\n  n="
               ++ show n
               ++ "\n  list="
-              ++ synopsis (ListR Word64R) list
+              ++ synopsis @BabbageEra (ListR Word64R) list
               ++ "\n  run1="
               ++ show (runRngSpec list s1)
               ++ "\n run2="
@@ -961,7 +967,7 @@ manyMergeRngSpec = do
       pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
   let trips = [(x, y, m) | x <- xs, y <- ys, Just m <- [consistent x y]]
   ts <- mapM check trips
-  pure $ (n, length trips, Maybe.mapMaybe pr ts)
+  pure (n, length trips, Maybe.mapMaybe pr ts)
 
 reportManyMergeRngSpec :: IO ()
 reportManyMergeRngSpec = do
@@ -984,13 +990,13 @@ data MapSpec era dom rng where
   -- | Something is inconsistent
   MapNever :: [String] -> MapSpec era dom rng
 
-instance Ord d => Show (MapSpec w d r) where
+instance (Ord d, EraTest w, Reflect w) => Show (MapSpec w d r) where
   show = showMapSpec
 
-instance (Ord dom, Era era) => Semigroup (MapSpec era dom rng) where
+instance (Ord dom, EraTest era, Reflect era) => Semigroup (MapSpec era dom rng) where
   (<>) = mergeMapSpec
 
-instance (Ord dom, Era era) => Monoid (MapSpec era dom rng) where
+instance (Ord dom, EraTest era, Reflect era) => Monoid (MapSpec era dom rng) where
   mempty = MapSpec SzAny RelAny PairAny RngAny
 
 instance LiftT (MapSpec era a b) where
@@ -999,7 +1005,7 @@ instance LiftT (MapSpec era a b) where
   dropT (Typed (Left s)) = MapNever s
   dropT (Typed (Right x)) = x
 
-showMapSpec :: MapSpec era dom rng -> String
+showMapSpec :: (EraTest era, Reflect era) => MapSpec era dom rng -> String
 showMapSpec (MapSpec w d p r) =
   "("
     ++ unlines
@@ -1014,7 +1020,9 @@ showMapSpec (MapSpec w d p r) =
     ++ ")"
 showMapSpec (MapNever _) = "MapNever"
 
-mergeMapSpec :: Ord dom => MapSpec era dom rng -> MapSpec era dom rng -> MapSpec era dom rng
+mergeMapSpec ::
+  (Ord dom, EraTest era, Reflect era) =>
+  MapSpec era dom rng -> MapSpec era dom rng -> MapSpec era dom rng
 mergeMapSpec spec1 spec2 = case (spec1, spec2) of
   (MapNever s, MapNever t) -> MapNever (s ++ t)
   (MapNever _, y) -> y
@@ -1038,7 +1046,8 @@ mergeMapSpec spec1 spec2 = case (spec1, spec2) of
 --   inconsistencies there as well as (\ a b c -> dropT (mapSpec a b c)) has the same
 --   type as MapSpec, but pushes the reports of inconsistencies into MapNever.
 mapSpec ::
-  Ord d => Size -> RelSpec era d -> PairSpec era d r -> RngSpec era r -> Typed (MapSpec era d r)
+  (Ord d, EraTest era, Reflect era) =>
+  Size -> RelSpec era d -> PairSpec era d r -> RngSpec era r -> Typed (MapSpec era d r)
 mapSpec sz1 rel pair rng =
   let sz2 = sizeForRel rel
       sz3 = sizeForRng rng
@@ -1148,7 +1157,7 @@ sizeForMapSpec (MapNever _) = SzAny
 -- | Generate a random MapSpec
 genMapSpec ::
   forall era dom w.
-  (Ord dom, Era era, Ord w, Adds w) =>
+  (Ord dom, Ord w, Adds w, EraTest era, Reflect era) =>
   Gen dom ->
   Rep era dom ->
   Rep era w ->
@@ -1192,7 +1201,7 @@ genMapSpec genD repd repw l n = frequency [(1, pure mempty), (6, genmapspec)]
 --   pure (Map.fromList (zip (Set.toList dom) rangelist))
 genFromMapSpec ::
   forall era w dom.
-  (Era era, Ord dom) =>
+  (Ord dom, EraTest era, Reflect era) =>
   String ->
   [String] ->
   Gen dom ->
@@ -1246,13 +1255,14 @@ genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr varside m)
 --   (SubMap xvar yexp) Break value of yexp into (x + extra), then answer: xvar = x
 --   (SubMap xexp yvar) Break value of xexp into (x + extra), then answer: yvar == x + extra
 pairSpecTransform ::
-  (Ord d, Eq r) => PairSide -> Rep era d -> Rep era r -> Map d r -> ([d], [r]) -> [(d, r)]
+  (Ord d, Eq r, EraTest era, Reflect era) =>
+  PairSide -> Rep era d -> Rep era r -> Map d r -> ([d], [r]) -> [(d, r)]
 pairSpecTransform side drep rrep m (dlist, rlist) = zip doms rngs
   where
     accum (ds, rs) k v = (remove side "domain" drep k ds, remove side "range" rrep v rs)
     (doms, rngs) = Map.foldlWithKey' accum (dlist, rlist) m
 
-remove :: Eq a => PairSide -> String -> Rep era a -> a -> [a] -> [a]
+remove :: (Eq a, EraTest era, Reflect era) => PairSide -> String -> Rep era a -> a -> [a] -> [a]
 remove side part rep x (y : ys) =
   if x == y then ys else y : (remove side part rep x ys)
 remove VarOnLeft _part _rep _x [] = []
@@ -1326,12 +1336,12 @@ data SetSpec era a where
   SetSpec :: Ord a => Size -> RelSpec era a -> SetSpec era a
   SetNever :: [String] -> SetSpec era a
 
-instance Show (SetSpec era a) where show = showSetSpec
+instance (EraTest era, Reflect era) => Show (SetSpec era a) where show = showSetSpec
 
-instance Ord a => Semigroup (SetSpec era a) where
+instance (Ord a, EraTest era, Reflect era) => Semigroup (SetSpec era a) where
   (<>) = mergeSetSpec
 
-instance Ord a => Monoid (SetSpec era a) where
+instance (Ord a, EraTest era, Reflect era) => Monoid (SetSpec era a) where
   mempty = SetSpec SzAny RelAny
 
 instance LiftT (SetSpec era t) where
@@ -1340,11 +1350,11 @@ instance LiftT (SetSpec era t) where
   dropT (Typed (Left s)) = SetNever s
   dropT (Typed (Right x)) = x
 
-showSetSpec :: SetSpec era a -> String
+showSetSpec :: (EraTest era, Reflect era) => SetSpec era a -> String
 showSetSpec (SetSpec s r) = sepsP ["SetSpec", show s, show r]
 showSetSpec (SetNever _) = "SetNever"
 
-mergeSetSpec :: Ord a => SetSpec era a -> SetSpec era a -> SetSpec era a
+mergeSetSpec :: (Ord a, EraTest era, Reflect era) => SetSpec era a -> SetSpec era a -> SetSpec era a
 mergeSetSpec s1 s2 = case (s1, s2) of
   (SetNever xs, SetNever ys) -> SetNever (xs ++ ys)
   (SetNever xs, _) -> SetNever xs
@@ -1356,7 +1366,7 @@ mergeSetSpec s1 s2 = case (s1, s2) of
     r3 -> dropT (explain ("While merging\n  " ++ show s1 ++ "\n  " ++ show s2) $ setSpec (s11 <> s22) r3)
 
 -- | Test the size consistency while building a SetSpec
-setSpec :: Ord t => Size -> RelSpec era t -> Typed (SetSpec era t)
+setSpec :: (Ord t, EraTest era, Reflect era) => Size -> RelSpec era t -> Typed (SetSpec era t)
 setSpec sz1 rel = case (sz1 <> sz2) of
   SzNever xs ->
     failT
@@ -1379,12 +1389,14 @@ sizeForSetSpec :: SetSpec era a -> Size
 sizeForSetSpec (SetSpec sz _) = sz
 sizeForSetSpec (SetNever _) = SzAny
 
-genSetSpec :: Ord s => [String] -> Gen s -> Rep era s -> Int -> Gen (SetSpec era s)
+genSetSpec ::
+  (Ord s, EraTest era, Reflect era) => [String] -> Gen s -> Rep era s -> Int -> Gen (SetSpec era s)
 genSetSpec msgs genS repS size = do
   r <- genRelSpec ("from genSetSpec" : msgs) genS repS size
   pure (SetSpec (SzExact size) r)
 
-genFromSetSpec :: forall era a. Era era => [String] -> Gen a -> SetSpec era a -> Gen (Set a)
+genFromSetSpec ::
+  forall era a. (EraTest era, Reflect era) => [String] -> Gen a -> SetSpec era a -> Gen (Set a)
 genFromSetSpec msgs genS (SetSpec sz rp) = do
   n <- genFromSize sz
   genFromRelSpec ("genFromSetSpec" : msgs) genS n rp
@@ -1469,13 +1481,13 @@ data ElemSpec era t where
   ElemNever :: [String] -> ElemSpec era t
   ElemAny :: ElemSpec era t
 
-instance Show (ElemSpec era a) where
+instance (EraTest era, Reflect era) => Show (ElemSpec era a) where
   show = showElemSpec
 
-instance Era era => Semigroup (ElemSpec era a) where
+instance (EraTest era, Reflect era) => Semigroup (ElemSpec era a) where
   (<>) = mergeElemSpec
 
-instance Era era => Monoid (ElemSpec era a) where
+instance (EraTest era, Reflect era) => Monoid (ElemSpec era a) where
   mempty = ElemAny
 
 instance LiftT (ElemSpec era t) where
@@ -1484,14 +1496,14 @@ instance LiftT (ElemSpec era t) where
   dropT (Typed (Left s)) = ElemNever s
   dropT (Typed (Right x)) = x
 
-showElemSpec :: ElemSpec era a -> String
+showElemSpec :: (EraTest era, Reflect era) => ElemSpec era a -> String
 showElemSpec (ElemSum small sz) = sepsP ["ElemSum", show small, show sz]
 showElemSpec (ElemProj small r _l sz) = sepsP ["ElemProj", show small, show r, show sz]
 showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) xs]
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
 
-mergeElemSpec :: Era era => ElemSpec era a -> ElemSpec era a -> ElemSpec era a
+mergeElemSpec :: (EraTest era, Reflect era) => ElemSpec era a -> ElemSpec era a -> ElemSpec era a
 mergeElemSpec (ElemNever xs) (ElemNever ys) = ElemNever (xs ++ ys)
 mergeElemSpec (ElemNever xs) _ = ElemNever xs
 mergeElemSpec _ (ElemNever ys) = ElemNever ys
@@ -1598,6 +1610,7 @@ genElemSpec repw (SomeLens (l :: Lens' w c)) siz = do
 
 genFromElemSpec ::
   forall era r.
+  (EraTest era, Reflect era) =>
   [String] ->
   Gen r ->
   Int ->
@@ -1668,13 +1681,13 @@ data ListSpec era t where
   ListSpec :: Size -> ElemSpec era t -> ListSpec era t
   ListNever :: [String] -> ListSpec era t
 
-instance Show (ListSpec era a) where
+instance (EraTest era, Reflect era) => Show (ListSpec era a) where
   show = showListSpec
 
-instance Era era => Semigroup (ListSpec era a) where
+instance (EraTest era, Reflect era) => Semigroup (ListSpec era a) where
   (<>) = mergeListSpec
 
-instance Era era => Monoid (ListSpec era a) where
+instance (EraTest era, Reflect era) => Monoid (ListSpec era a) where
   mempty = ListSpec SzAny ElemAny
 
 instance LiftT (ListSpec era t) where
@@ -1683,11 +1696,11 @@ instance LiftT (ListSpec era t) where
   dropT (Typed (Left s)) = ListNever s
   dropT (Typed (Right x)) = x
 
-showListSpec :: ListSpec era a -> String
+showListSpec :: (EraTest era, Reflect era) => ListSpec era a -> String
 showListSpec (ListSpec s xs) = sepsP ["ListSpec", show s, show xs]
 showListSpec (ListNever _) = "ListNever"
 
-mergeListSpec :: Era era => ListSpec era a -> ListSpec era a -> ListSpec era a
+mergeListSpec :: (EraTest era, Reflect era) => ListSpec era a -> ListSpec era a -> ListSpec era a
 mergeListSpec (ListNever xs) (ListNever ys) = ListNever (xs ++ ys)
 mergeListSpec (ListNever xs) (ListSpec _ _) = ListNever xs
 mergeListSpec (ListSpec _ _) (ListNever xs) = ListNever xs
@@ -1698,7 +1711,7 @@ mergeListSpec a@(ListSpec s1 e1) b@(ListSpec s2 e2) =
     e3 -> dropT (explain ("While merging\n  " ++ show a ++ "\n  " ++ show b) $ listSpec (s1 <> s2) e3)
 
 -- | Test the size consistency while building a ListSpec
-listSpec :: Size -> ElemSpec era t -> Typed (ListSpec era t)
+listSpec :: (EraTest era, Reflect era) => Size -> ElemSpec era t -> Typed (ListSpec era t)
 listSpec sz1 el = case (sz1 <> sz2) of
   SzNever xs ->
     failT
@@ -1736,6 +1749,7 @@ genListSpec repw l size = do
 
 genFromListSpec ::
   forall era r.
+  (EraTest era, Reflect era) =>
   [String] ->
   Gen r ->
   ListSpec era r ->
@@ -1760,7 +1774,13 @@ testSoundElemSpec = do
       spec
   pure $
     counterexample
-      ("size=" ++ show size ++ "\nspec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
+      ( "size="
+          ++ show size
+          ++ "\nspec="
+          ++ show spec
+          ++ "\nlist="
+          ++ synopsis @BabbageEra (ListR Word64R) list
+      )
       (runElemSpec list spec)
 
 testSoundListSpec :: Gen Property
@@ -1770,7 +1790,7 @@ testSoundListSpec = do
   list <- genFromListSpec @BabbageEra ["testSoundListSpec"] (choose (1, 1000)) spec
   pure $
     counterexample
-      ("spec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
+      ("spec=" ++ show spec ++ "\nlist=" ++ synopsis @BabbageEra (ListR Word64R) list)
       (runListSpec list spec)
 
 manyMergeListSpec :: Gen (Size, Int, [String])
@@ -1866,7 +1886,7 @@ someMap r = do
 -- ===================================
 -- Some proto-tests, to be fixed soon
 
-aMap :: Era era => Gen (MapSpec era Int Word64)
+aMap :: (EraTest era, Reflect era) => Gen (MapSpec era Int Word64)
 aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R (SomeLens word64CoinL) 4
 
 testm :: Gen (MapSpec BabbageEra Int Word64)
@@ -1899,7 +1919,7 @@ genSumsTo = do
   elements
     [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
 
-solveSumsTo :: Pred era -> AddsSpec DeltaCoin
+solveSumsTo :: (EraTest era, Reflect era) => Pred era -> AddsSpec DeltaCoin
 solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
   varOnRight @DeltaCoin ["solveSumsTo"] n cond m nam
 solveSumsTo (SumsTo _ (Var (V nam DeltaCoinR _)) cond [One (Lit DeltaCoinR m)]) =
@@ -2023,7 +2043,7 @@ allSpecTests =
         ]
     , testGroup
         "RelSpec tests"
-        [ testProperty "we generate consistent RelSpecs" testConsistentRel
+        [ testProperty "we generate consistent RelSpecs" (testConsistentRel @BabbageEra)
         , testProperty "test RelSpec sound" testSoundRelSpec
         , testProperty "test mergeRelSpec" testMergeRelSpec
         , testProperty "test More consistent RelSpec" reportManyMergeRelSpec
@@ -2095,13 +2115,13 @@ anyPairSpec PairAny = True
 anyPairSpec (PairSpec _ _ _ m) = Map.null m
 anyPairSpec _ = False
 
-instance Monoid (PairSpec era a b) where
+instance (EraTest era, Reflect era) => Monoid (PairSpec era a b) where
   mempty = PairAny
 
-instance Semigroup (PairSpec era dom rng) where
+instance (EraTest era, Reflect era) => Semigroup (PairSpec era dom rng) where
   (<>) = mergePairSpec
 
-instance Show (PairSpec era dom rng) where
+instance (EraTest era, Reflect era) => Show (PairSpec era dom rng) where
   show = showPairSpec
 
 instance LiftT (PairSpec era dom rng) where
@@ -2110,12 +2130,13 @@ instance LiftT (PairSpec era dom rng) where
   dropT (Typed (Left s)) = PairNever s
   dropT (Typed (Right x)) = x
 
-showPairSpec :: PairSpec era dom rng -> String
+showPairSpec :: (EraTest era, Reflect era) => PairSpec era dom rng -> String
 showPairSpec (PairNever _) = "PairNever"
 showPairSpec PairAny = "PairAny"
 showPairSpec (PairSpec dom rng side mp) = sepsP ["PairSpec", show dom, show rng, show side, synopsis (MapR dom rng) mp]
 
-mergePairSpec :: PairSpec era a b -> PairSpec era a b -> PairSpec era a b
+mergePairSpec ::
+  (EraTest era, Reflect era) => PairSpec era a b -> PairSpec era a b -> PairSpec era a b
 mergePairSpec (PairNever xs) (PairNever ys) = PairNever (xs ++ ys)
 mergePairSpec d@(PairNever _) _ = d
 mergePairSpec _ d@(PairNever _) = d
@@ -2258,7 +2279,8 @@ genConsistentPairSpec _ _ (PairSpec d r VarOnLeft m) =
     ]
 
 genFromPairSpec ::
-  forall era dom rng. Ord dom => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
+  forall era dom rng.
+  (Ord dom, EraTest era, Reflect era) => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
 genFromPairSpec msgs (PairNever xs) = errorMess "genFromPairSpec failed due to PairNever" (msgs ++ xs)
 genFromPairSpec _msgs PairAny = pure $ Map.empty
 genFromPairSpec msgs p@(PairSpec domr rngr VarOnRight mp) = do
