@@ -37,8 +37,7 @@ module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Conway.State (ConwayEraCertState (..), VState (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Conway.State (ConwayEraCertState (..), VState (..), Accounts)
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -70,7 +69,6 @@ import Cardano.Ledger.State (
   emptySnapShots,
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Trans ()
 import Data.Default (Default (def))
 import Data.Map.Strict (Map)
@@ -102,9 +100,7 @@ data ModelNewEpochState era = ModelNewEpochState
     mPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   , mPoolDeposits :: !(Map (KeyHash 'StakePool) Coin)
   , -- DState state fields
-    mRewards :: !(Map (Credential 'Staking) Coin)
-  , mDelegations :: !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , mKeyDeposits :: !(Map (Credential 'Staking) Coin)
+    mAccounts :: !(Accounts era)
   , --  _fGenDelegs,  _genDelegs, and _irwd, are for
     --  changing the PParams and are abstracted away
 
@@ -166,16 +162,16 @@ genDelegsZero = GenDelegs Map.empty
 instantaneousRewardsZero :: InstantaneousRewards
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
-dStateZero :: DState c
+dStateZero :: EraCertState era => DState era
 dStateZero =
   DState
-    { dsUnified = UM.empty
+    { dsAccounts = def
     , dsFutureGenDelegs = Map.empty
     , dsGenDelegs = genDelegsZero
     , dsIRewards = instantaneousRewardsZero
     }
 
-pStateZero :: PState c
+pStateZero :: PState era
 pStateZero =
   PState
     { psStakePoolParams = Map.empty
@@ -251,9 +247,7 @@ mNewEpochStateZero =
   ModelNewEpochState
     { mPoolParams = Map.empty
     , mPoolDeposits = Map.empty
-    , mRewards = Map.empty
-    , mDelegations = Map.empty
-    , mKeyDeposits = Map.empty
+    , mAccounts = def
     , mUTxO = Map.empty
     , mMutFee = Map.empty
     , mChainAccountState = accountStateZero
@@ -287,19 +281,10 @@ class Extract t era where
 instance Extract (DState era) era where
   extract x =
     DState
-      (UM.unify (makeRewards x) Map.empty (mDelegations x) Map.empty)
+      (mAccounts x)
       Map.empty
       genDelegsZero
       instantaneousRewardsZero
-
-makeRewards :: ModelNewEpochState era -> Map.Map (Credential 'Staking) UM.RDPair
-makeRewards mnes = Map.mapWithKey f credRewMap
-  where
-    credRewMap = mRewards mnes
-    credDepMap = mKeyDeposits mnes
-    f cred rew = case Map.lookup cred credDepMap of
-      Just dep -> UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError dep)
-      Nothing -> error ("In makeRewards the reward and deposit maps are not in synch " ++ show cred)
 
 instance Extract (PState era) era where
   extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
@@ -359,9 +344,7 @@ abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
     , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
-    , mRewards = (UM.rewardMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mDelegations = (UM.sPoolMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mAccounts = (dsAccounts . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
     , mChainAccountState = (esChainAccountState . nesEs) x

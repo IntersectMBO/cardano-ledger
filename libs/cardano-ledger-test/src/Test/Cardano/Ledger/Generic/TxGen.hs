@@ -44,6 +44,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
@@ -71,7 +72,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State hiding (balance)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -131,7 +132,6 @@ import Test.Cardano.Ledger.Generic.GenState (
   getUtxoTest,
   mkRedeemers,
   mkRedeemersFromTags,
-  modifyGenStateInitialRewards,
   modifyGenStateInitialUtxo,
   modifyModelCount,
   modifyModelIndex,
@@ -687,7 +687,7 @@ genTxCerts slot = do
                     else -- In order to Delegate, the delegCred must exist in rewards.
                     -- so if it is not there, we put it there, otherwise we may
                     -- never generate a valid delegation.
-                      ( (RegTxCert delegCred) : dcs
+                      ( RegTxCert delegCred : dcs
                       , Map.insert delegCred (Coin 99) regCreds
                       )
              in insertIfNotPresent dcs' regCreds' (Just delegKey)
@@ -695,13 +695,13 @@ genTxCerts slot = do
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
-  reward <- gets (mRewards . gsModel)
+  accounts <- gets (mAccounts . gsModel)
   let initSets ::
         ( [TxCert era]
         , Set (ScriptHash, Maybe (KeyHash 'StakePool))
         , Map (Credential 'Staking) Coin
         )
-      initSets = ([], Set.empty, reward)
+      initSets = ([], Set.empty, Map.map (fromCompact . (^. balanceAccountStateL)) (accounts ^. accountsMapL))
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
   pure $ reverse dcs
 
@@ -845,14 +845,14 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Ju
 getConwayTxCertCredential (ConwayTxCertGov _) = Nothing
 
 genWithdrawals ::
-  Reflect era => SlotNo -> GenRS era (Withdrawals, Map (Credential 'Staking) Coin)
+  Reflect era => SlotNo -> GenRS era (Withdrawals)
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards, newRewards)
-    else pure (Withdrawals Map.empty, Map.empty)
+      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards)
+    else pure (Withdrawals Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
@@ -922,7 +922,7 @@ genAlonzoTxAndInfo proof slot = do
 
   -- generate Withdrawals before TxCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain TxCerts if they conflict with existing Rewards
-  (withdrawals@(Withdrawals wdrlMap), newRewards) <- genWithdrawals slot
+  withdrawals@(Withdrawals wdrlMap) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
   rewardsWithdrawalTxOut <-
@@ -1030,14 +1030,14 @@ genAlonzoTxAndInfo proof slot = do
           ]
       fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
 
-  keyDeposits <- gets (mKeyDeposits . gsModel)
+  accounts <- gets (mAccounts . gsModel)
   let deposits = case proof of
-        Shelley -> depositsAndRefunds gePParams dcerts keyDeposits
-        Mary -> depositsAndRefunds gePParams dcerts keyDeposits
-        Allegra -> depositsAndRefunds gePParams dcerts keyDeposits
-        Alonzo -> depositsAndRefunds gePParams dcerts keyDeposits
-        Babbage -> depositsAndRefunds gePParams dcerts keyDeposits
-        Conway -> depositsAndRefunds gePParams dcerts keyDeposits
+        Shelley -> depositsAndRefunds gePParams dcerts accounts
+        Mary -> depositsAndRefunds gePParams dcerts accounts
+        Allegra -> depositsAndRefunds gePParams dcerts accounts
+        Alonzo -> depositsAndRefunds gePParams dcerts accounts
+        Babbage -> depositsAndRefunds gePParams dcerts accounts
+        Conway -> depositsAndRefunds gePParams dcerts accounts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
@@ -1088,7 +1088,6 @@ genAlonzoTxAndInfo proof slot = do
           , AuxData' []
           ]
   count <- gets (mCount . gsModel)
-  modifyGenStateInitialRewards (`Map.union` newRewards)
   modifyGenStateInitialUtxo (`Map.union` minus utxo maybeoldpair)
   modifyModelCount (const (count + 1))
   modifyModelIndex (Map.insert count (TxId txBodyHash))
