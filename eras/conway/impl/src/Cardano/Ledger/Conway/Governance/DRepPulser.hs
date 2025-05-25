@@ -255,7 +255,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpAccounts :: !(Accounts era)
     -- ^ Snapshot containing the mapping of stake credentials to DReps, Pools and Rewards.
     , dpIndex :: !Int
-    -- ^ The index of the iterator over `dpUMap`. Grows with each pulse.
+    -- ^ The index of the iterator over `dpAccounts`. Grows with each pulse.
     , dpInstantStake :: !(InstantStake era)
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
     , dpStakePoolDistr :: PoolDistr
