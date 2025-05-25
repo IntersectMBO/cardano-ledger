@@ -116,6 +116,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.TreeDiff
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
 import GHC.TypeLits (Symbol)
+import Test.Cardano.Ledger.Conway.Era (EraTest)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 
 -- ===================================================
@@ -152,6 +153,7 @@ class
   , EraStake era
   , ShelleyEraTxCert era
   , EraCertState era
+  , EraTest era
   ) =>
   Reflect era
   where
