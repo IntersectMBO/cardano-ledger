@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
@@ -44,6 +45,12 @@ instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsItem era)
 deriving newtype instance ToExpr ix => ToExpr (AsIx ix it)
 
 deriving newtype instance ToExpr it => ToExpr (AsItem ix it)
+
+instance (ToExpr ix, ToExpr it) => ToExpr (AsIxItem ix it)
+
+instance ToExpr (PlutusPurpose AsIxItem era) => ToExpr (AlonzoScriptsNeeded era)
+
+instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsIxItem era)
 
 -- Core
 deriving newtype instance ToExpr CoinPerWord
@@ -168,3 +175,7 @@ instance
         , ("pwcExUnits", toExpr pwcExUnits)
         , ("pwcCostModel", toExpr pwcCostModel)
         ]
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (AlonzoBbodyPredFailure era)

@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Constrained.Solver where
 
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era (..), hashScript)
+import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Plutus.Data (hashData)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -83,6 +83,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   (:~:) (Refl),
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck hiding (Fixed, getSize, total)
@@ -142,20 +143,22 @@ sameRep r1 r2 = case testEql r1 r2 of
   Nothing -> failT ["Type error in sameRep:\n  " ++ show r1 ++ " =/=\n  " ++ show r2]
 
 -- | Simplify and return with evidence that 'expr' has type 's'
-simplifyAtType :: Era era => Rep era s -> Term era t -> Typed s
+simplifyAtType :: (EraTest era, Reflect era) => Rep era s -> Term era t -> Typed s
 simplifyAtType r1 term = do
   t <- simplify term
   Refl <- sameRep r1 (termRep term)
   pure t
 
 simplifySet ::
-  (Ord rng, Era era) => Rep era rng -> Term era y -> Typed (HasConstraint Ord (Set rng))
+  (Ord rng, EraTest era, Reflect era) =>
+  Rep era rng -> Term era y -> Typed (HasConstraint Ord (Set rng))
 simplifySet r1 term = do
   x <- simplify term
   Refl <- sameRep (SetR r1) (termRep term)
   pure (With x)
 
-simplifyList :: Era era => Rep era rng -> Term era y -> Typed (HasConstraint Eq [rng])
+simplifyList ::
+  (EraTest era, Reflect era) => Rep era rng -> Term era y -> Typed (HasConstraint Eq [rng])
 simplifyList r1 term = do
   x <- simplify term
   Refl <- sameRep (ListR r1) (termRep term)
@@ -194,7 +197,8 @@ atLeast rep c = add c <$> genRep rep
 -- ================================================================
 -- Solver for variables of type (Map dom rng)
 solveMap ::
-  forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
+  forall dom rng era.
+  (EraTest era, Reflect era) => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Before (Lit _ _) (Var v2)) | Name v1 == Name v2 -> pure mempty
   (Sized (Lit SizeR sz) (Var v2))
@@ -407,7 +411,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
 --   That can only happen in a (RngSum cond c) or a (RngProj cond rep c) constructor of 'Sum'
 --   Because we don't know if 'c' can have negative values, we do the summation as an Integer
 solveMapSummands ::
-  (Era era, Adds c) =>
+  (Adds c, EraTest era, Reflect era) =>
   c -> -- The smallest allowed
   c -> -- the evaluated lhs
   [String] -> -- path to here
@@ -433,7 +437,9 @@ solveMapSummands small lhsC msg cond v c (s : ss) = do
   solveMapSummands small lhsC msg cond v (add c $ fromI ["solveMapSummands"] d) ss
 solveMapSummands _ _ msg _ v _ [] = failT (("Does not have exactly one summand with variable " ++ show (Name v)) : msg)
 
-solveMaps :: (Era era, Ord dom) => V era (Map dom rng) -> [Pred era] -> Typed (MapSpec era dom rng)
+solveMaps ::
+  (Ord dom, EraTest era, Reflect era) =>
+  V era (Map dom rng) -> [Pred era] -> Typed (MapSpec era dom rng)
 solveMaps v@(V _ (MapR _ _) _) cs =
   foldlM' accum (MapSpec SzAny RelAny PairAny RngAny) cs
   where
@@ -446,7 +452,8 @@ solveMaps v@(V _ (MapR _ _) _) cs =
 
 -- | Given a variable: 'v1', with a Set type, compute a SetSpec
 --   which describes the constraints implied by the Pred 'predicate'
-solveSet :: forall era a. Era era => V era (Set a) -> Pred era -> Typed (SetSpec era a)
+solveSet ::
+  forall era a. (EraTest era, Reflect era) => V era (Set a) -> Pred era -> Typed (SetSpec era a)
 solveSet v1@(V _ (SetR r) _) predicate = case predicate of
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> setSpec sz RelAny
   (List (Var v2@(V _ (SetR _) _)) []) | Just Refl <- sameName v1 v2 -> setSpec (SzExact 0) RelAny
@@ -521,7 +528,7 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
         setSpec (SzMost (Map.size x)) (RelLens lensbt r trep (relSubset drep (Map.keysSet x)))
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
-solveSets :: Era era => V era (Set a) -> [Pred era] -> Typed (SetSpec era a)
+solveSets :: (EraTest era, Reflect era) => V era (Set a) -> [Pred era] -> Typed (SetSpec era a)
 solveSets v@(V nm (SetR _) _) cs =
   explain ("\nSolving for " ++ nm ++ ", Set Predicates\n" ++ unlines (map (("  " ++) . show) cs)) $
     foldlM' accum mempty cs
@@ -533,7 +540,8 @@ solveSets v@(V nm (SetR _) _) cs =
 -- ========================================================
 -- Solving for variables with an Adds instance
 
-solveSum :: forall era t. (Adds t, Era era) => V era t -> Pred era -> Typed (AddsSpec t)
+solveSum ::
+  forall era t. (Adds t, EraTest era, Reflect era) => V era t -> Pred era -> Typed (AddsSpec t)
 solveSum v1@(V nam r _) predx =
   case predx of
     (Sized expr (Var v2@(V nm _ _))) | Name v1 == Name v2 -> do
@@ -612,7 +620,7 @@ solveSum v1@(V nam r _) predx =
       pure (AddsSpecSize nm (SzExact (toI x)))
     other -> failT ["Can't solveSum " ++ show (Name v1) ++ " = " ++ show other]
 
-solveSums :: (Adds t, Era era) => V era t -> [Pred era] -> Typed (AddsSpec t)
+solveSums :: (Adds t, EraTest era, Reflect era) => V era t -> [Pred era] -> Typed (AddsSpec t)
 solveSums v@(V nm r _) cs =
   explain
     ( "\nGiven (Add "
@@ -632,7 +640,7 @@ solveSums v@(V nm r _) cs =
         ("Solving Sum constraint (" ++ show cond ++ ") for variable " ++ show nm)
         (liftT (spec <> sumVspec))
 
-summandAsInt :: Adds c => Sum era c -> Typed Int
+summandAsInt :: (Adds c, EraTest era, Reflect era) => Sum era c -> Typed Int
 summandAsInt (One (Lit _ x)) = pure (toI x)
 summandAsInt (One (Delta (Lit CoinR (Coin n)))) = pure (toI (DeltaCoin n))
 summandAsInt (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (toI ((DeltaCoin (-n))))
@@ -642,13 +650,14 @@ summandAsInt (SumList (Lit _ m)) = pure (toI (List.foldl' add zero m))
 summandAsInt (ProjMap _ l (Lit _ m)) = pure (toI (List.foldl' (\ans x -> add ans (x ^. l)) zero m))
 summandAsInt x = failT ["Can't compute summandAsInt: " ++ show x ++ ", to an Int."]
 
-genSum :: Adds x => Sum era x -> Rep era x -> x -> Subst era -> Gen (Subst era)
+genSum ::
+  (Adds x, EraTest era, Reflect era) => Sum era x -> Rep era x -> x -> Subst era -> Gen (Subst era)
 genSum (One (Var v)) rep x sub = pure $ extend v (Lit rep x) sub
 genSum (One (Delta (Var v))) DeltaCoinR d sub = pure $ extend v (Lit CoinR (fromI [] (toI d))) sub
 genSum (One (Negate (Var v))) DeltaCoinR (DeltaCoin n) sub = pure $ extend v (Lit DeltaCoinR (DeltaCoin (-n))) sub
 genSum other rep x _ = errorMess ("Can't genSum " ++ show other) [show rep, show x]
 
-summandsAsInt :: (Adds c, Era era) => [Sum era c] -> Typed Int
+summandsAsInt :: (Adds c, EraTest era, Reflect era) => [Sum era c] -> Typed Int
 summandsAsInt [] = pure 0
 summandsAsInt (x : xs) = do
   n <- summandAsInt x
@@ -659,7 +668,8 @@ sameV :: V era s -> V era t -> Typed (s :~: t)
 sameV (V _ r1 _) (V _ r2 _) = sameRep r1 r2
 
 unique2 ::
-  Adds c => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
+  (Adds c, EraTest era, Reflect era) =>
+  V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
 unique2 v1 (c, b, ns) (One (Var v2)) =
   if Name v1 == Name v2
     then pure (c, b, Name v2 : ns)
@@ -681,7 +691,8 @@ unique2 _ (c1, b, ns) sumexpr = do c2 <- summandAsInt sumexpr; pure (c1 + c2, b,
 -- | Check that there is exactly 1 occurence of 'v',
 --   and return the sum of the other terms in 'ss'
 --   which should all be constants.
-intSumWithUniqueV :: Adds c => V era t -> [Sum era c] -> Typed (Int, Bool)
+intSumWithUniqueV ::
+  (Adds c, EraTest era, Reflect era) => V era t -> [Sum era c] -> Typed (Int, Bool)
 intSumWithUniqueV v@(V nam _ _) ss = do
   (c, b, ns) <- foldlM' (unique2 v) (0, False, []) ss
   case ns of
@@ -694,7 +705,7 @@ intSumWithUniqueV v@(V nam _ _) ss = do
 
 -- | Given a variable: 'v1', with a List type, compute a ListSpec
 --   which describes the constraints implied by the Pred 'predicate'
-solveList :: Era era => V era [a] -> Pred era -> Typed (ListSpec era a)
+solveList :: (EraTest era, Reflect era) => V era [a] -> Pred era -> Typed (ListSpec era a)
 solveList v1@(V _ (ListR r) _) predicate = case predicate of
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> pure $ ListSpec sz ElemAny
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
@@ -709,7 +720,7 @@ solveList v1@(V _ (ListR r) _) predicate = case predicate of
     pure $ ListSpec (SzExact (length ys)) (ElemEqual r ys)
   cond -> failT ["Can't solveList " ++ show cond ++ " for variable " ++ show v1]
 
-solveLists :: Era era => V era [a] -> [Pred era] -> Typed (ListSpec era a)
+solveLists :: (EraTest era, Reflect era) => V era [a] -> [Pred era] -> Typed (ListSpec era a)
 solveLists v@(V nm (ListR _) _) cs =
   explain ("\nSolving for " ++ nm ++ ", List Predicates\n" ++ unlines (map (("  " ++) . show) cs)) $
     foldlM' accum mempty cs
@@ -722,7 +733,7 @@ solveLists v@(V nm (ListR _) _) cs =
 -- Helper functions for use in 'dispatch'
 
 -- | Combine solving an generating for a variable with a 'Counts' instance
-genCount :: Count t => V era t -> [Pred era] -> Typed (Gen t)
+genCount :: (Count t, EraTest era, Reflect era) => V era t -> [Pred era] -> Typed (Gen t)
 genCount v1@(V _ rep _) [Random (Var v2)] | Name v1 == Name v2 = pure (genRep rep)
 genCount v1@(V _ r1 _) [Var v2@(V _ r2 _) :=: expr] | Name v1 == Name v2 = do
   Refl <- sameRep r1 r2
@@ -764,7 +775,7 @@ update :: t -> [Update t] -> t
 update t [] = t
 update t (Update s l : more) = update (Lens.set l s t) more
 
-anyToUpdate :: Rep era t1 -> (AnyF era t2) -> Typed (Update t1)
+anyToUpdate :: (EraTest era, Reflect era) => Rep era t1 -> AnyF era t2 -> Typed (Update t1)
 anyToUpdate rep1 (AnyF (FConst _ s rep2 l)) = do
   Refl <- sameRep rep1 rep2
   pure (Update s l)
@@ -781,7 +792,8 @@ isIf _ = False
 -- Given a variable ('v1' :: 't') and [Pred] that constrain it. Produce a (Gen t)
 
 -- | Dispatch on the type of the variable 'v1' being solved.
-dispatch :: forall t era. (HasCallStack, Era era) => V era t -> [Pred era] -> Typed (Gen t)
+dispatch ::
+  forall t era. (HasCallStack, EraTest era, Reflect era) => V era t -> [Pred era] -> Typed (Gen t)
 dispatch v1 preds | Just (If tar x y) <- List.find isIf preds = do
   b <- simplifyTarget tar
   let others = filter (not . isIf) preds
@@ -962,7 +974,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n"
             ]
 
 genOrFail ::
-  Era era =>
+  (EraTest era, Reflect era) =>
   Bool ->
   Either [String] (Subst era) ->
   ([Name era], [Pred era]) ->
@@ -984,23 +996,20 @@ genOrFail _ (Right _) (names, _) = error ("Multiple names not handed yet " ++ sh
 genOrFail _ (Left msgs) _ = pure (Left msgs)
 
 genOrFailList ::
-  Era era =>
+  (EraTest era, Reflect era) =>
   Bool ->
   Either [String] (Subst era) ->
   [([Name era], [Pred era])] ->
   Gen (Either [String] (Subst era))
 genOrFailList loud = foldlM' (genOrFail loud)
 
-genDependGraph :: Bool -> Proof era -> DependGraph era -> Gen (Either [String] (Subst era))
-genDependGraph loud Shelley (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud Allegra (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud Mary (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud Alonzo (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud Babbage (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud Conway (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph ::
+  (EraTest era, Reflect era) => Bool -> DependGraph era -> Gen (Either [String] (Subst era))
+genDependGraph loud (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
 
 -- | Solve for one variable, and add its solution to the substitution
-solveOneVar :: Era era => Subst era -> ([Name era], [Pred era]) -> Gen (Subst era)
+solveOneVar ::
+  (EraTest era, Reflect era) => Subst era -> ([Name era], [Pred era]) -> Gen (Subst era)
 solveOneVar subst ([Name (v@(V _ r _))], ps) = do
   !genOneT <- monadTyped (dispatch v (map (substPred subst) ps)) -- Sub solution for previously solved variables
   !t <- genOneT
@@ -1018,14 +1027,16 @@ solveOneVar subst0 (names, preds) = case (names, map (substPred subst0) preds) o
     foldlM' (\ !sub (!sumx, !x) -> genSum (substSum sub sumx) rep x sub) subst0 (zip suml zs)
   (ns, ps) -> errorMess "Not yet. multiple vars in solveOneVar" [show ns, show ps]
 
-toolChainSub :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
+toolChainSub ::
+  (EraTest era, Reflect era) => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
 toolChainSub _proof order cs subst0 = do
   (_count, DependGraph pairs) <- compileGenWithSubst order subst0 cs
   Subst subst <- foldlM' solveOneVar subst0 pairs
   let isTempV k = not (elem '.' k)
   pure $ (Subst (Map.filterWithKey (\k _ -> isTempV k) subst))
 
-toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
+toolChain ::
+  (EraTest era, Reflect era) => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
 toolChain _proof order cs subst0 = do
   (_count, DependGraph pairs) <- compileGenWithSubst order subst0 cs
   subst <- foldlM' solveOneVar subst0 pairs

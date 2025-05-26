@@ -45,6 +45,7 @@ import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.TreeDiff
 import Lens.Micro (Lens', lens)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
@@ -59,8 +60,8 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain)
@@ -237,7 +238,7 @@ And generate: partC suchthat: (Sum partC) = availableC
 
 -}
 
-certsPreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+certsPreds :: forall era. (EraTest era, Reflect era) => UnivSize -> Proof era -> [Pred era]
 certsPreds UnivSize {..} p = case whichTxCert p of
   TxCertShelleyToBabbage ->
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ shelleycerts)
@@ -569,7 +570,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     drep2b = Var (pV p "drep2b" DRepR No)
 
 certsStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -596,7 +597,7 @@ demo mode seed = do
           >>= (\subst -> monadTyped (substToEnv subst emptyEnv))
       )
   certsv <- monadTyped (findVar (unVar certs) env)
-  when (mode == Interactive) $ putStrLn (show (ppList (\(TxCertF _ x) -> pcTxCert proof x) certsv))
+  when (mode == Interactive) $ print (ppList (\(TxCertF _ x) -> toExpr x) certsv)
   modeRepl mode proof env ""
 
 demoTest :: TestTree

@@ -28,6 +28,10 @@
 
 ### `testlib`
 
+* Added `ToExpr` instances for:
+  * `ConwayPlutusPurpose AsIxItem`
+  * `DRepPulser`
+  * `ConwayBbodyPredFailure`
 * Added `Era` module with `ConwayEraTest` class
 
 ## 1.19.0.0

@@ -26,6 +26,8 @@ class
   , AlonzoEraTxAuxData era
   , AlonzoEraUTxO era
   , ToExpr (PlutusScript era)
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsIxItem era)
   , Script era ~ AlonzoScript era
   ) =>
   AlonzoEraTest era

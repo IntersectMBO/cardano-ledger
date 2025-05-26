@@ -50,7 +50,6 @@ import Test.Cardano.Ledger.Generic.GenState (
   runGenRS,
  )
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 
@@ -97,14 +96,14 @@ instance ExecSpecRule "UTXO" ConwayEra where
   extraInfo _ ctx env@UtxoEnv {..} st@UTxOState {..} sig st' =
     PP.vcat
       [ "Impl:"
-      , PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
-      , "initial TotalAda:" <+> PP.ppString (showExpr $ totalAda st)
+      , PP.pretty (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
+      , "initial TotalAda:" <+> PP.pretty (showExpr $ totalAda st)
       , "final TotalAda:  " <+> case st' of
-          Right (x, _) -> PP.ppString (showExpr $ totalAda x)
+          Right (x, _) -> PP.pretty (showExpr $ totalAda x)
           Left _ -> "N/A"
       , mempty
       , "Spec:"
-      , PP.ppString
+      , PP.pretty
           ( either show T.unpack . runSpecTransM ctx $
               Agda.utxoDebug externalFunctions
                 <$> toSpecRep env

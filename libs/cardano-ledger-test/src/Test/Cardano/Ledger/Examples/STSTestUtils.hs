@@ -78,11 +78,12 @@ import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
+import Test.Cardano.Ledger.Common (ToExpr, toExpr)
+import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -225,7 +226,7 @@ trustMeP _ _ tx = tx
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 testBBODY ::
-  (Reflect era, HasCallStack) =>
+  (HasCallStack, EraTest era, Reflect era) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block BHeaderView era ->
@@ -254,7 +255,7 @@ testUTXOW ::
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
 testUTXOW wit@(UTXOW Alonzo) utxo p tx =
-  testUTXOWwith wit (genericCont (show (pcTxWithUTxO Alonzo utxo tx))) utxo p tx
+  testUTXOWwith wit (genericCont (show (utxo, tx))) utxo p tx
 testUTXOW wit@(UTXOW Babbage) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW wit@(UTXOW Conway) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
@@ -347,8 +348,8 @@ genericCont ::
   ( Foldable t
   , Eq (t x)
   , Eq y
-  , PrettyA x
-  , PrettyA y
+  , ToExpr x
+  , ToExpr y
   , HasCallStack
   ) =>
   String ->
@@ -370,18 +371,18 @@ genericCont cause expected computed =
     causedBy
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
-    expectedToPass y = "Expected to pass with:\n" ++ show (prettyA y) ++ "\n"
-    expectedToFail x = "Expected to fail with:\n" ++ show (prettyA $ toList x) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (prettyA $ toList x)
-    passedWith y = "But passed with:\n" ++ show (prettyA y)
+    expectedToPass y = "Expected to pass with:\n" ++ show (toExpr y) ++ "\n"
+    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ toList x) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (toExpr $ toList x)
+    passedWith y = "But passed with:\n" ++ show (toExpr y)
 
 subsetCont ::
   ( Foldable t
   , Eq (t x)
   , Eq x
   , Eq y
-  , PrettyA x
-  , PrettyA y
+  , ToExpr x
+  , ToExpr y
   , Show (t x)
   , Show y
   ) =>
@@ -397,15 +398,15 @@ subsetCont expected computed =
     (Left x, Right y) ->
       error $
         "expected to pass with "
-          ++ show (prettyA y)
+          ++ show (toExpr y)
           ++ "\n\nBut failed with\n\n"
-          ++ show (prettyA $ toList x)
+          ++ show (toExpr $ toList x)
     (Right y, Left x) ->
       error $
         "expected to fail with "
-          ++ show (prettyA $ toList x)
+          ++ show (toExpr $ toList x)
           ++ "\n\nBut passed with\n\n"
-          ++ show (prettyA y)
+          ++ show (toExpr y)
 
 specialCont ::
   ( Eq (PredicateFailure (EraRule "UTXOW" era))

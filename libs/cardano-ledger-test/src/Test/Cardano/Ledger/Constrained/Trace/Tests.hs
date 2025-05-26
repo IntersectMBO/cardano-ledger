@@ -19,8 +19,9 @@ import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Foldable (toList)
 import Lens.Micro ((^.))
 import System.IO (hSetEncoding, stdout, utf8)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Constrained.Ast (runTarget)
-import Test.Cardano.Ledger.Constrained.Classes (TxF (..), TxOutF (..))
+import Test.Cardano.Ledger.Constrained.Classes (TxF (..))
 import Test.Cardano.Ledger.Constrained.Env (Env (..), emptyEnv)
 import Test.Cardano.Ledger.Constrained.Monad (Typed)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
@@ -41,19 +42,11 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   setVar,
   toGen,
  )
+import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (drepDeposit)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Proof hiding (LEDGER, lift)
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
-import Test.QuickCheck (
-  Arbitrary (..),
-  Property,
-  conjoin,
-  counterexample,
-  whenFail,
-  withMaxSuccess,
-  (===),
- )
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -92,10 +85,11 @@ genAndRunSimpleTx = do
 --   drop into the Repl, so that users can explore the inputs.
 ledgerStateEqProp ::
   ( Signal (EraRule "LEDGER" era) ~ Tx era
-  , Reflect era
   , Show (State (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , Eq (State (EraRule "LEDGER" era))
+  , EraTest era
+  , Reflect era
   ) =>
   Proof era ->
   Env era ->
@@ -111,7 +105,7 @@ ledgerStateEqProp proof env1 expectedLedgerState ledgerenv ledgerstate tx =
     Left errs ->
       let errsLines = "" : "applySTS fails" : map show (toList errs)
        in counterexample
-            (unlines (errsLines ++ ["Tx =", show (pcTx proof tx)]))
+            (unlines (errsLines ++ ["Tx =", show (toExpr tx)]))
             ( whenFail
                 (putStrLn (unlines errsLines) >> goRepl proof env1 "")
                 False
@@ -130,6 +124,7 @@ runOne ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , EraTest era
   , Reflect era
   ) =>
   Proof era ->
@@ -141,7 +136,7 @@ runOne proof txIx (TraceStep beforeEnv afterEnv tx) = do
   expectedLedgerState <- runTarget afterEnv (ledgerStateT proof)
   pure $ ledgerStateEqProp proof afterEnv expectedLedgerState lenv ledgerstate tx
 
-oneTx :: Reflect era => Proof era -> Int -> TraceM era (Tx era)
+oneTx :: (EraTest era, Reflect era) => Proof era -> Int -> TraceM era (Tx era)
 oneTx proof _n = do
   !tx <- simpleTx proof (Coin 70000)
   setVar txterm (TxF proof tx)
@@ -156,8 +151,9 @@ testTrace ::
   ( Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Reflect era
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , EraTest era
+  , Reflect era
   ) =>
   Proof era ->
   Int ->

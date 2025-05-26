@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Added `Generic` instance for `AlonzoScriptsNeeded`
 * Move to `testlib` `DecCBOR` instances for: `AlonzoTxSeq`, `AlonzoTx`, `TxBody AlonzoEra`, `AlonzoTxAuxDataRaw`, `AlonzoTxAuxData`, `AlonzoScript`, `AlonzoTxWitsRaw`, `AlonzoTxWits`, `RedeemersRaw`, `Redeemers`, `TxDatsRaw`, `TxDats`
 * Added to `PParams`: `ppCollateralPercentage`,`ppCostModels`,`ppMaxBlockExUnits`,`ppMaxCollateralInputs`,`ppMaxTxExUnits`,`ppMaxValSize`,`ppPrices`
 * Removed `alonzoCommonPParamsHKDPairs` from `PParams`
@@ -21,6 +22,11 @@
 
 ### `testlib`
 
+* Added `ToExpr` instances for:
+  * `AsIxItem`
+  * `AlonzoScriptsNeeded`
+  * `AlonzoPlutusPurpose AsIxItem`
+  * `AlonzoBbodyPredFailure`
 * Deprecated `mkPlutusScript'`
 * Change type signature of `genPlutusScript`, `genNativeScript`, `genAlonzoScript`, `alwaysSucceedsLang` and `alwaysFailsLang`.
 * Remove `TxInfoLanguage` and `mkTxInfoLanguage`

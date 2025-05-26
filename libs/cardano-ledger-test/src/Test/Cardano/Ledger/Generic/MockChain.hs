@@ -50,22 +50,13 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Internal (Seq)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
+import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcKeyHash,
-  pcNewEpochState,
-  pcSlotNo,
-  ppInt,
-  ppRecord,
-  ppShelleyLedgersPredFailure,
-  ppTickPredicateFailure,
- )
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
+import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ================================================
@@ -80,6 +71,13 @@ data MockChainFailure era
   | BlocksOutOfOrder
       !SlotNo -- The last applied block SlotNo
       !SlotNo -- The candidate block SlotNo
+  deriving (Generic)
+
+instance
+  ( ToExpr (ShelleyTickPredFailure era)
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ToExpr (MockChainFailure era)
 
 data MockChainEvent era
   = MockChainFromTickEvent !(ShelleyTickEvent era)
@@ -90,6 +88,7 @@ data MockBlock era = MockBlock
   , mbSlot :: !SlotNo
   , mbTrans :: !(StrictSeq (Tx era))
   }
+  deriving (Generic)
 
 data MockChainState era = MockChainState
   { mcsNes :: !(NewEpochState era)
@@ -217,48 +216,20 @@ deriving instance
   (Eq (ShelleyTickPredFailure era), Eq (ShelleyLedgersPredFailure era)) => Eq (MockChainFailure era)
 
 ppMockChainState ::
-  Reflect era =>
+  (Reflect era, ShelleyEraTest era) =>
   MockChainState era ->
-  PDoc
-ppMockChainState (MockChainState nes _ sl count) =
-  ppRecord
-    "MockChainState"
-    [ ("NewEpochState", pcNewEpochState reify nes)
-    , ("LastBlock", pcSlotNo sl)
-    , ("Count", ppInt count)
-    ]
+  Expr
+ppMockChainState = toExpr
 
-instance Reflect era => PrettyA (MockChainState era) where
-  prettyA = ppMockChainState
+instance (Reflect era, ShelleyEraTest era) => ToExpr (MockChainState era)
 
-ppMockBlock :: MockBlock era -> PDoc
-ppMockBlock (MockBlock iss sl txs) =
-  ppRecord
-    "MockBock"
-    [ ("Issuer", pcKeyHash iss)
-    , ("Slot", pcSlotNo sl)
-    , ("Transactions", ppInt (length txs))
-    ]
+ppMockBlock :: ToExpr (StrictSeq (Tx era)) => MockBlock era -> Expr
+ppMockBlock = toExpr
 
-instance PrettyA (MockBlock era) where prettyA = ppMockBlock
+instance ToExpr (StrictSeq (Tx era)) => ToExpr (MockBlock era)
 
-ppMockChainFailure :: Reflect era => Proof era -> MockChainFailure era -> PDoc
-ppMockChainFailure proof x = case proof of
-  Conway -> help x
-  Babbage -> help x
-  Alonzo -> help x
-  Mary -> help x
-  Allegra -> help x
-  Shelley -> help x
-  where
-    help (MockChainFromTickFailure y) = ppTickPredicateFailure y
-    help (MockChainFromLedgersFailure y) = ppShelleyLedgersPredFailure proof y
-    help (BlocksOutOfOrder lastslot cand) =
-      ppRecord
-        "BlocksOutOfOrder"
-        [ ("Last applied block", pcSlotNo lastslot)
-        , ("Candidate block", pcSlotNo cand)
-        ]
+ppMockChainFailure :: ToExpr (MockChainFailure era) => MockChainFailure era -> Expr
+ppMockChainFailure = toExpr
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
 noThunksGen Conway = noThunks []

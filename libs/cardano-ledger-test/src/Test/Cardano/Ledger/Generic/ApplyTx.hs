@@ -35,9 +35,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
@@ -66,9 +66,7 @@ import Test.Cardano.Ledger.Generic.ModelState (
   Model,
   ModelNewEpochState (..),
   mNewEpochStateZero,
-  pcModelNewEpochState,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (
@@ -180,7 +178,7 @@ applyShelleyCert model dcert = case dcert of
     where
       pp = mPParams model
   ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
+    Nothing -> error ("DeRegKey not in rewards: " <> show (toExpr x))
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model)
@@ -302,7 +300,7 @@ go = do
       tx = (notValidatingTx proof) {isValid = IsValid False}
       allinputs = txbody ^. allInputsTxBodyF
       txbody = body tx
-      doc = pcTx proof tx
+      doc = toExpr tx
       model1 =
         (mNewEpochStateZero @BabbageEra)
           { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs
@@ -311,9 +309,9 @@ go = do
           , mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
           }
       model2 = applyTx proof 0 (SlotNo 0) model1 tx
-  print (pcModelNewEpochState proof model1)
+  print (toExpr model1)
   print doc
-  print (pcModelNewEpochState proof model2)
+  print (toExpr model2)
 
 filterRewards ::
   EraPParams era =>

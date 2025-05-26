@@ -39,7 +39,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   namePoolCert,
   nameTxCert,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 
@@ -50,8 +49,8 @@ minitraceEither ::
   forall s e.
   ( ExecSpecRule s e
   , ExecState s e ~ State (EraRule s e)
-  , PrettyA (Signal (EraRule s e))
-  , PrettyA (State (EraRule s e))
+  , ToExpr (Signal (EraRule s e))
+  , ToExpr (State (EraRule s e))
   ) =>
   WitRule s e ->
   Int ->
@@ -77,8 +76,8 @@ minitraceEither witrule n0 = do
               Left ps ->
                 pure
                   ( Left
-                      ( [ "\nSIGNAL = " ++ show (prettyA signal2)
-                        , "\nSTATE = " ++ show (prettyA state)
+                      ( [ "\nSIGNAL = " ++ show (toExpr signal2)
+                        , "\nSTATE = " ++ show (toExpr state)
                         , "\nPredicateFailures"
                         ]
                           ++ map show (NE.toList ps)
@@ -96,8 +95,8 @@ minitrace ::
   forall s e.
   ( ExecSpecRule s e
   , ExecState s e ~ State (EraRule s e)
-  , PrettyA (Signal (EraRule s e))
-  , PrettyA (State (EraRule s e))
+  , ToExpr (Signal (EraRule s e))
+  , ToExpr (State (EraRule s e))
   ) =>
   WitRule s e ->
   Int ->
@@ -112,8 +111,8 @@ minitraceProp ::
   forall s e.
   ( ExecSpecRule s e
   , ExecState s e ~ State (EraRule s e)
-  , PrettyA (Signal (EraRule s e))
-  , PrettyA (State (EraRule s e))
+  , ToExpr (Signal (EraRule s e))
+  , ToExpr (State (EraRule s e))
   ) =>
   WitRule s e ->
   Int ->
