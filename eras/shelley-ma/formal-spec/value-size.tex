@@ -13,7 +13,7 @@ of an output. The restriction on the total serialized size of the transaction (s
 by the parameter $\var{maxTxSize}$) serves as an implicit upper bound on the
 size of a $\Value_C$ contained in an output of a transaction. Without tighter
 limits on the output $\Value_C$ size, one of the following situations could arise,
-causing the output to be come unspendable (these are just a two examples) :
+causing the output to become unspendable (these are just a two examples):
 
 \begin{itemize}
   \item The script locking the very large $\Value_C$-containing UTxO is too large
@@ -78,12 +78,12 @@ The function $\fun{serSize}$ returns the actual number of bytes in the bytestrin
     serialized representation of a $\ValMonoid$ element. The specific underlying $\ValMonoid$
     is required to be serializable in every era.
 
-    The $\fun{serSize}$ function is used constrain
+    The $\fun{serSize}$ function is used to constrain
     the serialized representation of the transaction (in particular, the size
     of $\Value_C$ elements in outputs), whereas the min-Ada requirement is a calculation based on
     the in-memory representation size. A transparently-calculated size estimate
     is not necessary for limiting the size of values in outputs, since this size-bound
-    check does not place any additional accounting/monetary constranits on transaction construction,
+    check does not place any additional accounting/monetary constraints on transaction construction,
     unlike the min-Ada requirement.
 
 \subsection{Min UTxO Value}
