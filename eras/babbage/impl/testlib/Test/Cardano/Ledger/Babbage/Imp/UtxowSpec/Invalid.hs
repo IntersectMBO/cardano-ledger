@@ -24,6 +24,8 @@ import Cardano.Ledger.Plutus (
   Data (..),
   Datum (..),
   Language (..),
+  TxOutSource (TxOutFromInput),
+  dataToBinaryData,
   hashData,
   hashPlutusScript,
   mkDatum,
@@ -133,7 +135,20 @@ spec = describe "Invalid" $ do
     const $ pendingWith "not implemented yet"
 
   it "Inline datum with Plutus V1" $ do
-    const $ pendingWith "not implemented yet"
+    let scriptHash = withSLanguage PlutusV1 $ hashPlutusScript . alwaysSucceedsWithDatum
+        txOut =
+          mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+            & datumTxOutL .~ Datum (dataToBinaryData . Data $ PV1.I 0)
+        tx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
+    txIn <- txInAt (0 :: Int) <$> submitTx tx
+    submitFailingTx
+      (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
+      [ injectFailure $
+          CollectErrors
+            [ BadTranslation . inject $
+                InlineDatumsNotSupported @era (TxOutFromInput txIn)
+            ]
+      ]
 
   it "Min-utxo value with output too large" $ do
     const $ pendingWith "not implemented yet"
