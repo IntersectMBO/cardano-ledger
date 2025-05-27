@@ -32,6 +32,8 @@ module Cardano.Ledger.Plutus.Data (
   binaryDataToData,
   dataToBinaryData,
   Datum (..),
+  mkInlineDatum,
+  mkHashedDatum,
   datumDataHash,
   translateDatum,
 ) where
@@ -248,6 +250,12 @@ instance Era era => ToJSON (Datum era) where
     case datumDataHash d of
       SNothing -> toEncoding Null
       SJust dh -> toEncoding dh
+
+mkInlineDatum :: forall era. Era era => PV1.Data -> Datum era
+mkInlineDatum = Datum . dataToBinaryData . Data @era
+
+mkHashedDatum :: forall era. Era era => PV1.Data -> Datum era
+mkHashedDatum = DatumHash . hashData . Data @era
 
 -- | Get the Hash of the datum.
 datumDataHash :: Datum era -> StrictMaybe DataHash
