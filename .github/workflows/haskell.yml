@@ -96,8 +96,9 @@ jobs:
           flags: -external-libsodium-vrf
         EOF
 
-    - name: Configure to limit the heap size for ghc 8
-      if: startsWith(${{ matrix.ghc }}, 8)
+    # Use this to debug "run canceled" build failures
+    - name: Configure to limit the ghc heap size
+      if: false
       run: |
         cat >> cabal.project.local <<EOF
         with-compiler: $PWD/scripts/ghc-limited
@@ -141,6 +142,11 @@ jobs:
         restore-keys: |
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
+
+    - name: Install build tools and helpers
+      run: |
+        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
+        cabal path --installdir >> "$GITHUB_PATH"
 
     - name: Check workflow test matrix
       run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
@@ -343,6 +349,9 @@ jobs:
           TRIES=3
           scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
         fi
+
+    - name: Run doctests
+      run: scripts/doctest.sh "${{ matrix.package }}"
 
   complete:
     name: Tests completed
