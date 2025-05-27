@@ -25,8 +25,8 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  decodeTag,
-  encodeTag,
+  decodeWord8,
+  encodeWord8,
   fromByronCBOR,
   toByronCBOR,
  )
@@ -115,15 +115,15 @@ instance FromCBOR RequiresNetworkMagic where
 
 instance EncCBOR RequiresNetworkMagic where
   encCBOR = \case
-    RequiresNoMagic -> encodeTag 0
-    RequiresMagic -> encodeTag 1
+    RequiresNoMagic -> encodeWord8 0
+    RequiresMagic -> encodeWord8 1
 
 instance DecCBOR RequiresNetworkMagic where
   decCBOR =
-    decodeTag >>= \case
+    decodeWord8 >>= \case
       0 -> return RequiresNoMagic
       1 -> return RequiresMagic
-      tag -> fail $ "RequiresNetworkMagic: unknown tag " ++ show tag
+      w8 -> fail $ "RequiresNetworkMagic: unknown constructor " ++ show w8
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.
