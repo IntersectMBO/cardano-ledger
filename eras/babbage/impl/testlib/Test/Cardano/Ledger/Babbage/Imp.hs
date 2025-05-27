@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Plutus (Language (..))
@@ -34,13 +34,14 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , BabbageEraTxBody era
-  , EraPlutusTxInfo 'PlutusV2 era
+  , EraPlutusTxInfo PlutusV2 era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
