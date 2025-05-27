@@ -12,9 +12,9 @@
 -- Let's start by defining the GHC extensions and imports.
 --
 -- >>> :set -XTypeApplications
--- >>> import Cardano.Ledger.Api.Era (Babbage)
+-- >>> import Cardano.Ledger.Api.Era (BabbageEra)
 -- >>> import Lens.Micro
--- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators () -- Neded for doctests only
+-- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators () -- Needed for doctests only
 -- >>> import Test.QuickCheck -- Needed for doctests only
 --
 -- Here's an example on how to build a very basic Babbage era transaction output with a random
@@ -24,7 +24,7 @@
 -- quickCheck $ \addr val ->
 --     let
 --         -- Defining a Babbage era transaction output with some random address and value.
---         txOut = mkBasicTxOut @Babbage addr val
+--         txOut = mkBasicTxOut @BabbageEra addr val
 --      in
 --         -- We verify that the transaction output contains our random address and value.
 --         txOut ^. addrTxOutL == addr && txOut ^. valueTxOutL == val

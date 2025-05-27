@@ -129,8 +129,8 @@ calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
 --
 -- ====__Example__
 --
--- >>> let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
--- >>> calcMinFeeTx relevantUtxo pp tx 5
+-- > let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
+-- > calcMinFeeTx relevantUtxo pp tx 5
 calcMinFeeTx ::
   forall era.
   (EraUTxO era, EraCertState era) =>

@@ -301,6 +301,7 @@ extractKeys ks (OMap sseq kv) =
 --
 -- Examples:
 --
+-- >>> :set -XFlexibleInstances -XMultiParamTypeClasses
 -- >>> import Data.OMap.Strict
 -- >>> import Lens.Micro
 -- >>> instance HasOKey Int (Int, Char) where okeyL = _1
