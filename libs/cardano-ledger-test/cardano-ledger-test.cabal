@@ -42,7 +42,6 @@ library
     Test.Cardano.Ledger.Constrained.Conway.TxBodySpec
     Test.Cardano.Ledger.Constrained.Conway.Utxo
     Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-    Test.Cardano.Ledger.EraClass
     Test.Cardano.Ledger.Examples.AlonzoAPI
     Test.Cardano.Ledger.Examples.AlonzoBBODY
     Test.Cardano.Ledger.Examples.AlonzoCollectInputs
@@ -64,9 +63,7 @@ library
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.NoThunks
     Test.Cardano.Ledger.STS
-    Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.Tickf
-    Test.Cardano.Ledger.ValueFromList
 
   hs-source-dirs: src
   default-language: Haskell2010
