@@ -25,9 +25,7 @@ import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
 import Constrained.API
-import Control.Monad (guard)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -37,52 +35,6 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-
--- | Specify that some of the rewards in the RDPair's are zero.
---   without this in the DState, it is hard to generate the ConwayUnRegCert
---   certificate, since it requires a rewards balance of 0.
---   We also specify that both reward and deposit are greater than (Coin 0)
-someZeros :: Specification (AccountState era)
-someZeros = constrained $ \ [var| someRdpair |] ->
-  match someRdpair $ \ [var| rewardx |] [var|deposit|] ->
-    [ satisfies rewardx (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, gtSpec 0))
-    , satisfies deposit (geqSpec 0)
-    ]
-
-conwayAccountsSpec ::
-  forall era.
-  Era era =>
-  WitUniv era ->
-  Map RewardAccount Coin ->
-  Specification (Accounts era)
-conwayAccountsSpec univ wdrl =
-  let n = wvSize univ
-      m = Map.size wdrl
-      maxRewDepSize = fromIntegral (n - (m + 2)) -- (2 * n - (m + 2))
-      withdrawalPairs :: [(Credential 'Staking, Word64)]
-      withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 wdrl))
-      withdrawalKeys :: Set (Credential 'Staking)
-      withdrawalKeys = Map.keysSet (Map.mapKeys raCredential wdrl)
-   in constrained $ \ [var|rdmap|] ->
-        [ -- size of rdmap, can't be bigger than the witness set (n keys + n scripts)
-          -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ (rdmap) <=. lit maxRewDepSize
-        , assertExplain (pure "some rewards (not in withdrawals) are zero") $
-            forAll rdmap $
-              \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
-                -- Apply this only to entries NOT IN the withdrawal set, since entries in the withdrawal set
-                -- already force the reward in the RDPair to the withdrawal amount.
-                [ witness univ cred
-                , whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
-                ]
-        , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
-            match pair $ \ [var| wcred |] [var| coin |] ->
-              [ assertExplain (pure "withdrawalKeys are a subset of the rdMap") $ mapMember_ wcred rdmap
-              , -- Force the reward in the RDPair to the withdrawal amount.
-                onJust (lookup_ wcred rdmap) $ \ [var|rdpair|] ->
-                  match rdpair $ \rew _deposit -> assert $ rew ==. coin
-              ]
-        ]
 
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
@@ -97,39 +49,19 @@ keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
     isKeyHash (ScriptHashObj _) = False
 
 dStateSpec ::
-  forall era.
-  EraSpecDeleg era =>
-  WitUniv era ->
+  WitUniv ConwayEra ->
   Map RewardAccount Coin ->
-  Specification (DState era)
-dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var|accounts|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+  Specification (DState ConwayEra)
+dStateSpec univ _wdrls = constrained $ \ [var| dstate |] ->
+  match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
-      assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      assert $ sizeOf_ futureGenDelegs ==. 0
     , -- genDelegs
       match genDelegs $ \gd ->
-        [ witness univ (dom_ gd)
-        , witness univ (rng_ gd)
-        , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+        [ assert $ sizeOf_ gd ==. 0
         ]
     , -- irewards
       match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-    , match accounts conwayAccountsSpec
-      $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
-        [ -- rdMap
-          satisfies rdMap (conwayAccounsSpec univ wdrls)
-        , -- dRepMap
-          dependsOn dRepMap rdMap
-        , reify rdMap id $ \ [var|rdm|] ->
-            [ witness univ (dom_ dRepMap)
-            , assert $ subset_ (lit (keyHashWdrl wdrls)) (dom_ dRepMap)
-            , witness univ (rng_ dRepMap)
-            , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
-            ]
-        , -- sPoolMap
-          reify rdMap id $ \ [var|rdmp|] ->
-            assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
-        ]
     ]
 
 conwayDelegCertSpec ::
