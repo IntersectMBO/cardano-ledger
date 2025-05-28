@@ -42,6 +42,7 @@ module Cardano.Ledger.Core (
   Value,
   EraPParams (..),
   mkCoinTxOut,
+  wireSizeTxF,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -75,13 +76,14 @@ import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR,
   DecShareCBOR (Share),
-  EncCBOR,
+  EncCBOR (..),
   EncCBORGroup,
   Interns,
   Sized (sizedValue),
   ToCBOR,
   encCBORGroup,
   mkSized,
+  serialize,
   serialize',
  )
 import Cardano.Ledger.Coin (Coin)
@@ -102,6 +104,7 @@ import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -149,9 +152,6 @@ class
 
   -- | For fee calculation and estimations of impact on block space
   sizeTxF :: SimpleGetter (Tx era) Integer
-
-  -- | For end use by eg. diffusion layer in transaction submission protocol
-  wireSizeTxF :: SimpleGetter (Tx era) Word32
 
   -- | For fee calculation and estimations of impact on block space
   -- To replace `sizeTxF` after it has been proved equivalent to it .
@@ -633,3 +633,18 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
 txIdTxBody :: EraTxBody era => TxBody era -> TxId
 txIdTxBody = TxId . hashAnnotated
+
+-- | txsize computes the length of the serialised bytes (actual size)
+wireSizeTxF :: forall era. EraTx era => SimpleGetter (Tx era) Word32
+wireSizeTxF =
+  to $
+    checkedFromIntegral
+      . LBS.length
+      . serialize (eraProtVerLow @era)
+      . encCBOR
+  where
+    checkedFromIntegral n =
+      if n <= fromIntegral (maxBound :: Word32)
+        then fromIntegral n
+        else error $ "Impossible: Size of the transaction is too big: " ++ show n
+{-# INLINEABLE wireSizeTxF #-}

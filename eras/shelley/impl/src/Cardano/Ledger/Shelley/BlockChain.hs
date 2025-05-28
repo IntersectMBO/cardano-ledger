@@ -33,11 +33,12 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
   StrictMaybe (..),
+  maybeToStrictMaybe,
   mkNonceFromNumber,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
@@ -50,7 +51,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -232,10 +233,19 @@ instance
             <> ")"
       )
 
-    let txns =
-          sequenceA $
-            StrictSeq.forceToStrict $
-              Seq.zipWith3 segWitAnnTx bodies wits metadata
+    let
+      segWitAnnTx bodyAnn witsAnn' metaAnn = Annotator $ \bytes ->
+        let body' = runAnnotator bodyAnn bytes
+            witnessSet = runAnnotator witsAnn' bytes
+            metadata' = flip runAnnotator bytes <$> metaAnn
+         in ShelleyTx
+              body'
+              witnessSet
+              (maybeToStrictMaybe metadata')
+      txns =
+        sequenceA $
+          StrictSeq.forceToStrict $
+            Seq.zipWith3 segWitAnnTx bodies wits metadata
     pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce

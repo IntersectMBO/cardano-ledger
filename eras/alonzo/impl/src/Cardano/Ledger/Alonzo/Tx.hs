@@ -48,7 +48,6 @@ module Cardano.Ledger.Alonzo.Tx (
   witsAlonzoTxL,
   auxDataAlonzoTxL,
   sizeAlonzoTxF,
-  wireSizeAlonzoTxF,
   isValidAlonzoTxL,
   txdats',
   txscripts',
@@ -127,7 +126,6 @@ import Data.Maybe.Strict (
  )
 import Data.Set (Set)
 import Data.Typeable (Typeable)
-import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
@@ -168,9 +166,6 @@ instance EraTx AlonzoEra where
 
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
-
-  wireSizeTxF = wireSizeAlonzoTxF
-  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
@@ -225,21 +220,6 @@ sizeAlonzoTxF =
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
-
--- | txsize computes the length of the serialised bytes (actual size)
-wireSizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Word32
-wireSizeAlonzoTxF =
-  to $
-    checkedFromIntegral
-      . LBS.length
-      . serialize (eraProtVerLow @era)
-      . encCBOR
-  where
-    checkedFromIntegral n =
-      if n <= fromIntegral (maxBound :: Word32)
-        then fromIntegral n
-        else error $ "Impossible: Size of the transaction is too big: " ++ show n
-{-# INLINEABLE wireSizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
 isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})

@@ -500,8 +500,7 @@ instance Arbitrary (TxBody ShelleyEra) where
       <*> arbitrary
 
 genTx ::
-  ( EraTx era
-  , Arbitrary (TxBody era)
+  ( Arbitrary (TxBody era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (TxWits era)
   ) =>

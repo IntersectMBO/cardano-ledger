@@ -46,9 +46,6 @@ instance EraTx BabbageEra where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  wireSizeTxF = wireSizeAlonzoTxF
-  {-# INLINE wireSizeTxF #-}
-
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 

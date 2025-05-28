@@ -212,7 +212,6 @@ mkScriptHash = ScriptHash . mkDummyHash @ADDRHASH
 -- serialisation, not validation.
 exampleTx ::
   forall era.
-  EraTx era =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   TxBody era ->
   TxAuxData era ->
