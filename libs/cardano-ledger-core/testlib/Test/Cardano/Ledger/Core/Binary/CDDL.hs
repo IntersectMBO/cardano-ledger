@@ -2,10 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-{-# HLINT ignore "Evaluate" #-}
+{- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Core.Binary.CDDL where
 

@@ -1,17 +1,22 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-{-# HLINT ignore "Evaluate" #-}
+{- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Allegra.CDDL (
   module Test.Cardano.Ledger.Shelley.CDDL,
   module Test.Cardano.Ledger.Allegra.CDDL,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Core (Era)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Test.Cardano.Ledger.Shelley.CDDL hiding (
@@ -23,7 +28,11 @@ import Test.Cardano.Ledger.Shelley.CDDL hiding (
 import Text.Heredoc
 
 allegraCDDL :: Huddle
-allegraCDDL = collectFrom [HIRule block, HIRule transaction]
+allegraCDDL =
+  collectFrom
+    [ HIRule $ block @AllegraEra
+    , HIRule $ transaction @AllegraEra
+    ]
 
 native_script :: Rule
 native_script =
@@ -77,7 +86,7 @@ auxiliary_data =
       , "auxiliary_scripts" ==> auxiliary_scripts
       ]
 
-transaction_body :: Rule
+transaction_body :: forall era. Era era => Rule
 transaction_body =
   comment
     [str|Allegra transaction body adds the validity interval start at index 8
@@ -90,26 +99,26 @@ transaction_body =
         , opt (idx 3 ==> VUInt)
         , opt (idx 4 ==> arr [0 <+ a certificate])
         , opt (idx 5 ==> withdrawals)
-        , opt (idx 6 ==> update)
+        , opt (idx 6 ==> update @era)
         , opt (idx 7 ==> metadata_hash)
         , opt (idx 8 ==> VUInt)
         ]
 
-block :: Rule
+block :: forall era. Era era => Rule
 block =
   "block"
     =:= arr
-      [ a header
-      , "transaction_bodies" ==> arr [0 <+ a transaction_body]
+      [ a $ header @era
+      , "transaction_bodies" ==> arr [0 <+ a (transaction_body @era)]
       , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
       , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
       ]
 
-transaction :: Rule
+transaction :: forall era. Era era => Rule
 transaction =
   "transaction"
     =:= arr
-      [ a transaction_body
+      [ a $ transaction_body @era
       , a transaction_witness_set
       , a (auxiliary_data / VNil)
       ]
