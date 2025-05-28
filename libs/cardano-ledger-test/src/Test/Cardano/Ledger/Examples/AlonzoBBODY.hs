@@ -75,7 +75,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Era
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,

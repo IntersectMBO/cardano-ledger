@@ -38,6 +38,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
