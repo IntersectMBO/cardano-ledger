@@ -194,7 +194,7 @@ isValidPlutus v = isRight . decodePlutusRunnable v
 
 -- | Serialize the runnable version of the plutus script
 --
--- prop> decodePlutusRunnable majVer (plutusFromRunnable pr) == Right pr
+-- > decodePlutusRunnable majVer (plutusFromRunnable pr) == Right pr
 plutusFromRunnable :: PlutusRunnable l -> Plutus l
 plutusFromRunnable = Plutus . PlutusBinary . P.serialisedScript . plutusRunnable
 

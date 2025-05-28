@@ -12,7 +12,7 @@
 -- >>> :set -XScopedTypeVariables
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
--- >>> import Cardano.Ledger.Api.Era (Babbage)
+-- >>> import Cardano.Ledger.Api.Era (BabbageEra)
 -- >>> import Lens.Micro
 -- >>> import Test.Cardano.Ledger.Babbage.Arbitrary ()
 --
@@ -20,7 +20,7 @@
 -- transaction output using the provided interface.
 --
 -- >>> :{
--- quickCheck $ \(txOut :: TxOut Babbage) ->
+-- quickCheck $ \(txOut :: TxOut BabbageEra) ->
 --     let
 --         -- Defining a Babbage era transaction body with a single random transaction output
 --         txBody = mkBasicTxBody
