@@ -572,7 +572,7 @@ url :: Rule
 url = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
 
 pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a metadata_hash]
+pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
 
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]
