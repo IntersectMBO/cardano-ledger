@@ -79,7 +79,6 @@ import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
-import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))

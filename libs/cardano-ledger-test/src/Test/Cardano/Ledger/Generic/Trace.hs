@@ -49,7 +49,6 @@ import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
   SnapShots (..),
-  UTxO (..),
   calculatePoolDistr,
  )
 import qualified Cardano.Ledger.UMap as UM
@@ -76,15 +75,9 @@ import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Era
-import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
 import Test.Cardano.Ledger.Generic.Functions (
   adaPots,
-  allInputs,
-  getBody,
-  getScriptWits,
-  getWitnesses,
-  isValid',
   totalAda,
   txoutFields,
  )
@@ -98,7 +91,6 @@ import Test.Cardano.Ledger.Generic.GenState (
   getSlot,
   getSlotDelta,
   getTreasury,
-  gsModel,
   initStableFields,
   initialLedgerState,
   modifyModel,
@@ -213,20 +205,10 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
 
 -- ==============================================================================
 
--- | Turn a UTxO into a smaller UTxO, with only entries mentioned in
---   the inputs of 'txs' ,  then pretty print it.
-pcSmallUTxO :: EraTx era => Proof era -> MUtxo era -> [Tx era] -> Expr
-pcSmallUTxO proof u txs = ppMap toExpr (shortTxOut proof) m
-  where
-    keys = Set.unions (map f txs)
-    f tx = allInputs proof (getBody proof tx)
-    m = Map.restrictKeys u keys
-
 raiseMockError ::
   forall era.
   ( Reflect era
   , EraTest era
-  , ToExpr (MockChainFailure era)
   ) =>
   Word64 ->
   SlotNo ->
@@ -235,37 +217,14 @@ raiseMockError ::
   [Tx era] ->
   GenState era ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
-  let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
-      _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
+  let _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
       _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
       _keydeposits = UM.depositMap $ epochstate ^. esLStateL . lsCertStateL . certDStateL . dsUnifiedL
    in show
-        [ pcSmallUTxO reify utxo txs
-        , ppSet toExpr gsStablePools
-        , ppSet toExpr gsStableDelegators
-        , -- You never know what is NEEDED to debug a failure, and what is a DISTRACTION
-          -- These things certainly fall in that category. I leave them commented out so if
-          -- they are not a distraction in the current error, they are easy to turn back on.
-          -- ppString "===================================",
-          -- ppString "PoolDeposits\n" <> ppMap pcKeyHash pcCoin _pooldeposits,
-          -- ppString "===================================",
-          -- ppString "KeyDeposits\n" <> ppMap pcCredential pcCoin _keydeposits,
-          -- ppString "Model KeyDeposits\n" <> ppMap pcCredential pcCoin (mKeyDeposits gsModel),
-          -- ppString "Initial Pool Distr\n" <> ppMap pcKeyHash pcIndividualPoolStake gsInitialPoolDistr,
-          -- ppString "===================================",
-          -- ppString "Initial Pool Params\n" <> ppMap pcKeyHash pcPoolParams gsInitialPoolParams,
-          -- ppString "===================================",
-          -- ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
-          showBlock utxo txs
-        , toExpr $ adaPots reify epochstate
-        , ppList toExpr (Fold.toList pdfs)
+        [ toExpr $ adaPots reify epochstate
         , toExpr slot
         , toExpr next
-        , ppMap
-            toExpr
-            toExpr
-            (Map.restrictKeys gsScripts . badScripts reify $ Fold.toList pdfs)
         , -- ppString "===================================",
           -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
           toExpr (epochstate ^. curPParamsEpochStateL)
@@ -319,19 +278,6 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-showBlock :: forall era. (Reflect era, EraTest era) => MUtxo era -> [Tx era] -> Expr
-showBlock u txs = ppList pppair (zip txs [0 ..])
-  where
-    pppair (tx, n) =
-      let body = getBody reify tx
-       in toExpr
-            [ toExpr @Int n
-            , toExpr $ hashAnnotated body
-            , smartTxBody u body
-            , toExpr (isValid' reify tx)
-            , ppMap toExpr toExpr (getScriptWits reify (getWitnesses reify tx))
-            ]
-
 shortTxOut :: EraTxOut era => Proof era -> TxOut era -> Expr
 shortTxOut proof out = case txoutFields proof out of
   (Addr _ pay _, _, _) -> toExpr (pay, out ^. coinTxOutL)
@@ -358,7 +304,6 @@ instance
   ( STS (MOCKCHAIN era)
   , Reflect era
   , EraTest era
-  , ToExpr (MockChainFailure era)
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where
