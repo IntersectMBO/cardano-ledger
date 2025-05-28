@@ -49,36 +49,13 @@ someZeros = constrained $ \ [var| someRdpair |] ->
     , satisfies deposit (geqSpec 0)
     ]
 
--- | Specification for the RewardDepositMap of the Umap in the DState
---   It must be witnessed, and conform to some properties relating to the
---   withdrawals map, which is part of the context, so passed as an arg.
-rewDepMapSpec ::
-  Era era =>
-  WitUniv era ->
-  Map RewardAccount Coin ->
-  Specification (Map (Credential 'Staking) RDPair)
-rewDepMapSpec univ wdrl =
-  let n = wvSize univ
-      m = Map.size wdrl
-      maxRewDepSize = fromIntegral (2 * n - (m + 2))
-   in constrained $ \ [var|rdmap|] ->
-        [ -- can't be bigger than the witness set (n keys + n scripts)
-          -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ rdmap <=. lit maxRewDepSize -- If this is too large
-        , assert $ subset_ (lit (wdrlCredentials wdrl)) (dom_ rdmap) -- it is hard to satisfy this
-        , forAll' rdmap $ \ [var|cred|] [var| rdpair|] ->
-            [ witness univ cred
-            , satisfies rdpair someZeros
-            ]
-        ]
-
-rewDepMapSpec2 ::
+conwayAccountsSpec ::
   forall era.
   Era era =>
   WitUniv era ->
   Map RewardAccount Coin ->
-  Specification (Map (Credential 'Staking) RDPair)
-rewDepMapSpec2 univ wdrl =
+  Specification (Accounts era)
+conwayAccountsSpec univ wdrl =
   let n = wvSize univ
       m = Map.size wdrl
       maxRewDepSize = fromIntegral (n - (m + 2)) -- (2 * n - (m + 2))
@@ -126,7 +103,7 @@ dStateSpec ::
   Map RewardAccount Coin ->
   Specification (DState era)
 dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var| accounts |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+  match dstate $ \ [var|accounts|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
       assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
     , -- genDelegs
@@ -137,9 +114,10 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
         ]
     , -- irewards
       match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-    , match accounts $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
+    , match accounts conwayAccountsSpec
+      $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
         [ -- rdMap
-          satisfies rdMap (rewDepMapSpec2 univ wdrls)
+          satisfies rdMap (conwayAccounsSpec univ wdrls)
         , -- dRepMap
           dependsOn dRepMap rdMap
         , reify rdMap id $ \ [var|rdm|] ->
@@ -151,8 +129,6 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
         , -- sPoolMap
           reify rdMap id $ \ [var|rdmp|] ->
             assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
-        , -- ptrMapo
-          assertExplain (pure "ptrMap is empty") $ ptrMap ==. lit mempty
         ]
     ]
 
