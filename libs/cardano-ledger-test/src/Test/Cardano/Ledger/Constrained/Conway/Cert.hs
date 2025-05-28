@@ -198,7 +198,7 @@ class
   certStateSpec ::
     WitUniv era ->
     Set (Credential 'DRepRole) ->
-    Map (RewardAccount) Coin ->
+    Map RewardAccount Coin ->
     Specification (CertState era)
 
 instance EraSpecCert ShelleyEra where

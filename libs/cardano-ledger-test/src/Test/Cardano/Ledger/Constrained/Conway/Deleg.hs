@@ -27,6 +27,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
 import Constrained.API
+import Control.Monad (guard)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -41,7 +42,7 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
 --   certificate, since it requires a rewards balance of 0.
 --   We also specify that both reward and deposit are greater than (Coin 0)
-someZeros :: Specification RDPair
+someZeros :: Specification (AccountState era)
 someZeros = constrained $ \ [var| someRdpair |] ->
   match someRdpair $ \ [var| rewardx |] [var|deposit|] ->
     [ satisfies rewardx (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, gtSpec 0))
@@ -122,10 +123,10 @@ dStateSpec ::
   forall era.
   EraSpecDeleg era =>
   WitUniv era ->
-  Map (RewardAccount) Coin ->
+  Map RewardAccount Coin ->
   Specification (DState era)
 dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var| uMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+  match dstate $ \ [var| accounts |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
       assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
     , -- genDelegs
@@ -136,7 +137,7 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
         ]
     , -- irewards
       match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-    , match uMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
+    , match accounts $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
         [ -- rdMap
           satisfies rdMap (rewDepMapSpec2 univ wdrls)
         , -- dRepMap
@@ -164,14 +165,12 @@ conwayDelegCertSpec ::
 conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
   let ds = certState ^. certDStateL
       vs = certState ^. certVStateL
-      rewardMap = unUnify $ rewards ds
+      accountsMap = ds ^. accountsL . accountsMapL
       dReps = vsDReps vs
-      delegMap = unUnify $ delegations ds
-      zeroReward = (== 0) . fromCompact . rdReward
-      depositOf k =
-        case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
-          Just d | d > 0 -> SJust d
-          _ -> SNothing
+      depositOf cred =
+        case Map.lookup cred accountsMap of
+          Just accountState -> SJust $ fromCompact (accountState ^. depositAccountStateL)
+          Nothing -> SNothing
       delegateeInPools :: Term Delegatee -> Pred
       delegateeInPools delegatee =
         (caseOn delegatee)
@@ -199,29 +198,28 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
 
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
-              [ assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              [ assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
               , assert $ mc ==. lit (SJust (pp ^. ppKeyDepositL))
               ]
           )
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
-                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
-              , assert $ elem_ sc $ lit (Map.keys delegMap)
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter isZeroAccountBalance accountsMap)
               , -- The `StrictMaybe` needs to be precisely what is in the delegation map
                 reify sc depositOf (==. mc)
               ]
           )
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
           ( branchW 1 $ \sc delegatee ->
-              [ assert . member_ sc $ lit (Map.keysSet delegMap)
+              [ assert . member_ sc $ lit (Map.keysSet accountsMap)
               , delegateeInPools delegatee
               ]
           )
           -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
-              , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              , assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
               , delegateeInPools delegatee
               ]
           )
@@ -238,15 +236,13 @@ delegEnvSpec = constrained $ \env ->
 
 shelleyDelegCertSpec ::
   forall era.
-  EraPParams era =>
+  (EraPParams era, EraAccounts era) =>
   WitUniv era ->
   ConwayDelegEnv era ->
   DState era ->
-  Specification (ShelleyDelegCert)
+  Specification ShelleyDelegCert
 shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
-  let rewardMap = unUnify $ rewards ds
-      delegMap = unUnify $ delegations ds
-      zeroReward = (== 0) . fromCompact . rdReward
+  let accountsMap = ds ^. accountsL . accountsMapL
    in constrained $ \dc ->
         (caseOn dc)
           -- The weights on each 'branchW' case try to make it likely
@@ -254,13 +250,12 @@ shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
 
           -- ShelleyRegCert !(StakeCredential c)
           ( branchW 2 $ \sc ->
-              [witness univ sc, assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))]
+              [witness univ sc, assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))]
           )
           -- ShelleyUnRegCert !(StakeCredential c)
           ( branchW 3 $ \sc ->
-              [ -- You can only unregister things with 0 reward
-                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
-              , assert $ elem_ sc $ lit (Map.keys delegMap)
+              [ -- You can only unregister credentials with 0 balance
+                assert $ member_ sc $ lit (Map.keysSet $ Map.filter isZeroAccountBalance accountsMap)
               , witness univ sc
               ]
           )
@@ -268,12 +263,15 @@ shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
           ( branchW 2 $ \sc kh ->
               [ dependsOn sc dc
               , dependsOn kh dc
-              , assert . elem_ sc $ lit (Map.keys delegMap)
-              , assert $ elem_ kh (lit (Map.keys pools))
+              , assert $ member_ sc (lit (Map.keysSet accountsMap))
+              , assert $ member_ kh (lit (Map.keysSet pools))
               , witness univ sc
               , witness univ kh
               ]
           )
+
+isZeroAccountBalance :: EraAccounts era => AccountState era -> Bool
+isZeroAccountBalance accountState = accountState ^. balanceAccountStateL == mempty
 
 -- =============================================
 
