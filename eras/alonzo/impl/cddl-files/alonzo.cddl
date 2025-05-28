@@ -55,7 +55,7 @@ signature = bytes .size 64
 
 protocol_version = (major_protocol_version, uint)
 
-major_protocol_version = 1 .. 7
+major_protocol_version = 0 .. 7
 
 kes_signature = bytes .size 448
 

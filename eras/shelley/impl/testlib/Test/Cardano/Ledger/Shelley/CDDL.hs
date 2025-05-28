@@ -1,43 +1,48 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-{-# HLINT ignore "Evaluate" #-}
+{- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Shelley.CDDL (
   module Test.Cardano.Ledger.Core.Binary.CDDL,
   module Test.Cardano.Ledger.Shelley.CDDL,
 ) where
 
+import Cardano.Ledger.BaseTypes (getVersion)
+import Cardano.Ledger.Core (ByronEra, Era, eraProtVerHigh, eraProtVerLow)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
-import Data.Function (($))
 import Data.Word (Word64)
-import GHC.Num (Integer)
 import Test.Cardano.Ledger.Core.Binary.CDDL
 import Text.Heredoc
+import Prelude hiding ((/))
 
 shelleyCDDL :: Huddle
-shelleyCDDL = collectFrom [HIRule block, HIRule transaction, HIRule signkeyKES]
+shelleyCDDL = collectFrom [HIRule $ block @ShelleyEra, HIRule $ transaction @ShelleyEra, HIRule signkeyKES]
 
-block :: Rule
+block :: forall era. Era era => Rule
 block =
   "block"
     =:= arr
-      [ a header
-      , "transaction_bodies" ==> arr [0 <+ a transaction_body]
+      [ a $ header @era
+      , "transaction_bodies" ==> arr [0 <+ a (transaction_body @era)]
       , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
       , "transaction_metadata_set" ==> mp [0 <+ asKey transaction_index ==> transaction_metadata]
       ]
 
-transaction :: Rule
+transaction :: forall era. Era era => Rule
 transaction =
   "transaction"
     =:= arr
-      [ a transaction_body
+      [ a $ transaction_body @era
       , a transaction_witness_set
       , a (transaction_metadata / VNil)
       ]
@@ -45,10 +50,10 @@ transaction =
 transaction_index :: Rule
 transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
 
-header :: Rule
-header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
+header :: forall era. Era era => Rule
+header = "header" =:= arr [a $ header_body @era, "body_signature" ==> kes_signature]
 
-header_body :: Rule
+header_body :: forall era. Era era => Rule
 header_body =
   "header_body"
     =:= arr
@@ -62,7 +67,7 @@ header_body =
       , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
       , "block_body_hash" ==> hash32
       , a operational_cert
-      , a protocol_version
+      , a $ protocol_version @era
       ]
 
 operational_cert :: Named Group
@@ -75,21 +80,15 @@ operational_cert =
       , "sigma" ==> signature
       ]
 
--- TODO Replace with the following once
--- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
---
--- next_major_protocol_version :: Rule
--- next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
-next_major_protocol_version :: Integer
-next_major_protocol_version = 3
+major_protocol_version :: forall era. Era era => Rule
+major_protocol_version =
+  "major_protocol_version"
+    =:= (getVersion @Integer (eraProtVerLow @ByronEra) ... succ (getVersion @Integer (eraProtVerHigh @era)))
 
-major_protocol_version :: Rule
-major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... next_major_protocol_version
+protocol_version :: forall era. Era era => Named Group
+protocol_version = "protocol_version" =:~ grp [a $ major_protocol_version @era, a VUInt]
 
-protocol_version :: Named Group
-protocol_version = "protocol_version" =:~ grp [a major_protocol_version, a VUInt]
-
-transaction_body :: Rule
+transaction_body :: forall era. Era era => Rule
 transaction_body =
   "transaction_body"
     =:= mp
@@ -99,7 +98,7 @@ transaction_body =
       , idx 3 ==> VUInt
       , opt (idx 4 ==> arr [0 <+ a certificate])
       , opt (idx 5 ==> withdrawals)
-      , opt (idx 6 ==> update)
+      , opt (idx 6 ==> update @era)
       , opt (idx 7 ==> metadata_hash)
       ]
 
@@ -249,15 +248,15 @@ url = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [0 <+ asKey reward_account ==> coin]
 
-update :: Rule
-update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
+update :: forall era. Era era => Rule
+update = "update" =:= arr [a $ proposed_protocol_parameter_updates @era, a epoch]
 
-proposed_protocol_parameter_updates :: Rule
+proposed_protocol_parameter_updates :: forall era. Era era => Rule
 proposed_protocol_parameter_updates =
   "proposed_protocol_parameter_updates"
-    =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update]
+    =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update @era]
 
-protocol_param_update :: Rule
+protocol_param_update :: forall era. Era era => Rule
 protocol_param_update =
   "protocol_param_update"
     =:= mp
@@ -275,7 +274,7 @@ protocol_param_update =
       , opt (idx 11 ==> unit_interval) //- "treasury growth rate"
       , opt (idx 12 ==> unit_interval) //- "decentralization constant"
       , opt (idx 13 ==> nonce) //- "extra entropy"
-      , opt (idx 14 ==> arr [a protocol_version]) //- "protocol version"
+      , opt (idx 14 ==> arr [a $ protocol_version @era]) //- "protocol version"
       , opt (idx 15 ==> coin) //- "min utxo value"
       ]
 

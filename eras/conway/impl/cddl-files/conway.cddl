@@ -125,7 +125,7 @@ signature = bytes .size 64
 
 protocol_version = [major_protocol_version, uint]
 
-major_protocol_version = 1 .. 10
+major_protocol_version = 0 .. 12
 
 transaction_body = 
   {   0  : set<transaction_input>         
