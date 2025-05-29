@@ -440,6 +440,7 @@ ledgerTransition = do
                   pp
                   (govState ^. constitutionGovStateL . constitutionScriptL)
                   certStateAfterCERTS
+                  (govState ^. committeeGovStateL)
               , proposals
               , govSignal
               )
@@ -538,6 +539,7 @@ instance
 instance
   ( ConwayEraTxCert era
   , ConwayEraPParams era
+  , ConwayEraGov era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
