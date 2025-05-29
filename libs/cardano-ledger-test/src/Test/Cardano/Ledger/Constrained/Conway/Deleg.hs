@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
 import Cardano.Ledger.Conway.State
@@ -52,7 +53,7 @@ dStateSpec ::
   WitUniv ConwayEra ->
   Map RewardAccount Coin ->
   Specification (DState ConwayEra)
-dStateSpec univ _wdrls = constrained $ \ [var| dstate |] ->
+dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
   match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
       assert $ sizeOf_ futureGenDelegs ==. 0

@@ -25,4 +25,6 @@ instance EraAccounts AllegraEra where
     lens (strictMaybeToMaybe . sasStakePoolDelegation) $ \sas d ->
       sas {sasStakePoolDelegation = maybeToStrictMaybe d}
 
+  unregisterAccount = unregisterShelleyAccount
+
 instance ShelleyEraAccounts AllegraEra
