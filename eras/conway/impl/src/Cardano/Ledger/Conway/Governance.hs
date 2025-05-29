@@ -567,20 +567,16 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote (Just DRepAlwaysNoConfidence) = DefaultNoConfidence
     toDefaultVote _ = DefaultNo
 
+-- | Extract all unique hot credential authorizations for the current committee
+-- that is elected.
 authorizedElectedHotCommitteeCredentials ::
-  (ConwayEraGov era, ConwayEraCertState era) =>
-  LedgerState era ->
+  StrictMaybe (Committee era) ->
+  CommitteeState era ->
   Set.Set (Credential 'HotCommitteeRole)
-authorizedElectedHotCommitteeCredentials ledgerState =
-  case ledgerState ^. lsUTxOStateL . utxosGovStateL . committeeGovStateL of
+authorizedElectedHotCommitteeCredentials committee committeeState =
+  case committee of
     SNothing -> Set.empty
     SJust electedCommiteee ->
-      collectAuthorizedHotCreds $
-        csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
-  where
-    committeeState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
-    collectAuthorizedHotCreds =
-      let toHotCredSet !acc = \case
-            CommitteeHotCredential hotCred -> Set.insert hotCred acc
-            CommitteeMemberResigned {} -> acc
-       in F.foldl' toHotCredSet Set.empty
+      authorizedHotCommitteeCredentials $
+        CommitteeState $
+          csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
