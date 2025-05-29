@@ -80,7 +80,6 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
-import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.Proof
@@ -225,7 +224,7 @@ trustMeP _ _ tx = tx
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 testBBODY ::
-  (HasCallStack, EraTest era, Reflect era) =>
+  (HasCallStack, Reflect era) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block BHeaderView era ->

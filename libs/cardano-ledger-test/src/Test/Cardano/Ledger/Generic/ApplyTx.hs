@@ -22,6 +22,7 @@ import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -175,19 +176,21 @@ applyShelleyCert model dcert = case dcert of
       }
     where
       pp = mPParams model
-  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (toExpr x))
-    Just (Coin 0) ->
+  ShelleyTxCertDelegCert (ShelleyUnRegCert cred) -> case unregisterAccount cred (mAccounts model) of
+    (Nothing, _) -> error ("DeRegKey not in rewards: " <> show (toExpr cred))
+    (Just accountState, accounts) ->
       model
-        { mRewards = Map.delete x (mRewards model)
-        , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keyDeposit
+        { mAccounts = accounts
+        , mDeposited = mDeposited model <-> accountState ^. depositAccountStateL
         }
       where
         keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
-    model {mDelegations = Map.insert cred hash (mDelegations model)}
+  ShelleyTxCertDelegCert (ShelleyDelegCert cred poolId) ->
+    model
+      { mAccounts =
+          adjustAccountState cred (stakePoolDelegationAccountStateL .~ Just poolId) (mAccounts model)
+      }
   ShelleyTxCertPool (RegPool poolparams) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
@@ -327,13 +330,14 @@ filterAllRewards rs' m =
 
 applyRUpd ::
   forall era.
+  EraAccounts era =>
   RewardUpdateOld ->
   Model era ->
   Model era
 applyRUpd ru m =
   m
     { mFees = mFees m `addDeltaCoin` deltaFOld ru
-    , mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    , mAccounts = addToBalanceAccounts (rsOld ru) (mAccounts m)
     }
 
 notValidatingTx ::

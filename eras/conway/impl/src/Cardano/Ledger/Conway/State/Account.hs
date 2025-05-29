@@ -125,6 +125,8 @@ instance EraAccounts ConwayEra where
     lens (strictMaybeToMaybe . casStakePoolDelegation) $ \cas d ->
       cas {casStakePoolDelegation = maybeToStrictMaybe d}
 
+  unregisterAccount = unregisterConwayAccount
+
 class EraAccounts era => ConwayEraAccounts era where
   mkConwayAccountState :: CompactForm Coin -> AccountState era
   default mkConwayAccountState ::
