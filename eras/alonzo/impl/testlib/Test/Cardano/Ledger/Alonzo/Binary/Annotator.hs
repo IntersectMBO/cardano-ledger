@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.Tx hiding (body, isValid, wits)
+import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxSeq.Internal

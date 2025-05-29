@@ -41,7 +41,7 @@ module Cardano.Ledger.Alonzo.Tx (
   ScriptIntegrity (ScriptIntegrity),
   ScriptIntegrityHash,
   -- Figure 3
-  AlonzoTx (AlonzoTx, body, wits, isValid, auxiliaryData),
+  AlonzoTx (AlonzoTx, atBody, atWits, atIsValid, atAuxData),
   AlonzoEraTx (..),
   mkBasicAlonzoTx,
   bodyAlonzoTxL,
@@ -139,10 +139,10 @@ newtype IsValid = IsValid Bool
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON)
 
 data AlonzoTx era = AlonzoTx
-  { body :: !(TxBody era)
-  , wits :: !(TxWits era)
-  , isValid :: !IsValid
-  , auxiliaryData :: !(StrictMaybe (TxAuxData era))
+  { atBody :: !(TxBody era)
+  , atWits :: !(TxWits era)
+  , atIsValid :: !IsValid
+  , atAuxData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic)
 
@@ -198,17 +198,17 @@ mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (TxBody era)
-bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
+bodyAlonzoTxL = lens atBody (\tx txBody -> tx {atBody = txBody})
 {-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `TxWits` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWits era)
-witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
+witsAlonzoTxL = lens atWits (\tx txWits -> tx {atWits = txWits})
 {-# INLINEABLE witsAlonzoTxL #-}
 
 -- | `TxAuxData` setter and getter for `AlonzoTx`.
 auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (TxAuxData era))
-auxDataAlonzoTxL = lens auxiliaryData (\tx txTxAuxData -> tx {auxiliaryData = txTxAuxData})
+auxDataAlonzoTxL = lens atAuxData (\tx txTxAuxData -> tx {atAuxData = txTxAuxData})
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
@@ -222,7 +222,7 @@ sizeAlonzoTxF =
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
-isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
+isValidAlonzoTxL = lens atIsValid (\tx valid -> tx {atIsValid = valid})
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
@@ -300,11 +300,11 @@ toCBORForSizeComputation ::
   ) =>
   AlonzoTx era ->
   Encoding
-toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
+toCBORForSizeComputation AlonzoTx {atBody, atWits, atAuxData} =
   encodeListLen 3
-    <> encCBOR body
-    <> encCBOR wits
-    <> encodeNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
+    <> encCBOR atBody
+    <> encCBOR atWits
+    <> encodeNullMaybe encCBOR (strictMaybeToMaybe atAuxData)
 
 alonzoMinFeeTx ::
   ( EraTx era
@@ -358,13 +358,13 @@ toCBORForMempoolSubmission ::
   AlonzoTx era ->
   Encoding
 toCBORForMempoolSubmission
-  AlonzoTx {body, wits, auxiliaryData, isValid} =
+  AlonzoTx {atBody, atWits, atAuxData, atIsValid} =
     encode $
       Rec AlonzoTx
-        !> To body
-        !> To wits
-        !> To isValid
-        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) auxiliaryData
+        !> To atBody
+        !> To atWits
+        !> To atIsValid
+        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) atAuxData
 
 instance
   ( Era era

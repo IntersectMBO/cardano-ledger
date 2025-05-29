@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
@@ -22,7 +22,6 @@ import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
-import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -41,7 +40,6 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  initUTxO,
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
@@ -66,7 +64,6 @@ import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersF
 import Test.Cardano.Ledger.Generic.ModelState (
   Model,
   ModelNewEpochState (..),
-  mNewEpochStateZero,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
@@ -291,28 +288,6 @@ additions bodyhash firstTxIx outputs =
     [ (TxIn (TxId bodyhash) idx, out)
     | (out, idx) <- zip outputs [firstTxIx ..]
     ]
-
--- | This is a template of how we might create unit tests that run both the real STS rules
---   and the model to see that they agree. 'collateralOutputTx' and 'initUTxO' are from
---   the BabbageFeatures.hs unit test file.
-go :: IO ()
-go = do
-  let proof = Babbage
-      tx = (notValidatingTx proof) {isValid = IsValid False}
-      allinputs = txbody ^. allInputsTxBodyF
-      txbody = body tx
-      doc = toExpr tx
-      model1 =
-        (mNewEpochStateZero @BabbageEra)
-          { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs
-          , mCount = 0
-          , mFees = Coin 10
-          , mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
-          }
-      model2 = applyTx proof 0 (SlotNo 0) model1 tx
-  print (toExpr model1)
-  print doc
-  print (toExpr model2)
 
 filterRewards ::
   EraPParams era =>
