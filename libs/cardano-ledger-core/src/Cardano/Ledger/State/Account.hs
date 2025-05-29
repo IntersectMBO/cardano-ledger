@@ -15,6 +15,7 @@ module Cardano.Ledger.State.Account (
   EraAccounts (..),
   lookupAccountState,
   isAccountRegistered,
+  adjustAccountState,
   lookupStakePoolDelegation,
   sumBalancesAccounts,
   sumDepositsAccounts,
@@ -91,6 +92,21 @@ class
 
   stakePoolDelegationAccountStateL :: Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
 
+  -- | Remove the account from the state. Note that it is not capable of affecting state for DReps
+  -- and StakePools, those have to be handled separately.
+  --
+  -- There is no counterpart for registering an account, because different eras require different
+  -- information. However for testing purposed there is
+  -- `Test.Cardano.Ledger.Era.registerTestAccount` that can be used for all eras.
+  unregisterAccount ::
+    -- | Credential to unregister
+    Credential 'Staking ->
+    -- | `Accounts` to remove the account state from
+    Accounts era ->
+    -- | Returns `Just` whenever account was registered and `Nothing` otherwise. Produced `Accounts`
+    -- will have the account state removed, if it was present there to begin with.
+    (Maybe (AccountState era), Accounts era)
+
 sumBalancesAccounts :: EraAccounts era => Accounts era -> Coin
 sumBalancesAccounts accounts =
   fromCompact $ foldMap' (^. balanceAccountStateL) $ accounts ^. accountsMapL
@@ -129,6 +145,11 @@ lookupAccountState cred accounts = Map.lookup cred (accounts ^. accountsMapL)
 -- | Check whether account for this staking credential is registered
 isAccountRegistered :: EraAccounts era => Credential 'Staking -> Accounts era -> Bool
 isAccountRegistered cred accounts = Map.member cred (accounts ^. accountsMapL)
+
+adjustAccountState ::
+  EraAccounts era =>
+  (AccountState era -> AccountState era) -> Credential 'Staking -> Accounts era -> Accounts era
+adjustAccountState cred f = accountsMapL %~ Map.adjust cred f
 
 -- | In case when account state is registrated and it is delegated to a stake pool this function
 -- will return that delegation.
