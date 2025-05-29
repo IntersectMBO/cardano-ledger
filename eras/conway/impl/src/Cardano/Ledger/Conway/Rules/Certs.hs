@@ -96,7 +96,7 @@ data CertsEnv era = CertsEnv
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
-  , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
+  , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
   }
   deriving (Generic)
 

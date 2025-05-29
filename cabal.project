@@ -38,6 +38,7 @@ packages:
   eras/babbage/test-suite
   eras/conway/impl
   eras/conway/test-suite
+  eras/dijkstra
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite

@@ -128,9 +128,15 @@ library testlib
     Test.Cardano.Ledger.Conway.Binary.Cddl
     Test.Cardano.Ledger.Conway.Binary.Regression
     Test.Cardano.Ledger.Conway.Binary.RoundTrip
+    Test.Cardano.Ledger.Conway.BinarySpec
     Test.Cardano.Ledger.Conway.CDDL
+    Test.Cardano.Ledger.Conway.CommitteeRatifySpec
+    Test.Cardano.Ledger.Conway.DRepRatifySpec
     Test.Cardano.Ledger.Conway.Era
     Test.Cardano.Ledger.Conway.Genesis
+    Test.Cardano.Ledger.Conway.GenesisSpec
+    Test.Cardano.Ledger.Conway.GoldenSpec
+    Test.Cardano.Ledger.Conway.GovActionReorderSpec
     Test.Cardano.Ledger.Conway.Imp
     Test.Cardano.Ledger.Conway.Imp.BbodySpec
     Test.Cardano.Ledger.Conway.Imp.CertsSpec
@@ -144,9 +150,13 @@ library testlib
     Test.Cardano.Ledger.Conway.Imp.UtxoSpec
     Test.Cardano.Ledger.Conway.Imp.UtxosSpec
     Test.Cardano.Ledger.Conway.ImpTest
+    Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
     Test.Cardano.Ledger.Conway.Proposals
+    Test.Cardano.Ledger.Conway.SPORatifySpec
+    Test.Cardano.Ledger.Conway.Spec
     Test.Cardano.Ledger.Conway.Translation.TranslatableGen
     Test.Cardano.Ledger.Conway.TreeDiff
+    Test.Cardano.Ledger.Conway.TxInfoSpec
 
   visibility: public
   hs-source-dirs: testlib
@@ -163,6 +173,7 @@ library testlib
 
   build-depends:
     FailT,
+    aeson,
     base,
     bytestring,
     cardano-data:{cardano-data, testlib},
@@ -173,6 +184,7 @@ library testlib
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-slotting:testlib,
     cardano-strict-containers,
     containers,
     cuddle >=0.4,
@@ -237,17 +249,7 @@ test-suite tests
   other-modules:
     Paths_cardano_ledger_conway
     Test.Cardano.Ledger.Conway.Binary.CddlSpec
-    Test.Cardano.Ledger.Conway.BinarySpec
-    Test.Cardano.Ledger.Conway.CommitteeRatifySpec
-    Test.Cardano.Ledger.Conway.DRepRatifySpec
-    Test.Cardano.Ledger.Conway.GenesisSpec
-    Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GoldenTranslation
-    Test.Cardano.Ledger.Conway.GovActionReorderSpec
-    Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
-    Test.Cardano.Ledger.Conway.SPORatifySpec
-    Test.Cardano.Ledger.Conway.Spec
-    Test.Cardano.Ledger.Conway.TxInfoSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -264,22 +266,10 @@ test-suite tests
 
   build-depends:
     HUnit,
-    aeson,
     base,
-    cardano-data,
     cardano-ledger-allegra,
-    cardano-ledger-alonzo,
-    cardano-ledger-alonzo:testlib,
-    cardano-ledger-babbage,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-binary:testlib,
     cardano-ledger-conway,
-    cardano-ledger-core,
-    cardano-ledger-core:testlib,
-    cardano-ledger-shelley,
-    cardano-slotting:testlib,
-    cardano-strict-containers,
-    containers,
-    data-default,
-    microlens,
-    plutus-ledger-api,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
     testlib,

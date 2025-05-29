@@ -164,6 +164,7 @@ module Cardano.Ledger.Conway.Governance (
   reCommitteeStateL,
   DefaultVote (..),
   defaultStakePoolVote,
+  translateProposals,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -287,7 +288,7 @@ cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
 cgsFuturePParamsL =
   lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
 
-govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
+govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
@@ -398,7 +399,7 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
       , "futurePParams" .= cgsFuturePParams
       ]
 
-instance EraPParams ConwayEra => EraGov ConwayEra where
+instance EraGov ConwayEra where
   type GovState ConwayEra = ConwayGovState ConwayEra
 
   curPParamsGovStateL = cgsCurPParamsL

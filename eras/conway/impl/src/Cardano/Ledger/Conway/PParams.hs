@@ -81,6 +81,11 @@ module Cardano.Ledger.Conway.PParams (
   conwayModifiedPPGroups,
   pvtHardForkInitiationL,
   pvtMotionNoConfidenceL,
+  conwayApplyPPUpdates,
+  emptyConwayPParams,
+  emptyConwayPParamsUpdate,
+  asNaturalHKD,
+  asBoundedIntegralHKD,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams

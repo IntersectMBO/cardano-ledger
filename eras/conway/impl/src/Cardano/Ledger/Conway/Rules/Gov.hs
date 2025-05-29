@@ -188,7 +188,7 @@ data ConwayGovPredFailure era
   | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
       -- | The PrevGovActionId of the HardForkInitiation that fails
-      (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+      (StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Its protocol version and the protocal version of the previous gov-action pointed to by the proposal
       (Mismatch 'RelGT ProtVer)
   | InvalidPolicyHash
@@ -633,9 +633,9 @@ preceedingHardFork ::
   EraPParams era =>
   GovAction era ->
   PParams era ->
-  GovRelation StrictMaybe era ->
+  GovRelation StrictMaybe ->
   Proposals era ->
-  Maybe (StrictMaybe (GovPurposeId 'HardForkPurpose era), ProtVer, ProtVer)
+  Maybe (StrictMaybe (GovPurposeId 'HardForkPurpose), ProtVer, ProtVer)
 preceedingHardFork (HardForkInitiation mPrev newProtVer) pp pgaids ps
   | mPrev == pgaids ^. grHardForkL = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
   | otherwise = do

@@ -3,15 +3,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.BinarySpec (spec) where
 
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Core (AlonzoEraScript (..), AsIx)
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Data.Default (def)
 import Data.Proxy
 import Data.Typeable (typeRep)
@@ -21,30 +24,45 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
+import Test.Cardano.Ledger.Conway.Era (BabbageEraTest)
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra, roundTripEraSpec)
 
-spec :: Spec
+spec ::
+  forall era.
+  ( BabbageEraTest (PreviousEra era)
+  , ConwayEraImp era
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  , RuleListEra era
+  , StashedAVVMAddresses era ~ ()
+  , SafeToHash (TxWits era)
+  ) =>
+  Spec
 spec = do
-  specUpgrade @ConwayEra def
+  specUpgrade @era def
   describe "RoundTrip" $ do
     roundTripCborSpec @GovActionId
-    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'HardForkPurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'CommitteePurpose ConwayEra)
-    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose ConwayEra)
+    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose)
+    roundTripCborSpec @(GovPurposeId 'HardForkPurpose)
+    roundTripCborSpec @(GovPurposeId 'CommitteePurpose)
+    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose)
     roundTripCborSpec @Vote
     roundTripCborSpec @Voter
-    roundTripConwayCommonSpec @ConwayEra
+    roundTripConwayCommonSpec @era
     -- ConwayGenesis only makes sense in Conway era
-    roundTripEraSpec @ConwayEra @ConwayGenesis
+    roundTripEraSpec @era @ConwayGenesis
   describe "DecCBOR instances equivalence" $ do
-    Binary.decoderEquivalenceCoreEraTypesSpec @ConwayEra
-    decoderEquivalenceLenientSpec @(TxDats ConwayEra)
-    decoderEquivalenceLenientSpec @(Redeemers ConwayEra)
-  Binary.txSizeSpec @ConwayEra
+    Binary.decoderEquivalenceCoreEraTypesSpec @era
+    decoderEquivalenceLenientSpec @(TxDats era)
+    decoderEquivalenceLenientSpec @(Redeemers era)
+  Binary.txSizeSpec @era
   where
     -- The expectation used in this spec allows for the deserialization to fail, in which case
     -- it only checks that it fails for both decoders.

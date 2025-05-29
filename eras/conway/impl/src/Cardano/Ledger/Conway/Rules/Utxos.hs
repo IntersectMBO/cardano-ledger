@@ -19,6 +19,8 @@ module Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUTXOS,
   ConwayUtxosPredFailure (..),
   ConwayUtxosEvent (..),
+  alonzoToConwayUtxosPredFailure,
+  alonzoToConwayUtxosEvent,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)

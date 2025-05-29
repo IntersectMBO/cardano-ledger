@@ -81,7 +81,7 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (ProposalProcedure era)
 
 instance ToExpr (Committee era)
 
-instance ToExpr (GovPurposeId purpose era)
+instance ToExpr (GovPurposeId purpose)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 
@@ -93,8 +93,8 @@ instance ToExpr a => ToExpr (PEdges a)
 instance ToExpr a => ToExpr (PGraph a)
 
 instance
-  (forall p. ToExpr (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  ToExpr (GovRelation f era)
+  (forall p. ToExpr (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  ToExpr (GovRelation f)
 
 instance (Era era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Proposals era)
 

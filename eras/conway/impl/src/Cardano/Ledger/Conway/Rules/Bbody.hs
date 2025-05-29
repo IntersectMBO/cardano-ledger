@@ -19,6 +19,8 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   ConwayBBODY,
   ConwayBbodyPredFailure (..),
   maxRefScriptSizePerBlock,
+  alonzoToConwayBbodyPredFailure,
+  shelleyToConwayBbodyPredFailure,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)

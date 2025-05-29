@@ -42,14 +42,15 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Rational ((%!))
 
-spec :: Spec
+spec :: forall era. ConwayEraTest era => Spec
 spec = do
   describe "DRep Ratification" $ do
-    correctThresholdsProp @ConwayEra
-    noStakeProp @ConwayEra
+    correctThresholdsProp @era
+    noStakeProp @era
     acceptedRatioProp
     allAbstainProp
     noVotesProp
