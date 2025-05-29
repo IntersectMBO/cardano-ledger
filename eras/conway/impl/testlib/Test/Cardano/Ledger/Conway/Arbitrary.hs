@@ -629,6 +629,7 @@ instance (Era era, Arbitrary (PParamsHKD Identity era), Arbitrary (CertState era
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Era era => Arbitrary (VotingProcedure era) where
   arbitrary = VotingProcedure <$> arbitrary <*> arbitrary
