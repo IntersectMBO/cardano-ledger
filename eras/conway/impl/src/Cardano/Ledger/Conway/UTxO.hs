@@ -13,7 +13,9 @@ module Cardano.Ledger.Conway.UTxO (
   conwayConsumed,
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
+  getConwayScriptsNeeded,
   txNonDistinctRefScriptsSize,
+  getConwayMinFeeTxUtxo,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (

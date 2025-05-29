@@ -15,6 +15,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Utxo (
+  ConwayUTXO,
   allegraToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,

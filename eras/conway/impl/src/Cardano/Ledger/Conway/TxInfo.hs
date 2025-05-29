@@ -29,7 +29,15 @@ module Cardano.Ledger.Conway.TxInfo (
   transMap,
   transTxInInfoV1,
   transTxOutV1,
+  transMintValue,
+  transTxBodyId,
+  transVotingProcedures,
+  transProposal,
   toPlutusV3Args,
+  transTxCertV1V2,
+  transPlutusPurposeV1V2,
+  guardConwayFeaturesForPlutusV1V2,
+  transTxInInfoV3,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)

@@ -689,8 +689,8 @@ instance
 
   toSpecRep = pure . showOpaqueErrorString
 
-instance SpecTranslate ctx (GovPurposeId r c) where
-  type SpecRep (GovPurposeId r c) = (Agda.TxId, Integer)
+instance SpecTranslate ctx (GovPurposeId r) where
+  type SpecRep (GovPurposeId r) = (Agda.TxId, Integer)
 
   toSpecRep (GovPurposeId gaId) = toSpecRep gaId
 

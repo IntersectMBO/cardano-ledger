@@ -315,9 +315,6 @@ noConfidenceSpec =
         & ppPoolVotingThresholdsL . pvtCommitteeNoConfidenceL .~ 1 %! 2
         & ppCommitteeMaxTermLengthL .~ EpochInterval 200
     let
-      getCommittee =
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
       assertNoCommittee :: HasCallStack => ImpTestM era ()
       assertNoCommittee =
         do

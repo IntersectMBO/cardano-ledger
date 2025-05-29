@@ -875,9 +875,9 @@ instance HasSimpleRep GovActionIx
 
 instance HasSpec GovActionIx
 
-instance HasSimpleRep (GovPurposeId p era)
+instance HasSimpleRep (GovPurposeId p)
 
-instance (Typeable p, Era era) => HasSpec (GovPurposeId p era)
+instance Typeable p => HasSpec (GovPurposeId p)
 
 instance Typeable era => HasSimpleRep (GovAction era)
 
@@ -1069,9 +1069,9 @@ instance Typeable era => HasSimpleRep (ConwayCertState era)
 
 instance ConwayEraCertState era => HasSpec (ConwayCertState era)
 
-instance Typeable era => HasSimpleRep (GovRelation StrictMaybe era)
+instance HasSimpleRep (GovRelation StrictMaybe)
 
-instance Era era => HasSpec (GovRelation StrictMaybe era)
+instance HasSpec (GovRelation StrictMaybe)
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (GovEnv era)
 

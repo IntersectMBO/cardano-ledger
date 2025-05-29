@@ -129,6 +129,15 @@ cradle:
     - path: "eras/conway/test-suite/test"
       component: "cardano-ledger-conway-test:test:cardano-ledger-conway-test"
 
+    - path: "eras/dijkstra/src"
+      component: "lib:cardano-ledger-dijkstra"
+
+    - path: "eras/dijkstra/testlib"
+      component: "cardano-ledger-dijkstra:lib:testlib"
+
+    - path: "eras/dijkstra/test"
+      component: "cardano-ledger-dijkstra:test:tests"
+
     - path: "eras/mary/impl/src"
       component: "lib:cardano-ledger-mary"
 

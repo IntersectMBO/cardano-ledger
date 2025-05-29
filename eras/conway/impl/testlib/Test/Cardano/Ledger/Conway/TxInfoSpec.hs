@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -5,13 +6,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxCert)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, toPlutusTxCert)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (StakeCredential)
@@ -20,12 +21,19 @@ import Data.Proxy (Proxy (..))
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Conway.Genesis ()
 
-spec :: Spec
+spec ::
+  forall era.
+  ( ConwayEraTest era
+  , EraPlutusTxInfo PlutusV3 era
+  , TxCert era ~ ConwayTxCert era
+  ) =>
+  Spec
 spec = do
   describe "TxInfo" $ do
-    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @ConwayEra Proxy pv cert)
+    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @era Proxy pv cert)
         transV9 = trans (ProtVer (natVersion @9) 0)
         transV10 = trans (ProtVer (natVersion @10) 0)
 

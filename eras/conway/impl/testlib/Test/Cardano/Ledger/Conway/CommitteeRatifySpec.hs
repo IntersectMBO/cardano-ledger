@@ -40,12 +40,13 @@ import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
-spec :: Spec
+spec :: forall era. ConwayEraTest era => Spec
 spec = do
   describe "Committee Ratification" $ do
-    acceptedProp @ConwayEra
+    acceptedProp @era
     acceptedRatioProp
     allYesProp
     allNoProp
