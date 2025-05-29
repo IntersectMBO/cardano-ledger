@@ -664,6 +664,7 @@ instance
   , Tx era ~ AlonzoTx era
   , EraTx era
   , BabbageEraTxBody era
+  , AlonzoEraTx era
   ) =>
   SpecTranslate ctx (AlonzoTx era)
   where
@@ -673,10 +674,10 @@ instance
     Agda.MkTx
       <$> withCtx
         (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
-        (toSpecRep (body tx))
-      <*> toSpecRep (wits tx)
-      <*> toSpecRep (isValid tx)
-      <*> toSpecRep (auxiliaryData tx)
+        (toSpecRep (tx ^. bodyTxL))
+      <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. isValidTxL)
+      <*> toSpecRep (tx ^. auxDataTxL)
 
 instance
   ( EraPParams era
