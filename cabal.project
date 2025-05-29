@@ -21,8 +21,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/plutus
-  tag: efb93658cf91fa4f315b9e3cb5052b16301e4f57
-  --sha256: sha256-wAaURuRtaZJXEAebWcOBR5prW+FvG2rWaJwJCu4Mt2o=
+  tag: 30b27c2dd952dced1671b296f87bcc07b1dee7d5
+  --sha256: sha256-efB8UbgomaKYmrw95Yb53lsBKenDPby9Kkt72tbT6Io=
   subdir:
     plutus-core
     plutus-metatheory
