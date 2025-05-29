@@ -460,7 +460,7 @@ govEnvSpec ::
   PParams ConwayEra ->
   Specification (GovEnv ConwayEra)
 govEnvSpec pp = constrained $ \ [var|govEnv|] ->
-  match govEnv $ \_ _ [var|cppx|] _ _ -> [assert $ lit pp ==. cppx]
+  match govEnv $ \_ _ [var|cppx|] _ _ _ -> [assert $ lit pp ==. cppx]
 
 conwayGovStateSpec ::
   EraSpecLedger ConwayEra =>
