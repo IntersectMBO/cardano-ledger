@@ -4,17 +4,17 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
+import Cardano.Ledger.Internal.Era (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
-
-data MaryEra
 
 instance Era MaryEra where
   type PreviousEra MaryEra = AllegraEra
