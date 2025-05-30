@@ -30,19 +30,19 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   accountStateSpec,
   aggregateDRep,
   conwayGovStateSpec,
-  dstateSpec,
+  conwayDStateSpec,
   epochNoSpec,
   epochStateSpec,
   getMarkSnapShot,
   govEnvSpec,
   ledgerStateSpec,
-  pstateSpec,
+  pStateSpec,
   shelleyGovStateSpec,
   snapShotSpec,
   snapShotsSpec,
   utxoSpecWit,
   utxoStateSpec,
-  vstateSpec,
+  vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (..))
