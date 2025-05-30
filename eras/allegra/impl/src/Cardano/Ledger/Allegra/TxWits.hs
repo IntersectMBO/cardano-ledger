@@ -11,7 +11,7 @@ module Cardano.Ledger.Allegra.TxWits () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.TxAuxData ()
-import Cardano.Ledger.Core (EraScript (upgradeScript), EraTxWits (..))
+import Cardano.Ledger.Core (EraTxWits (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits (..),
   addrShelleyTxWitsL,
@@ -32,9 +32,3 @@ instance EraTxWits AllegraEra where
 
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
-
-  upgradeTxWits stw =
-    ShelleyTxWits
-      (addrWits stw)
-      (upgradeScript <$> scriptWits stw)
-      (bootWits stw)

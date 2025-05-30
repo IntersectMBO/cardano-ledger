@@ -96,10 +96,6 @@ instance EraTxAuxData ShelleyEra where
     lensMemoRawType @ShelleyEra stadrMetadata $
       \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
 
-  -- Calling this partial function will result in compilation error, since ByronEra has
-  -- no instance for EraTxOut type class.
-  upgradeTxAuxData = error "It is not possible to translate Byron TxOut with 'upgradeTxOut'"
-
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
 
 instance EqRaw (ShelleyTxAuxData era)

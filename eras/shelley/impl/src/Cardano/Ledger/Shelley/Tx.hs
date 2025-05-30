@@ -189,10 +189,6 @@ instance EraTx ShelleyEra where
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
-  upgradeTx =
-    error
-      "Calling this function will cause a compilation error, since there is no Tx instance for Byron"
-
 instance (Tx era ~ ShelleyTx era, EraTx era) => EqRaw (ShelleyTx era) where
   eqRaw = shelleyEqTxRaw
 

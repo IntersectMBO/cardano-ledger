@@ -114,7 +114,6 @@ import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Void (Void)
 import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -138,9 +137,6 @@ class
   EraTx era
   where
   type Tx era = (r :: Type) | r -> era
-
-  type TxUpgradeError era :: Type
-  type TxUpgradeError era = Void
 
   mkBasicTx :: TxBody era -> Tx era
 
@@ -174,11 +170,6 @@ class
     Int ->
     Coin
 
-  upgradeTx ::
-    EraTx (PreviousEra era) =>
-    Tx (PreviousEra era) ->
-    Either (TxUpgradeError era) (Tx era)
-
 class
   ( EraTxOut era
   , EraTxCert era
@@ -197,9 +188,6 @@ class
   where
   -- | The body of a transaction.
   data TxBody era
-
-  type TxBodyUpgradeError era :: Type
-  type TxBodyUpgradeError era = Void
 
   mkBasicTxBody :: TxBody era
 
@@ -255,22 +243,6 @@ class
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.
   getGenesisKeyHashCountTxBody :: TxBody era -> Int
   getGenesisKeyHashCountTxBody _ = 0
-
-  -- | Upgrade the transaction body from the previous era.
-  --
-  -- This can fail where elements of the transaction body are deprecated.
-  -- Compare this to `translateEraThroughCBOR`:
-  -- - `upgradeTxBody` will use the Haskell representation, but will not
-  --   preserve the serialised form. However, it will be suitable for iterated
-  --   translation through eras.
-  -- - `translateEraThroughCBOR` will preserve the binary representation, but is
-  --   not guaranteed to work through multiple eras - that is, the serialised
-  --   representation from era n is guaranteed valid in era n + 1, but not
-  --   necessarily in era n + 2.
-  upgradeTxBody ::
-    EraTxBody (PreviousEra era) =>
-    TxBody (PreviousEra era) ->
-    Either (TxBodyUpgradeError era) (TxBody era)
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
@@ -463,13 +435,6 @@ class
 
   metadataTxAuxDataL :: Lens' (TxAuxData era) (Map Word64 Metadatum)
 
-  -- | Every era, except Shelley, must be able to upgrade a `TxAuxData` from a previous
-  -- era.
-  --
-  -- /Warning/ - Important to note that any memoized binary representation will not be
-  -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
-  upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
-
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
 
 -- | Compute a hash of `TxAuxData`
@@ -500,8 +465,6 @@ class
   bootAddrTxWitsL :: Lens' (TxWits era) (Set BootstrapWitness)
 
   scriptTxWitsL :: Lens' (TxWits era) (Map ScriptHash (Script era))
-
-  upgradeTxWits :: EraTxWits (PreviousEra era) => TxWits (PreviousEra era) -> TxWits era
 
 -- | This is a helper lens that will hash the scripts when adding as witnesses.
 hashScriptTxWitsL ::

@@ -2,7 +2,6 @@ module Cardano.Ledger.Api.Tx.AuxData (
   EraTxAuxData (TxAuxData),
   mkBasicTxAuxData,
   metadataTxAuxDataL,
-  upgradeTxAuxData,
   hashTxAuxData,
   validateTxAuxData,
 

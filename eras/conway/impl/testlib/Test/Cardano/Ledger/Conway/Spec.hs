@@ -21,7 +21,6 @@ import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraScript (..),
   AsIx,
-  Era (..),
   EraRule,
   EraTx (..),
   EraTxBody (..),
@@ -62,7 +61,6 @@ import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
-import Test.Cardano.Ledger.Conway.Era (BabbageEraTest)
 import qualified Test.Cardano.Ledger.Conway.GoldenSpec as Golden
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
@@ -79,7 +77,6 @@ spec ::
   , RuleListEra era
   , ConwayEraImp era
   , ApplyTx era
-  , BabbageEraTest (PreviousEra era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)

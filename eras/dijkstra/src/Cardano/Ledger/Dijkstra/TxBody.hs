@@ -55,7 +55,6 @@ import Cardano.Ledger.Binary (
   Sized (..),
   ToCBOR,
   mkSized,
-  unsafeMapSized,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -81,7 +80,6 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.TxBody (
-  TxBody (..),
   conwayProposalsDeposits,
   conwayRedeemerPointer,
   conwayRedeemerPointerInverse,
@@ -465,30 +463,6 @@ instance EraTxBody DijkstraEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
-
-  upgradeTxBody ConwayTxBody {..} = do
-    pure $
-      DijkstraTxBody
-        { dtbSpendInputs = ctbSpendInputs
-        , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbOutputs
-        , dtbCerts = OSet.mapL coerce ctbCerts
-        , dtbWithdrawals = ctbWithdrawals
-        , dtbTxfee = ctbTxfee
-        , dtbVldt = ctbVldt
-        , dtbAdHash = ctbAdHash
-        , dtbMint = ctbMint
-        , dtbCollateralInputs = ctbCollateralInputs
-        , dtbReqSignerHashes = ctbReqSignerHashes
-        , dtbScriptIntegrityHash = ctbScriptIntegrityHash
-        , dtbTxNetworkId = ctbTxNetworkId
-        , dtbReferenceInputs = ctbReferenceInputs
-        , dtbCollateralReturn = unsafeMapSized upgradeTxOut <$> ctbCollateralReturn
-        , dtbTotalCollateral = ctbTotalCollateral
-        , dtbCurrentTreasuryValue = ctbCurrentTreasuryValue
-        , dtbProposalProcedures = OSet.mapL upgradeProposals ctbProposalProcedures
-        , dtbVotingProcedures = coerce ctbVotingProcedures
-        , dtbTreasuryDonation = ctbTreasuryDonation
-        }
 
 upgradeGovAction ::
   Coercible (PParamsHKD StrictMaybe (PreviousEra era)) (PParamsHKD StrictMaybe era) =>

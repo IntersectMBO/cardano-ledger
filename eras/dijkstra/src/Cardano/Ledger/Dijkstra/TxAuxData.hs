@@ -8,7 +8,6 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   metadataAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
-  translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
  )
 import Cardano.Ledger.Conway.Core (
@@ -25,8 +24,6 @@ instance EraTxAuxData DijkstraEra where
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
 
   metadataTxAuxDataL = metadataAlonzoTxAuxDataL
-
-  upgradeTxAuxData = translateAlonzoTxAuxData
 
   validateTxAuxData = validateAlonzoTxAuxData
 

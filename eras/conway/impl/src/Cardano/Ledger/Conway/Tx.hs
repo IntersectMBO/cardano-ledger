@@ -46,7 +46,6 @@ import Lens.Micro ((^.))
 
 instance EraTx ConwayEra where
   type Tx ConwayEra = AlonzoTx ConwayEra
-  type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -66,13 +65,6 @@ instance EraTx ConwayEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
-
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
 
 -- | 25 KiB
 refScriptCostStride :: Int

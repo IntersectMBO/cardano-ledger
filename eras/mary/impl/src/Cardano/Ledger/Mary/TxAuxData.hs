@@ -32,8 +32,6 @@ instance EraTxAuxData MaryEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  upgradeTxAuxData (AllegraTxAuxData md scripts) = AllegraTxAuxData md $ upgradeScript <$> scripts
-
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
 instance AllegraEraTxAuxData MaryEra where
