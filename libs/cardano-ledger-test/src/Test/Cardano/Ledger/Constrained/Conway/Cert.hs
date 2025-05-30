@@ -6,7 +6,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -160,7 +159,7 @@ computeSets ds =
 
 shelleyTxCertSpec ::
   forall era.
-  (AtMostEra BabbageEra era, EraSpecPParams era) =>
+  (AtMostEra BabbageEra era, EraSpecPParams era, EraAccounts era) =>
   WitUniv era ->
   CertEnv era ->
   ShelleyCertState era ->
