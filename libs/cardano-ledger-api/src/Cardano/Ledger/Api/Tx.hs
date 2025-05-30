@@ -64,10 +64,14 @@ module Cardano.Ledger.Api.Tx (
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
+
+  -- * Upgrade
+  binaryUpgradeTx,
+  upgradeTx,
 ) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Era (EraApi (..))
 import Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
   RedeemerReportWithLogs,
@@ -79,5 +83,5 @@ import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
-import Cardano.Ledger.Core (EraTx (..), txIdTx)
+import Cardano.Ledger.Core (EraTx (..), binaryUpgradeTx, txIdTx)
 import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx, setMinFeeTxUtxo)

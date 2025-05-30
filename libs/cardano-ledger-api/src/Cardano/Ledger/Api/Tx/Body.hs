@@ -69,12 +69,16 @@ module Cardano.Ledger.Api.Tx.Body (
   ProposalProcedure (..),
   currentTreasuryValueTxBodyL,
   treasuryDonationTxBodyL,
+
+  -- * Upgrade
+  binaryUpgradeTxBody,
+  upgradeTxBody,
 ) where
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
-import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Era (EraApi (..))
 import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -86,7 +90,14 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Core (EraTxBody (..), PParams, TxAuxDataHash (..), Value, txIdTxBody)
+import Cardano.Ledger.Core (
+  EraTxBody (..),
+  PParams,
+  TxAuxDataHash (..),
+  Value,
+  binaryUpgradeTxBody,
+  txIdTxBody,
+ )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))

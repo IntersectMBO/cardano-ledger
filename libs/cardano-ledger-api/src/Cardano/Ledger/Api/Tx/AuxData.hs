@@ -20,6 +20,10 @@ module Cardano.Ledger.Api.Tx.AuxData (
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
+
+  -- * Upgrade
+  binaryUpgradeTxAuxData,
+  upgradeTxAuxData,
 ) where
 
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
@@ -29,6 +33,6 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   getAlonzoTxAuxDataScripts,
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.Core (EraTxAuxData (..), hashTxAuxData)
+import Cardano.Ledger.Api.Era (EraApi (..))
+import Cardano.Ledger.Core (EraTxAuxData (..), binaryUpgradeTxAuxData, hashTxAuxData)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))

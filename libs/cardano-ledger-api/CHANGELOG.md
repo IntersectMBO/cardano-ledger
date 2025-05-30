@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`
 * Add `EraApi` class
 * Export `VotingProcedure`, `ProposalProcedure`, `currentTreasuryValueTxBodyL` and
   `treasuryDonationTxBodyL` from `Cardano.Ledger.Api.Tx.Body`
