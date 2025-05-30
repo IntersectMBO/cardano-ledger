@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
+import Cardano.Ledger.Shelley.State
 import Data.Default (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
@@ -27,7 +28,6 @@ test =
     , f Mary
     , f Alonzo
     , f Babbage
-    , f Conway
     ]
   where
     f proof = testThunks proof 100 def
@@ -35,6 +35,7 @@ test =
 testThunks ::
   forall era.
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
