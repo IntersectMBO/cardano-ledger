@@ -281,7 +281,7 @@ withPrevActId gas k =
 onHardFork ::
   IsPred p =>
   Term (GovActionState ConwayEra) ->
-  ( Term (StrictMaybe (GovPurposeId 'HardForkPurpose ConwayEra)) ->
+  ( Term (StrictMaybe (GovPurposeId 'HardForkPurpose)) ->
     Term ProtVer ->
     p
   ) ->

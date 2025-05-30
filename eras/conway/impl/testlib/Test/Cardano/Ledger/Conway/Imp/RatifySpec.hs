@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
@@ -529,15 +530,24 @@ spoVotesForHardForkInitiation =
       modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
       protVer <- getProtVer
       gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-      submitYesVoteCCs_ hotCCs gai
+      impAnn "Submit CC yes vote" $ submitYesVoteCCs_ hotCCs gai
+      logString $ "Committee: " <> showExpr hotCCs
+      GovActionState {gasCommitteeVotes} <- getGovActionState gai
+      logString $ "CC Votes: " <> showExpr gasCommitteeVotes
+      minSize <- getsPParams ppCommitteeMinSizeL
+      committee <- getCommittee
+      logString $ "Min committee size: " <> show minSize
+      logString $ "Committee: " <> showExpr committee
+      logString . show =<< getsNES nesELL
+      impAnn "Accepted by committee" $ isCommitteeAccepted gai `shouldReturn` True
       -- 1 % 4 stake yes; 3 % 4 stake no; yes / stake - abstain < 1 % 2
-      submitYesVote_ (StakePoolVoter spoK1) gai
+      impAnn "Submit SPO1 yes vote" $ submitYesVote_ (StakePoolVoter spoK1) gai
       passNEpochs 2
       logRatificationChecks gai
       isSpoAccepted gai `shouldReturn` False
       getLastEnactedHardForkInitiation `shouldReturn` SNothing
       -- 1 % 2 stake yes; 1 % 2 stake no; yes / stake - abstain = 1 % 2
-      submitYesVote_ (StakePoolVoter spoK2) gai
+      impAnn "Submit SPO2 yes vote" $ submitYesVote_ (StakePoolVoter spoK2) gai
       isSpoAccepted gai `shouldReturn` True
       passNEpochs 2
       getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)

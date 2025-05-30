@@ -47,6 +47,8 @@ module Cardano.Ledger.Conway.TxBody (
   ConwayTxBodyRaw (..),
   conwayTotalDepositsTxBody,
   conwayProposalsDeposits,
+  conwayRedeemerPointer,
+  conwayRedeemerPointerInverse,
 ) where
 
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
@@ -65,6 +67,7 @@ import Cardano.Ledger.Binary (
   Sized (..),
   ToCBOR (..),
   mkSized,
+  unsafeMapSized,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -343,11 +346,7 @@ instance EraTxBody ConwayEra where
     pure $
       ConwayTxBody
         { ctbSpendInputs = btbInputs btb
-        , ctbOutputs =
-            mkSized (eraProtVerLow @ConwayEra)
-              . upgradeTxOut
-              . sizedValue
-              <$> btbOutputs btb
+        , ctbOutputs = unsafeMapSized upgradeTxOut <$> btbOutputs btb
         , ctbCerts = certsOSet
         , ctbWithdrawals = btbWithdrawals btb
         , ctbTxfee = btbTxFee btb
@@ -359,11 +358,7 @@ instance EraTxBody ConwayEra where
         , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
         , ctbTxNetworkId = btbTxNetworkId btb
         , ctbReferenceInputs = btbReferenceInputs btb
-        , ctbCollateralReturn =
-            mkSized (eraProtVerLow @ConwayEra)
-              . upgradeTxOut
-              . sizedValue
-              <$> btbCollateralReturn btb
+        , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
         , ctbTotalCollateral = btbTotalCollateral btb
         , ctbCurrentTreasuryValue = SNothing
         , ctbProposalProcedures = OSet.empty

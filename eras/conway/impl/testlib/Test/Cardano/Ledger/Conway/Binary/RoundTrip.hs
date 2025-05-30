@@ -77,14 +77,14 @@ roundTripConwayEraTypesSpec ::
   ) =>
   Spec
 roundTripConwayEraTypesSpec = do
-  describe "Conway Transaction Types" $ do
+  describe (eraName @era <> " Transaction Types") $ do
     roundTripEraTypeSpec @era @GovAction
     roundTripEraTypeSpec @era @VotingProcedure
     roundTripEraTypeSpec @era @VotingProcedures
     roundTripEraTypeSpec @era @ProposalProcedure
     roundTripEraTypeSpec @era @Constitution
     prop "CostModels" $ roundTripEraExpectation @era @CostModels
-  describe "Conway State Types" $ do
+  describe (eraName @era <> " State Types") $ do
     roundTripShareEraTypeSpec @era @EnactState
     roundTripShareEraTypeSpec @era @GovActionState
     roundTripShareEraTypeSpec @era @Proposals

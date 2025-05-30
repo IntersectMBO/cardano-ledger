@@ -14,7 +14,6 @@ import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -46,17 +45,18 @@ import Data.Ratio ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
-spec :: Spec
+spec :: forall era. ConwayEraTest era => Spec
 spec = do
   describe "SPO Ratification" $ do
-    acceptedRatioProp @ConwayEra
-    noStakeProp @ConwayEra
-    allAbstainProp @ConwayEra
-    noVotesProp @ConwayEra
-    allYesProp @ConwayEra
-    noConfidenceProp @ConwayEra
+    acceptedRatioProp @era
+    noStakeProp @era
+    allAbstainProp @era
+    noVotesProp @era
+    allYesProp @era
+    noConfidenceProp @era
 
 acceptedRatioProp ::
   forall era.
