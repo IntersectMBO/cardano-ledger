@@ -47,7 +47,6 @@ import Constrained.Base (
   pattern (:<:),
  )
 import Constrained.Conformance
-import Constrained.Conformance ()
 import Constrained.Core (Value (..), unionWithMaybe)
 import Constrained.FunctionSymbol
 import Constrained.GenT (
