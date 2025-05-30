@@ -1,9 +1,10 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -13,19 +14,22 @@
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
+import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
-import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.State hiding (balance)
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
-import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -49,10 +53,89 @@ keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
     isKeyHash (KeyHashObj _) = True
     isKeyHash (ScriptHashObj _) = False
 
+accountBalanceSpec :: (HasSpec a, Monoid a) => Term a -> Pred
+accountBalanceSpec balance =
+  satisfies
+    balance
+    ( chooseSpec
+        (1, constrained $ \ [var| x |] -> assert $ x ==. lit mempty)
+        (3, constrained (const True))
+    )
+
+stakePoolDelegationPred ::
+  Map (KeyHash 'StakePool) a ->
+  Term (StrictMaybe (KeyHash 'StakePool)) ->
+  Pred
+stakePoolDelegationPred stakePools stakePoolDelegation =
+  assert $
+    caseOn
+      stakePoolDelegation
+      (branch (const True))
+      (branch (`member_` lit (Map.keysSet stakePools)))
+
+dRepDelegationPred :: Map (Credential 'DRepRole) a -> Term (StrictMaybe DRep) -> Pred
+dRepDelegationPred dReps dRepDelegation =
+  assert $
+    caseOn
+      dRepDelegation
+      (branch (const True))
+      (branch (dRepMembershipPred dReps))
+
+dRepMembershipPred :: Map (Credential 'DRepRole) a -> Term DRep -> Pred
+dRepMembershipPred dRepsMap dRep =
+  assert $
+    (caseOn dRep)
+      (branchW 5 (`member_` lit (dRepsSet credKeyHash)))
+      (branchW 5 (`member_` lit (dRepsSet credScriptHash)))
+      (branchW 1 $ const True)
+      (branchW 1 $ const True)
+  where
+    dRepsSet f = Set.fromList [k' | k <- Map.keys dRepsMap, Just k' <- [f k]]
+
+shelleyAccountStatePred ::
+  Era era =>
+  Map (KeyHash 'StakePool) a ->
+  Term (ShelleyAccountState era) ->
+  Pred
+shelleyAccountStatePred stakePools shelleyAccountState =
+  assert $
+    match shelleyAccountState $ \_ptr [var|balance|] _deposit [var|stakePoolDelegation|] ->
+      [ accountBalanceSpec balance
+      , stakePoolDelegationPred stakePools stakePoolDelegation
+      ]
+
+conwayAccountStatePred ::
+  Era era =>
+  Map (KeyHash 'StakePool) a ->
+  Map (Credential 'DRepRole) b ->
+  Term (ConwayAccountState era) ->
+  Pred
+conwayAccountStatePred stakePools dReps conwayAccountState =
+  assert $
+    match conwayAccountState $ \ [var|balance|] _deposit [var|stakePoolDelegation|] [var|dRepDelegation|] ->
+      [ accountBalanceSpec balance
+      , stakePoolDelegationPred stakePools stakePoolDelegation
+      , dRepDelegationPred dReps dRepDelegation
+      ]
+
+conwayAccountsSpec ::
+  Era era =>
+  WitUniv era ->
+  Map (KeyHash 'StakePool) a ->
+  Map (Credential 'DRepRole) b ->
+  Specification (ConwayAccounts era)
+conwayAccountsSpec univ stakePools dReps =
+  constrained $ \ [var|conwayAccountState|] ->
+    match conwayAccountState $ \ [var|conwayAccountsMap|] ->
+      [ witness univ (dom_ conwayAccountsMap)
+      , forAll (rng_ conwayAccountsMap) (conwayAccountStatePred stakePools dReps)
+      ]
+
 dStateSpec ::
-  WitUniv ConwayEra ->
+  (Era era, HasSpec (Accounts era), IsNormalType (Accounts era)) =>
+  WitUniv era ->
   Map RewardAccount Coin ->
-  Specification (DState ConwayEra)
+  Specification (DState era)
 dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
   match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
@@ -84,22 +167,10 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
       delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
-          (branch $ \drep -> isInDReps drep)
-          (branch $ \kh drep -> [assert $ isInPools kh, assert $ isInDReps drep])
+          (branch $ \dRep -> dRepMembershipPred dReps dRep)
+          (branch $ \kh dRep -> [assert $ isInPools kh, dRepMembershipPred dReps dRep])
         where
           isInPools = (`member_` lit (Map.keysSet pools))
-          drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term DRep -> Pred
-          isInDReps drep =
-            (caseOn drep)
-              ( branch $ \drepKeyHash ->
-                  drepKeyHash `member_` lit (drepsSet credKeyHash dReps)
-              )
-              ( branch $ \drepScriptHash ->
-                  drepScriptHash `member_` lit (drepsSet credScriptHash dReps)
-              )
-              (branch $ const True)
-              (branch $ const True)
    in constrained $ \dc ->
         (caseOn dc)
           -- The weights on each 'branchW' case try to make it likely
@@ -184,7 +255,7 @@ isZeroAccountBalance accountState = accountState ^. balanceAccountStateL == memp
 
 -- =============================================
 
-class (Era era, EraPParams era) => EraSpecDeleg era where
+class (Era era, EraPParams era, HasSpec (Accounts era), IsNormalType (Accounts era)) => EraSpecDeleg era where
   hasGenDelegs :: proxy era -> Bool
 
 instance EraSpecDeleg ShelleyEra where
