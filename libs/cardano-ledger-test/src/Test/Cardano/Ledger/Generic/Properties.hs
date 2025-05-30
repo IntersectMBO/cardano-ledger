@@ -18,7 +18,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley as S (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -26,7 +26,6 @@ import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
@@ -151,7 +150,6 @@ testTxValidForLEDGER ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  , EraTest era
   ) =>
   Proof era ->
   Box era ->
@@ -256,6 +254,7 @@ txPreserveAda genSize =
 -- | Ada is preserved over a trace of length 100
 adaIsPreserved ::
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
@@ -292,6 +291,7 @@ stakeInvariant (MockChainState {}) (MockChainState nes _ _ _) =
 
 incrementStakeInvariant ::
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
