@@ -91,7 +91,6 @@ library
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    data-default,
     deepseq,
     mempack,
     microlens,

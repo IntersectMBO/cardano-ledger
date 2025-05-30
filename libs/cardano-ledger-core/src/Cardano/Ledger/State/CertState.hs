@@ -47,6 +47,9 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psDepositsL,
+  emptyPState,
+  emptyInstantaneousRewards,
+  emptyDState,
 ) where
 
 import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
@@ -79,7 +82,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -132,6 +134,9 @@ data InstantaneousRewards = InstantaneousRewards
   , deltaTreasury :: !DeltaCoin
   }
   deriving (Show, Eq, Generic)
+
+emptyInstantaneousRewards :: InstantaneousRewards
+emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 instance NoThunks InstantaneousRewards
 
@@ -193,6 +198,9 @@ instance ToJSON (DState era) where
   toJSON = object . toDStatePair
   toEncoding = pairs . mconcat . toDStatePair
 
+emptyDState :: DState era
+emptyDState = DState undefined undefined undefined undefined
+
 toDStatePair :: KeyValue e a => DState era -> [a]
 toDStatePair DState {..} =
   [ "unified" .= dsUnified
@@ -233,6 +241,9 @@ data PState era = PState
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
+
+emptyPState :: PState era
+emptyPState = PState mempty mempty mempty mempty
 
 instance NoThunks (PState era)
 
@@ -295,7 +306,7 @@ instance DecCBOR CommitteeAuthorization where
 newtype CommitteeState era = CommitteeState
   { csCommitteeCreds :: Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
   }
-  deriving (Eq, Ord, Show, Generic, EncCBOR, NFData, Default, NoThunks)
+  deriving (Eq, Ord, Show, Generic, EncCBOR, NFData, NoThunks)
 
 instance ToJSON (CommitteeState era)
 
@@ -333,7 +344,6 @@ class
         , Interns (Credential 'DRepRole)
         , Interns (Credential 'HotCommitteeRole)
         )
-  , Default (CertState era)
   , NoThunks (CertState era)
   , NFData (CertState era)
   , Show (CertState era)
@@ -342,6 +352,8 @@ class
   EraCertState era
   where
   type CertState era = (r :: Type) | r -> era
+
+  emptyCertState :: CertState era
 
   certDStateL :: Lens' (CertState era) (DState era)
 
@@ -379,21 +391,6 @@ instance DecShareCBOR InstantaneousRewards where
       dR <- lift decCBOR
       dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
-
-instance Default InstantaneousRewards where
-  def = InstantaneousRewards Map.empty Map.empty mempty mempty
-
-instance Default (DState era) where
-  def =
-    DState
-      UM.empty
-      Map.empty
-      (GenDelegs Map.empty)
-      def
-
-instance Default (PState era) where
-  def =
-    PState Map.empty Map.empty Map.empty Map.empty
 
 rewards :: DState era -> UView (Credential 'Staking) RDPair
 rewards = RewDepUView . dsUnified

@@ -14,6 +14,7 @@ module Cardano.Ledger.Shelley.State.CertState (
   shelleyObligationCertState,
   shelleyCertsTotalDepositsTxBody,
   shelleyCertsTotalRefundsTxBody,
+  emptyShelleyCertState,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -32,7 +33,6 @@ import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default (Default (..))
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -45,9 +45,12 @@ data ShelleyCertState era = ShelleyCertState
   }
   deriving (Show, Eq, Generic)
 
+emptyShelleyCertState :: ShelleyCertState era
+emptyShelleyCertState = ShelleyCertState emptyPState emptyDState
+
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
-  def
+  emptyCertState
     & certPStateL .~ p
     & certDStateL .~ d
 
@@ -92,6 +95,8 @@ shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
 
+  emptyCertState = emptyShelleyCertState
+
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
 
@@ -128,9 +133,6 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
       decSharePlusLensCBOR $
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
     pure ShelleyCertState {..}
-
-instance Default (ShelleyCertState era) where
-  def = ShelleyCertState def def
 
 instance Era era => NoThunks (ShelleyCertState era)
 

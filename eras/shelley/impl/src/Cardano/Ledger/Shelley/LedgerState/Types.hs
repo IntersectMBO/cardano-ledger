@@ -54,7 +54,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
@@ -80,6 +79,14 @@ data EpochState era = EpochState
   -- See https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf
   }
   deriving (Generic)
+
+--emptyEpochState :: EpochState era
+--emptyEpochState = 
+--  EpochState
+--    emptyChainAccountState
+--    emptyLedgerState
+--    emptySnapShots
+--    emptyNonMyopic
 
 instance CanGetUTxO EpochState
 
@@ -552,24 +559,6 @@ toLedgerStatePairs ls@(LedgerState _ _) =
    in [ "utxoState" .= lsUTxOState
       , "delegationState" .= lsCertState
       ]
-
--- ====================================================
-
---------------------------------------------------------------------------------
--- Default instances
---------------------------------------------------------------------------------
-
-instance (EraGov era, EraStake era) => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty def mempty mempty
-
-instance
-  Default (LedgerState era) =>
-  Default (EpochState era)
-  where
-  def = EpochState def def def def
-
-instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
-  def = LedgerState def def
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields

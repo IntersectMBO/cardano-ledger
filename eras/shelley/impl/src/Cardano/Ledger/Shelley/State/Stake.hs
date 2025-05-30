@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Coerce
-import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Typeable
@@ -75,9 +74,6 @@ instance Semigroup (ShelleyInstantStake era) where
 
 instance Monoid (ShelleyInstantStake era) where
   mempty = ShelleyInstantStake Map.empty Map.empty
-
-instance Default (ShelleyInstantStake era) where
-  def = mempty
 
 instance ToJSON (ShelleyInstantStake era) where
   toJSON = object . toIncrementalStakePairs

@@ -15,13 +15,13 @@ module Cardano.Ledger.State.ChainAccount (
   casReservesL,
   treasuryL,
   reservesL,
+  emptyChainAccountState,
 ) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -63,6 +63,12 @@ instance ToJSON ChainAccountState where
   toJSON = object . toChainAccountStatePairs
   toEncoding = pairs . mconcat . toChainAccountStatePairs
 
+emptyChainAccountState :: ChainAccountState
+emptyChainAccountState = 
+  ChainAccountState
+    mempty
+    mempty
+
 toChainAccountStatePairs :: KeyValue e a => ChainAccountState -> [a]
 toChainAccountStatePairs as@(ChainAccountState _ _) =
   let ChainAccountState {casTreasury, casReserves} = as
@@ -73,9 +79,6 @@ toChainAccountStatePairs as@(ChainAccountState _ _) =
 instance NoThunks ChainAccountState
 
 instance NFData ChainAccountState
-
-instance Default ChainAccountState where
-  def = ChainAccountState (Coin 0) (Coin 0)
 
 casTreasuryL :: Lens' ChainAccountState Coin
 casTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})

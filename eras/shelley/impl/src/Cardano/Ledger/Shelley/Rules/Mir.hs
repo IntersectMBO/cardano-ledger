@@ -50,7 +50,6 @@ import Control.State.Transition (
   judgmentContext,
   tellEvent,
  )
-import Data.Default (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -77,8 +76,7 @@ instance NFData (ShelleyMirEvent era)
 instance NoThunks (ShelleyMirPredFailure era)
 
 instance
-  ( Default (EpochState era)
-  , EraGov era
+  ( EraGov era
   , EraCertState era
   ) =>
   STS (ShelleyMIR era)
@@ -91,6 +89,7 @@ instance
   type PredicateFailure (ShelleyMIR era) = ShelleyMirPredFailure era
 
   transitionRules = [mirTransition]
+  initialRules = [pure emptyEpochState]
 
   assertions =
     [ PostCondition
@@ -165,6 +164,3 @@ mirTransition = do
           nm
           & prevPParamsEpochStateL .~ pr
           & curPParamsEpochStateL .~ pp
-
-emptyInstantaneousRewards :: InstantaneousRewards
-emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty

@@ -112,7 +112,6 @@ library
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    data-default,
     deepseq,
     groups,
     mempack,
@@ -140,6 +139,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Binary.RoundTrip
     Test.Cardano.Ledger.Shelley.CDDL
     Test.Cardano.Ledger.Shelley.Constants
+    Test.Cardano.Ledger.Shelley.Default
     Test.Cardano.Ledger.Shelley.Era
     Test.Cardano.Ledger.Shelley.Imp
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec

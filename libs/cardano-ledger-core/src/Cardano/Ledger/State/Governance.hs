@@ -58,7 +58,6 @@ class
         )
   , ToCBOR (GovState era)
   , FromCBOR (GovState era)
-  , Default (GovState era)
   , ToJSON (GovState era)
   ) =>
   EraGov era
@@ -67,7 +66,6 @@ class
 
   -- | Construct empty governance state
   emptyGovState :: GovState era
-  emptyGovState = def
 
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)

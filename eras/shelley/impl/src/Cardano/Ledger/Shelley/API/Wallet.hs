@@ -90,7 +90,7 @@ import Cardano.Ledger.Shelley.PoolRank (
   nonMyopicMemberRew,
   percentile',
  )
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
+import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance, emptyRewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (epochInfoSize)
@@ -100,7 +100,6 @@ import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default (def))
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -400,7 +399,7 @@ getRewardProvenance globals newEpochState =
   ( runReader
       (createRUpd slotsPerEpoch blocksMade epochState maxSupply asc secparam)
       globals
-  , def
+  , emptyRewardProvenance
   )
   where
     epochState = nesEs newEpochState

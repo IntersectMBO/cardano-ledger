@@ -39,12 +39,11 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
-import Cardano.Ledger.State (EraCertState)
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy
@@ -181,7 +180,7 @@ calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
       pure (asWitness (bootstrapKeyHash ba), Byron.addrAttributes bootAddr)
     byronAttributes = Map.fromList $ mapMaybe getByronAttrs inputs
     requiredKeyHashes =
-      getWitsVKeyNeeded def utxo txBody Set.\\ nativeScriptsKeyWitsHashes
+      getWitsVKeyNeeded emptyCertState utxo txBody Set.\\ nativeScriptsKeyWitsHashes
     numKeyWitsRequired =
       getGenesisKeyHashCountTxBody txBody
         + extraKeyWitsCount

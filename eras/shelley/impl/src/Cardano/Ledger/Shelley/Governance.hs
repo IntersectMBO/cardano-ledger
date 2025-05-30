@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,7 +8,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -51,13 +49,14 @@ import Data.Aeson (
   pairs,
   (.=),
  )
-import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 
 instance EraGov ShelleyEra where
   type GovState ShelleyEra = ShelleyGovState ShelleyEra
+
+  emptyGovState = emptyShelleyGovState
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
@@ -188,9 +187,6 @@ toPPUPStatePairs ShelleyGovState {..} =
   , "curPParams" .= sgsCurPParams
   , "prevPParams" .= sgsPrevPParams
   ]
-
-instance EraPParams era => Default (ShelleyGovState era) where
-  def = emptyShelleyGovState
 
 emptyShelleyGovState :: EraPParams era => ShelleyGovState era
 emptyShelleyGovState =

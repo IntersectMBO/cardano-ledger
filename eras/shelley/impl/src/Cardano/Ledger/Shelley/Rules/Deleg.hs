@@ -126,7 +126,13 @@ newtype ShelleyDelegEvent era = DelegNewEpoch EpochNo
 
 instance NFData (ShelleyDelegEvent era)
 
-instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (ShelleyDELEG era) where
+instance
+  ( EraPParams era
+  , ShelleyEraTxCert era
+  , ProtVerAtMost era 8
+  ) =>
+  STS (ShelleyDELEG era)
+  where
   type State (ShelleyDELEG era) = DState era
   type Signal (ShelleyDELEG era) = TxCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
@@ -135,6 +141,7 @@ instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (She
   type Event (ShelleyDELEG era) = ShelleyDelegEvent era
 
   transitionRules = [delegationTransition]
+  initialRules = [pure emptyDState]
 
 instance NoThunks (ShelleyDelegPredFailure era)
 
