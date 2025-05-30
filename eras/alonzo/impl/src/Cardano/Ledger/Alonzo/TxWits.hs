@@ -29,10 +29,8 @@ module Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   nullRedeemers,
   lookupRedeemer,
-  upgradeRedeemers,
   TxDats (MkTxDats, TxDats, TxDats'),
   TxDatsRaw (..),
-  upgradeTxDats,
   AlonzoTxWits (
     MkAlonzoTxWits,
     AlonzoTxWits,
@@ -113,7 +111,7 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoizedEra,
  )
-import Cardano.Ledger.Plutus.Data (Data, hashData, upgradeData)
+import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -124,13 +122,11 @@ import Cardano.Ledger.Plutus.Language (
   plutusLanguage,
  )
 import Cardano.Ledger.Shelley.TxWits (
-  ShelleyTxWits (..),
   mapTraverseableDecoderA,
   shelleyEqTxWitsRaw,
  )
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
-import Data.Bifunctor (Bifunctor (first))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -245,20 +241,6 @@ lookupRedeemer ::
   Maybe (Data era, ExUnits)
 lookupRedeemer key = Map.lookup key . unRedeemers
 {-# DEPRECATED lookupRedeemer "In favor of `unRedeemersL`" #-}
-
--- | Upgrade redeemers from one era to another. The underlying data structure
--- will remain identical, but the memoised serialisation may change to reflect
--- the versioned serialisation of the new era.
-upgradeRedeemers ::
-  forall era.
-  (AlonzoEraScript (PreviousEra era), AlonzoEraScript era) =>
-  Redeemers (PreviousEra era) ->
-  Redeemers era
-upgradeRedeemers =
-  Redeemers
-    . Map.mapKeys upgradePlutusPurposeAsIx
-    . Map.map (first upgradeData)
-    . unRedeemers
 
 -- ====================================================================
 -- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
@@ -399,15 +381,6 @@ instance Era era => Monoid (TxDats era) where
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (TxDats era)
 
--- | Upgrade 'TxDats' from one era to another. The underlying data structure
--- will remain identical, but the memoised serialisation may change to reflect
--- the versioned serialisation of the new era.
-upgradeTxDats ::
-  (Era era1, Era era2) =>
-  TxDats era1 ->
-  TxDats era2
-upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
-
 -- =====================================================
 -- AlonzoTxWits instances
 
@@ -530,9 +503,6 @@ instance EraScript AlonzoEra => EraTxWits AlonzoEra where
 
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
-
-  upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
-    AlonzoTxWits addrWits bootWits (upgradeScript <$> scriptWits) mempty emptyRedeemers
 
 class (EraTxWits era, AlonzoEraScript era) => AlonzoEraTxWits era where
   datsTxWitsL :: Lens' (TxWits era) (TxDats era)

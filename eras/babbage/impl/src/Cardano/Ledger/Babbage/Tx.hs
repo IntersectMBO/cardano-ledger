@@ -17,21 +17,13 @@ import Cardano.Ledger.Alonzo.TxSeq (
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
-  BabbageTxBodyUpgradeError,
   TxBody (..),
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
-import Control.Arrow (left)
-
-newtype BabbageTxUpgradeError
-  = BTUEBodyUpgradeError BabbageTxBodyUpgradeError
-  deriving (Eq, Show)
 
 instance EraTx BabbageEra where
   type Tx BabbageEra = AlonzoTx BabbageEra
-  type TxUpgradeError BabbageEra = BabbageTxUpgradeError
-
   mkBasicTx = mkBasicAlonzoTx
 
   bodyTxL = bodyAlonzoTxL
@@ -50,13 +42,6 @@ instance EraTx BabbageEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
-
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> left BTUEBodyUpgradeError (upgradeTxBody b)
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
 
 instance AlonzoEraTx BabbageEra where
   isValidTxL = isValidAlonzoTxL

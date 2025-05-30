@@ -64,10 +64,13 @@ module Cardano.Ledger.Api.Tx (
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
+
+  -- * Upgrade
+  upgradeTx,
 ) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Era (EraApi (..))
 import Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
   RedeemerReportWithLogs,

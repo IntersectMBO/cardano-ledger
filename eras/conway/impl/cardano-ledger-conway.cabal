@@ -279,7 +279,6 @@ test-suite tests
     cardano-slotting:testlib,
     cardano-strict-containers,
     containers,
-    data-default,
     microlens,
     plutus-ledger-api,
     testlib,

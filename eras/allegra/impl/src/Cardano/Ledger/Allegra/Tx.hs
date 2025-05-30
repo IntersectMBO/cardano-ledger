@@ -18,10 +18,8 @@ import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
 import Cardano.Ledger.Core (
   EraTx (..),
-  EraTxAuxData (upgradeTxAuxData),
   EraTxWits (..),
   NativeScript,
-  upgradeTxBody,
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (
@@ -59,12 +57,6 @@ instance EraTx AllegraEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
-
-  upgradeTx (ShelleyTx txb txwits txAux) =
-    ShelleyTx
-      <$> upgradeTxBody txb
-      <*> pure (upgradeTxWits txwits)
-      <*> pure (fmap upgradeTxAuxData txAux)
 
 -- =======================================================
 -- Validating timelock scripts
