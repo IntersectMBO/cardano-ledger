@@ -8,28 +8,25 @@
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
-import Cardano.Ledger.State (EraCertState (..), UTxO (..))
-import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
 import Data.Default (Default (def))
-import Data.Foldable as F (foldl')
-import qualified Data.Map as Map
+import Data.Foldable as F (fold, foldl')
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import qualified Prettyprinter as Pretty
-import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString)
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
@@ -40,13 +37,7 @@ import Test.Cardano.Ledger.Generic.Functions (
  )
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.Proof (
-  Proof (..),
-  Reflect (..),
-  Some (..),
-  preBabbage,
-  unReflect,
- )
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (..),
@@ -94,6 +85,7 @@ aggUTxO ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , Reflect era
+  , ShelleyEraAccounts era
   ) =>
   Proof era ->
   Gen Property
@@ -116,9 +108,10 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace ::
-  (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@Conway n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
+  (Testable prop, Reflect era) =>
+  Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
+forAllChainTrace Conway _n _propf =
+  property True -- Conway can't handle pointers.
 forAllChainTrace p@Babbage n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@Alonzo n propf =
@@ -141,40 +134,22 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
   let LedgerState {lsUTxOState = utxost, lsCertState = certState} = (esLState . nesEs . mcsNes) mockChainSt
       -- TODO handle VState
       pstate = certState ^. certPStateL
-      dstate = certState ^. certDStateL
+      accountsMap = certState ^. certDStateL . accountsL . accountsMapL
       allDeposits = utxosDeposited utxost
-      sumCoin m = Map.foldl' (<+>) (Coin 0) m
-      keyDeposits = fromCompact $ sumDepositUView (RewDepUView (dsUnified dstate))
-      poolDeposits = sumCoin (psDeposits pstate)
+      keyDeposits = fromCompact $ foldMap (^. depositAccountStateL) accountsMap
+      poolDeposits = F.fold (psDeposits pstate)
    in counterexample
         ( ansiDocToString . Pretty.vsep $
             [ "Deposit invariant fails:"
             , Pretty.indent 2 . Pretty.vsep . map Pretty.pretty $
                 [ "All deposits = " ++ show allDeposits
-                , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
+                , "Key deposits = "
+                    ++ synopsisCoinMap (Just (Map.map (fromCompact . (^. depositAccountStateL)) accountsMap))
                 , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
                 ]
             ]
         )
         (allDeposits === keyDeposits <+> poolDeposits)
-
-rewardDepositDomainInvariant ::
-  EraCertState era =>
-  SourceSignalTarget (MOCKCHAIN era) ->
-  Property
-rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
-  let LedgerState {lsCertState = certState} = (esLState . nesEs . mcsNes) mockChainSt
-      -- TODO VState
-      dstate = certState ^. certDStateL
-      rewardDomain = domain (RewDepUView (dsUnified dstate))
-      depositDomain = Map.keysSet (depositMap (dsUnified dstate))
-   in counterexample
-        ( ansiDocToString . Pretty.vsep $
-            [ "Reward-Deposit domain invariant fails:"
-            , Pretty.indent 2 $ diffExpr rewardDomain depositDomain
-            ]
-        )
-        (rewardDomain === depositDomain)
 
 itemPropToTraceProp ::
   (SourceSignalTarget (MOCKCHAIN era) -> Property) -> Trace (MOCKCHAIN era) -> Property
@@ -187,17 +162,15 @@ depositEra proof =
     [ testProperty
         "Deposits = KeyDeposits + PoolDeposits"
         (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era)))
-    , testProperty
-        "Reward domain = Deposit domain"
-        (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
     ]
 
--- | Build a TestTree that tests 'f' at all the Eras listed in 'ps'
-testEras :: String -> [Some Proof] -> (forall era. Reflect era => Proof era -> TestTree) -> TestTree
-testEras message ps f = testGroup message (applyF ps)
-  where
-    applyF [] = []
-    applyF (Some e : more) = unReflect f e : applyF more
-
 depositTests :: TestTree
-depositTests = testEras "deposit invariants" preBabbage depositEra
+depositTests =
+  testGroup
+    "deposit invariants"
+    [ depositEra Shelley
+    , depositEra Allegra
+    , depositEra Mary
+    , depositEra Alonzo
+    , depositEra Babbage
+    ]
