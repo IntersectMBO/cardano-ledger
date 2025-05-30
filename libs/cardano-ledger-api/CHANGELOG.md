@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`
 * Add `EraApi` class
 * Expose `Dijkstra` Era
 * Moved `Annotator` instances to `testlib` for all respective packages
