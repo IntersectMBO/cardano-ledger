@@ -81,7 +81,6 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
-  AlonzoTxBodyUpgradeError,
   ScriptIntegrityHash,
   TxBody (AlonzoTxBody),
  )
@@ -112,10 +111,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
+import Cardano.Ledger.Shelley.Tx (shelleyEqTxRaw)
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
-import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
@@ -146,12 +144,8 @@ data AlonzoTx era = AlonzoTx
   }
   deriving (Generic)
 
-newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
-  deriving (Show)
-
 instance EraTx AlonzoEra where
   type Tx AlonzoEra = AlonzoTx AlonzoEra
-  type TxUpgradeError AlonzoEra = AlonzoTxUpgradeError
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -172,13 +166,6 @@ instance EraTx AlonzoEra where
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
-
-  upgradeTx (ShelleyTx body wits aux) =
-    AlonzoTx
-      <$> left ATUEBodyUpgradeError (upgradeTxBody body)
-      <*> pure (upgradeTxWits wits)
-      <*> pure (IsValid True)
-      <*> pure (fmap upgradeTxAuxData aux)
 
 instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
   eqRaw = alonzoEqTxRaw

@@ -12,7 +12,6 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
-import Data.Default (def)
 import Data.Proxy
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
@@ -22,13 +21,11 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
-import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
 spec :: Spec
 spec = do
-  specUpgrade @ConwayEra def
   describe "RoundTrip" $ do
     roundTripCborSpec @GovActionId
     roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose ConwayEra)
