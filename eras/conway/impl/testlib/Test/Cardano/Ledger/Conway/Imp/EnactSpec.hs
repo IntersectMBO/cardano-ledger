@@ -333,7 +333,7 @@ noConfidenceSpec =
             [ (KeyHashObj khCC, addEpochInterval startEpochNo (EpochInterval 50))
             ]
     prevGaidCommittee@(GovPurposeId gaidCommittee) <-
-      electCommittee
+      submitCommitteeElection
         SNothing
         drep
         initialCommitteeMembers

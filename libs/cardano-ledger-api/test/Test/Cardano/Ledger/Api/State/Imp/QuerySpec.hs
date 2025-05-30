@@ -183,7 +183,7 @@ spec = do
 
         initialCommitteeMembers <- getCommitteeMembers
         GovPurposeId gid <-
-          electCommittee
+          submitCommitteeElection
             SNothing
             drep
             initialCommitteeMembers
@@ -224,7 +224,7 @@ spec = do
     initialMembers <- getCommitteeMembers
 
     ga1@(GovPurposeId gaid1) <-
-      electCommittee
+      submitCommitteeElection
         SNothing
         drep
         initialMembers
@@ -304,7 +304,7 @@ spec = do
         c6Expiry = offsetEpochInterval 6
         c7Expiry = offsetEpochInterval 7
     ga2@(GovPurposeId gaid2) <-
-      electCommittee
+      submitCommitteeElection
         (SJust ga1)
         drep
         [c2]
@@ -374,7 +374,7 @@ spec = do
         c4NewNewExpiry = offsetEpochInterval 9
         c6NewExpiry = offsetEpochInterval 9
     GovPurposeId gaid3 <-
-      electCommittee
+      submitCommitteeElection
         (SJust ga2)
         drep
         [c1]
