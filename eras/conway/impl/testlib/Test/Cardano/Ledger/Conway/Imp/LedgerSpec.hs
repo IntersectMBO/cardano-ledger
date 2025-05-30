@@ -14,6 +14,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure (UnelectedCommitteeVoters),
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (BadInputsUTxO),
   maxRefScriptSizePerTx,
@@ -22,7 +23,10 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), ApplyTxError (..), applyTx, mkMempoolEnv)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import qualified Cardano.Ledger.Shelley.HardForks as HF (
+  bootstrapPhase,
+  disallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
@@ -44,6 +48,7 @@ spec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   , ApplyTx era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -290,12 +295,13 @@ spec = do
                       (CommitteeVoter ccHot)
                       (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
                   )
-
-      txFixed <-
-        submitFailingMempoolTx "unallowed votes" tx $
-          pure . injectFailure . ConwayMempoolFailure $
-            "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
-
-      -- The tx should pass all other rules
-      withNoFixup $
-        submitTx_ txFixed
+      pv <- getProtVer
+      if HF.disallowUnelectedCommitteeFromVoting pv
+        then
+          submitFailingTx tx [injectFailure $ UnelectedCommitteeVoters [ccHot]]
+        else do
+          txFixed <-
+            submitFailingMempoolTx "unallowed votes" tx $
+              pure . injectFailure . ConwayMempoolFailure $
+                "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
+          withNoFixup $ submitTx_ txFixed

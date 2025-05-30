@@ -78,7 +78,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerCommitteeHotKey,
   registerCommitteeHotKeys,
   logCurPParams,
-  electCommittee,
+  submitCommitteeElection,
   electBasicCommittee,
   proposalsShowDebug,
   getGovPolicy,
@@ -1258,7 +1258,7 @@ resignCommitteeColdKey coldKey anchor = do
     CommitteeHotCredential hotCred <- Map.lookup coldKey committeAuthorizations
     pure hotCred
 
-electCommittee ::
+submitCommitteeElection ::
   forall era.
   ( HasCallStack
   , ConwayEraImp era
@@ -1268,7 +1268,7 @@ electCommittee ::
   Set.Set (Credential 'ColdCommitteeRole) ->
   Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
   ImpTestM era (GovPurposeId 'CommitteePurpose)
-electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
+submitCommitteeElection prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
   let
     committeeAction =
       UpdateCommittee
