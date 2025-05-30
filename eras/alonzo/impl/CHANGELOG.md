@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
 * Renamed fields of `AlonzoTx`
   * `body` to `atBody`
   * `wits` to `atWits`

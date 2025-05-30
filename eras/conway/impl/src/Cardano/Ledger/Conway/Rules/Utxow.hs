@@ -316,8 +316,6 @@ alonzoToConwayUtxowPredFailure = \case
   Alonzo.MissingRequiredDatums mds rds -> MissingRequiredDatums mds rds
   Alonzo.NotAllowedSupplementalDatums uds ads -> NotAllowedSupplementalDatums uds ads
   Alonzo.PPViewHashesDontMatch m -> PPViewHashesDontMatch m
-  Alonzo.MissingRequiredSigners _xs ->
-    error "Impossible case. It will be removed once we are in Conway. See #3972"
   Alonzo.UnspendableUTxONoDatumHash ins -> UnspendableUTxONoDatumHash ins
   Alonzo.ExtraRedeemers xs -> ExtraRedeemers xs
 
