@@ -1,0 +1,904 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.OSet.Strict</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier">Empty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator">(:&lt;|:)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator">(:|&gt;:)</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#null"><span class="hs-identifier">null</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#size"><span class="hs-identifier">size</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#singleton"><span class="hs-identifier">singleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#lookup"><span class="hs-identifier">lookup</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#member"><span class="hs-identifier">member</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#%21%3F"><span class="hs-operator">(!?)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromList"><span class="hs-identifier">fromList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier">fromStrictSeq</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromStrictSeqDuplicates"><span class="hs-identifier">fromStrictSeqDuplicates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#toStrictSeq"><span class="hs-identifier">toStrictSeq</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#toSet"><span class="hs-identifier">toSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromSet"><span class="hs-identifier">fromSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromFoldable"><span class="hs-identifier">fromFoldable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#fromFoldableDuplicates"><span class="hs-identifier">fromFoldableDuplicates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#invariantHolds"><span class="hs-identifier">invariantHolds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier">invariantHolds'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator">(|&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator">(&lt;|)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator">(|&gt;&lt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator">(&gt;&lt;|)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Data.OSet.Strict.html#filter"><span class="hs-identifier">filter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier">encCBOR</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeSetLikeEnforceNoDuplicates"><span class="hs-identifier">decodeSetLikeEnforceNoDuplicates</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeStrictSeq"><span class="hs-identifier">encodeStrictSeq</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier">encodeTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#setTag"><span class="hs-identifier">setTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier">toJSON</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GHC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsList</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">filter</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">lookup</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">null</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | A general-purpose finite, ordered, set that is strict in its</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- values.</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- The strictness is enforced by the underlying `StrictSeq` from base,</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- and the uniqueness of the values is enforced in this module, by the</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- constructing functions by leveraging an accompanying `Set`.</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- TODO: @aniketd Implement DecShareCBOR</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">data</span><span> </span><span id="OSet"><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span></span><span> </span><span id="local-6989586621679215186"><span class="annot"><a href="#local-6989586621679215186"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OSet"><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="osSSeq"><span class="annot"><span class="annottext">forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var hs-var">osSSeq</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">SSeq.StrictSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215186"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="osSet"><span class="annot"><span class="annottext">forall a. OSet a -&gt; Set a
+</span><a href="Data.OSet.Strict.html#osSet"><span class="hs-identifier hs-var hs-var">osSet</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215186"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679215485"><span id="local-6989586621679215491"><span class="annot"><span class="annottext">OSet a -&gt; OSet a -&gt; Bool
+(OSet a -&gt; OSet a -&gt; Bool)
+-&gt; (OSet a -&gt; OSet a -&gt; Bool) -&gt; Eq (OSet a)
+forall a. Eq a =&gt; OSet a -&gt; OSet a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; OSet a -&gt; OSet a -&gt; Bool
+== :: OSet a -&gt; OSet a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; OSet a -&gt; OSet a -&gt; Bool
+/= :: OSet a -&gt; OSet a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215500"><span id="local-6989586621679215506"><span id="local-6989586621679215510"><span id="local-6989586621679215514"><span id="local-6989586621679215517"><span id="local-6989586621679215520"><span id="local-6989586621679215523"><span class="annot"><span class="annottext">Eq (OSet a)
+Eq (OSet a) =&gt;
+(OSet a -&gt; OSet a -&gt; Ordering)
+-&gt; (OSet a -&gt; OSet a -&gt; Bool)
+-&gt; (OSet a -&gt; OSet a -&gt; Bool)
+-&gt; (OSet a -&gt; OSet a -&gt; Bool)
+-&gt; (OSet a -&gt; OSet a -&gt; Bool)
+-&gt; (OSet a -&gt; OSet a -&gt; OSet a)
+-&gt; (OSet a -&gt; OSet a -&gt; OSet a)
+-&gt; Ord (OSet a)
+OSet a -&gt; OSet a -&gt; Bool
+OSet a -&gt; OSet a -&gt; Ordering
+OSet a -&gt; OSet a -&gt; OSet a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (OSet a)
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Bool
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Ordering
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+$ccompare :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Ordering
+compare :: OSet a -&gt; OSet a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Bool
+&lt; :: OSet a -&gt; OSet a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Bool
+&lt;= :: OSet a -&gt; OSet a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Bool
+&gt; :: OSet a -&gt; OSet a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; Bool
+&gt;= :: OSet a -&gt; OSet a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+max :: OSet a -&gt; OSet a -&gt; OSet a
+$cmin :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+min :: OSet a -&gt; OSet a -&gt; OSet a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215529"><span id="local-6989586621679215537"><span id="local-6989586621679215541"><span class="annot"><span class="annottext">Int -&gt; OSet a -&gt; ShowS
+[OSet a] -&gt; ShowS
+OSet a -&gt; String
+(Int -&gt; OSet a -&gt; ShowS)
+-&gt; (OSet a -&gt; String) -&gt; ([OSet a] -&gt; ShowS) -&gt; Show (OSet a)
+forall a. Show a =&gt; Int -&gt; OSet a -&gt; ShowS
+forall a. Show a =&gt; [OSet a] -&gt; ShowS
+forall a. Show a =&gt; OSet a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; OSet a -&gt; ShowS
+showsPrec :: Int -&gt; OSet a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; OSet a -&gt; String
+show :: OSet a -&gt; String
+$cshowList :: forall a. Show a =&gt; [OSet a] -&gt; ShowS
+showList :: [OSet a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215545"><span id="local-6989586621679215547"><span class="annot"><span class="annottext">(forall x. OSet a -&gt; Rep (OSet a) x)
+-&gt; (forall x. Rep (OSet a) x -&gt; OSet a) -&gt; Generic (OSet a)
+forall x. Rep (OSet a) x -&gt; OSet a
+forall x. OSet a -&gt; Rep (OSet a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (OSet a) x -&gt; OSet a
+forall a x. OSet a -&gt; Rep (OSet a) x
+$cfrom :: forall a x. OSet a -&gt; Rep (OSet a) x
+from :: forall x. OSet a -&gt; Rep (OSet a) x
+$cto :: forall a x. Rep (OSet a) x -&gt; OSet a
+to :: forall x. Rep (OSet a) x -&gt; OSet a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679215552"><span id="local-6989586621679215556"><span id="local-6989586621679215562"><span class="annot"><span class="annottext">Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+Proxy (OSet a) -&gt; String
+(Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (OSet a) -&gt; String)
+-&gt; NoThunks (OSet a)
+forall a. NoThunks a =&gt; Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+forall a. NoThunks a =&gt; Proxy (OSet a) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall a. NoThunks a =&gt; Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall a. NoThunks a =&gt; Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; OSet a -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall a. NoThunks a =&gt; Proxy (OSet a) -&gt; String
+showTypeOf :: Proxy (OSet a) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215600"><span class="annot"><span class="annottext">OSet a -&gt; ()
+(OSet a -&gt; ()) -&gt; NFData (OSet a)
+forall a. NFData a =&gt; OSet a -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall a. NFData a =&gt; OSet a -&gt; ()
+rnf :: OSet a -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215278"><span id="local-6989586621679215623"><span id="local-6989586621679215627"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215278"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215278"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679215633"><span class="annot"><span class="annottext">&lt;&gt; :: OSet a -&gt; OSet a -&gt; OSet a
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">(&lt;&gt;)</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">(|&gt;&lt;)</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215281"><span id="local-6989586621679215639"><span id="local-6989586621679215643"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215281"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215281"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679215646"><span class="annot"><span class="annottext">mempty :: OSet a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a
+forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215286"><span id="local-6989586621679215650"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215286"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">GHC.IsList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215286"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Item"><span class="annot"><span class="hs-identifier hs-var">Item</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215286"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679215286"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679215656"><span class="annot"><span class="annottext">fromList :: [Item (OSet a)] -&gt; OSet a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromList</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; OSet a
+[Item (OSet a)] -&gt; OSet a
+forall a. Ord a =&gt; [a] -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679215659"><span class="annot"><span class="annottext">toList :: OSet a -&gt; [Item (OSet a)]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">toList</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; [a]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">F.toList</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; [a]) -&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; [a]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215663"><span id="local-6989586621679215670"><span id="local-6989586621679215681"><span id="local-6989586621679215686"><span id="local-6989586621679215691"><span id="local-6989586621679215696"><span id="local-6989586621679215701"><span id="local-6989586621679215706"><span class="annot"><span class="hs-identifier hs-type">Foldable</span></span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679215715"><span class="annot"><span class="annottext">foldMap :: forall m a. Monoid m =&gt; (a -&gt; m) -&gt; OSet a -&gt; m
+</span><a href="#local-6989586621679215715"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldMap</span></a></span></span><span> </span><span id="local-6989586621679215717"><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679215717"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; m) -&gt; Seq a -&gt; m
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; Seq a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">F.foldMap</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; m
+</span><a href="#local-6989586621679215717"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; m) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; m
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldMap</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679215720"><span class="annot"><span class="annottext">foldr :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; OSet a -&gt; b
+</span><a href="#local-6989586621679215720"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldr</span></a></span></span><span> </span><span id="local-6989586621679215722"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679215722"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679215723"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215723"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldr</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679215722"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215723"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; b) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldr</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679215725"><span class="annot"><span class="annottext">foldl :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; OSet a -&gt; b
+</span><a href="#local-6989586621679215725"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldl</span></a></span></span><span> </span><span id="local-6989586621679215727"><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679215727"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679215728"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215728"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl</span></span><span> </span><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679215727"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215728"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; b) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldl</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679215730"><span class="annot"><span class="annottext">foldr' :: forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; OSet a -&gt; b
+</span><a href="#local-6989586621679215730"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldr'</span></a></span></span><span> </span><span id="local-6989586621679215732"><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679215732"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679215733"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215733"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldr'</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; b
+</span><a href="#local-6989586621679215732"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215733"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; b) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldr'</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679215735"><span class="annot"><span class="annottext">foldl' :: forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; OSet a -&gt; b
+</span><a href="#local-6989586621679215735"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldl'</span></a></span></span><span> </span><span id="local-6989586621679215737"><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679215737"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679215738"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215738"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(b -&gt; a -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">b -&gt; a -&gt; b
+</span><a href="#local-6989586621679215737"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679215738"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; b) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; b
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldl'</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679215740"><span class="annot"><span class="annottext">foldr1 :: forall a. (a -&gt; a -&gt; a) -&gt; OSet a -&gt; a
+</span><a href="#local-6989586621679215740"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldr1</span></a></span></span><span> </span><span id="local-6989586621679215742"><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679215742"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; Seq a -&gt; a
+forall a. (a -&gt; a -&gt; a) -&gt; Seq a -&gt; a
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">F.foldr1</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679215742"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; a) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldr1</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679215744"><span class="annot"><span class="annottext">foldl1 :: forall a. (a -&gt; a -&gt; a) -&gt; OSet a -&gt; a
+</span><a href="#local-6989586621679215744"><span class="hs-identifier hs-var hs-var hs-var hs-var">foldl1</span></a></span></span><span> </span><span id="local-6989586621679215746"><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679215746"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; a -&gt; a) -&gt; Seq a -&gt; a
+forall a. (a -&gt; a -&gt; a) -&gt; Seq a -&gt; a
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; a -&gt; a) -&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">F.foldl1</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679215746"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; a) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">foldl1</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679215748"><span class="annot"><span class="annottext">length :: forall a. OSet a -&gt; Int
+</span><a href="#local-6989586621679215748"><span class="hs-identifier hs-var hs-var hs-var hs-var">length</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq a -&gt; Int
+forall a. Seq a -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">F.length</span></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; Int) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">length</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679215751"><span class="annot"><span class="annottext">null :: forall a. OSet a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">null</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq a -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">F.null</span></span><span> </span><span class="annot"><span class="annottext">(Seq a -&gt; Bool) -&gt; (OSet a -&gt; Seq a) -&gt; OSet a -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq a -&gt; Seq a)
+-&gt; (OSet a -&gt; StrictSeq a) -&gt; OSet a -&gt; Seq a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><span class="hs-pragma hs-type">null</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215334"><span id="local-6989586621679215759"><span id="local-6989586621679215763"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215334"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215334"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679215770"><span class="annot"><span class="annottext">encCBOR :: OSet a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215771"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215771"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215772"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215772"><span class="hs-identifier hs-var">_set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier hs-var">encodeTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#setTag"><span class="hs-identifier hs-var">setTag</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Encoding) -&gt; StrictSeq a -&gt; Encoding
+forall a. (a -&gt; Encoding) -&gt; StrictSeq a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeStrictSeq"><span class="hs-identifier hs-var">encodeStrictSeq</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215771"><span class="hs-identifier hs-var">seq</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215343"><span id="local-6989586621679215782"><span id="local-6989586621679215786"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679215343"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215343"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215343"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215343"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679215793"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (OSet a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; OSet a -&gt; OSet a)
+-&gt; (OSet a -&gt; (Int, OSet a)) -&gt; Decoder s a -&gt; Decoder s (OSet a)
+forall s a b c.
+Monoid b =&gt;
+(a -&gt; b -&gt; b) -&gt; (b -&gt; (Int, c)) -&gt; Decoder s a -&gt; Decoder s c
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeSetLikeEnforceNoDuplicates"><span class="hs-identifier hs-var">decodeSetLikeEnforceNoDuplicates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(OSet a -&gt; a -&gt; OSet a) -&gt; a -&gt; OSet a -&gt; OSet a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679215796"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215796"><span class="hs-identifier hs-var">oset</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OSet a -&gt; Int
+forall a. OSet a -&gt; Int
+</span><a href="Data.OSet.Strict.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215796"><span class="hs-identifier hs-var">oset</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215796"><span class="hs-identifier hs-var">oset</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679215358"><span id="local-6989586621679215800"><span id="local-6989586621679215804"><span id="local-6989586621679215807"><span id="local-6989586621679215810"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215358"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215358"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679215816"><span class="annot"><span class="annottext">toJSON :: OSet a -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Value) -&gt; (OSet a -&gt; [a]) -&gt; OSet a -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; [a]
+forall a. OSet a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">F.toList</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \). Shallow invariant using just `length` and `size`.</span></span><span>
+</span><span id="line-114"></span><span id="local-6989586621679215817"><span class="annot"><a href="Data.OSet.Strict.html#invariantHolds"><span class="hs-identifier hs-type">invariantHolds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215817"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-115"></span><span id="invariantHolds"><span class="annot"><span class="annottext">invariantHolds :: forall a. OSet a -&gt; Bool
+</span><a href="Data.OSet.Strict.html#invariantHolds"><span class="hs-identifier hs-var hs-var">invariantHolds</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215820"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215820"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215821"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215821"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Int
+forall a. StrictSeq a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#length"><span class="hs-identifier hs-var">SSeq.length</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215820"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215821"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- | \( O(n \log n) \). Deep invariant using set membership check for</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- each value. By the pigeon-hole principle, this check is exhaustive.</span><span>
+</span><span id="line-119"></span><span id="local-6989586621679215363"><span class="annot"><a href="Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-type">invariantHolds'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215363"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215363"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-120"></span><span id="invariantHolds%27"><span class="annot"><span class="annottext">invariantHolds' :: forall a. Ord a =&gt; OSet a -&gt; Bool
+</span><a href="Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var hs-var">invariantHolds'</span></a></span></span><span> </span><span id="local-6989586621679215827"><span class="annot"><span class="annottext">oset :: OSet a
+</span><a href="#local-6989586621679215827"><span class="hs-identifier hs-var">oset</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215828"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215828"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215829"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215829"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><span class="annottext">OSet a -&gt; Bool
+forall a. OSet a -&gt; Bool
+</span><a href="Data.OSet.Strict.html#invariantHolds"><span class="hs-identifier hs-var">invariantHolds</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215827"><span class="hs-identifier hs-var">oset</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Bool) -&gt; Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215829"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq a -&gt; Seq a
+forall a. StrictSeq a -&gt; Seq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromStrict"><span class="hs-identifier hs-var">SSeq.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215828"><span class="hs-identifier hs-var">seq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \).</span></span><span>
+</span><span id="line-124"></span><span id="local-6989586621679215833"><span class="annot"><a href="Data.OSet.Strict.html#null"><span class="hs-identifier hs-type">null</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215833"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-125"></span><span id="null"><span class="annot"><span class="annottext">null :: forall a. OSet a -&gt; Bool
+</span><a href="Data.OSet.Strict.html#null"><span class="hs-identifier hs-var hs-var">null</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679215834"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215834"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215834"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \).</span></span><span>
+</span><span id="line-128"></span><span id="local-6989586621679215836"><span class="annot"><a href="Data.OSet.Strict.html#size"><span class="hs-identifier hs-type">size</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215836"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span></span><span>
+</span><span id="line-129"></span><span id="size"><span class="annot"><span class="annottext">size :: forall a. OSet a -&gt; Int
+</span><a href="Data.OSet.Strict.html#size"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679215837"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215837"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215837"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \).</span></span><span>
+</span><span id="line-132"></span><span id="local-6989586621679215282"><span class="annot"><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-type">empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215282"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-133"></span><span id="empty"><span class="annot"><span class="annottext">empty :: forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+forall a. StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#Empty"><span class="hs-identifier hs-var">SSeq.Empty</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \). Strict in its argument.</span></span><span>
+</span><span id="line-136"></span><span id="local-6989586621679215374"><span class="annot"><a href="Data.OSet.Strict.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679215374"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215374"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-137"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: forall a. a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679215840"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215840"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; StrictSeq a
+forall a. a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#singleton"><span class="hs-identifier hs-var">SSeq.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215840"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Set a
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215840"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- | \( O(\log(\min(i,n-i))) \). The element at the specified position,</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- counting from 0. If the specified position is negative or at least</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- the length of the sequence, 'lookup' returns 'Nothing'.</span><span>
+</span><span id="line-142"></span><span id="local-6989586621679215378"><span class="annot"><a href="Data.OSet.Strict.html#lookup"><span class="hs-identifier hs-type">lookup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215378"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679215378"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-143"></span><span id="lookup"><span class="annot"><span class="annottext">lookup :: forall a. Int -&gt; OSet a -&gt; Maybe a
+</span><a href="Data.OSet.Strict.html#lookup"><span class="hs-identifier hs-var hs-var">lookup</span></a></span></span><span> </span><span id="local-6989586621679215843"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215843"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215844"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215844"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215845"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215845"><span class="hs-identifier hs-var">_set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; StrictSeq a -&gt; Maybe a
+forall a. Int -&gt; StrictSeq a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#lookup"><span class="hs-identifier hs-var">SSeq.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679215843"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215844"><span class="hs-identifier hs-var">seq</span></a></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="annot"><span class="hs-comment">-- | `flip`ed version of `lookup`</span></span><span>
+</span><span id="line-146"></span><span id="local-6989586621679215381"><span class="annot"><a href="Data.OSet.Strict.html#%21%3F"><span class="hs-operator hs-type">(!?)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215381"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679215381"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-147"></span><span id="%21%3F"><span class="annot"><span class="annottext">!? :: forall a. OSet a -&gt; Int -&gt; Maybe a
+</span><a href="Data.OSet.Strict.html#%21%3F"><span class="hs-operator hs-var hs-var">(!?)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; OSet a -&gt; Maybe a) -&gt; OSet a -&gt; Int -&gt; Maybe a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet a -&gt; Maybe a
+forall a. Int -&gt; OSet a -&gt; Maybe a
+</span><a href="Data.OSet.Strict.html#lookup"><span class="hs-identifier hs-var">lookup</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="annot"><span class="hs-comment">-- | \( O(\log n) \). Checks membership before cons'ing.</span></span><span>
+</span><span id="line-150"></span><span id="local-6989586621679215383"><span class="annot"><a href="Data.OSet.Strict.html#cons"><span class="hs-identifier hs-type">cons</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215383"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215383"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215383"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215383"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-151"></span><span id="cons"><span class="annot"><span class="annottext">cons :: forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#cons"><span class="hs-identifier hs-var hs-var">cons</span></a></span></span><span> </span><span id="local-6989586621679215851"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215851"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679215852"><span class="annot"><span class="annottext">oset :: OSet a
+</span><a href="#local-6989586621679215852"><span class="hs-identifier hs-var">oset</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215853"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215853"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215854"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215854"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215851"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215854"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215852"><span class="hs-identifier hs-var">oset</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215851"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; StrictSeq a -&gt; StrictSeq a
+forall a. a -&gt; StrictSeq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#%3C%7C"><span class="hs-operator hs-var">SSeq.&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215853"><span class="hs-identifier hs-var">seq</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215851"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.insert`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215854"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span id="local-6989586621679215857"><span class="annot"><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-type">(&lt;|)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215857"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215857"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215857"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215857"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-157"></span><span id="%3C%7C"><span class="annot"><span class="annottext">&lt;| :: forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var hs-var">(&lt;|)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#cons"><span class="hs-identifier hs-var">cons</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-type">&lt;|</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><span class="hs-comment">-- | \( O(\log n) \). Checks membership before snoc'ing.</span></span><span>
+</span><span id="line-162"></span><span id="local-6989586621679215352"><span class="annot"><a href="Data.OSet.Strict.html#snoc"><span class="hs-identifier hs-type">snoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215352"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215352"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215352"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215352"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-163"></span><span id="snoc"><span class="annot"><span class="annottext">snoc :: forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#snoc"><span class="hs-identifier hs-var hs-var">snoc</span></a></span></span><span> </span><span id="local-6989586621679215863"><span class="annot"><span class="annottext">oset :: OSet a
+</span><a href="#local-6989586621679215863"><span class="hs-identifier hs-var">oset</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215864"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215864"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215865"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215865"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679215866"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215866"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215866"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215865"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215863"><span class="hs-identifier hs-var">oset</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215864"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; a -&gt; StrictSeq a
+forall a. StrictSeq a -&gt; a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#%7C%3E"><span class="hs-operator hs-var">SSeq.|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215866"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215866"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.insert`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215865"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span id="local-6989586621679215868"><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-type">(|&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215868"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215868"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215868"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215868"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-169"></span><span id="%7C%3E"><span class="annot"><span class="annottext">|&gt; :: forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var hs-var">(|&gt;)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-type">|&gt;</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><span class="hs-comment">-- | \( O(\log n) \).</span></span><span>
+</span><span id="line-174"></span><span id="local-6989586621679215391"><span class="annot"><a href="Data.OSet.Strict.html#uncons"><span class="hs-identifier hs-type">uncons</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215391"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215391"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679215391"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215391"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-175"></span><span id="uncons"><span class="annot"><span class="annottext">uncons :: forall a. Ord a =&gt; OSet a -&gt; Maybe (a, OSet a)
+</span><a href="Data.OSet.Strict.html#uncons"><span class="hs-identifier hs-var hs-var">uncons</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215874"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215874"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215875"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215875"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215874"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#Empty"><span class="hs-identifier hs-var">SSeq.Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (a, OSet a)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621679215876"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215876"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#%3A%3C%7C"><span class="hs-operator hs-type">SSeq.:&lt;|</span></a></span><span> </span><span id="local-6989586621679215878"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215878"><span class="hs-identifier hs-var">xs'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a, OSet a) -&gt; Maybe (a, OSet a)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215876"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215878"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215876"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.delete`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215875"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="annot"><span class="hs-comment">-- | \( O(\log n) \).</span></span><span>
+</span><span id="line-180"></span><span id="local-6989586621679215394"><span class="annot"><a href="Data.OSet.Strict.html#unsnoc"><span class="hs-identifier hs-type">unsnoc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215394"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215394"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215394"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679215394"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-181"></span><span id="unsnoc"><span class="annot"><span class="annottext">unsnoc :: forall a. Ord a =&gt; OSet a -&gt; Maybe (OSet a, a)
+</span><a href="Data.OSet.Strict.html#unsnoc"><span class="hs-identifier hs-var hs-var">unsnoc</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215883"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215883"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215884"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215884"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215883"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-182"></span><span>  </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#Empty"><span class="hs-identifier hs-var">SSeq.Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (OSet a, a)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-183"></span><span>  </span><span id="local-6989586621679215885"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215885"><span class="hs-identifier hs-var">xs'</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#%3A%7C%3E"><span class="hs-operator hs-type">SSeq.:|&gt;</span></a></span><span> </span><span id="local-6989586621679215887"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215887"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(OSet a, a) -&gt; Maybe (OSet a, a)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215885"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215887"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.delete`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215884"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215887"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="annot"><span class="hs-comment">-- | \(O(n \log n)\). Convert to an OSet from a List.</span></span><span>
+</span><span id="line-186"></span><span id="local-6989586621679215287"><span class="annot"><a href="Data.OSet.Strict.html#fromList"><span class="hs-identifier hs-type">fromList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215287"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679215287"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215287"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-187"></span><span id="fromList"><span class="annot"><span class="annottext">fromList :: forall a. Ord a =&gt; [a] -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromList"><span class="hs-identifier hs-var hs-var">fromList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; OSet a
+forall (f :: * -&gt; *) a. (Foldable f, Ord a) =&gt; f a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromFoldable"><span class="hs-identifier hs-var">fromFoldable</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="annot"><span class="hs-comment">-- | Using a `Foldable` instance of the source data structure convert it to an `OSet`</span></span><span>
+</span><span id="line-190"></span><span id="local-6989586621679215397"><span id="local-6989586621679215398"><span class="annot"><a href="Data.OSet.Strict.html#fromFoldable"><span class="hs-identifier hs-type">fromFoldable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Foldable</span></span><span> </span><span class="annot"><a href="#local-6989586621679215397"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215398"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215397"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215398"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215398"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-191"></span><span id="fromFoldable"><span class="annot"><span class="annottext">fromFoldable :: forall (f :: * -&gt; *) a. (Foldable f, Ord a) =&gt; f a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromFoldable"><span class="hs-identifier hs-var hs-var">fromFoldable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(OSet a -&gt; a -&gt; OSet a) -&gt; OSet a -&gt; f a -&gt; OSet a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#snoc"><span class="hs-identifier hs-var">snoc</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- | \(O(n \log n)\). Checks membership before snoc-ing.</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- De-duplicates the StrictSeq without overwriting.</span><span>
+</span><span id="line-195"></span><span id="local-6989586621679215403"><span class="annot"><a href="Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier hs-type">fromStrictSeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215403"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">SSeq.StrictSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215403"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215403"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-196"></span><span id="fromStrictSeq"><span class="annot"><span class="annottext">fromStrictSeq :: forall a. Ord a =&gt; StrictSeq a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier hs-var hs-var">fromStrictSeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; OSet a
+forall (f :: * -&gt; *) a. (Foldable f, Ord a) =&gt; f a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromFoldable"><span class="hs-identifier hs-var">fromFoldable</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- | \(O(n \log n)\). Checks membership before snoc-ing.</span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- Returns a 2-tuple, with `fst` as a `Set` of duplicates found</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- and the `snd` as the de-duplicated `OSet` without overwriting.</span><span>
+</span><span id="line-201"></span><span id="local-6989586621679215405"><span id="local-6989586621679215406"><span class="annot"><a href="Data.OSet.Strict.html#fromFoldableDuplicates"><span class="hs-identifier hs-type">fromFoldableDuplicates</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Foldable</span></span><span> </span><span class="annot"><a href="#local-6989586621679215405"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215406"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215405"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215406"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215406"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215406"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-202"></span><span id="fromFoldableDuplicates"><span class="annot"><span class="annottext">fromFoldableDuplicates :: forall (f :: * -&gt; *) a.
+(Foldable f, Ord a) =&gt;
+f a -&gt; (Set a, OSet a)
+</span><a href="Data.OSet.Strict.html#fromFoldableDuplicates"><span class="hs-identifier hs-var hs-var">fromFoldableDuplicates</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Set a, OSet a) -&gt; a -&gt; (Set a, OSet a))
+-&gt; (Set a, OSet a) -&gt; f a -&gt; (Set a, OSet a)
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; f a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">(Set a, OSet a) -&gt; a -&gt; (Set a, OSet a)
+forall a. Ord a =&gt; (Set a, OSet a) -&gt; a -&gt; (Set a, OSet a)
+</span><a href="#local-6989586621679215905"><span class="hs-identifier hs-var">snoc'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set a
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OSet a
+forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-204"></span><span>    </span><span id="local-6989586621679215409"><span class="annot"><a href="#local-6989586621679215905"><span class="hs-identifier hs-type">snoc'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215409"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-205"></span><span>    </span><span id="local-6989586621679215905"><span class="annot"><span class="annottext">snoc' :: forall a. Ord a =&gt; (Set a, OSet a) -&gt; a -&gt; (Set a, OSet a)
+</span><a href="#local-6989586621679215905"><span class="hs-identifier hs-var hs-var">snoc'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679215910"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215910"><span class="hs-identifier hs-var">duplicates</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679215911"><span class="annot"><span class="annottext">oset :: OSet a
+</span><a href="#local-6989586621679215911"><span class="hs-identifier hs-var">oset</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215912"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215912"><span class="hs-identifier hs-var">seq</span></a></span></span><span> </span><span id="local-6989586621679215913"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215913"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679215914"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215914"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-206"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215914"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215913"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-207"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215914"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.insert`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215910"><span class="hs-identifier hs-var">duplicates</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215911"><span class="hs-identifier hs-var">oset</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215910"><span class="hs-identifier hs-var">duplicates</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215912"><span class="hs-identifier hs-var">seq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; a -&gt; StrictSeq a
+forall a. StrictSeq a -&gt; a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#%7C%3E"><span class="hs-operator hs-var">SSeq.|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215914"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215914"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.insert`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215913"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- | \(O(n \log n)\). Checks membership before snoc-ing.</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- Returns a 2-tuple, with `fst` as a `Set` of duplicates found</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- and the `snd` as the de-duplicated `OSet` without overwriting.</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- Starts from the left or head, using `foldl'`</span><span>
+</span><span id="line-214"></span><span id="local-6989586621679215411"><span class="annot"><a href="Data.OSet.Strict.html#fromStrictSeqDuplicates"><span class="hs-identifier hs-type">fromStrictSeqDuplicates</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215411"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">SSeq.StrictSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215411"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215411"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215411"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-215"></span><span id="fromStrictSeqDuplicates"><span class="annot"><span class="annottext">fromStrictSeqDuplicates :: forall a. Ord a =&gt; StrictSeq a -&gt; (Set a, OSet a)
+</span><a href="Data.OSet.Strict.html#fromStrictSeqDuplicates"><span class="hs-identifier hs-var hs-var">fromStrictSeqDuplicates</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; (Set a, OSet a)
+forall (f :: * -&gt; *) a.
+(Foldable f, Ord a) =&gt;
+f a -&gt; (Set a, OSet a)
+</span><a href="Data.OSet.Strict.html#fromFoldableDuplicates"><span class="hs-identifier hs-var">fromFoldableDuplicates</span></a></span><span>
+</span><span id="line-216"></span><span>
+</span><span id="line-217"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \) -  Extract underlying strict sequence</span></span><span>
+</span><span id="line-218"></span><span id="local-6989586621679215918"><span class="annot"><a href="Data.OSet.Strict.html#toStrictSeq"><span class="hs-identifier hs-type">toStrictSeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215918"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">SSeq.StrictSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215918"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-219"></span><span id="toStrictSeq"><span class="annot"><span class="annottext">toStrictSeq :: forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#toStrictSeq"><span class="hs-identifier hs-var hs-var">toStrictSeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; StrictSeq a
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="Data.OSet.Strict.html#osSSeq"><span class="hs-identifier hs-var">osSSeq</span></a></span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="annot"><span class="hs-comment">-- | \( O(1) \) -  Extract underlying Set</span></span><span>
+</span><span id="line-222"></span><span id="local-6989586621679215919"><span class="annot"><a href="Data.OSet.Strict.html#toSet"><span class="hs-identifier hs-type">toSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215919"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215919"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-223"></span><span id="toSet"><span class="annot"><span class="annottext">toSet :: forall a. OSet a -&gt; Set a
+</span><a href="Data.OSet.Strict.html#toSet"><span class="hs-identifier hs-var hs-var">toSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; Set a
+forall a. OSet a -&gt; Set a
+</span><a href="Data.OSet.Strict.html#osSet"><span class="hs-identifier hs-var">osSet</span></a></span><span>
+</span><span id="line-224"></span><span>
+</span><span id="line-225"></span><span class="annot"><span class="hs-comment">-- | \( O(n) \).</span></span><span>
+</span><span id="line-226"></span><span id="local-6989586621679215415"><span class="annot"><a href="Data.OSet.Strict.html#fromSet"><span class="hs-identifier hs-type">fromSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679215415"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215415"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-227"></span><span id="fromSet"><span class="annot"><span class="annottext">fromSet :: forall a. Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#fromSet"><span class="hs-identifier hs-var hs-var">fromSet</span></a></span></span><span> </span><span id="local-6989586621679215920"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215920"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq a -&gt; Set a -&gt; OSet a
+forall a. StrictSeq a -&gt; Set a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-var">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[a] -&gt; StrictSeq a
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-e86b0d33d22e15e2730cbcfeec5aa01545cf89de151a81e2ae4fc6cc2bc471ce/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; StrictSeq a) -&gt; [a] -&gt; StrictSeq a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set a -&gt; [a]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.elems</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215920"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215920"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="annot"><span class="hs-comment">-- | \(O(\log n)\). Membership check.</span></span><span>
+</span><span id="line-230"></span><span id="local-6989586621679215422"><span class="annot"><a href="Data.OSet.Strict.html#member"><span class="hs-identifier hs-type">member</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215422"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215422"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215422"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-231"></span><span id="member"><span class="annot"><span class="annottext">member :: forall a. Ord a =&gt; a -&gt; OSet a -&gt; Bool
+</span><a href="Data.OSet.Strict.html#member"><span class="hs-identifier hs-var hs-var">member</span></a></span></span><span> </span><span id="local-6989586621679215925"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215925"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span id="local-6989586621679215926"><span class="annot"><span class="annottext">StrictSeq a
+</span><a href="#local-6989586621679215926"><span class="hs-identifier hs-var">_seq</span></a></span></span><span> </span><span id="local-6989586621679215927"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215927"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215925"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679215927"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="annot"><span class="hs-comment">-- | \( O(n \log n) \)</span></span><span>
+</span><span id="line-234"></span><span id="local-6989586621679215424"><span class="annot"><a href="Data.OSet.Strict.html#filter"><span class="hs-identifier hs-type">filter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215424"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679215424"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215424"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215424"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-235"></span><span id="filter"><span class="annot"><span class="annottext">filter :: forall a. Ord a =&gt; (a -&gt; Bool) -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#filter"><span class="hs-identifier hs-var hs-var">filter</span></a></span></span><span> </span><span id="local-6989586621679215931"><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679215931"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(OSet a -&gt; a -&gt; OSet a) -&gt; OSet a -&gt; OSet a -&gt; OSet a
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; OSet a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679215932"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215932"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679215933"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215933"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+</span><a href="#local-6989586621679215931"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215933"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215932"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215933"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215932"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OSet a
+forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-type">Empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679215427"><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215427"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-238"></span><span class="hs-keyword">pattern</span><span> </span><span id="Empty"><span id="%24mEmpty"><span id="%24bEmpty"><span class="annot"><span class="annottext">$mEmpty :: forall {r} {a}. OSet a -&gt; ((# #) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bEmpty :: forall a. OSet a
+</span><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var hs-var hs-var hs-var">Empty</span></a></span></span></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#null"><span class="hs-identifier hs-type">null</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-240"></span><span>    </span><span class="annot"><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a
+forall a. OSet a
+</span><a href="Data.OSet.Strict.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-241"></span><span>
+</span><span id="line-242"></span><span class="annot"><span class="hs-comment">-- | \(O(\log n)\).</span></span><span>
+</span><span id="line-243"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">(:&lt;|:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679215180"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215180"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215180"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215180"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215180"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-244"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="#local-6989586621679215936"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span id="%3A%3C%7C%3A"><span id="%24m%3A%3C%7C%3A"><span id="%24b%3A%3C%7C%3A"><span class="annot"><span class="annottext">$m:&lt;|: :: forall {r} {a}.
+Ord a =&gt;
+OSet a -&gt; (a -&gt; OSet a -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$b:&lt;|: :: forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-var hs-var hs-var hs-var">:&lt;|:</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679215939"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#uncons"><span class="hs-identifier hs-type">uncons</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679215936"><span class="annot"><a href="#local-6989586621679215936"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215939"><span class="annot"><a href="#local-6989586621679215939"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-246"></span><span>    </span><span id="local-6989586621679215941"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215941"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-var">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679215942"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215942"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215941"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215942"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span>
+</span><span id="line-249"></span><span>
+</span><span id="line-250"></span><span class="annot"><span class="hs-comment">-- | \(O(\log n)\).</span></span><span>
+</span><span id="line-251"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">(:|&gt;:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679215179"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215179"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215179"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679215179"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215179"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-252"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="#local-6989586621679215943"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span id="%3A%7C%3E%3A"><span id="%24m%3A%7C%3E%3A"><span id="%24b%3A%7C%3E%3A"><span class="annot"><span class="annottext">$m:|&gt;: :: forall {r} {a}.
+Ord a =&gt;
+OSet a -&gt; (OSet a -&gt; a -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$b:|&gt;: :: forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-var hs-var hs-var hs-var">:|&gt;:</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679215946"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.OSet.Strict.html#unsnoc"><span class="hs-identifier hs-type">unsnoc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679215943"><span class="annot"><a href="#local-6989586621679215943"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679215946"><span class="annot"><a href="#local-6989586621679215946"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-254"></span><span>    </span><span id="local-6989586621679215948"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215948"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-var">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679215949"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215949"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215948"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215949"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-255"></span><span>
+</span><span id="line-256"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span>
+</span><span id="line-257"></span><span>
+</span><span id="line-258"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#Empty"><span class="hs-pragma hs-type">Empty</span></a></span><span class="hs-pragma">,</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">:|&gt;:</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#Empty"><span class="hs-pragma hs-type">Empty</span></a></span><span class="hs-pragma">,</span><span> </span><span class="hs-pragma">(</span><span class="hs-pragma">:&lt;|:</span><span class="hs-pragma">)</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-261"></span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- | \( O(n\log(m*n)) \). For every uncons-ed element from the sequence on the right,</span><span>
+</span><span id="line-263"></span><span class="hs-comment">-- checks its membership in the sequence on the left, before snoc'ing it.</span><span>
+</span><span id="line-264"></span><span class="hs-comment">-- Preserves order. Remove duplicates from sequence on the right.</span><span>
+</span><span id="line-265"></span><span id="local-6989586621679215950"><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-type">(|&gt;&lt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215950"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215950"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215950"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215950"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-266"></span><span id="local-6989586621679215955"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215955"><span class="hs-identifier hs-var">osetl</span></a></span></span><span> </span><span id="%7C%3E%3C"><span class="annot"><span class="annottext">|&gt;&lt; :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var hs-var">|&gt;&lt;</span></a></span></span><span> </span><span id="local-6989586621679215956"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215956"><span class="hs-identifier hs-var">osetr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215956"><span class="hs-identifier hs-var">osetr</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">OSet a
+</span><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215955"><span class="hs-identifier hs-var">osetl</span></a></span><span>
+</span><span id="line-268"></span><span>  </span><span id="local-6989586621679215957"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215957"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679215958"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215958"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215955"><span class="hs-identifier hs-var">osetl</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215957"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215958"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-269"></span><span>
+</span><span id="line-270"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-type">|&gt;&lt;</span></a></span><span>
+</span><span id="line-271"></span><span>
+</span><span id="line-272"></span><span class="hs-comment">-- | \( O(m\log(m+n)) \). For every unsnoc-ed element from the sequence on the left,</span><span>
+</span><span id="line-273"></span><span class="hs-comment">-- checks its membership in the sequence on the right, before cons'ing it.</span><span>
+</span><span id="line-274"></span><span class="hs-comment">-- Preserves order. Remove duplicates from sequence on the left.</span><span>
+</span><span id="line-275"></span><span id="local-6989586621679215959"><span class="annot"><a href="Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-type">(&gt;&lt;|)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679215959"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215959"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215959"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679215959"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-276"></span><span id="local-6989586621679215964"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215964"><span class="hs-identifier hs-var">osetl</span></a></span></span><span> </span><span id="%3E%3C%7C"><span class="annot"><span class="annottext">&gt;&lt;| :: forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var hs-var">&gt;&lt;|</span></a></span></span><span> </span><span id="local-6989586621679215965"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215965"><span class="hs-identifier hs-var">osetr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215964"><span class="hs-identifier hs-var">osetl</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-277"></span><span>  </span><span class="annot"><span class="annottext">OSet a
+</span><a href="Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215965"><span class="hs-identifier hs-var">osetr</span></a></span><span>
+</span><span id="line-278"></span><span>  </span><span id="local-6989586621679215966"><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215966"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679215967"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215967"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215966"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679215967"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; OSet a -&gt; OSet a
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet a
+</span><a href="#local-6989586621679215965"><span class="hs-identifier hs-var">osetr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-279"></span><span>
+</span><span id="line-280"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">5</span><span> </span><span class="annot"><a href="Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-type">&gt;&lt;|</span></a></span><span>
+</span><span id="line-281"></span></pre></body></html>
