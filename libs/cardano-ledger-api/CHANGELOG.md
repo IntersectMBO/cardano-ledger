@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `EraApi` class
 * Export `VotingProcedure`, `ProposalProcedure`, `currentTreasuryValueTxBodyL` and
   `treasuryDonationTxBodyL` from `Cardano.Ledger.Api.Tx.Body`
 * Export `DijkstraEra` from `Cardano.Ledger.Api.Era`
