@@ -12,8 +12,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   datsAlonzoTxWitsL,
   rdmrsAlonzoTxWitsL,
   scriptAlonzoTxWitsL,
-  upgradeRedeemers,
-  upgradeTxDats,
  )
 import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport (
   AlonzoEraTxWits (..),
@@ -36,15 +34,6 @@ instance EraTxWits ConwayEra where
 
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
-
-  upgradeTxWits atw =
-    AlonzoTxWits
-      { txwitsVKey = txwitsVKey atw
-      , txwitsBoot = txwitsBoot atw
-      , txscripts = upgradeScript <$> txscripts atw
-      , txdats = upgradeTxDats (txdats atw)
-      , txrdmrs = upgradeRedeemers (txrdmrs atw)
-      }
 
 instance AlonzoEraTxWits ConwayEra where
   datsTxWitsL = datsAlonzoTxWitsL
