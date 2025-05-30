@@ -72,8 +72,10 @@ import Test.QuickCheck hiding (forAll, witness)
 class
   ( EraSpecTxOut era
   , EraStake era
+  , HasSpec (Accounts era)
   , HasSpec (GovState era)
   , HasSpec (CertState era)
+  , IsNormalType (Accounts era)
   , IsNormalType (CertState era)
   , EraCertState era
   ) =>
@@ -237,7 +239,7 @@ vstateSpec univ epoch delegated = constrained $ \ [var|vstate|] ->
                 ]
           ]
     , assertExplain (pure "num dormant epochs should not be too large") $
-        [epoch <=. numdormant, numdormant <=. epoch + (lit (EpochNo 10))]
+        [epoch <=. numdormant, numdormant <=. epoch + lit (EpochNo 10)]
     , dependsOn numdormant epoch -- Solve epoch first.
     , match comstate $ \ [var|commap|] ->
         [witness univ (dom_ commap), satisfies commap (hasSize (rangeSize 1 4))]
@@ -261,15 +263,16 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
     accum ans cred (DRepScriptHash sh) = Map.insertWith Set.union (ScriptHashObj sh) (Set.singleton cred) ans
     accum ans _ _ = ans
 
-dstateSpec ::
+conwayDStateSpec ::
   forall era.
-  EraSpecLedger era =>
+  (EraSpecLedger era, Accounts era ~ ShelleyAccounts era) =>
   WitUniv era ->
   Term ChainAccountState ->
   Term (Map (KeyHash 'StakePool) PoolParams) ->
   Specification (DState era)
+
 dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
-  match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+  match ds $ \ [var|accounts|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
       [ dependsOn dRepMap rdMap
       , -- The dRepMap depends on the rdMap, so it is computed afterwards, forced by the reify
@@ -307,7 +310,7 @@ dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
         satisfies irewards (irewardSpec @era univ acct)
       , satisfies
           futureGenDelegs
-          (hasSize (if hasGenDelegs @era [] then (rangeSize 0 3) else (rangeSize 0 0)))
+          (hasSize (if hasGenDelegs @era [] then rangeSize 0 3 else rangeSize 0 0))
       , match genDelegs $ \ [var|gdmap|] ->
           [ if hasGenDelegs @era []
               then satisfies gdmap (hasSize (rangeSize 1 4))
@@ -375,9 +378,11 @@ shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
     [ satisfies pState (pstateSpec univ epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ acct poolreg)
+        , satisfies dState (shelleyDStateSpec univ acct poolreg)
         ]
     ]
+  where
+    shelleyDStateSpec = error "Unimplemented"
 
 conwayCertStateSpec ::
   EraSpecLedger ConwayEra =>
@@ -388,12 +393,14 @@ conwayCertStateSpec ::
 conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
   match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
-        [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ acct poolreg)
-        ]
     , reify dState getDelegatees $ \ [var|delegatees|] ->
         satisfies vState (vstateSpec univ epoch delegatees)
+    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
+        reify vState psStakePoolParams $ \ [var|poolreg|] ->
+        [ dependsOn dState poolreg
+        , dependsOn dState poolreg
+        , satisfies dState (conwayDStateSpec univ acct poolreg)
+        ]
     ]
 
 -- ==============================================================
@@ -438,7 +445,10 @@ getDelegs ::
   EraCertState era =>
   CertState era ->
   Map (Credential 'Staking) (KeyHash 'StakePool)
-getDelegs cs = UMap.sPoolMap $ cs ^. certDStateL . dsUnifiedL
+getDelegs cs =
+  Map.mapMaybe
+    (^. stakePoolDelegationAccountStateL)
+    (cs ^. certDStateL . accountsL . accountsMapL)
 
 -- ====================================================================
 -- Specs for LedgerState
@@ -524,9 +534,8 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
     markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
-    markDelegations ::
-      VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
-    markDelegations = VMap.fromMap (UMap.sPoolMap (ls ^. lsCertStateL . certDStateL . dsUnifiedL))
+    markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+    markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
     markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
     markPoolParams = VMap.fromMap (psStakePoolParams (ls ^. lsCertStateL . certPStateL))
 
