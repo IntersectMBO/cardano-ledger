@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Added `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`
 * Remove `upgradeTx` and `TxUpgradeError` from `EraTx`
 * Remove `upgradeTxBody` and `TxBodyUpgradeError` from `EraTxBody`
 * Remove `upgradeTxAuxData` from `EraTxAuxData`

@@ -43,6 +43,10 @@ module Cardano.Ledger.Core (
   EraPParams (..),
   mkCoinTxOut,
   wireSizeTxF,
+  binaryUpgradeTx,
+  binaryUpgradeTxBody,
+  binaryUpgradeTxWits,
+  binaryUpgradeTxAuxData,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -76,6 +80,7 @@ import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR,
   DecShareCBOR (Share),
+  DecoderError,
   EncCBOR (..),
   EncCBORGroup,
   Interns,
@@ -85,6 +90,7 @@ import Cardano.Ledger.Binary (
   mkSized,
   serialize,
   serialize',
+  translateViaCBORAnnotator,
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -102,6 +108,7 @@ import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)
+import Control.Monad.Except (Except)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -114,6 +121,7 @@ import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -611,3 +619,43 @@ wireSizeTxF =
         then fromIntegral n
         else error $ "Impossible: Size of the transaction is too big: " ++ show n
 {-# INLINEABLE wireSizeTxF #-}
+
+-- | Translate a transaction through its binary representation from previous to current era.
+binaryUpgradeTx ::
+  forall era.
+  (Era era, ToCBOR (Tx (PreviousEra era)), DecCBOR (Annotator (Tx era))) =>
+  -- | Label for error reporting
+  Text ->
+  Tx (PreviousEra era) ->
+  Except DecoderError (Tx era)
+binaryUpgradeTx msg tx = translateViaCBORAnnotator (eraProtVerLow @era) msg tx
+
+-- | Translate a tx body through its binary representation from previous to current era.
+binaryUpgradeTxBody ::
+  forall era.
+  (Era era, ToCBOR (TxBody (PreviousEra era)), DecCBOR (Annotator (TxBody era))) =>
+  -- | Label for error reporting
+  Text ->
+  TxBody (PreviousEra era) ->
+  Except DecoderError (TxBody era)
+binaryUpgradeTxBody msg txBody = translateViaCBORAnnotator (eraProtVerLow @era) msg txBody
+
+-- | Translate tx witnesses through its binary representation from previous to current era.
+binaryUpgradeTxWits ::
+  forall era.
+  (Era era, ToCBOR (TxWits (PreviousEra era)), DecCBOR (Annotator (TxWits era))) =>
+  -- | Label for error reporting
+  Text ->
+  TxWits (PreviousEra era) ->
+  Except DecoderError (TxWits era)
+binaryUpgradeTxWits msg txWits = translateViaCBORAnnotator (eraProtVerLow @era) msg txWits
+
+-- | Translate tx auxData through its binary representation from previous to current era.
+binaryUpgradeTxAuxData ::
+  forall era.
+  (Era era, ToCBOR (TxAuxData (PreviousEra era)), DecCBOR (Annotator (TxAuxData era))) =>
+  -- | Label for error reporting
+  Text ->
+  TxAuxData (PreviousEra era) ->
+  Except DecoderError (TxAuxData era)
+binaryUpgradeTxAuxData msg txAuxData = translateViaCBORAnnotator (eraProtVerLow @era) msg txAuxData
