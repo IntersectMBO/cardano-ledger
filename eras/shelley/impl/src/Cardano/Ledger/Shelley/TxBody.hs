@@ -235,11 +235,6 @@ instance EraTxBody ShelleyEra where
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
-  upgradeTxBody =
-    error $
-      "Calling this function will cause a compilation error, "
-        ++ "since there is no `EraTxBody` instance for `ByronEra`"
-
 instance ShelleyEraTxBody ShelleyEra where
   ttlTxBodyL =
     lensMemoRawType @ShelleyEra stbrTtl $ \txBodyRaw ttl -> txBodyRaw {stbrTtl = ttl}

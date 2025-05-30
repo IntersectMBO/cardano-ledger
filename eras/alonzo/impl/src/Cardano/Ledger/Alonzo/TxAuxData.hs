@@ -38,7 +38,6 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
-  translateAlonzoTxAuxData,
   metadataAlonzoTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
@@ -47,8 +46,8 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   emptyAlonzoTxAuxDataRaw,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -271,14 +270,6 @@ instance EraTxAuxData AlonzoEra where
 
   metadataTxAuxDataL = metadataAlonzoTxAuxDataL
 
-  upgradeTxAuxData (AllegraTxAuxData md scripts) =
-    mkMemoizedEra @AlonzoEra $
-      AlonzoTxAuxDataRaw
-        { atadrMetadata = md
-        , atadrTimelock = translateTimelock <$> scripts
-        , atadrPlutus = mempty
-        }
-
   validateTxAuxData = validateAlonzoTxAuxData
 
 metadataAlonzoTxAuxDataL ::
@@ -371,14 +362,3 @@ pattern AlonzoTxAuxData' ::
   AlonzoTxAuxData era
 pattern AlonzoTxAuxData' {atadMetadata', atadTimelock', atadPlutus'} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadTimelock' atadPlutus')
-
-translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2) =>
-  AlonzoTxAuxData era1 ->
-  AlonzoTxAuxData era2
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
-  AlonzoTxAuxData
-    { atadMetadata = atadMetadata
-    , atadTimelock = translateTimelock <$> atadTimelock
-    , atadPlutus = atadPlutus
-    }

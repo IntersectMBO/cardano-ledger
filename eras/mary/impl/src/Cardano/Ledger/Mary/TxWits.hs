@@ -9,7 +9,7 @@
 
 module Cardano.Ledger.Mary.TxWits () where
 
-import Cardano.Ledger.Core (EraTxWits (..), upgradeScript)
+import Cardano.Ledger.Core (EraTxWits (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Shelley.TxWits (
@@ -32,9 +32,3 @@ instance EraTxWits MaryEra where
 
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
-
-  upgradeTxWits stw =
-    ShelleyTxWits
-      (addrWits stw)
-      (upgradeScript <$> scriptWits stw)
-      (bootWits stw)

@@ -45,7 +45,6 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbTxNetworkId
   ),
   AlonzoTxBodyRaw (..),
-  AlonzoTxBodyUpgradeError (..),
   AlonzoEraTxBody (..),
   ShelleyEraTxBody (..),
   AllegraEraTxBody (..),
@@ -103,11 +102,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.TxBody (
-  TxBody (..),
- )
 import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
@@ -124,22 +119,17 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoizedEra,
  )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
-import Control.Monad (when)
-import Data.Default (def)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (isSJust)
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Void (absurd)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -200,18 +190,10 @@ deriving instance Show AlonzoTxBodyRaw
 instance Memoized (TxBody AlonzoEra) where
   type RawType (TxBody AlonzoEra) = AlonzoTxBodyRaw
 
-data AlonzoTxBodyUpgradeError
-  = -- | The TxBody contains a protocol parameter update that attempts to update
-    -- the min UTxO. Since this doesn't exist in Alonzo, we fail if an attempt is
-    -- made to update it.
-    ATBUEMinUTxOUpdated
-  deriving (Show)
-
 instance EraTxBody AlonzoEra where
   newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes AlonzoTxBodyRaw)
     deriving (ToCBOR, Generic)
     deriving newtype (SafeToHash)
-  type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoizedEra @AlonzoEra emptyAlonzoTxBodyRaw
 
@@ -253,60 +235,6 @@ instance EraTxBody AlonzoEra where
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
-
-  upgradeTxBody
-    MaryTxBody
-      { mtbInputs
-      , mtbOutputs
-      , mtbCerts
-      , mtbWithdrawals
-      , mtbTxFee
-      , mtbValidityInterval
-      , mtbUpdate
-      , mtbAuxDataHash
-      , mtbMint
-      } = do
-      certs <-
-        traverse
-          (left absurd . upgradeTxCert)
-          mtbCerts
-
-      updates <- traverse upgradeUpdate mtbUpdate
-      pure $
-        AlonzoTxBody
-          { atbInputs = mtbInputs
-          , atbOutputs = upgradeTxOut <$> mtbOutputs
-          , atbCerts = certs
-          , atbWithdrawals = mtbWithdrawals
-          , atbTxFee = mtbTxFee
-          , atbValidityInterval = mtbValidityInterval
-          , atbUpdate = updates
-          , atbAuxDataHash = mtbAuxDataHash
-          , atbMint = mtbMint
-          , atbCollateral = mempty
-          , atbReqSignerHashes = mempty
-          , atbScriptIntegrityHash = SNothing
-          , atbTxNetworkId = SNothing
-          }
-      where
-        upgradeUpdate ::
-          Update MaryEra ->
-          Either AlonzoTxBodyUpgradeError (Update AlonzoEra)
-        upgradeUpdate (Update pp epoch) =
-          Update <$> upgradeProposedPPUpdates pp <*> pure epoch
-
-        upgradeProposedPPUpdates ::
-          ProposedPPUpdates MaryEra ->
-          Either AlonzoTxBodyUpgradeError (ProposedPPUpdates AlonzoEra)
-        upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates
-            <$> traverse
-              ( \ppu -> do
-                  when (isSJust $ ppu ^. ppuMinUTxOValueL) $
-                    Left ATBUEMinUTxOUpdated
-                  pure $ upgradePParamsUpdate def ppu
-              )
-              m
 
 instance ShelleyEraTxBody AlonzoEra where
   ttlTxBodyL = notSupportedInThisEraL

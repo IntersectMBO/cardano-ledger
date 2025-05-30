@@ -54,12 +54,11 @@ module Cardano.Ledger.Conway.TxBody (
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
-  TxBody (..),
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
+import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -67,7 +66,6 @@ import Cardano.Ledger.Binary (
   Sized (..),
   ToCBOR (..),
   mkSized,
-  unsafeMapSized,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -91,7 +89,6 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts (ConwayEraScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
-  ConwayTxCertUpgradeError,
  )
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Mary.Value (MultiAsset (..), policies)
@@ -108,9 +105,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (unless, when)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
@@ -286,19 +281,9 @@ basicConwayTxBodyRaw =
     SNothing
     mempty
 
-data ConwayTxBodyUpgradeError
-  = CTBUETxCert ConwayTxCertUpgradeError
-  | -- | The TxBody contains an update proposal from a pre-Conway era. Since
-    --   this can only have come from the genesis delegates, we just discard it.
-    CTBUEContainsUpdate
-  | -- | In eras prior to Conway duplicate certificates where allowed
-    CTBUEContainsDuplicateCerts (Set (TxCert ConwayEra))
-  deriving (Eq, Show)
-
 instance EraTxBody ConwayEra where
   newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes ConwayTxBodyRaw)
     deriving (Generic, SafeToHash, ToCBOR)
-  type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
   mkBasicTxBody = mkConwayTxBody
 
@@ -337,34 +322,6 @@ instance EraTxBody ConwayEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
-
-  upgradeTxBody btb = do
-    when (isSJust (btbUpdate btb)) $ Left CTBUEContainsUpdate
-    certs <- traverse (left CTBUETxCert . upgradeTxCert) (btbCerts btb)
-    let (duplicates, certsOSet) = OSet.fromStrictSeqDuplicates certs
-    unless (null duplicates) $ Left $ CTBUEContainsDuplicateCerts duplicates
-    pure $
-      ConwayTxBody
-        { ctbSpendInputs = btbInputs btb
-        , ctbOutputs = unsafeMapSized upgradeTxOut <$> btbOutputs btb
-        , ctbCerts = certsOSet
-        , ctbWithdrawals = btbWithdrawals btb
-        , ctbTxfee = btbTxFee btb
-        , ctbVldt = btbValidityInterval btb
-        , ctbAdHash = btbAuxDataHash btb
-        , ctbMint = btbMint btb
-        , ctbCollateralInputs = btbCollateral btb
-        , ctbReqSignerHashes = btbReqSignerHashes btb
-        , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
-        , ctbTxNetworkId = btbTxNetworkId btb
-        , ctbReferenceInputs = btbReferenceInputs btb
-        , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
-        , ctbTotalCollateral = btbTotalCollateral btb
-        , ctbCurrentTreasuryValue = SNothing
-        , ctbProposalProcedures = OSet.empty
-        , ctbVotingProcedures = VotingProcedures mempty
-        , ctbTreasuryDonation = Coin 0
-        }
 
 -- ==========================================
 -- Deposits and Refunds for Conway TxBody
