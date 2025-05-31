@@ -225,6 +225,9 @@ cradle:
     - path: "libs/cardano-ledger-core/src"
       component: "lib:cardano-ledger-core"
 
+    - path: "libs/cardano-ledger-core/internal"
+      component: "cardano-ledger-core:lib:internal"
+
     - path: "libs/cardano-ledger-core/testlib"
       component: "cardano-ledger-core:lib:testlib"
 

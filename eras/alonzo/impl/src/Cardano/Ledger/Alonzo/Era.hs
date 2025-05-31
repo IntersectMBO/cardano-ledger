@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Era (
   AlonzoEra,
@@ -10,14 +11,12 @@ module Cardano.Ledger.Alonzo.Era (
   AlonzoLEDGER,
 ) where
 
+import Cardano.Ledger.Internal.Era (AlonzoEra)
 import Cardano.Ledger.Mary (MaryEra, MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
-
--- | The Alonzo era
-data AlonzoEra
 
 instance Era AlonzoEra where
   type PreviousEra AlonzoEra = MaryEra

@@ -140,14 +140,20 @@
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
-            ({pkgs, ...}: {
+            ({pkgs, ...}: let
+              ghcVersion = pkgs.haskell-nix.compiler."${config.compiler-nix-name}".version;
+            in {
               # packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
               # uncomment if necessary when profiling
               packages.byron-spec-chain.configureFlags = ["--ghc-option=-Werror"];
               packages.byron-spec-ledger.configureFlags = ["--ghc-option=-Werror"];
               packages.non-integral.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley-ma-test.configureFlags = ["--ghc-option=-Werror"];
+              packages.cardano-ledger-shelley.configureFlags = if (builtins.compareVersions ghcVersion "9.8.0") >= 0
+                                                               then ["--ghc-options='-Werror -Wwarn=x-unsafe-internal'"]
+                                                               else ["--ghc-option=-Werror"];
+              packages.cardano-ledger-shelley-ma-test.configureFlags = if (builtins.compareVersions ghcVersion "9.8.0") >= 0
+                                                               then ["--ghc-options='-Werror -Wwarn=x-unsafe-internal'"]
+                                                               else ["--ghc-option=-Werror"];
               packages.small-steps.configureFlags = ["--ghc-option=-Werror"];
               packages.cardano-ledger-byron = {
                 configureFlags = ["--ghc-option=-Werror"];
