@@ -260,6 +260,16 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
     accum ans cred (DRepScriptHash sh) = Map.insertWith Set.union (ScriptHashObj sh) (Set.singleton cred) ans
     accum ans _ _ = ans
 
+shelleyDStateSpec ::
+  forall era.
+  (EraSpecLedger era, Accounts era ~ ShelleyAccounts era) =>
+  WitUniv era ->
+  Term ChainAccountState ->
+  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Specification (DState era)
+shelleyDStateSpec  = undefined
+
+
 conwayDStateSpec ::
   forall era.
   (EraSpecLedger era, Accounts era ~ ConwayAccounts era) =>
@@ -312,6 +322,7 @@ pStateSpec univ stakePoolDelegations curEpoch = constrained $ \ [var|pState|] ->
     , assert $ sizeOf_ (dom_ futureStakePoolParams) <=. 4
     , assert $ 3 <=. sizeOf_ (dom_ stakePoolParams)
     , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
+    -- TODO: restrict majority of reward accounts in PoolParams to be present in dom stakePoolDelegations
     ]
 
 accountStateSpec :: Specification ChainAccountState
