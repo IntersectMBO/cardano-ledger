@@ -17,8 +17,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.State (EraCertState (..), dsUnifiedL)
-import Cardano.Ledger.UMap (umElemsL)
+import Cardano.Ledger.State
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
@@ -41,7 +40,7 @@ instance
 
   toSpecRep GovEnv {..} = do
     enactState <- askCtx @(EnactState era)
-    let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
+    let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
     Agda.MkGovEnv
       <$> toSpecRep geTxId
       <*> toSpecRep geEpoch

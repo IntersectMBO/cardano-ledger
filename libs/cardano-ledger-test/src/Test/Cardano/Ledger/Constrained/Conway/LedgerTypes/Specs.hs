@@ -116,7 +116,7 @@ instance EraSpecLedger BabbageEra where
 instance EraSpecLedger ConwayEra where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = conwayCertStateSpec
+  certStateSpec univ _ = conwayCertStateSpec univ
 
 -- This is a hack, neccessitated by the fact that conwayGovStateSpec,
 -- written for the conformance tests, requires an actual GovEnv as an input.
@@ -362,10 +362,9 @@ shelleyCertStateSpec -- univ acct epoch = constrained $ \ [var|shelleyCertState|
 conwayCertStateSpec ::
   EraSpecLedger ConwayEra =>
   WitUniv ConwayEra ->
-  Term ChainAccountState ->
   Term EpochNo ->
   Specification (ConwayCertState ConwayEra)
-conwayCertStateSpec univ _acct epoch = constrained $ \ [var|certState|] ->
+conwayCertStateSpec univ epoch = constrained $ \ [var|certState|] ->
   unsafeExists $ \ [var|stakePoolDelegations|] ->
     unsafeExists $ \ [var|dRepDelegations|] ->
       [ satisfies stakePoolDelegations (stakePoolDelegationsSpec univ)
@@ -377,7 +376,6 @@ conwayCertStateSpec univ _acct epoch = constrained $ \ [var|certState|] ->
               satisfies vState (vStateSpec univ epoch dRepsDelegatees)
           ]
       ]
-  where
 
 -- ==============================================================
 -- Specs for UTxO and UTxOState
