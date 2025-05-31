@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   filterAllRewards,
   lsCertStateL,
   nesEsL,
-  rewards,
  )
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
 import Cardano.Ledger.Shelley.Rules (
@@ -50,15 +49,7 @@ import Cardano.Ledger.Shelley.Rules (
   validatingTickTransitionFORECAST,
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
-import Cardano.Ledger.State (
-  EraCertState (..),
-  PoolDistr (..),
-  SnapShot (..),
-  SnapShots (..),
-  calculatePoolDistr,
-  calculatePoolStake,
- )
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)
@@ -242,8 +233,9 @@ tickfRuleBench =
                                 )
                                 ( \registeredAggregated ->
                                     bench "union+" $
-                                      let dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
-                                       in whnf (rewards dState UM.∪+) registeredAggregated
+                                      whnf
+                                        (addToBalanceAccounts registeredAggregated)
+                                        (nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
                                 )
                             ]
                         ]
