@@ -190,9 +190,7 @@ instance
   type Signal (ConwayCERTS era) = Seq (TxCert era)
   type Environment (ConwayCERTS era) = CertsEnv era
   type BaseM (ConwayCERTS era) = ShelleyBase
-  type
-    PredicateFailure (ConwayCERTS era) =
-      ConwayCertsPredFailure era
+  type PredicateFailure (ConwayCERTS era) = ConwayCertsPredFailure era
   type Event (ConwayCERTS era) = ConwayCertsEvent era
 
   transitionRules = [conwayCertsTransition @era]

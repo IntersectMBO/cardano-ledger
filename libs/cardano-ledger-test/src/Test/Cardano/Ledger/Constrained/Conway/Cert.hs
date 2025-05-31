@@ -69,7 +69,7 @@ shelleyCertStateSpec ::
   (EraSpecDeleg era, EraCertState era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Map (RewardAccount) Coin ->
+  Map RewardAccount Coin ->
   Specification (ShelleyCertState era)
 shelleyCertStateSpec univ _delegatees wdrls =
   constrained $ \cs ->
@@ -83,7 +83,7 @@ conwayCertStateSpec ::
   (EraSpecDeleg era, EraCertState era, ConwayEraCertState era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Map (RewardAccount) Coin ->
+  Map RewardAccount Coin ->
   Specification (ConwayCertState era)
 conwayCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
