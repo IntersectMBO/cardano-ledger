@@ -11,7 +11,7 @@
 --
 -- Let's start by defining the GHC extensions and imports.
 --
--- >>> :set -XTypeApplications
+-- >>> :set -XTypeApplications -Wno-unrecognised-warning-flags -Wno-x-unsafe-internal
 -- >>> import Cardano.Ledger.Api.Era (BabbageEra)
 -- >>> import Lens.Micro
 -- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators () -- Needed for doctests only

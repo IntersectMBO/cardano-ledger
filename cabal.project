@@ -65,6 +65,11 @@ packages:
 program-options
   ghc-options: -Werror
 
+if (impl(ghc >=9.8))
+  program-options
+    ghc-options:
+      -Wwarn=x-unsafe-internal
+
 package plutus-preprocessor
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
 

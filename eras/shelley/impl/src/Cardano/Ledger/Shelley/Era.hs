@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Era (
   ShelleyEra,
@@ -27,8 +28,7 @@ module Cardano.Ledger.Shelley.Era (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
-
-data ShelleyEra
+import Cardano.Ledger.Internal.Era (ShelleyEra)
 
 instance Era ShelleyEra where
   type PreviousEra ShelleyEra = ByronEra

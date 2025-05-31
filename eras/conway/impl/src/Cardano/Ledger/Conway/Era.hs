@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
@@ -24,6 +25,7 @@ module Cardano.Ledger.Conway.Era (
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Internal.Era (ConwayEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
@@ -34,9 +36,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 -- =====================================================
-
--- | The Conway era
-data ConwayEra
 
 instance Era ConwayEra where
   type PreviousEra ConwayEra = BabbageEra
