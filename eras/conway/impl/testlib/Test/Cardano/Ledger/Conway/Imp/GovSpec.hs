@@ -14,12 +14,12 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
-import Cardano.Ledger.Shelley.HardForks (disallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -756,7 +756,7 @@ votingSpec =
       let pv@(ProtVer major minor) = pp ^. ppProtocolVersionL
       gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
       hotCred <- KeyHashObj <$> freshKeyHash
-      if disallowUnelectedCommitteeFromVoting pv
+      if hardforkConwayDisallowUnelectedCommitteeFromVoting pv
         then
           submitFailingVote
             (CommitteeVoter hotCred)

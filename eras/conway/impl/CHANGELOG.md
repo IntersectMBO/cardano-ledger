@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+- Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
+  - `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
+  - `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
 - Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
 - Change the type of `authorizedELectedCommitteeCredentials` to
   `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091

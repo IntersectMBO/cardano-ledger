@@ -54,10 +54,13 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..))
+import Cardano.Ledger.Shelley (
+  hardforkAllegraAggregatedRewards,
+  hardforkBabbageForgoRewardPrefilter,
+ )
 import Cardano.Ledger.Shelley.API (NonMyopic)
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   FilteredRewards (..),
@@ -430,13 +433,13 @@ rewardOnePool
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
       f =
-        if HardForks.aggregatedRewards pv
+        if hardforkAllegraAggregatedRewards pv
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
         f (raCredential $ ppRewardAccount pool) lReward mRewards
       potentialRewards' =
-        if HardForks.forgoRewardPrefilter pv
+        if hardforkBabbageForgoRewardPrefilter pv
           then potentialRewards
           else eval (addrsRew ◁ potentialRewards)
       rewards' = Map.filter (/= Coin 0) potentialRewards'
@@ -507,7 +510,7 @@ rewardOld
         pure (hk, rewardMap, ls)
       pv = pp ^. ppProtocolVersionL
       f =
-        if HardForks.aggregatedRewards pv
+        if hardforkAllegraAggregatedRewards pv
           then Map.unionsWith (<>)
           else Map.unions
       rewards' = f $ mapMaybe (\(_, x, _) -> x) results

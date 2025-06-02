@@ -8,10 +8,16 @@
 module Cardano.Ledger.Conway (
   Conway,
   ConwayEra,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
 ) where
 
 import Cardano.Ledger.Babbage.TxBody ()
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (
+  ConwayEra,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.State ()

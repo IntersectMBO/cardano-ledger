@@ -14,6 +14,7 @@ import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -34,7 +35,6 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams, ppId, ppRewardAccount)
-import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
@@ -87,7 +87,7 @@ acceptedRatioProp = do
                   else case gas ^. gasActionL of
                     HardForkInitiation _ _ -> unCoin stakeYes % unCoin (fromCompact totalStake <-> stakeAbstain)
                     action
-                      | bootstrapPhase protVer ->
+                      | hardforkConwayBootstrapPhase protVer ->
                           unCoin stakeYes
                             % unCoin (fromCompact totalStake <-> stakeAbstain <-> stakeAlwaysAbstain <-> stakeNoConfidence)
                       | NoConfidence {} <- action ->

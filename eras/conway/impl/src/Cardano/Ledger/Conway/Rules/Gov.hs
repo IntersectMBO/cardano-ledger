@@ -60,7 +60,12 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
+import Cardano.Ledger.Conway.Era (
+  ConwayEra,
+  ConwayGOV,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov,
@@ -104,10 +109,6 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (
-  bootstrapPhase,
-  disallowUnelectedCommitteeFromVoting,
- )
 import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.State (
@@ -387,7 +388,7 @@ checkBootstrapVotes ::
   [(Voter, GovActionState era)] ->
   Test (ConwayGovPredFailure era)
 checkBootstrapVotes pp votes
-  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+  | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) =
       checkDisallowedVotes votes DisallowedVotesDuringBootstrap $ \gas ->
         \case
           DRepVoter {} | gasAction gas == InfoAction -> True
@@ -436,7 +437,7 @@ checkBootstrapProposal ::
   ProposalProcedure era ->
   Test (ConwayGovPredFailure era)
 checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
-  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+  | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) =
       failureUnless (isBootstrapAction pProcGovAction) $ DisallowedProposalDuringBootstrap proposal
   | otherwise = pure ()
 
@@ -474,7 +475,7 @@ govTransition = do
 
   expectedNetworkId <- liftSTS $ asks networkId
 
-  when (HF.disallowUnelectedCommitteeFromVoting $ pp ^. ppProtocolVersionL) $
+  when (hardforkConwayDisallowUnelectedCommitteeFromVoting $ pp ^. ppProtocolVersionL) $
     failOnNonEmpty
       (unelectedCommitteeVoters committee committeeState gsVotingProcedures)
       UnelectedCommitteeVoters
@@ -502,7 +503,7 @@ govTransition = do
         -- PParamsUpdate well-formedness check
         runTest $ actionWellFormed (pp ^. ppProtocolVersionL) pProcGovAction
 
-        unless (HF.bootstrapPhase $ pp ^. ppProtocolVersionL) $ do
+        unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $ do
           let refundAddress = proposal ^. pProcReturnAddrL
               govAction = proposal ^. pProcGovActionL
           UMap.member' (raCredential refundAddress) (certDState ^. dsUnifiedL)
@@ -541,7 +542,7 @@ govTransition = do
             -- Policy check
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
 
-            unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+            unless (hardforkConwayBootstrapPhase $ pp ^. ppProtocolVersionL) $
               -- The sum of all withdrawals must be positive
               F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do

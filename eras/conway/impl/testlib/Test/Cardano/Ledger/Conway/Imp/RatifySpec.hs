@@ -10,13 +10,16 @@ module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway (
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Shelley.HardForks (bootstrapPhase, disallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
@@ -83,7 +86,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
     gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
     submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred hotCs) gai
     submitYesVote_ (StakePoolVoter spoK1) gai
-    if bootstrapPhase protVer
+    if hardforkConwayBootstrapPhase protVer
       then do
         isCommitteeAccepted gai `shouldReturn` True
         passNEpochs 2
@@ -166,7 +169,7 @@ spoAndCCVotingSpec = do
 
       passNEpochs 2
 
-      if bootstrapPhase protVer
+      if hardforkConwayBootstrapPhase protVer
         then do
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
           getProtVer `shouldReturn` nextProtVer
@@ -189,7 +192,7 @@ spoAndCCVotingSpec = do
       passNEpochs 2
 
       newRefScriptBaseFee <- getsPParams ppMinFeeRefScriptCostPerByteL
-      if bootstrapPhase protVer
+      if hardforkConwayBootstrapPhase protVer
         then do
           getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
           newRefScriptBaseFee `shouldBe` (25 %! 2)
@@ -369,7 +372,7 @@ paramChangeAffectsProposalsSpec =
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
             passNEpochs 2
-            (^. pvtCommitteeNormalL) <$> (getsPParams ppPoolVotingThresholdsL) `shouldReturn` threshold
+            (^. pvtCommitteeNormalL) <$> getsPParams ppPoolVotingThresholdsL `shouldReturn` threshold
 
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ whenPostBootstrap $ do
         -- This sets up a stake pool with 1_000_000 Coin
@@ -431,7 +434,7 @@ paramChangeAffectsProposalsSpec =
                   & ppuDRepVotingThresholdsL
                     .~ SJust (drepVotingThresholds & dvtPPGovGroupL .~ threshold)
               )
-      parentGai <- paramChange SNothing ((90 %! 100)) >>= submitGovAction
+      parentGai <- paramChange SNothing (90 %! 100) >>= submitGovAction
       childGai <- paramChange (SJust parentGai) (75 %! 100) >>= submitGovAction
       submitYesVote_ (DRepVoter drepC) parentGai
       submitYesVoteCCs_ hotCommitteeCs parentGai
@@ -1737,10 +1740,10 @@ committeeMaxTermLengthSpec =
       -- Upto protocol version 10, CC members can vote for the hard-fork
       -- although their election hasn't been enacted yet. We need to pass
       -- another epoch to have their enactment.
-      when (disallowUnelectedCommitteeFromVoting curProtVer) passEpoch
+      when (hardforkConwayDisallowUnelectedCommitteeFromVoting curProtVer) passEpoch
       submitYesVoteCCs_ hotCs gid
 
-      unless (disallowUnelectedCommitteeFromVoting curProtVer) $ do
+      unless (hardforkConwayDisallowUnelectedCommitteeFromVoting curProtVer) $ do
         -- Although elected, new CC members are not yet active at this point
         -- since it takes two epochs for their election to take effect, hence
         -- the check fails
@@ -1756,7 +1759,7 @@ committeeMaxTermLengthSpec =
       -- is not yet enacted...
       getLastEnactedHardForkInitiation `shouldReturn` SNothing
       -- ...but now, until PV 10, we can see that the CC accepted the proposal...
-      unless (disallowUnelectedCommitteeFromVoting curProtVer) $
+      unless (hardforkConwayDisallowUnelectedCommitteeFromVoting curProtVer) $
         isCommitteeAccepted gid `shouldReturn` True
       -- ...and that they are elected members now, albeit already expired ones
       expectMembers $ initialMembers <> Set.fromList newMembers

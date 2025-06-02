@@ -40,7 +40,7 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.Era (hardforkBabbageForgoRewardPrefilter)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PoolRank (
   Likelihood (..),
@@ -184,7 +184,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       collectLRs acc poolRI =
         let rewardAccount = raCredential . ppRewardAccount . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
-         in if HardForks.forgoRewardPrefilter (pr ^. ppProtocolVersionL)
+         in if hardforkBabbageForgoRewardPrefilter (pr ^. ppProtocolVersionL)
               || rewardAccount `UM.member` rewards ds
               then
                 Map.insertWith

@@ -18,7 +18,11 @@ module Cardano.Ledger.Conway.Rules.Mempool (
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayMEMPOOL)
+import Cardano.Ledger.Conway.Era (
+  ConwayLEDGER,
+  ConwayMEMPOOL,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState,
@@ -29,7 +33,6 @@ import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
 import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVoters)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Shelley.HardForks (disallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv, ledgerPpL)
 import Control.Monad (unless)
@@ -115,7 +118,8 @@ mempoolTransition = do
 
   -- Skip all other checks if the transaction is probably a duplicate
   whenFailureFreeDefault ledgerState $ do
-    unless (disallowUnelectedCommitteeFromVoting $ ledgerEnv ^. ledgerPpL . ppProtocolVersionL) $
+    let protVer = ledgerEnv ^. ledgerPpL . ppProtocolVersionL
+    unless (hardforkConwayDisallowUnelectedCommitteeFromVoting protVer) $
       -- This check can completely be removed once mainnet switches to protocol
       -- version 11, since the same check has been implemented in the GOV rule.
       --

@@ -12,9 +12,9 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 ) where
 
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
@@ -176,7 +176,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
           , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL $ ppDE denv
+              ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL $ ppDE denv
                   then -- In the Alonzo era, repeated fields are added
                     fold (iRReserves $ dsIRewards source)
                       `addDeltaCoin` fold irwd
@@ -194,7 +194,7 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
           , counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
-              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
+              ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
                     fold (iRTreasury $ dsIRewards source)
                       `addDeltaCoin` fold irwd

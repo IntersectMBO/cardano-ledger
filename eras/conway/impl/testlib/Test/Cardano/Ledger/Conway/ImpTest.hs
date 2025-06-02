@@ -149,7 +149,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -177,7 +177,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   epochStateGovStateL,
@@ -1579,7 +1578,7 @@ whenPostBootstrap = whenMajorVersionAtLeast @10
 ifBootstrap :: EraGov era => ImpTestM era a -> ImpTestM era a -> ImpTestM era a
 ifBootstrap inBootstrap outOfBootstrap = do
   pv <- getProtVer
-  if HardForks.bootstrapPhase pv then inBootstrap else outOfBootstrap
+  if hardforkConwayBootstrapPhase pv then inBootstrap else outOfBootstrap
 
 submitYesVoteCCs_ ::
   forall era f.

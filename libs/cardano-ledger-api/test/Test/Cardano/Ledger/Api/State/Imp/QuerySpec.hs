@@ -18,6 +18,7 @@ import Cardano.Ledger.Api.State.Query (
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovPurposeId (..),
@@ -27,7 +28,6 @@ import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -82,7 +82,7 @@ spec = do
               let tot = addEpochInterval epochNo (EpochInterval drepActivity)
               pv <- getProtVer
               pure $
-                if HF.bootstrapPhase pv
+                if hardforkConwayBootstrapPhase pv
                   then binOpEpochNo (+) tot (fromIntegral n)
                   else tot
 

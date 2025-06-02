@@ -16,7 +16,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -115,7 +114,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
   HKDApplicative (hkdLiftA2),
@@ -132,7 +131,6 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
@@ -888,7 +886,7 @@ instance ConwayEraPParams ConwayEra where
         isValid (/= zero) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
-      , bootstrapPhase pv
+      , hardforkConwayBootstrapPhase pv
           || isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
       ]

@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+- Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
+  - `aggregateRewards` to `hardforkAllegraAggregateRewards`.
+  - `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
+  - `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
+  - `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
+  - Delete the `Shelley.HardForks` module.
 - Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
   - This tests if the protocol version is greater than 10.
 * Deprecated `toShelleyGenesisPairs`

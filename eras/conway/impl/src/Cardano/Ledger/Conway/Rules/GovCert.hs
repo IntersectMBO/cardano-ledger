@@ -38,7 +38,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
@@ -58,7 +58,6 @@ import Cardano.Ledger.Conway.State (
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
   CommitteeState (..),
@@ -291,7 +290,7 @@ computeDRepExpiryVersioned ::
 computeDRepExpiryVersioned pp currentEpoch numDormantEpochs
   -- Starting with version 10, we correctly take into account the number of dormant epochs
   -- when registering a drep
-  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+  | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) =
       addEpochInterval currentEpoch (pp ^. ppDRepActivityL)
   | otherwise =
       computeDRepExpiry (pp ^. ppDRepActivityL) currentEpoch numDormantEpochs

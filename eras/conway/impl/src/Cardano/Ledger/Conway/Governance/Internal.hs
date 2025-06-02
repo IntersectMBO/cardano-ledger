@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -92,6 +90,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Era (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
@@ -112,7 +111,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateStakeDistrL,
   epochStateUMapL,
@@ -479,7 +477,7 @@ votingCommitteeThresholdInternal currentEpoch pp committee (CommitteeState hotKe
         -- if the committee size is smaller than the minimum given in PParams,
         -- we treat it as if we had no committee
         SJust t
-          | HF.bootstrapPhase (pp ^. ppProtocolVersionL)
+          | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)
               || activeCommitteeSize >= minSize ->
               VotingThreshold t
         _ -> NoVotingThreshold
@@ -531,7 +529,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
         } -- We reset all (except InfoAction) DRep thresholds to 0 during bootstrap phase
-          | HF.bootstrapPhase (pp ^. ppProtocolVersionL) = def
+          | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) = def
           | otherwise = pp ^. ppDRepVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold dvtMotionNoConfidence

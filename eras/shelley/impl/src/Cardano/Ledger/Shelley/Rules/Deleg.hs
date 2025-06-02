@@ -39,8 +39,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
-import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
+import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra, hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
@@ -317,7 +316,7 @@ delegationTransition = do
                     )
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
           (combinedMap, available) <-
-            if HardForks.allowMIRTransfer pv
+            if hardforkAlonzoAllowMIRTransfer pv
               then do
                 let cm = Map.unionWith (<>) credCoinMap' instantaneousRewards
                 all (>= mempty) cm ?! MIRProducesNegativeUpdate
@@ -327,7 +326,7 @@ delegationTransition = do
                 pure (Map.union credCoinMap' instantaneousRewards, potAmount)
           updateReservesAndTreasury targetPot combinedMap available ds
         SendToOppositePotMIR coin ->
-          if HardForks.allowMIRTransfer pv
+          if hardforkAlonzoAllowMIRTransfer pv
             then do
               let available = availableAfterMIR targetPot chainAccountState (dsIRewards ds)
               coin >= mempty ?! MIRNegativeTransfer targetPot coin

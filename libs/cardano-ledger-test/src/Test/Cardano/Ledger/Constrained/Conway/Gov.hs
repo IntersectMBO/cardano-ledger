@@ -14,12 +14,11 @@ module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Cardano.Ledger.UMap (umElems, umElemsL)
 import Constrained.API
 import Constrained.Base (IsPred (..))
@@ -391,13 +390,13 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
               ]
         , assert $ sum_ (rng_ withdrawMap) >. lit (Coin 0)
         , assert $ policy ==. lit gePPolicy
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NoConfidence
     ( branch $ \mPrevActionId ->
         [ assert $ mPrevActionId `elem_` lit committeeIds
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- UpdateCommittee
@@ -405,13 +404,13 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
         [ assert $ mPrevActionId `elem_` lit committeeIds
         , forAll (rng_ added) $ \epoch ->
             lit geEpoch <. epoch
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NewConstitution
     ( branch $ \mPrevActionId _c ->
         [ assert $ mPrevActionId `elem_` lit constitutionIds
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- InfoAction

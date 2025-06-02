@@ -76,7 +76,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Constitution (..),
   GovAction (..),
@@ -114,7 +114,6 @@ import Cardano.Ledger.Plutus.TxInfo (
  )
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.State (UTxO)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Arrow (ArrowChoice (..))
@@ -554,12 +553,12 @@ transTxCert pv = \case
     PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
     let transDeposit
-          | HF.bootstrapPhase pv = Nothing
+          | hardforkConwayBootstrapPhase pv = Nothing
           | otherwise = Just (transCoinToLovelace deposit)
      in PV3.TxCertRegStaking (transCred stakeCred) transDeposit
   UnRegDepositTxCert stakeCred refund ->
     let transRefund
-          | HF.bootstrapPhase pv = Nothing
+          | hardforkConwayBootstrapPhase pv = Nothing
           | otherwise = Just (transCoinToLovelace refund)
      in PV3.TxCertUnRegStaking (transCred stakeCred) transRefund
   DelegTxCert stakeCred delegatee ->
