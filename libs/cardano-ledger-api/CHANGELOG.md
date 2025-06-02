@@ -8,6 +8,10 @@
 * Moved `Annotator` instances to `testlib` for all respective packages
 * Rename `queryAccountState` to `queryChainAccountState`
 
+### `testlib`
+
+* Re-export all Ledger `Arbitrary` instances from `Test.Cardano.Ledger.Api.Arbitrary`
+
 ## 1.11.0.0
 
 * Remove `witVKeyBytes`
