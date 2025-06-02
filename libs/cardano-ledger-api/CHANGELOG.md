@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Export `DijkstraEra` from `Test.Cardano.Ledger.Api.Era`
+* Set `LatestKnownEra` to `DijkstraEra`
+* Stop exporting deprecated `Shelley`, `Mary`, `Allegra`, `Alonzo`, `Babbage` and `Conway` type synonyms
 * Moved `Annotator` instances to `testlib` for all respective packages
 * Rename `queryAccountState` to `queryChainAccountState`
 

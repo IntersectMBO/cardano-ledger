@@ -109,3 +109,6 @@ spec =
     describe "ConwayEra" $ do
       propSetBabbageMinTxOut @ConwayEra
       propSetEnsureMinTxOut @ConwayEra
+    describe "DijkstraEra" $ do
+      propSetBabbageMinTxOut @DijkstraEra
+      propSetEnsureMinTxOut @DijkstraEra
