@@ -14,7 +14,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -73,7 +72,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getRewardAccountFor,
   getReward,
   lookupReward,
-  poolParams,
+  freshPoolParams,
   registerPool,
   registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
@@ -1446,7 +1445,7 @@ registerStakeCredential cred = do
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert @era cred]
+        .~ SSeq.fromList [RegTxCert cred]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
 
@@ -1489,12 +1488,12 @@ getReward stakingCredential = do
           <> "\nMake sure you have the reward account registered with `registerRewardAccount` "
           <> "or by some other means."
 
-poolParams ::
+freshPoolParams ::
   ShelleyEraImp era =>
   KeyHash 'StakePool ->
   RewardAccount ->
   ImpTestM era PoolParams
-poolParams khPool rewardAccount = do
+freshPoolParams khPool rewardAccount = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let minCost = pp ^. ppMinPoolCostL
@@ -1525,7 +1524,7 @@ registerPoolWithRewardAccount ::
   RewardAccount ->
   ImpTestM era ()
 registerPoolWithRewardAccount khPool rewardAccount = do
-  pps <- poolParams khPool rewardAccount
+  pps <- freshPoolParams khPool rewardAccount
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)

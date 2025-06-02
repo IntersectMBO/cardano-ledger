@@ -23,8 +23,7 @@
 * Replace export from `Cardano.Ledger.Shelley.UTxO` of deprecated `balance` and `coinBalance` with `sumUTxO` and `sumCoinUTxO` respectively
 * Remove `ShelleyTxBody`
 * Removed `era` parameter from `ShelleyTxBodyRaw`
-* Remove `HeapWords` instances for: #5001
-  - `ShelleyTxOut`
+* Remove `HeapWords` instances for `ShelleyTxOut`: #5001
 * Deprecate `witsFromTxWitnesses`
 * Expose access to `ShelleyTxRaw`, `ShelleyTxAuxDataRaw`, `ShelleyTxBodyRaw`, `ShelleyTxWitsRaw`, `MkMultiSig`
 * Expose constructors `MkShelleyTx`, `MkShelleyTxAuxData`, `MkShelleyTxBody`, `MkShelleyTxWits`, `MultiSigRaw`
@@ -41,6 +40,7 @@
 
 ### `testlib`
 
+* Rename `poolParams` to `freshPoolParams`
 * Added `ToExpr` instances for:
   * `ShelleyScriptsNeeded`
   * `ShelleyBbodyState`
