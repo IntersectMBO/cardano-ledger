@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Added `COMPLETE` pragma for `NativeScript`
 * Move to `testlib` the `DecCBOR` instance for `TxBody MaryEra`
 * Remove `MaryTxBody`
 * Converted `MaryTxBodyRaw` into a type synonym

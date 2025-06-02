@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Added `COMPLETE` pragma for `NativeScript`
 * Add:
   * `alonzoToConwayUtxosPredFailure`
   * `alonzoToConwayUtxosEvent`

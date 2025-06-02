@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -12,7 +13,7 @@ module Cardano.Ledger.Allegra.Tx (
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
-import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), evalTimelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock, evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
@@ -72,7 +73,8 @@ instance EraTx AllegraEra where
 -- We still need to correctly compute the witness set for TxBody as well.
 
 validateTimelock ::
-  (EraTx era, AllegraEraTxBody era, AllegraEraScript era) => Tx era -> NativeScript era -> Bool
+  (EraTx era, AllegraEraTxBody era, AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  Tx era -> NativeScript era -> Bool
 validateTimelock tx timelock = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
