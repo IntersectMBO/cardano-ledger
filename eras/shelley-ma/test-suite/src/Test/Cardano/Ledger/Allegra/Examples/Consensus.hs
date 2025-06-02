@@ -29,7 +29,6 @@ ledgerExamplesAllegra :: ShelleyLedgerExamples AllegraEra
 ledgerExamplesAllegra =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @AllegraEra))
-    id
     exampleCoin
     (exampleAllegraTxBody exampleCoin)
     exampleAllegraTxAuxData

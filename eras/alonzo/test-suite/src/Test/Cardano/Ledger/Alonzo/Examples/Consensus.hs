@@ -5,7 +5,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Scripts (
@@ -157,8 +157,8 @@ exampleTx =
           [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
-exampleTransactionInBlock :: AlonzoTx AlonzoEra
-exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
+exampleTransactionInBlock :: Tx AlonzoEra
+exampleTransactionInBlock = MkAlonzoTx $ AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 

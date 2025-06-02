@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Rules.Delegs ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -157,12 +157,11 @@ ledgerTransition = do
 instance
   ( AlonzoEraTx era
   , EraGov era
-  , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -172,7 +171,7 @@ instance
   STS (AlonzoLEDGER era)
   where
   type State (AlonzoLEDGER era) = LedgerState era
-  type Signal (AlonzoLEDGER era) = AlonzoTx era
+  type Signal (AlonzoLEDGER era) = Tx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = ShelleyLedgerPredFailure era

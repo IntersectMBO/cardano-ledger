@@ -312,3 +312,5 @@ instance ConwayEraCertState era => ToExpr (ConwayCertState era)
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (ConwayBbodyPredFailure era)
+
+instance ToExpr (Tx ConwayEra)

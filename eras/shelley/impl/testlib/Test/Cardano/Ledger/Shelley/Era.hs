@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Shelley.Era (
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.State
 import Data.Default
 import Test.Cardano.Ledger.Common

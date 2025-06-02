@@ -1,10 +1,15 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
   TxBody (..),
+  Tx (..),
   module X,
 ) where
 
@@ -23,27 +28,35 @@ import Cardano.Ledger.Babbage.TxBody (
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import Control.Arrow (left)
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
+import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Binary (ToCBOR, EncCBOR, DecCBOR (..), Annotator)
+import Cardano.Ledger.Binary.Coders (decode, Decode (..), (<*!))
 
 newtype BabbageTxUpgradeError
   = BTUEBodyUpgradeError BabbageTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTx BabbageEra where
-  type Tx BabbageEra = AlonzoTx BabbageEra
+  newtype Tx BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx BabbageEra}
+    deriving newtype (Eq, NFData, Show, NoThunks, ToCBOR, EncCBOR)
+    deriving (Generic)
   type TxUpgradeError BabbageEra = BabbageTxUpgradeError
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = babbageTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = babbageTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = babbageTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = babbageTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateTimelock
@@ -51,15 +64,16 @@ instance EraTx BabbageEra where
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
 
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> left BTUEBodyUpgradeError (upgradeTxBody b)
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkAlonzoTx (AlonzoTx b w valid aux)) =
+    fmap MkBabbageTx $
+      AlonzoTx
+        <$> left BTUEBodyUpgradeError (upgradeTxBody b)
+        <*> pure (upgradeTxWits w)
+        <*> pure valid
+        <*> pure (fmap upgradeTxAuxData aux)
 
 instance AlonzoEraTx BabbageEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = babbageTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
 instance EraSegWits BabbageEra where
@@ -68,3 +82,9 @@ instance EraSegWits BabbageEra where
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
   numSegComponents = 4
+
+instance DecCBOR (Annotator (Tx BabbageEra)) where
+  decCBOR = decode $ Ann (RecD MkBabbageTx) <*! From
+
+babbageTxL :: Lens' (Tx BabbageEra) (AlonzoTx BabbageEra)
+babbageTxL = lens unBabbageTx (\x y -> x {unBabbageTx = y})

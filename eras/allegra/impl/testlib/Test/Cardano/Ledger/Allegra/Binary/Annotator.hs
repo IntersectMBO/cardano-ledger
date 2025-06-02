@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Allegra.Binary.Annotator (
   module Test.Cardano.Ledger.Shelley.Binary.Annotator,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
@@ -67,3 +67,5 @@ instance Era era => DecCBOR (TimelockRaw era) where
 
 instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR
+
+deriving newtype instance DecCBOR (Tx AllegraEra)

@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -51,7 +50,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), Tx (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -67,8 +65,9 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((^.), (&), (.~))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import Cardano.Ledger.Shelley.Tx ()
 
 data ShelleyTxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era))
@@ -233,11 +232,9 @@ instance
         let body' = runAnnotator bodyAnn bytes
             witnessSet = runAnnotator witsAnn' bytes
             metadata' = flip runAnnotator bytes <$> metaAnn
-         in MkShelleyTx $
-              ShelleyTx
-                body'
-                witnessSet
-                (maybeToStrictMaybe metadata')
+         in mkBasicTx @era body'
+              & witsTxL .~ witnessSet
+              & auxDataTxL .~ maybeToStrictMaybe metadata'
       txns =
         sequenceA $
           StrictSeq.forceToStrict $
