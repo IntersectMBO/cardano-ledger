@@ -2,6 +2,7 @@
 
 module Test.Cardano.Ledger.Api.Arbitrary () where
 
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Cardano.Ledger.Api.State.Query (MemberStatus)
 import Test.Cardano.Ledger.Common
 

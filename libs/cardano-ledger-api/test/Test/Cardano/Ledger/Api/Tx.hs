@@ -21,8 +21,8 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), KeyPair (..), mkWitnessVKey)
+import Test.Cardano.Ledger.Api.Arbitrary ()
 
 txSpec ::
   forall era.
@@ -104,3 +104,4 @@ spec = do
   txSpec @AlonzoEra
   txSpec @BabbageEra
   txSpec @ConwayEra
+  txSpec @DijkstraEra

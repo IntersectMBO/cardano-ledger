@@ -22,7 +22,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 totalTxDeposits ::
