@@ -119,7 +119,7 @@ instance
   type BaseM (BabbageUTXOS era) = ShelleyBase
   type Environment (BabbageUTXOS era) = UtxoEnv era
   type State (BabbageUTXOS era) = UTxOState era
-  type Signal (BabbageUTXOS era) = AlonzoTx era
+  type Signal (BabbageUTXOS era) = Tx era
   type PredicateFailure (BabbageUTXOS era) = AlonzoUtxosPredFailure era
   type Event (BabbageUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -210,7 +210,6 @@ babbageEvalScriptsTxValid ::
   , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOS era)
-  , Signal (BabbageUTXOS era) ~ Tx era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)

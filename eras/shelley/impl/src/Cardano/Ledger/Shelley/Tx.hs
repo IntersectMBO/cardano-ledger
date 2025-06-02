@@ -175,6 +175,7 @@ instance DecCBOR (Annotator (Tx ShelleyEra)) where
 instance EraTx ShelleyEra where
   newtype Tx ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx ShelleyEra}
     deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
+    deriving Generic
 
   mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 

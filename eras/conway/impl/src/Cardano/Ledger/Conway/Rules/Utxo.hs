@@ -34,7 +34,6 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoUtxoEvent (UtxosEvent),
   AlonzoUtxoPredFailure (..),
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
@@ -229,7 +228,6 @@ instance
   , EraUTxO era
   , ConwayEraTxBody era
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
   , EraRule "UTXO" era ~ ConwayUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -247,7 +245,7 @@ instance
   STS (ConwayUTXO era)
   where
   type State (ConwayUTXO era) = Shelley.UTxOState era
-  type Signal (ConwayUTXO era) = AlonzoTx era
+  type Signal (ConwayUTXO era) = Tx era
   type Environment (ConwayUTXO era) = Shelley.UtxoEnv era
   type BaseM (ConwayUTXO era) = ShelleyBase
   type PredicateFailure (ConwayUTXO era) = ConwayUtxoPredFailure era

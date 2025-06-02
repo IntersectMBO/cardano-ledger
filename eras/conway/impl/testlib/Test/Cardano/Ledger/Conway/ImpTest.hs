@@ -1666,7 +1666,7 @@ showConwayTxBalance ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  AlonzoTx era ->
+  Tx era ->
   String
 showConwayTxBalance pp certState utxo tx =
   unlines
@@ -1702,7 +1702,7 @@ logConwayTxBalance ::
   , Tx era ~ AlonzoTx era
   , ConwayEraCertState era
   ) =>
-  AlonzoTx era ->
+  Tx era ->
   ImpTestM era ()
 logConwayTxBalance tx = do
   pp <- getsPParams id

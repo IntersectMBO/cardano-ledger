@@ -93,6 +93,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
+import Cardano.Ledger.Shelley.Tx (Tx(..))
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Shelley.PParams --------------------------------------------------------
@@ -705,6 +706,8 @@ instance
   Arbitrary (ShelleyTx era)
   where
   arbitrary = genTx
+
+deriving newtype instance Arbitrary (Tx ShelleyEra)
 
 instance
   ( Era era

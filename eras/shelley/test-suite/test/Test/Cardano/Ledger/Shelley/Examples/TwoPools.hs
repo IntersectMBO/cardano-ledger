@@ -216,7 +216,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @C ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0

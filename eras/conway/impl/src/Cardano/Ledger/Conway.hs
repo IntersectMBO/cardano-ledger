@@ -8,6 +8,7 @@
 module Cardano.Ledger.Conway (
   Conway,
   ConwayEra,
+  Tx (..),
 ) where
 
 import Cardano.Ledger.Babbage.TxBody ()
@@ -17,7 +18,7 @@ import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.State ()
 import Cardano.Ledger.Conway.Transition ()
 import Cardano.Ledger.Conway.Translation ()
-import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.Tx (Tx (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()

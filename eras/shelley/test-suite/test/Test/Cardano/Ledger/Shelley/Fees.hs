@@ -23,7 +23,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
-import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
@@ -77,7 +77,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-sizeTest :: HasCallStack => BSL.ByteString -> ShelleyTx ShelleyEra -> Assertion
+sizeTest :: HasCallStack => BSL.ByteString -> Tx ShelleyEra -> Assertion
 sizeTest b16 tx = do
   Base16.encode (Plain.serialize tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
@@ -165,16 +165,14 @@ txbSimpleUTxO =
     , stbMDHash = SNothing
     }
 
-txSimpleUTxO :: ShelleyTx ShelleyEra
+txSimpleUTxO :: Tx ShelleyEra
 txSimpleUTxO =
-  ShelleyTx
-    { stBody = txbSimpleUTxO
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
-          }
-    , stAuxData = SNothing
-    }
+  mkBasicTx txbSimpleUTxO
+    & witsTxL
+      .~ mempty
+        { addrWits = mkWitnessesVKey (hashAnnotated txbSimpleUTxO) [alicePay]
+        }
+    & auxDataTxL .~ SNothing
 
 txSimpleUTxOBytes16 :: BSL.ByteString
 txSimpleUTxOBytes16 =
@@ -206,21 +204,22 @@ txbMutiUTxO =
     , stbMDHash = SNothing
     }
 
-txMutiUTxO :: ShelleyTx ShelleyEra
+txMutiUTxO :: Tx ShelleyEra
 txMutiUTxO =
-  ShelleyTx
-    { stBody = txbMutiUTxO
-    , stWits =
-        mempty
-          { addrWits =
-              mkWitnessesVKey
-                (hashAnnotated txbMutiUTxO)
-                [ alicePay
-                , bobPay
-                ]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbMutiUTxO
+      , stWits =
+          mempty
+            { addrWits =
+                mkWitnessesVKey
+                  (hashAnnotated txbMutiUTxO)
+                  [ alicePay
+                  , bobPay
+                  ]
+            }
+      , stAuxData = SNothing
+      }
 
 txMutiUTxOBytes16 :: BSL.ByteString
 txMutiUTxOBytes16 =
@@ -240,16 +239,17 @@ txbRegisterStake =
     , stbMDHash = SNothing
     }
 
-txRegisterStake :: ShelleyTx ShelleyEra
+txRegisterStake :: Tx ShelleyEra
 txRegisterStake =
-  ShelleyTx
-    { stBody = txbRegisterStake
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbRegisterStake
+      , stWits =
+          mempty
+            { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterStake) [alicePay]
+            }
+      , stAuxData = SNothing
+      }
 
 txRegisterStakeBytes16 :: BSL.ByteString
 txRegisterStakeBytes16 =
@@ -272,19 +272,20 @@ txbDelegateStake =
     , stbMDHash = SNothing
     }
 
-txDelegateStake :: ShelleyTx ShelleyEra
+txDelegateStake :: Tx ShelleyEra
 txDelegateStake =
-  ShelleyTx
-    { stBody = txbDelegateStake
-    , stWits =
-        mempty
-          { addrWits =
-              mkWitnessesVKey
-                (hashAnnotated txbDelegateStake)
-                [asWitness alicePay, asWitness bobStake]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbDelegateStake
+      , stWits =
+          mempty
+            { addrWits =
+                mkWitnessesVKey
+                  (hashAnnotated txbDelegateStake)
+                  [asWitness alicePay, asWitness bobStake]
+            }
+      , stAuxData = SNothing
+      }
 
 txDelegateStakeBytes16 :: BSL.ByteString
 txDelegateStakeBytes16 =
@@ -304,16 +305,17 @@ txbDeregisterStake =
     , stbMDHash = SNothing
     }
 
-txDeregisterStake :: ShelleyTx ShelleyEra
+txDeregisterStake :: Tx ShelleyEra
 txDeregisterStake =
-  ShelleyTx
-    { stBody = txbDeregisterStake
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbDeregisterStake) [alicePay]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbDeregisterStake
+      , stWits =
+          mempty
+            { addrWits = mkWitnessesVKey (hashAnnotated txbDeregisterStake) [alicePay]
+            }
+      , stAuxData = SNothing
+      }
 
 txDeregisterStakeBytes16 :: BSL.ByteString
 txDeregisterStakeBytes16 =
@@ -333,16 +335,17 @@ txbRegisterPool =
     , stbMDHash = SNothing
     }
 
-txRegisterPool :: ShelleyTx ShelleyEra
+txRegisterPool :: Tx ShelleyEra
 txRegisterPool =
-  ShelleyTx
-    { stBody = txbRegisterPool
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbRegisterPool
+      , stWits =
+          mempty
+            { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
+            }
+      , stAuxData = SNothing
+      }
 
 txRegisterPoolBytes16 :: BSL.ByteString
 txRegisterPoolBytes16 =
@@ -362,16 +365,17 @@ txbRetirePool =
     , stbMDHash = SNothing
     }
 
-txRetirePool :: ShelleyTx ShelleyEra
+txRetirePool :: Tx ShelleyEra
 txRetirePool =
-  ShelleyTx
-    { stBody = txbRetirePool
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbRetirePool
+      , stWits =
+          mempty
+            { addrWits = mkWitnessesVKey (hashAnnotated txbRetirePool) [alicePay]
+            }
+      , stAuxData = SNothing
+      }
 
 txRetirePoolBytes16 :: BSL.ByteString
 txRetirePoolBytes16 =
@@ -395,16 +399,17 @@ txbWithMD =
     , stbMDHash = SJust $ hashTxAuxData @ShelleyEra md
     }
 
-txWithMD :: ShelleyTx ShelleyEra
+txWithMD :: Tx ShelleyEra
 txWithMD =
-  ShelleyTx
-    { stBody = txbWithMD
-    , stWits =
-        mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
-          }
-    , stAuxData = SJust md
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbWithMD
+      , stWits =
+          mempty
+            { addrWits = mkWitnessesVKey (hashAnnotated txbWithMD) [alicePay]
+            }
+      , stAuxData = SJust md
+      }
 
 txWithMDBytes16 :: BSL.ByteString
 txWithMDBytes16 =
@@ -435,16 +440,17 @@ txbWithMultiSig =
     , stbMDHash = SNothing
     }
 
-txWithMultiSig :: ShelleyTx ShelleyEra
+txWithMultiSig :: Tx ShelleyEra
 txWithMultiSig =
-  ShelleyTx
-    { stBody = txbWithMultiSig
-    , stWits =
-        mkBasicTxWits
-          & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay]
-          & scriptTxWitsL .~ Map.singleton (hashScript @ShelleyEra msig) msig
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbWithMultiSig
+      , stWits =
+          mkBasicTxWits
+            & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay]
+            & scriptTxWitsL .~ Map.singleton (hashScript @ShelleyEra msig) msig
+      , stAuxData = SNothing
+      }
 
 txWithMultiSigBytes16 :: BSL.ByteString
 txWithMultiSigBytes16 =
@@ -465,19 +471,20 @@ txbWithWithdrawal =
     , stbMDHash = SNothing
     }
 
-txWithWithdrawal :: ShelleyTx ShelleyEra
+txWithWithdrawal :: Tx ShelleyEra
 txWithWithdrawal =
-  ShelleyTx
-    { stBody = txbWithWithdrawal
-    , stWits =
-        mempty
-          { addrWits =
-              mkWitnessesVKey
-                (hashAnnotated txbWithWithdrawal)
-                [asWitness alicePay, asWitness aliceStake]
-          }
-    , stAuxData = SNothing
-    }
+  MkShelleyTx $
+    ShelleyTx
+      { stBody = txbWithWithdrawal
+      , stWits =
+          mempty
+            { addrWits =
+                mkWitnessesVKey
+                  (hashAnnotated txbWithWithdrawal)
+                  [asWitness alicePay, asWitness aliceStake]
+            }
+      , stAuxData = SNothing
+      }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
 txWithWithdrawalBytes16 =
@@ -501,11 +508,9 @@ testEstimateMinFee =
         & ppMinFeeBL .~ Coin 1
 
     txSimpleUTxONoWit =
-      ShelleyTx
-        { stBody = txbSimpleUTxO
-        , stWits = mempty
-        , stAuxData = SNothing
-        }
+      mkBasicTx txbSimpleUTxO
+        & witsTxL .~ mempty
+        & auxDataTxL .~ SNothing
 
 -- NOTE the txsize function takes into account which actual crypto parameter is in use.
 -- These tests are using Blake2b and Ed25519 so that:
