@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Rename `shelleyEqTxRaw` to `shelleyTxEqRaw`
 * Add `Generic` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
   * `aggregateRewards` to `hardforkAllegraAggregateRewards`.

@@ -1,7 +1,9 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -9,6 +11,7 @@
 
 module Cardano.Ledger.Allegra.Tx (
   validateTimelock,
+  Tx (..),
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -17,47 +20,65 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock, evalTime
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core (
   EraTx (..),
   EraTxWits (..),
   NativeScript,
  )
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
+  Tx (..),
   auxDataShelleyTxL,
   bodyShelleyTxL,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
+  shelleyTxEqRaw,
   sizeShelleyTxF,
   witsShelleyTxL,
  )
+import Control.DeepSeq (NFData)
 import qualified Data.Set as Set (map)
-import Lens.Micro ((^.))
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens, (^.))
+import NoThunks.Class (NoThunks)
 
 -- ========================================
 
 instance EraTx AllegraEra where
-  type Tx AllegraEra = ShelleyTx AllegraEra
+  newtype Tx AllegraEra = MkAllegraTx {unAllegraTx :: ShelleyTx AllegraEra}
+    deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicShelleyTx
+  mkBasicTx = MkAllegraTx . mkBasicShelleyTx
 
-  bodyTxL = bodyShelleyTxL
+  bodyTxL = allegraTxL . bodyShelleyTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsShelleyTxL
+  witsTxL = allegraTxL . witsShelleyTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataShelleyTxL
+  auxDataTxL = allegraTxL . auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeShelleyTxF
+  sizeTxF = allegraTxL . sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
+
+instance EqRaw (Tx AllegraEra) where
+  eqRaw = shelleyTxEqRaw
+
+instance DecCBOR (Annotator (Tx AllegraEra)) where
+  decCBOR = fmap MkAllegraTx <$> decCBOR
+
+allegraTxL :: Lens' (Tx AllegraEra) (ShelleyTx AllegraEra)
+allegraTxL = lens unAllegraTx (\x y -> x {unAllegraTx = y})
 
 -- =======================================================
 -- Validating timelock scripts

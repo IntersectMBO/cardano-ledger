@@ -12,6 +12,7 @@ module Cardano.Ledger.Mary (
   ShelleyTxOut,
   MaryValue,
   TxBody (..),
+  Tx (..),
 ) where
 
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -21,6 +22,7 @@ import Cardano.Ledger.Mary.Scripts ()
 import Cardano.Ledger.Mary.State ()
 import Cardano.Ledger.Mary.Transition ()
 import Cardano.Ledger.Mary.Translation ()
+import Cardano.Ledger.Mary.Tx (Tx (..))
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.TxSeq ()

@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -27,9 +27,9 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Proxy
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
--- \| This is where most of the ExecSpecRule instances are defined
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   nameCerts,
   nameDelegCert,
@@ -143,8 +143,8 @@ nameRatify (RatifySignal xs) = show (length xs) ++ " GovActionStates"
 nameGovSignal :: GovSignal Proof.ConwayEra -> String
 nameGovSignal (GovSignal (VotingProcedures m) os cs) = show (Map.size m) ++ " " ++ show (OSet.size os) ++ " " ++ show (length cs)
 
-nameAlonzoTx :: AlonzoTx era -> String
-nameAlonzoTx (AlonzoTx _body _wits isV _auxdata) = show isV
+nameAlonzoTx :: AlonzoEraTx era => Tx era -> String
+nameAlonzoTx = show . view isValidTxL
 
 -- | Run a minitrace for every instance of ExecRuleSpec
 spec :: Spec

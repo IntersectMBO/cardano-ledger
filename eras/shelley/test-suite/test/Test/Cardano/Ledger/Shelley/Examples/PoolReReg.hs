@@ -25,7 +25,7 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -121,7 +121,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -199,7 +199,7 @@ blockEx2 slot =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx slot)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo slot)
     (BlockNo 2)
     nonce0

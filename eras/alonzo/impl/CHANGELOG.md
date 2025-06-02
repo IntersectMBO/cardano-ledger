@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Rename `alonzoEqTxRaw` to `alonzoTxEqRaw`
 * Add `Generic` instance to `TransactionScriptFailure`
 * Add `Generic` instance for `AlonzoBbodyEvent`
 * Fix `AlonzoPlutusPurpose` CBOR(Group) instances. #5135

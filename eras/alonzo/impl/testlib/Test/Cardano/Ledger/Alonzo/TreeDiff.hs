@@ -203,3 +203,5 @@ instance
   , ToExpr (ContextError era)
   ) =>
   ToExpr (TransactionScriptFailure era)
+
+deriving newtype instance ToExpr (Tx AlonzoEra)

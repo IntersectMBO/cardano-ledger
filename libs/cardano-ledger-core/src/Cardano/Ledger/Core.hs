@@ -142,11 +142,10 @@ class
   , ToCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
-  , EqRaw (Tx era)
   ) =>
   EraTx era
   where
-  type Tx era = (r :: Type) | r -> era
+  data Tx era
 
   mkBasicTx :: TxBody era -> Tx era
 

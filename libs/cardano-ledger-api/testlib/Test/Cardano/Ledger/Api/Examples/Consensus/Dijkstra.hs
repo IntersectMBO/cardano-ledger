@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
+import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -79,9 +80,9 @@ ledgerExamplesDijkstra ::
   SLE.ShelleyLedgerExamples DijkstraEra
 ledgerExamplesDijkstra =
   SLE.ShelleyLedgerExamples
-    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
+    { SLE.sleBlock = SLE.exampleShelleyLedgerBlock $ MkDijkstraTx exampleTransactionInBlock
     , SLE.sleHashHeader = SLE.exampleHashHeader
-    , SLE.sleTx = exampleTransactionInBlock
+    , SLE.sleTx = MkDijkstraTx exampleTransactionInBlock
     , SLE.sleApplyTxError =
         ApplyTxError $
           pure $

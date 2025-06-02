@@ -27,7 +27,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
@@ -195,8 +195,8 @@ exampleTx =
           [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
-exampleTransactionInBlock :: AlonzoTx ConwayEra
-exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
+exampleTransactionInBlock :: Tx ConwayEra
+exampleTransactionInBlock = MkConwayTx $ AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 

@@ -16,7 +16,6 @@
 -- property tests in all eras.
 module Test.Cardano.Ledger.Shelley.Rewards (
   tests,
-  C,
   defaultMain,
   newEpochProp,
   newEpochEventsProp,
@@ -55,6 +54,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Shelley (
+  ShelleyEra,
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
  )
@@ -123,7 +123,7 @@ import GHC.Stack
 import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -666,24 +666,25 @@ lastElem [] = Nothing
 lastElem (_ : xs) = lastElem xs
 
 -- | Provide a legitimate NewEpochState to make an test Property
-newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property
+newEpochProp :: Word64 -> (NewEpochState ShelleyEra -> Property) -> Property
 newEpochProp tracelen propf = withMaxSuccess 100 $
-  forAllChainTrace @C tracelen defaultConstants $ \tr ->
+  forAllChainTrace @ShelleyEra tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} -> propf (chainNes target)
       _ -> property True
 
 -- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
-newEpochEventsProp :: Word64 -> ([ChainEvent C] -> NewEpochState C -> Property) -> Property
+newEpochEventsProp ::
+  Word64 -> ([ChainEvent ShelleyEra] -> NewEpochState ShelleyEra -> Property) -> Property
 newEpochEventsProp tracelen propf = withMaxSuccess 10 $
-  forEachEpochTrace @C 10 tracelen defaultConstants $ \tr ->
+  forEachEpochTrace @ShelleyEra 10 tracelen defaultConstants $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} ->
         propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
       _ -> property True
 
 aggIncrementalRewardEvents ::
-  [ChainEvent C] ->
+  [ChainEvent ShelleyEra] ->
   Map (Credential 'Staking) (Set Reward)
 aggIncrementalRewardEvents = F.foldl' accum Map.empty
   where
@@ -693,7 +694,7 @@ aggIncrementalRewardEvents = F.foldl' accum Map.empty
     accum ans _ = ans
 
 getMostRecentTotalRewardEvent ::
-  [ChainEvent C] ->
+  [ChainEvent ShelleyEra] ->
   Map (Credential 'Staking) (Set Reward)
 getMostRecentTotalRewardEvent = F.foldl' accum Map.empty
   where
@@ -704,7 +705,7 @@ complete :: PulsingRewUpdate -> (RewardUpdate, RewardEvent)
 complete (Complete r) = (r, mempty)
 complete (Pulsing rewsnap pulser) = runShelleyBase $ (completeRupd (Pulsing rewsnap pulser))
 
-eventsMirrorRewards :: [ChainEvent C] -> NewEpochState C -> Property
+eventsMirrorRewards :: [ChainEvent ShelleyEra] -> NewEpochState ShelleyEra -> Property
 eventsMirrorRewards events nes = same eventRew compRew
   where
     (compRew, eventRew) =
@@ -799,13 +800,13 @@ tests =
   testGroup
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $
-        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
+        withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @ShelleyEra))
     , testProperty "compare with reference impl, no provenance, v3" . noShrinking $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
+        newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @3) 0))
     , testProperty "compare with reference impl, no provenance, v7" . noShrinking $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
+        newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @7) 0))
     , testProperty "compare with reference impl, with provenance" . noShrinking $
-        newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
+        newEpochProp chainlen (oldEqualsNewOn @ShelleyEra (ProtVer (natVersion @3) 0))
     , testProperty "delta events mirror reward updates" $
         newEpochEventsProp chainlen eventsMirrorRewards
     ]

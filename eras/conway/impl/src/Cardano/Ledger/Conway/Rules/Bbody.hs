@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx, IsValid (..), isValidTxL)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -248,9 +248,8 @@ instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
   , TxSeq era ~ AlonzoTxSeq era
   , EraSegWits era
   , AlonzoEraPParams era

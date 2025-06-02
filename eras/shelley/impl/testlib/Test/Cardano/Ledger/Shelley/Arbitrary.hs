@@ -72,6 +72,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext)
+import Cardano.Ledger.Shelley.Tx (Tx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -707,6 +708,8 @@ instance
   Arbitrary (ShelleyTx era)
   where
   arbitrary = genTx
+
+deriving newtype instance Arbitrary (Tx ShelleyEra)
 
 instance
   ( Era era

@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra, Tx (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
@@ -178,8 +178,8 @@ exampleTx =
           [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
-exampleTransactionInBlock :: AlonzoTx BabbageEra
-exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
+exampleTransactionInBlock :: Tx BabbageEra
+exampleTransactionInBlock = MkBabbageTx $ AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 

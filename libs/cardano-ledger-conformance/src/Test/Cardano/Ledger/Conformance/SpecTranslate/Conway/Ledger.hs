@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -16,13 +17,16 @@ import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   AllegraEraTxBody (..),
+  AlonzoEraTx (..),
   AlonzoEraTxBody (..),
   BabbageEraTxBody (..),
   ConwayEraTxBody (..),
   EraPParams (..),
   EraRule,
+  EraTx (..),
   EraTxBody (..),
   ScriptHash,
+  txIdTx,
  )
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -33,8 +37,16 @@ import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), askCtx, showOpaqueErrorString)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
+import Test.Cardano.Ledger.Conformance (
+  OpaqueErrorString (..),
+  askCtx,
+  showOpaqueErrorString,
+  withCtx,
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  ConwayTxBodyTransContext (..),
+  SpecTranslate (..),
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
@@ -102,3 +114,15 @@ instance
       <*> toSpecRep (txb ^. collateralInputsTxBodyL)
       <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
       <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
+
+instance SpecTranslate ctx (Tx ConwayEra) where
+  type SpecRep (Tx ConwayEra) = Agda.Tx
+
+  toSpecRep tx =
+    Agda.MkTx
+      <$> withCtx
+        (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
+        (toSpecRep (tx ^. bodyTxL))
+      <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. isValidTxL)
+      <*> toSpecRep (tx ^. auxDataTxL)

@@ -148,3 +148,5 @@ instance Arbitrary (TxBody BabbageEra) where
       <*> arbitrary
 
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
+
+deriving newtype instance Arbitrary (Tx BabbageEra)

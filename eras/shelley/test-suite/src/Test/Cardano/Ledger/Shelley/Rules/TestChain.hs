@@ -112,7 +112,6 @@ type TestingLedger era ledger =
   ( BaseM ledger ~ ReaderT Globals Identity
   , Environment ledger ~ LedgerEnv era
   , State ledger ~ LedgerState era
-  , Signal ledger ~ Tx era
   , Embed (EraRule "DELEGS" era) ledger
   , Embed (EraRule "UTXOW" era) ledger
   , STS ledger
@@ -139,17 +138,21 @@ shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 cons
 
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 ledgerTraceFromBlock ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
-  , TestingLedger era ledger
+  , STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (ChainState era, Trace ledger)
+  (ChainState era, Trace (EraRule "LEDGER" era))
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
   , runShelleyBase $
-      Trace.closure @ledger ledgerEnv ledgerSt0 txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0 txs
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -158,17 +161,21 @@ ledgerTraceFromBlock chainSt block =
 -- it restricts the UTxO state to only those needed by the block.
 -- It also returns the unused UTxO for comparison later.
 ledgerTraceFromBlockWithRestrictedUTxO ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
-  , TestingLedger era ledger
+  , STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (UTxO era, Trace ledger)
+  (UTxO era, Trace (EraRule "LEDGER" era))
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
   , runShelleyBase $
-      Trace.closure @ledger ledgerEnv ledgerSt0' txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0' txs
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block

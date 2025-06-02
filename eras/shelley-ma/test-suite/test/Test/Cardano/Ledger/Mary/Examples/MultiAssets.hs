@@ -21,7 +21,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary (MaryEra, Tx (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.Value (
@@ -169,7 +169,7 @@ txbodySimpleEx1 =
     unboundedInterval
     mintSimpleEx1
 
-txSimpleEx1 :: ShelleyTx MaryEra
+txSimpleEx1 :: Tx MaryEra
 txSimpleEx1 =
   mkBasicTx txbodySimpleEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -218,7 +218,7 @@ txbodySimpleEx2 =
     unboundedInterval
     mempty
 
-txSimpleEx2 :: ShelleyTx MaryEra
+txSimpleEx2 :: Tx MaryEra
 txSimpleEx2 =
   mkBasicTx txbodySimpleEx2
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw)
@@ -295,7 +295,7 @@ txbodyTimeEx1 s e =
 txbodyTimeEx1Valid :: TxBody MaryEra
 txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
-txTimeEx1 :: TxBody MaryEra -> ShelleyTx MaryEra
+txTimeEx1 :: TxBody MaryEra -> Tx MaryEra
 txTimeEx1 txbody =
   mkBasicTx txbody
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -303,19 +303,19 @@ txTimeEx1 txbody =
     atw = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
     stw = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
 
-txTimeEx1Valid :: ShelleyTx MaryEra
+txTimeEx1Valid :: Tx MaryEra
 txTimeEx1Valid = txTimeEx1 txbodyTimeEx1Valid
 
-txTimeEx1InvalidLHSfixed :: ShelleyTx MaryEra
+txTimeEx1InvalidLHSfixed :: Tx MaryEra
 txTimeEx1InvalidLHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust beforeStart) (SJust stopInterval)
 
-txTimeEx1InvalidLHSopen :: ShelleyTx MaryEra
+txTimeEx1InvalidLHSopen :: Tx MaryEra
 txTimeEx1InvalidLHSopen = txTimeEx1 $ txbodyTimeEx1 SNothing (SJust stopInterval)
 
-txTimeEx1InvalidRHSfixed :: ShelleyTx MaryEra
+txTimeEx1InvalidRHSfixed :: Tx MaryEra
 txTimeEx1InvalidRHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) (SJust afterStop)
 
-txTimeEx1InvalidRHSopen :: ShelleyTx MaryEra
+txTimeEx1InvalidRHSopen :: Tx MaryEra
 txTimeEx1InvalidRHSopen = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) SNothing
 
 expectedUTxOTimeEx1 :: UTxO MaryEra
@@ -353,15 +353,16 @@ txbodyTimeEx2 =
     unboundedInterval
     mempty
 
-txTimeEx2 :: ShelleyTx MaryEra
+txTimeEx2 :: Tx MaryEra
 txTimeEx2 =
-  ShelleyTx
-    txbodyTimeEx2
-    mempty
-      { addrWits =
-          mkWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
-      }
-    SNothing
+  MkMaryTx $
+    ShelleyTx
+      txbodyTimeEx2
+      mempty
+        { addrWits =
+            mkWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
+        }
+      SNothing
 
 expectedUTxOTimeEx2 :: UTxO MaryEra
 expectedUTxOTimeEx2 =
@@ -415,7 +416,7 @@ txbodySingWitEx1 =
     unboundedInterval
     mintSingWitEx1
 
-txSingWitEx1Valid :: ShelleyTx MaryEra
+txSingWitEx1Valid :: Tx MaryEra
 txSingWitEx1Valid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -431,7 +432,7 @@ expectedUTxOSingWitEx1 =
       , (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
-txSingWitEx1Invalid :: ShelleyTx MaryEra
+txSingWitEx1Invalid :: Tx MaryEra
 txSingWitEx1Invalid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -469,7 +470,7 @@ txbodyNegEx1 =
     unboundedInterval
     mintNegEx1
 
-txNegEx1 :: ShelleyTx MaryEra
+txNegEx1 :: Tx MaryEra
 txNegEx1 =
   mkBasicTx txbodyNegEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -559,7 +560,7 @@ txbodyWithBigValue =
     unboundedInterval
     (bigValue <> smallValue)
 
-txBigValue :: ShelleyTx MaryEra
+txBigValue :: Tx MaryEra
 txBigValue =
   mkBasicTx txbodyWithBigValue
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)

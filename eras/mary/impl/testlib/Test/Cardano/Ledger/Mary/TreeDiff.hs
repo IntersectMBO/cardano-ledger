@@ -31,3 +31,5 @@ instance ToExpr AssetName where
 deriving newtype instance ToExpr (CompactForm MaryValue)
 
 instance ToExpr (TxBody MaryEra)
+
+instance ToExpr (Tx MaryEra)

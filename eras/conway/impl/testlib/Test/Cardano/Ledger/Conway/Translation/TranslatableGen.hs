@@ -11,7 +11,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx (..), PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (TxBody (ConwayTxBody))
@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance TranslatableGen ConwayEra where
   tgRedeemers = genRedeemers
-  tgTx = BabbageTranslatableGen.genTx @ConwayEra . genTxBody
+  tgTx = fmap MkConwayTx . BabbageTranslatableGen.genTx @ConwayEra . genTxBody
   tgUtxo = BabbageTranslatableGen.utxoWithTx @ConwayEra
 
 genTxBody :: SupportedLanguage ConwayEra -> Gen (TxBody ConwayEra)

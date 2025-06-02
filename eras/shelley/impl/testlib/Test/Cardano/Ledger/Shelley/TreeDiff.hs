@@ -319,3 +319,5 @@ instance ToExpr (ShelleySnapPredFailure era)
 instance ToExpr (ShelleyMirPredFailure era)
 
 instance ToExpr (ShelleyRupdPredFailure era)
+
+instance ToExpr (Tx ShelleyEra)

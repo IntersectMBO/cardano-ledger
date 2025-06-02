@@ -10,6 +10,10 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
 deriving newtype instance DecCBOR (TxBody DijkstraEra)
+
+deriving newtype instance DecCBOR (Tx DijkstraEra)

@@ -10,7 +10,6 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.State (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
@@ -30,7 +29,7 @@ ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _) _) -> utxo)
 testMaryNoDelegLEDGER ::
   HasCallStack =>
   UTxO MaryEra ->
-  ShelleyTx MaryEra ->
+  Tx MaryEra ->
   LedgerEnv MaryEra ->
   Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra) ->
   Assertion

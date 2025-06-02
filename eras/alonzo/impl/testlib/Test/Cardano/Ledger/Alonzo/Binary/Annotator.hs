@@ -261,3 +261,5 @@ instance Era era => DecCBOR (TxDatsRaw era) where
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Era era => DecCBOR (TxDats era)
+
+deriving newtype instance DecCBOR (Tx AlonzoEra)

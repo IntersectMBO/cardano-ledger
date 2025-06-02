@@ -79,12 +79,13 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Binary (mkSized, unsafeMapSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (TxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCertUpgradeError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
@@ -222,11 +223,12 @@ instance EraApi ShelleyEra where
       "Calling this function will cause a compilation error, since there is no TxWits instance for ByronEra"
 
 instance EraApi AllegraEra where
-  upgradeTx (ShelleyTx txb txwits txAux) =
-    ShelleyTx
-      <$> upgradeTxBody txb
-      <*> pure (upgradeTxWits txwits)
-      <*> pure (fmap upgradeTxAuxData txAux)
+  upgradeTx (MkShelleyTx (ShelleyTx txb txwits txAux)) =
+    fmap MkAllegraTx $
+      ShelleyTx
+        <$> upgradeTxBody txb
+        <*> pure (upgradeTxWits txwits)
+        <*> pure (fmap upgradeTxAuxData txAux)
 
   upgradeTxBody txBody = do
     certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
@@ -254,11 +256,12 @@ instance EraApi AllegraEra where
       (bootWits stw)
 
 instance EraApi MaryEra where
-  upgradeTx (ShelleyTx txb txwits txAux) =
-    ShelleyTx
-      <$> upgradeTxBody txb
-      <*> pure (upgradeTxWits txwits)
-      <*> pure (fmap upgradeTxAuxData txAux)
+  upgradeTx (MkAllegraTx (ShelleyTx txb txwits txAux)) =
+    fmap MkMaryTx $
+      ShelleyTx
+        <$> upgradeTxBody txb
+        <*> pure (upgradeTxWits txwits)
+        <*> pure (fmap upgradeTxAuxData txAux)
 
   upgradeTxBody atb = do
     certs <- traverse upgradeTxCert (Allegra.atbCerts atb)
@@ -297,12 +300,13 @@ instance EraApi AlonzoEra where
   type TxUpgradeError AlonzoEra = AlonzoTxUpgradeError
   type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
 
-  upgradeTx (ShelleyTx body wits aux) =
-    AlonzoTx
-      <$> left ATUEBodyUpgradeError (upgradeTxBody body)
-      <*> pure (upgradeTxWits wits)
-      <*> pure (IsValid True)
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkMaryTx (ShelleyTx body wits aux)) =
+    fmap MkAlonzoTx $
+      AlonzoTx
+        <$> left ATUEBodyUpgradeError (upgradeTxBody body)
+        <*> pure (upgradeTxWits wits)
+        <*> pure (IsValid True)
+        <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody
     MaryTxBody
@@ -420,12 +424,13 @@ instance EraApi BabbageEra where
   type TxUpgradeError BabbageEra = BabbageTxUpgradeError
   type TxBodyUpgradeError BabbageEra = BabbageTxBodyUpgradeError
 
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> left BTUEBodyUpgradeError (upgradeTxBody b)
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkAlonzoTx (AlonzoTx b w valid aux)) =
+    fmap MkBabbageTx $
+      AlonzoTx
+        <$> left BTUEBodyUpgradeError (upgradeTxBody b)
+        <*> pure (upgradeTxWits w)
+        <*> pure valid
+        <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody txBody = do
     certs <-
@@ -503,12 +508,13 @@ instance EraApi ConwayEra where
   type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
   type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkBabbageTx (AlonzoTx b w valid aux)) =
+    fmap MkConwayTx $
+      AlonzoTx
+        <$> upgradeTxBody b
+        <*> pure (upgradeTxWits w)
+        <*> pure valid
+        <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody btb = do
     when (isSJust (btbUpdate btb)) $ Left CTBUEContainsUpdate
@@ -551,12 +557,13 @@ instance EraApi ConwayEra where
 
 instance EraApi DijkstraEra where
   type TxUpgradeError DijkstraEra = TxBodyUpgradeError DijkstraEra
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkConwayTx (AlonzoTx b w valid aux)) =
+    fmap MkDijkstraTx $
+      AlonzoTx
+        <$> upgradeTxBody b
+        <*> pure (upgradeTxWits w)
+        <*> pure valid
+        <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody ConwayTxBody {..} = do
     pure $

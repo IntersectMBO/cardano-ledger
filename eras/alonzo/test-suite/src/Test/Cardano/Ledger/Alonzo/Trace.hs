@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -63,7 +62,6 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
   , EraCertState era
   , Crypto c

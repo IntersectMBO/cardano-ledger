@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
@@ -154,7 +154,7 @@ blockEx1 =
   mkBlockFakeVRF @ShelleyEra
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0

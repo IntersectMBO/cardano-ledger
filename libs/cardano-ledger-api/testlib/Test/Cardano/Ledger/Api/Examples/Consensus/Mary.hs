@@ -26,9 +26,8 @@ ledgerExamplesMary :: ShelleyLedgerExamples MaryEra
 ledgerExamplesMary =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @MaryEra))
-    id
     (exampleMultiAssetValue 1)
-    ((exampleAllegraTxBody (exampleMultiAssetValue 1)) & mintTxBodyL .~ exampleMultiAsset 1)
+    (exampleAllegraTxBody (exampleMultiAssetValue 1) & mintTxBodyL .~ exampleMultiAsset 1)
     exampleAllegraTxAuxData
     NoGenesis
 
