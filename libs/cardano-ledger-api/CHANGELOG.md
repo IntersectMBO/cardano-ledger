@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Export `VotingProcedure`, `ProposalProcedure`, `currentTreasuryValueTxBodyL` and
+  `treasuryDonationTxBodyL` from `Test.Cardano.Ledger.Api.Tx.Body`
 * Export `DijkstraEra` from `Test.Cardano.Ledger.Api.Era`
 * Set `LatestKnownEra` to `DijkstraEra`
 * Stop exporting deprecated `Shelley`, `Mary`, `Allegra`, `Alonzo`, `Babbage` and `Conway` type synonyms
