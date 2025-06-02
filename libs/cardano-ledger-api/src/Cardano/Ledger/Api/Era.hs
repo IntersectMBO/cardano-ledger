@@ -34,6 +34,9 @@ module Cardano.Ledger.Api.Era (
   Conway,
   ConwayEra,
 
+  -- ** Dijkstra
+  DijkstraEra,
+
   -- ** Latest Known
   LatestKnownEra,
 
@@ -72,6 +75,7 @@ import Cardano.Ledger.Core (
   eraProtVerHigh,
   eraProtVerLow,
  )
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 

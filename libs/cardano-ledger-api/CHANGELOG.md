@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Expose `Dijkstra` Era
 * Moved `Annotator` instances to `testlib` for all respective packages
 * Rename `queryAccountState` to `queryChainAccountState`
 
