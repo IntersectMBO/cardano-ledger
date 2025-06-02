@@ -8,6 +8,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Default (def)
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
@@ -21,6 +22,8 @@ import Test.Cardano.Ledger.Api.Upgrade (BinaryUpgradeOpts (..))
 import qualified Test.Cardano.Ledger.Api.Upgrade as Upgrade
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec, modifyImpInitProtVer)
@@ -51,6 +54,7 @@ apiSpec =
       Upgrade.spec @AlonzoEra (BinaryUpgradeOpts False False)
       Upgrade.spec @BabbageEra def
       Upgrade.spec @ConwayEra def
+      Upgrade.spec @DijkstraEra def
 
 main :: IO ()
 main = ledgerTestMain apiSpec
