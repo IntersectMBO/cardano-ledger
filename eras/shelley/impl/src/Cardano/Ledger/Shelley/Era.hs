@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -24,8 +25,10 @@ module Cardano.Ledger.Shelley.Era (
   ShelleyUPEC,
   ShelleyUTXO,
   ShelleyUTXOW,
+  hardforkAggregatedRewards,
 ) where
 
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
 import Cardano.Ledger.Internal.Era (ShelleyEra)
@@ -117,3 +120,6 @@ type instance EraRule "UPEC" ShelleyEra = ShelleyUPEC ShelleyEra
 type instance EraRule "UTXO" ShelleyEra = ShelleyUTXO ShelleyEra
 
 type instance EraRule "UTXOW" ShelleyEra = ShelleyUTXOW ShelleyEra
+
+hardforkAggregatedRewards :: ProtVer -> Bool
+hardforkAggregatedRewards pv = pvMajor pv > natVersion @2

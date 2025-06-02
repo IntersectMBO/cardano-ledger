@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+- Move `HardForks.aggregateRewards` to `Shelley.Era.hardforkAggregateRewards`.
 - Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
   - This tests if the protocol version is greater than 10.
 * Remove `ShelleyTxRaw`, `MkShelleyTx`, `segWitTx`, `unsafeConstructTxWithBytes`
