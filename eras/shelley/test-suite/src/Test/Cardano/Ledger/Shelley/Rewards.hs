@@ -57,6 +57,7 @@ import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Shelley.API (NonMyopic)
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Era (hardforkAggregatedRewards)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -430,7 +431,7 @@ rewardOnePool
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
       f =
-        if HardForks.aggregatedRewards pv
+        if hardforkAggregatedRewards pv
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
@@ -507,7 +508,7 @@ rewardOld
         pure (hk, rewardMap, ls)
       pv = pp ^. ppProtocolVersionL
       f =
-        if HardForks.aggregatedRewards pv
+        if hardforkAggregatedRewards pv
           then Map.unionsWith (<>)
           else Map.unions
       rewards' = f $ mapMaybe (\(_, x, _) -> x) results

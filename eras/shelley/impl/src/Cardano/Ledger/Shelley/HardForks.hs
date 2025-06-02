@@ -3,7 +3,6 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.HardForks (
-  aggregatedRewards,
   allowMIRTransfer,
   bootstrapPhase,
   validatePoolRewardAccountNetID,
@@ -14,11 +13,6 @@ module Cardano.Ledger.Shelley.HardForks (
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-
-aggregatedRewards ::
-  ProtVer ->
-  Bool
-aggregatedRewards pv = pvMajor pv > natVersion @2
 
 -- | Starting with protocol version 5, the MIR certs will also be
 -- able to transfer funds between the reserves and the treasury.
