@@ -16,6 +16,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
+  Timelock,
   evalTimelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -45,6 +46,7 @@ instance ShelleyEraImp AllegraEra where
 impAllegraSatisfyNativeScript ::
   ( AllegraEraScript era
   , AllegraEraTxBody era
+  , NativeScript era ~ Timelock era
   ) =>
   Set.Set (KeyHash 'Witness) ->
   TxBody era ->
@@ -79,4 +81,5 @@ impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
       lock@(RequireTimeExpire _)
         | evalTimelock mempty vi lock -> Just mempty
         | otherwise -> Nothing
+      _ -> error "Impossible: All NativeScripts should have been accounted for"
   pure $ satisfyScript script

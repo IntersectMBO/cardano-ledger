@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Added `COMPLETE` pragma for `NativeScript`
 * Add default implementation for `tcConwayGenesisL`
 * Remove `tcDelegsL` and `tcInitialDRepsL`
 * Export `registerDRepsThenDelegs`

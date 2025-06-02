@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -14,10 +15,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -68,6 +73,7 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   MemoBytes (Memo),
@@ -294,7 +300,48 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
   , RequireAnyOf
   , RequireMOf
   , RequireTimeExpire
-  , RequireTimeStart
+  , RequireTimeStart ::
+    AllegraEra
+  #-}
+
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart ::
+    MaryEra
+  #-}
+
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart ::
+    AlonzoEra
+  #-}
+
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart ::
+    BabbageEra
+  #-}
+
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart ::
+    ConwayEra
   #-}
 
 mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
@@ -353,7 +400,7 @@ ltePosInfty SNothing _ = False -- ∞ > j
 ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
-  AllegraEraScript era =>
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
   Set.Set (KeyHash 'Witness) ->
   ValidityInterval ->
   NativeScript era ->
@@ -372,6 +419,7 @@ evalTimelock vhks (ValidityInterval txStart txExp) = go
       RequireAllOf xs -> all go xs
       RequireAnyOf xs -> any go xs
       RequireMOf m xs -> isValidMOf m xs
+      _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 -- =========================================================
 -- Operations on Timelock scripts
@@ -398,6 +446,7 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ F.foldl' accum ")" 
   where
     accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
+showTimelock _ = error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.

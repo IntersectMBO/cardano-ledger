@@ -225,6 +225,7 @@ instance
             pure . Agda.RequireMOf (toInteger m) $ toList tls
           RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep slot
           RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep slot
+          _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 instance
   ( AlonzoEraScript era
