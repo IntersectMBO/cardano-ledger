@@ -539,7 +539,8 @@ transTxBodyWithdrawals txBody =
 -- omitting the deposit in these cases. It has been confirmed that this buggy behavior for protocol
 -- version 9 has been exercised on Mainnet, therefore this conditional translation can never be
 -- removed for Conway era (#4863)
-transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
+transTxCert ::
+  (ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) => ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister
@@ -575,6 +576,7 @@ transTxCert pv = \case
     PV3.TxCertUnRegDRep (transDRepCred drepCred) (transCoinToLovelace refund)
   UpdateDRepTxCert drepCred _anchor ->
     PV3.TxCertUpdateDRep (transDRepCred drepCred)
+  _ -> error "Impossible: All TxCerts should have been accounted for"
 
 transDRepCred :: Credential 'DRepRole -> PV3.DRepCredential
 transDRepCred = PV3.DRepCredential . transCred
