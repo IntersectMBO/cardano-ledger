@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+- Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
+- Change the type of `authorizedELectedCommitteeCredentials` to
+  `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091
 * Deprecated `toConwayTransitionConfigPairs`
 * Fixed `FromJSON` instance for `TransitionConfig ConwayEra`
 * Added `COMPLETE` pragma for `NativeScript ConwayEra`
@@ -52,6 +55,7 @@
 
 ### `testlib`
 
+- Rename `electCommittee` to `submitCommitteeElection` #5091
 * Fixed `Arbitrary` instance for `ConwayGenesis`
 * Added `Arbitrary` instance for `TransitionConfig ConwayEra`
 * Added `ToExpr` instances for:
