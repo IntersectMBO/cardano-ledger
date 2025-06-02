@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,6 +21,7 @@
 module Cardano.Ledger.Shelley.Tx (
   -- * Transaction
   ShelleyTx (..),
+  Tx (..),
   bodyShelleyTxL,
   witsShelleyTxL,
   auxDataShelleyTxL,
@@ -167,21 +169,25 @@ instance
         <*! From
         <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
+instance DecCBOR (Annotator (Tx ShelleyEra)) where
+  decCBOR = decode $ Ann (RecD MkShelleyTx) <*! From
+
 instance EraTx ShelleyEra where
-  type Tx ShelleyEra = ShelleyTx ShelleyEra
+  newtype Tx ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx ShelleyEra}
+    deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
 
-  mkBasicTx = mkBasicShelleyTx
+  mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 
-  bodyTxL = bodyShelleyTxL
+  bodyTxL = shelleyTxL . bodyShelleyTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsShelleyTxL
+  witsTxL = shelleyTxL . witsShelleyTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataShelleyTxL
+  auxDataTxL = shelleyTxL . auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeShelleyTxF
+  sizeTxF = shelleyTxL . sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateMultiSig
@@ -193,8 +199,8 @@ instance EraTx ShelleyEra where
     error
       "Calling this function will cause a compilation error, since there is no Tx instance for Byron"
 
-instance (Tx era ~ ShelleyTx era, EraTx era) => EqRaw (ShelleyTx era) where
-  eqRaw = shelleyEqTxRaw
+shelleyTxL :: Lens' (Tx ShelleyEra) (ShelleyTx ShelleyEra)
+shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})
 
 shelleyEqTxRaw :: EraTx era => Tx era -> Tx era -> Bool
 shelleyEqTxRaw tx1 tx2 =

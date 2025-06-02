@@ -229,7 +229,7 @@ specTxUpgrade = do
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
       Right (curTx :: Tx era)
         | Right upgradedTx <- upgradeTx prevTx ->
-            expectRawEqual "Tx" curTx upgradedTx
+            curTx `shouldBeExpr` upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
   prop "upgradeTx is preserved through serialization" $ \prevTx -> do
     case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTx of
@@ -242,7 +242,7 @@ specTxUpgrade = do
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
       Right (curTx :: Tx era)
         | Right upgradedTx <- upgradeTx prevTx ->
-            expectRawEqual "Tx" curTx upgradedTx
+            curTx `shouldBeExpr` upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
 
 specUpgrade ::
