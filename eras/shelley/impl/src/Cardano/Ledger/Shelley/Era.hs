@@ -30,6 +30,8 @@ module Cardano.Ledger.Shelley.Era (
   ShelleyUTXO,
   ShelleyUTXOW,
   hardforkAggregatedRewards,
+  hardforkAllowMIRTransfer,
+  hardforkValidatePoolRewardAccountNetID,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -127,3 +129,23 @@ type instance EraRule "UTXOW" ShelleyEra = ShelleyUTXOW ShelleyEra
 
 hardforkAggregatedRewards :: ProtVer -> Bool
 hardforkAggregatedRewards pv = pvMajor pv > natVersion @2
+
+-- | Starting with protocol version 5, the MIR certs will also be
+-- able to transfer funds between the reserves and the treasury.
+-- Additionally, the semantics for the pervious functionality will
+-- change a bit. Before version 5 redundancies in the instantaneous
+-- reward mapping were handled by overriding. Now they are handled
+-- by adding the values and allowing for negatives updates, provided
+-- the sum for each key remains positive.
+hardforkAllowMIRTransfer ::
+  ProtVer ->
+  Bool
+hardforkAllowMIRTransfer pv = pvMajor pv > natVersion @4
+
+-- | Starting with protocol version 5, we will validate the network ID
+-- for the reward account listed in stake pool registration certificates.
+hardforkValidatePoolRewardAccountNetID ::
+  ProtVer ->
+  Bool
+hardforkValidatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
+
