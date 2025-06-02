@@ -9,7 +9,7 @@
 --
 -- Let's start by defining the GHC extensions and imports.
 --
--- >>> :set -XScopedTypeVariables -Wno-unrecognised-warning-flags -Wno-x-unsafe-internal
+-- >>> :set -XScopedTypeVariables
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
 -- >>> import Cardano.Ledger.Api.Era (BabbageEra)

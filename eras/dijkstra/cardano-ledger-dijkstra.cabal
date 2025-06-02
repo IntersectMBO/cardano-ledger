@@ -78,7 +78,7 @@ library
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-conway,
-    cardano-ledger-core,
+    cardano-ledger-core:{cardano-ledger-core, internal},
     cardano-ledger-mary,
     cardano-ledger-shelley,
     cardano-strict-containers,

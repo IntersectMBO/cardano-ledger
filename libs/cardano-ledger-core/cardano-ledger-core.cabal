@@ -149,6 +149,9 @@ library internal
   exposed-modules:
     Cardano.Ledger.Internal.Era
 
+  other-modules:
+    Cardano.Ledger.Internal.Definition.Era
+
   visibility: public
   hs-source-dirs: internal
   default-language: Haskell2010
