@@ -1,13 +1,18 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Tx () where
+module Cardano.Ledger.Dijkstra.Tx (Tx (..)) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (..),
+  alonzoTxEqRaw,
   auxDataAlonzoTxL,
   bodyAlonzoTxL,
   isValidAlonzoTxL,
@@ -16,7 +21,8 @@ import Cardano.Ledger.Alonzo.Tx (
   witsAlonzoTxL,
  )
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..), hashAlonzoTxSeq)
-import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), getConwayMinFeeTx)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core (
   EraSegWits (..),
   EraTx (..),
@@ -25,22 +31,29 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
+import NoThunks.Class (NoThunks)
 
 instance EraTx DijkstraEra where
-  type Tx DijkstraEra = AlonzoTx DijkstraEra
+  newtype Tx DijkstraEra = MkDijkstraTx {unDijkstraTx :: AlonzoTx DijkstraEra}
+    deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkDijkstraTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = dijkstraTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = dijkstraTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = dijkstraTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = dijkstraTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateTimelock
@@ -48,8 +61,14 @@ instance EraTx DijkstraEra where
 
   getMinFeeTx = getConwayMinFeeTx
 
+instance EqRaw (Tx DijkstraEra) where
+  eqRaw = alonzoTxEqRaw
+
+dijkstraTxL :: Lens' (Tx DijkstraEra) (AlonzoTx DijkstraEra)
+dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
+
 instance AlonzoEraTx DijkstraEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = dijkstraTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
 instance EraSegWits DijkstraEra where
@@ -58,3 +77,6 @@ instance EraSegWits DijkstraEra where
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
   numSegComponents = 4
+
+instance DecCBOR (Annotator (Tx DijkstraEra)) where
+  decCBOR = fmap MkDijkstraTx <$> decCBOR

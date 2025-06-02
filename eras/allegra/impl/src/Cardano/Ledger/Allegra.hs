@@ -8,6 +8,7 @@
 module Cardano.Ledger.Allegra (
   Allegra,
   AllegraEra,
+  Tx (..),
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -17,7 +18,7 @@ import Cardano.Ledger.Allegra.Scripts ()
 import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Allegra.Transition ()
 import Cardano.Ledger.Allegra.Translation ()
-import Cardano.Ledger.Allegra.Tx ()
+import Cardano.Ledger.Allegra.Tx (Tx (..))
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Shelley.API

@@ -20,7 +20,7 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   EraPParams (..),
-  EraTx,
+  EraTx (..),
   EraTxAuxData (..),
   EraTxBody (..),
   EraTxOut (..),
@@ -92,6 +92,7 @@ instance
 
 instance
   ( EraTx era
+  , ToExpr (Tx era)
   , ToExpr (TxOut era)
   , ToExpr (TxBody era)
   , ToExpr (TxWits era)

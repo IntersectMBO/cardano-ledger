@@ -208,6 +208,7 @@ specTxUpgrade ::
   , HasCallStack
   , ToExpr (Tx era)
   , DecCBOR (Tx era)
+  , EqRaw (Tx era)
   ) =>
   Spec
 specTxUpgrade = do
@@ -259,6 +260,7 @@ spec ::
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)
+  , EqRaw (Tx era)
   ) =>
   BinaryUpgradeOpts ->
   Spec

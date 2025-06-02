@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -37,7 +38,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -880,3 +881,5 @@ instance Era era => Arbitrary (ConwayCertState era) where
 
 instance Arbitrary (TransitionConfig ConwayEra) where
   arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary (Tx ConwayEra)

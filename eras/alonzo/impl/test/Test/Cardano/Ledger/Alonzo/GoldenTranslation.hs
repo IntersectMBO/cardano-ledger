@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Paths_cardano_ledger_alonzo (getDataFileName)
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Common
 import Test.HUnit (Assertion)

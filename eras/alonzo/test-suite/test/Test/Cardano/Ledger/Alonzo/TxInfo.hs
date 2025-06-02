@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Alonzo.TxInfo (
 ) where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
@@ -92,7 +92,7 @@ txb i o =
     SNothing -- network ID
 
 txEx :: TxIn -> TxOut AlonzoEra -> Tx AlonzoEra
-txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
+txEx i o = MkAlonzoTx $ AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
 silentlyIgnore :: Tx AlonzoEra -> Assertion
 silentlyIgnore tx =

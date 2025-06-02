@@ -12,21 +12,23 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
   commonTests,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (LedgerState)
+import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (LedgerEnv)
+import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv)
 import Cardano.Ledger.Shelley.State
-import Control.Monad.Trans.Reader (ReaderT)
+import Cardano.Protocol.TPraos.API (GetLedgerView)
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Control.State.Transition
-import Data.Functor.Identity (Identity)
+import Data.Sequence (Seq)
 import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (
   testGroupByronTranslation,
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (
@@ -45,28 +47,32 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import qualified Test.Cardano.Ledger.Shelley.ShelleyTranslation as ShelleyTranslation (
   testGroupShelleyTranslation,
  )
-import Test.Cardano.Ledger.Shelley.Utils (ChainProperty)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
 commonTests ::
-  forall era ledger.
-  ( EraGen era
-  , EraStake era
-  , InstantStake era ~ ShelleyInstantStake era
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
-  , QC.HasTrace ledger (GenEnv MockCrypto era)
-  , Embed (EraRule "DELEGS" era) ledger
-  , Embed (EraRule "UTXOW" era) ledger
-  , Environment ledger ~ LedgerEnv era
-  , QC.BaseEnv ledger ~ Globals
-  , BaseM ledger ~ ReaderT Globals Identity
-  , State ledger ~ LedgerState era
-  , Signal ledger ~ Tx era
+  forall era.
+  ( ShelleyEraImp era
+  , EraGen era
+  , ApplyBlock era
+  , GetLedgerView era
+  , Embed (EraRule "BBODY" era) (CHAIN era)
+  , Embed (EraRule "TICK" era) (CHAIN era)
+  , Embed (EraRule "TICKN" era) (CHAIN era)
+  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv MockCrypto era)
+  , State (EraRule "TICKN" era) ~ TicknState
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "TICKN" era) ~ TicknEnv
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "TICKN" era) ~ Bool
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , ProtVerAtMost era 6
   , GovState era ~ ShelleyGovState era
+  , InstantStake era ~ ShelleyInstantStake era
+  , QC.BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , QC.HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   ) =>
   [TestTree]
 commonTests =
@@ -77,13 +83,13 @@ commonTests =
   , PoolReap.tests @era
   , testGroup
       "CHAIN level Properties"
-      [ AdaPreservation.tests @era @ledger (maxSuccess stdArgs)
-      , ColllisionFree.tests @era @ledger
-      , IncrementalStake.incrStakeComputationTest @era @ledger
+      [ AdaPreservation.tests @era (maxSuccess stdArgs)
+      , ColllisionFree.tests @era
+      , IncrementalStake.incrStakeComputationTest @era
       ]
   , testGroup
       "Trace generators properties"
-      [ ClassifyTraces.onlyValidLedgerSignalsAreGenerated @era @ledger
+      [ ClassifyTraces.onlyValidLedgerSignalsAreGenerated @era @(EraRule "LEDGER" era)
       , ClassifyTraces.onlyValidChainSignalsAreGenerated @era
       ]
   , ByronTranslation.testGroupByronTranslation

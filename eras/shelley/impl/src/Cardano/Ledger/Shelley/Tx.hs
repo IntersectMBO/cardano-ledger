@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,13 +21,14 @@
 module Cardano.Ledger.Shelley.Tx (
   -- * Transaction
   ShelleyTx (..),
+  Tx (..),
   bodyShelleyTxL,
   witsShelleyTxL,
   auxDataShelleyTxL,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
-  shelleyEqTxRaw,
   sizeShelleyTxF,
+  shelleyTxEqRaw,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -44,9 +46,7 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (
-  EqRaw (..),
- )
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Functor.Classes (Eq1 (liftEq))
+import Data.Functor.Classes (Eq1 (..))
 import Data.Maybe.Strict (
   StrictMaybe (..),
   strictMaybeToMaybe,
@@ -167,21 +167,26 @@ instance
         <*! From
         <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
+instance DecCBOR (Annotator (Tx ShelleyEra)) where
+  decCBOR = fmap MkShelleyTx <$> decCBOR
+
 instance EraTx ShelleyEra where
-  type Tx ShelleyEra = ShelleyTx ShelleyEra
+  newtype Tx ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx ShelleyEra}
+    deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicShelleyTx
+  mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 
-  bodyTxL = bodyShelleyTxL
+  bodyTxL = shelleyTxL . bodyShelleyTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsShelleyTxL
+  witsTxL = shelleyTxL . witsShelleyTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataShelleyTxL
+  auxDataTxL = shelleyTxL . auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeShelleyTxF
+  sizeTxF = shelleyTxL . sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateMultiSig
@@ -189,17 +194,20 @@ instance EraTx ShelleyEra where
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
-instance (Tx era ~ ShelleyTx era, EraTx era) => EqRaw (ShelleyTx era) where
-  eqRaw = shelleyEqTxRaw
-
-shelleyEqTxRaw :: EraTx era => Tx era -> Tx era -> Bool
-shelleyEqTxRaw tx1 tx2 =
+shelleyTxEqRaw :: EraTx era => Tx era -> Tx era -> Bool
+shelleyTxEqRaw tx1 tx2 =
   eqRaw (tx1 ^. bodyTxL) (tx2 ^. bodyTxL)
     && eqRaw (tx1 ^. witsTxL) (tx2 ^. witsTxL)
     && liftEq -- TODO: Implement Eq1 instance for StrictMaybe
       eqRaw
       (strictMaybeToMaybe (tx1 ^. auxDataTxL))
       (strictMaybeToMaybe (tx2 ^. auxDataTxL))
+
+instance EqRaw (Tx ShelleyEra) where
+  eqRaw = shelleyTxEqRaw
+
+shelleyTxL :: Lens' (Tx ShelleyEra) (ShelleyTx ShelleyEra)
+shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})
 
 --------------------------------------------------------------------------------
 -- Serialisation

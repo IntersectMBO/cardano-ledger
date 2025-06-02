@@ -34,6 +34,7 @@ import Cardano.Ledger.PoolParams (
   ppRewardAccount,
   ppVrf,
  )
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
   ShelleyLEDGER,
@@ -52,7 +53,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (..),
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), Tx (..))
 import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -89,7 +90,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (
   ASC (ASC),
   StakeProportion (StakeProportion),
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
@@ -243,15 +244,15 @@ testCheckLeaderVal =
 
 testLEDGER ::
   HasCallStack =>
-  LedgerState C ->
-  ShelleyTx C ->
-  LedgerEnv C ->
-  Either (NonEmpty (PredicateFailure (ShelleyLEDGER C))) (LedgerState C) ->
+  LedgerState ShelleyEra ->
+  Tx ShelleyEra ->
+  LedgerEnv ShelleyEra ->
+  Either (NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra))) (LedgerState ShelleyEra) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(ShelleyLEDGER C) runShelleyBase env $ pure initSt .- tx .->> expectedSt
+  checkTrace @(ShelleyLEDGER ShelleyEra) runShelleyBase env $ pure initSt .- tx .->> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(ShelleyLEDGER C) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(ShelleyLEDGER ShelleyEra) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
@@ -263,12 +264,12 @@ data AliceToBob = AliceToBob
   , fee :: Coin
   , deposits :: Coin
   , refunds :: Coin
-  , certs :: [TxCert C]
+  , certs :: [TxCert ShelleyEra]
   , ttl :: SlotNo
   , signers :: [KeyPair 'Witness]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> ShelleyTx C
+aliceGivesBobLovelace :: AliceToBob -> Tx ShelleyEra
 aliceGivesBobLovelace
   AliceToBob
     { input
@@ -279,7 +280,7 @@ aliceGivesBobLovelace
     , certs
     , ttl
     , signers
-    } = ShelleyTx txbody mempty {addrWits = awits} SNothing
+    } = MkShelleyTx $ ShelleyTx txbody mempty {addrWits = awits} SNothing
     where
       aliceCoin = aliceInitCoin <+> refunds <-> (toBob <+> fee <+> deposits)
       txbody =
@@ -298,7 +299,7 @@ aliceGivesBobLovelace
           SNothing
       awits = mkWitnessesVKey (hashAnnotated txbody) signers
 
-utxoState :: UTxOState C
+utxoState :: UTxOState ShelleyEra
 utxoState =
   UTxOState
     ( genesisCoins
@@ -313,25 +314,25 @@ utxoState =
     mempty
     mempty
 
-dpState :: CertState C
+dpState :: CertState ShelleyEra
 dpState = def
 
-ledgerState :: LedgerState C
+ledgerState :: LedgerState ShelleyEra
 ledgerState = LedgerState utxoState dpState
 
-addReward :: CertState C -> Credential 'Staking -> Coin -> CertState C
+addReward :: CertState ShelleyEra -> Credential 'Staking -> Coin -> CertState ShelleyEra
 addReward dp ra c = dp & certDStateL . dsUnifiedL .~ rewards'
   where
     ds = dp ^. certDStateL
     rewards' = UM.insert ra (UM.RDPair (UM.compactCoinOrError c) (UM.CompactCoin 2)) (rewards ds)
 
 -- Any key deposit works in this test ^
-ledgerEnv :: LedgerEnv C
+ledgerEnv :: LedgerEnv ShelleyEra
 ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
-  NonEmpty (PredicateFailure (ShelleyLEDGER C)) ->
-  ShelleyTx C ->
+  NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra)) ->
+  Tx ShelleyEra ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER ledgerState tx ledgerEnv (Left errs)
@@ -370,13 +371,13 @@ testWitnessNotIncluded =
           (SlotNo 100)
           SNothing
           SNothing
-      tx = ShelleyTx @C txbody mempty SNothing
+      tx = ShelleyTx @ShelleyEra txbody mempty SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
         ]
-        tx
+        (MkShelleyTx tx)
 
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
@@ -391,7 +392,7 @@ testSpendNotOwnedUTxO =
           SNothing
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated txbody) alicePay
-      tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      tx = MkShelleyTx $ ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
@@ -422,7 +423,7 @@ testWitnessWrongUTxO =
           SNothing
           SNothing
       aliceWit = mkWitnessVKey (hashAnnotated tx2body) alicePay
-      tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      tx = ShelleyTx @ShelleyEra txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
@@ -431,7 +432,7 @@ testWitnessWrongUTxO =
         , UtxowFailure $
             MissingVKeyWitnessesUTXOW txwits
         ]
-        tx
+        (MkShelleyTx tx)
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
@@ -451,7 +452,7 @@ testEmptyInputSet =
       dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
-        tx
+        (MkShelleyTx tx)
         ledgerEnv
         (Left [UtxowFailure (UtxoFailure InputSetEmptyUTxO)])
 
@@ -508,15 +509,15 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {stbTTL = SlotNo 2}
-      txwits :: Cardano.Ledger.Shelley.TxWits.ShelleyTxWits C
+      txwits :: Cardano.Ledger.Shelley.TxWits.ShelleyTxWits ShelleyEra
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb') [alicePay]}
-      tx = ShelleyTx @C txb txwits SNothing
+      tx = ShelleyTx @ShelleyEra txb txwits SNothing
       errs =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay]
         ]
-   in testLEDGER ledgerState tx ledgerEnv (Left errs)
+   in testLEDGER ledgerState (MkShelleyTx tx) ledgerEnv (Left errs)
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -534,15 +535,15 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      txwits :: ShelleyTxWits C
+      txwits :: ShelleyTxWits ShelleyEra
       txwits = mempty {addrWits = Set.singleton $ mkWitnessVKey (hashAnnotated txb) alicePay}
-      tx = ShelleyTx @C txb txwits SNothing
+      tx = ShelleyTx @ShelleyEra txb txwits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
       dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet bobStake) (Coin 10)
-   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') (MkShelleyTx tx) ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -569,9 +570,9 @@ testWithdrawalWrongAmt =
           }
       rAccount = mkVKeyRewardAccount Testnet bobStake
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
-      tx = ShelleyTx @C txb txwits SNothing
+      tx = ShelleyTx @ShelleyEra txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAccount (Coin 11)))]
-   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') (MkShelleyTx tx) ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
@@ -622,7 +623,7 @@ testPoolCostTooSmall =
         DelplFailure $
           PoolFailure $
             StakePoolCostTooLowPOOL $
-              Mismatch (ppCost alicePoolParamsSmallCost) (pp @C ^. ppMinPoolCostL)
+              Mismatch (ppCost alicePoolParamsSmallCost) (pp @ShelleyEra ^. ppMinPoolCostL)
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -655,10 +656,10 @@ testProducedOverMaxWord64 =
           SNothing
           SNothing
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txbody) [alicePay]}
-      tx = ShelleyTx @C txbody txwits SNothing
+      tx = ShelleyTx @ShelleyEra txbody txwits SNothing
       st =
         runShelleyBase $
-          applySTSTest @(ShelleyLEDGER C) (TRC (ledgerEnv, ledgerState, tx))
+          applySTSTest @(ShelleyLEDGER ShelleyEra) (TRC (ledgerEnv, ledgerState, MkShelleyTx tx))
    in -- We test that the predicate failure does not return bottom
       pure $! rnf st
 

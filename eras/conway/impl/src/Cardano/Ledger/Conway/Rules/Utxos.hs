@@ -217,7 +217,7 @@ instance
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
   type Environment (ConwayUTXOS era) = UtxoEnv era
   type State (ConwayUTXOS era) = UTxOState era
-  type Signal (ConwayUTXOS era) = AlonzoTx era
+  type Signal (ConwayUTXOS era) = Tx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
   type Event (ConwayUTXOS era) = ConwayUtxosEvent era
 

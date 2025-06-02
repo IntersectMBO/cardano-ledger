@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -81,7 +82,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
@@ -1533,6 +1534,13 @@ instance
   , IsNormalType (TxAuxData era)
   ) =>
   HasSpec (ShelleyTx era)
+
+instance HasSimpleRep (Tx ConwayEra) where
+  type TheSop (Tx ConwayEra) = TheSop (AlonzoTx ConwayEra)
+  toSimpleRep = toSimpleRep . unConwayTx
+  fromSimpleRep = MkConwayTx . fromSimpleRep
+
+instance HasSpec (Tx ConwayEra)
 
 instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyTx era) where
   type TheSop (ShelleyTx era) = '["ShelleyTx" ::: ShelleyTxTypes era]

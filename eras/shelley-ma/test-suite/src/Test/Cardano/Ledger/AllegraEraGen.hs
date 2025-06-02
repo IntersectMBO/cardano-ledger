@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.AllegraEraGen (
   genValidityInterval,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
@@ -94,7 +94,7 @@ instance EraGen AllegraEra where
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
-  constructTx = ShelleyTx
+  constructTx x y z = MkAllegraTx $ ShelleyTx x y z
 
 genTxBody ::
   SlotNo ->

@@ -171,7 +171,6 @@ import Cardano.Ledger.Conway.Rules (
   withdrawalCanWithdraw,
  )
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
@@ -1663,13 +1662,12 @@ expectMembers expKhs = do
 showConwayTxBalance ::
   ( EraUTxO era
   , ConwayEraTxBody era
-  , Tx era ~ AlonzoTx era
   , ConwayEraCertState era
   ) =>
   PParams era ->
   CertState era ->
   UTxO era ->
-  AlonzoTx era ->
+  Tx era ->
   String
 showConwayTxBalance pp certState utxo tx =
   unlines
@@ -1702,10 +1700,9 @@ logConwayTxBalance ::
   ( EraUTxO era
   , EraGov era
   , ConwayEraTxBody era
-  , Tx era ~ AlonzoTx era
   , ConwayEraCertState era
   ) =>
-  AlonzoTx era ->
+  Tx era ->
   ImpTestM era ()
 logConwayTxBalance tx = do
   pp <- getsPParams id

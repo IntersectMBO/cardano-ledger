@@ -48,7 +48,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
@@ -157,8 +156,11 @@ makeTx ::
   [KeyPair 'Witness] ->
   Map ScriptHash (MultiSig ShelleyEra) ->
   Maybe (ShelleyTxAuxData ShelleyEra) ->
-  ShelleyTx ShelleyEra
-makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
+  Tx ShelleyEra
+makeTx txBody keyPairs msigs auxData =
+  mkBasicTx txBody
+    & witsTxL .~ txWits
+    & auxDataTxL .~ maybeToStrictMaybe auxData
   where
     txWits :: ShelleyTxWits ShelleyEra
     txWits =

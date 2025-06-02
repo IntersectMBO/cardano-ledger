@@ -20,10 +20,9 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxWits hiding (mapTraverseableDecoderA)
@@ -32,6 +31,7 @@ import Data.IntMap
 import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.Annotator
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -52,7 +52,6 @@ instance
     auxData <-
       fmap (fmap runIdentity)
         <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap)
-
     let witsLength = length wits
     unless
       (bodiesLength == witsLength)
@@ -63,13 +62,20 @@ instance
             <> show witsLength
             <> ")"
       )
-    let txs =
-          StrictSeq.forceToStrict $
-            Seq.zipWith3 ShelleyTx bodies wits (maybeToStrictMaybe <$> auxData)
-        hash = hashShelleySegWits bodiesBytes witsBytes auxDataBytes
+    let
+      mkTx body wit aux =
+        mkBasicTx body
+          & witsTxL .~ wit
+          & auxDataTxL .~ aux
+      txs =
+        StrictSeq.forceToStrict $
+          Seq.zipWith3 mkTx bodies wits (maybeToStrictMaybe <$> auxData)
+      hash = hashShelleySegWits bodiesBytes witsBytes auxDataBytes
     pure $ TxSeq' txs hash bodiesBytes witsBytes auxDataBytes
 
 deriving newtype instance DecCBOR (TxBody ShelleyEra)
+
+deriving newtype instance DecCBOR (Tx ShelleyEra)
 
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxData era)
 

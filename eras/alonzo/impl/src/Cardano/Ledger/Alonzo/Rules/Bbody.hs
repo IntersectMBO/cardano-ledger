@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
+import Cardano.Ledger.Alonzo.Tx (totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
@@ -185,7 +185,6 @@ alonzoBbodyTransition ::
   , EraSegWits era
   , AlonzoEraTxWits era
   , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
@@ -266,11 +265,9 @@ instance
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
   , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
   , EraSegWits era
   , AlonzoEraPParams era
   ) =>

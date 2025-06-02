@@ -46,7 +46,6 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateTooManyCollateralInputs,
   validateWrongNetworkInTxBody,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
@@ -354,14 +353,13 @@ utxoTransition ::
   ( EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ AlonzoTx era
+  , Signal (EraRule "UTXO" era) ~ Tx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
@@ -455,7 +453,6 @@ instance
   , EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
   , EraRule "UTXO" era ~ BabbageUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -472,7 +469,7 @@ instance
   STS (BabbageUTXO era)
   where
   type State (BabbageUTXO era) = UTxOState era
-  type Signal (BabbageUTXO era) = AlonzoTx era
+  type Signal (BabbageUTXO era) = Tx era
   type Environment (BabbageUTXO era) = UtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
   type PredicateFailure (BabbageUTXO era) = BabbageUtxoPredFailure era

@@ -43,7 +43,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
@@ -122,7 +122,6 @@ import Test.Cardano.Ledger.Conformance (
   askCtx,
   hashToInteger,
   showOpaqueErrorString,
-  withCtx,
  )
 import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
@@ -654,31 +653,6 @@ instance SpecTranslate ctx IsValid where
   type SpecRep IsValid = Bool
 
   toSpecRep (IsValid b) = pure b
-
-instance
-  ( SpecTranslate ctx (TxWits era)
-  , SpecTranslate ctx (TxAuxData era)
-  , SpecTranslate ConwayTxBodyTransContext (TxBody era)
-  , SpecRep (TxWits era) ~ Agda.TxWitnesses
-  , SpecRep (TxAuxData era) ~ Agda.AuxiliaryData
-  , SpecRep (TxBody era) ~ Agda.TxBody
-  , Tx era ~ AlonzoTx era
-  , EraTx era
-  , BabbageEraTxBody era
-  , AlonzoEraTx era
-  ) =>
-  SpecTranslate ctx (AlonzoTx era)
-  where
-  type SpecRep (AlonzoTx era) = Agda.Tx
-
-  toSpecRep tx =
-    Agda.MkTx
-      <$> withCtx
-        (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
-        (toSpecRep (tx ^. bodyTxL))
-      <*> toSpecRep (tx ^. witsTxL)
-      <*> toSpecRep (tx ^. isValidTxL)
-      <*> toSpecRep (tx ^. auxDataTxL)
 
 instance
   ( EraPParams era

@@ -15,9 +15,7 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val
@@ -27,15 +25,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.TreeDiff
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Cert (
-  delegateeSpec,
-  shelleyTxCertSpec,
- )
-import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
 
 -- =================================
@@ -113,27 +104,3 @@ getDepositRefund pp certState certs =
 
 putPretty :: ToExpr t => [Char] -> t -> IO ()
 putPretty nm x = putStrLn (nm ++ "\n" ++ show (prettyE x))
-
-testBody :: IO ()
-testBody = do
-  univ <- generate $ genWitUniv @AllegraEra 5
-  wdrls <- generate $ genFromSpec (constrained $ \x -> witness univ x)
-  delegatees <- generate $ genFromSpec (delegateeSpec univ)
-  certsEnv <- generate $ genFromSpec @(CertsEnv AllegraEra) certsEnvSpec
-  certState <-
-    generate $
-      genFromSpec @(CertState AllegraEra)
-        (certStateSpec @AllegraEra univ delegatees wdrls)
-
-  cert <-
-    generate $
-      genFromSpec @(TxCert AllegraEra) $
-        (shelleyTxCertSpec @AllegraEra univ (projectEnv certsEnv) certState)
-          <> (witShelleyTxCert univ)
-  -- The problem with this is that the CertState does not have any
-  -- thing from the universe, so any Cert that requires a member_ of someting
-  -- in the CertState, will never succeed,  because the Hashes are disjoint
-  -- between the CertState and the Universe. So those certs with member_
-  -- always fail, so the only ones that are ever generated are RegCert and RegPool
-  print univ
-  putStrLn (show (prettyE cert))

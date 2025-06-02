@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
@@ -155,7 +155,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -229,7 +229,7 @@ blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 20)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo 20)
     (BlockNo 2)
     nonce0
@@ -301,7 +301,7 @@ blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 80)
-    [txEx3]
+    [MkShelleyTx txEx3]
     (SlotNo 80)
     (BlockNo 3)
     nonce0
