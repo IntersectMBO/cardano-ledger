@@ -8,7 +8,6 @@ module Main where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
@@ -32,6 +31,7 @@ import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
+import Test.Cardano.Ledger.Mary.ImpTest ()
 
 type instance EraRule "TICKN" MaryEra = TPraos.TICKN
 
@@ -65,7 +65,7 @@ allegraTests =
           (TQC.QuickCheckMaxRatio 50)
           (ClassifyTraces.relevantCasesAreCovered @AllegraEra (maxSuccess stdArgs))
       )
-    , AdaPreservation.tests @AllegraEra @(ShelleyLEDGER AllegraEra) (maxSuccess stdArgs)
+    , AdaPreservation.tests @AllegraEra (maxSuccess stdArgs)
     , ClassifyTraces.onlyValidChainSignalsAreGenerated @AllegraEra
     , WitVKeys.tests
     , testScriptPostTranslation
@@ -87,12 +87,12 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        ( Shelley.commonTests @AllegraEra @(ShelleyLEDGER AllegraEra)
+        ( Shelley.commonTests @AllegraEra
             ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AllegraEra)]
         )
     , testGroup
         "Mary Ledger - nightly"
-        ( Shelley.commonTests @MaryEra @(ShelleyLEDGER MaryEra)
+        ( Shelley.commonTests @MaryEra
             ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy MaryEra)]
         )
     ]

@@ -9,8 +9,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -42,6 +40,7 @@ module Cardano.Ledger.Alonzo.Tx (
   ScriptIntegrityHash,
   -- Figure 3
   AlonzoTx (AlonzoTx, atBody, atWits, atIsValid, atAuxData),
+  Tx (..),
   AlonzoEraTx (..),
   mkBasicAlonzoTx,
   bodyAlonzoTxL,
@@ -61,7 +60,6 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Other
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
-  alonzoEqTxRaw,
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
@@ -108,10 +106,9 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
-import Cardano.Ledger.Shelley.Tx (shelleyEqTxRaw)
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
@@ -145,20 +142,22 @@ data AlonzoTx era = AlonzoTx
   deriving (Generic)
 
 instance EraTx AlonzoEra where
-  type Tx AlonzoEra = AlonzoTx AlonzoEra
+  newtype Tx AlonzoEra = MkAlonzoTx (AlonzoTx AlonzoEra)
+    deriving newtype (Eq, NFData, EncCBOR, ToCBOR, NoThunks, Show)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = alonzoTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = alonzoTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = alonzoTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = alonzoTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateTimelock
@@ -167,8 +166,8 @@ instance EraTx AlonzoEra where
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
 
-instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
-  eqRaw = alonzoEqTxRaw
+alonzoTxL :: Lens' (Tx AlonzoEra) (AlonzoTx AlonzoEra)
+alonzoTxL = lens undefined undefined
 
 class
   (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era, AlonzoEraScript era) =>
@@ -176,8 +175,11 @@ class
   where
   isValidTxL :: Lens' (Tx era) IsValid
 
+instance DecCBOR (Annotator (Tx AlonzoEra)) where
+  decCBOR = decode $ Ann (RecD MkAlonzoTx) <*! From
+
 instance AlonzoEraTx AlonzoEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = alonzoTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
 mkBasicAlonzoTx :: Monoid (TxWits era) => TxBody era -> AlonzoTx era
@@ -395,7 +397,3 @@ instance
               <$> decodeNullMaybe decCBOR
           )
   {-# INLINE decCBOR #-}
-
-alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
-alonzoEqTxRaw tx1 tx2 =
-  shelleyEqTxRaw tx1 tx2 && (tx1 ^. isValidTxL == tx2 ^. isValidTxL)

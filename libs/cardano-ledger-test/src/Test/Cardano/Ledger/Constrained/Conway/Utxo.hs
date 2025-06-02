@@ -26,13 +26,12 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
   EraPParams (..),
-  EraTx,
+  EraTx (..),
   EraTxAuxData (..),
   EraTxWits (..),
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Cardano.Ledger.UMap (depositMap)
@@ -139,7 +138,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
 data UtxoExecContext era = UtxoExecContext
-  { uecTx :: !(AlonzoTx era)
+  { uecTx :: !(Tx era)
   , uecUTxO :: !(UTxO era)
   , uecUtxoEnv :: !(UtxoEnv era)
   }
@@ -162,6 +161,7 @@ instance
   , ToExpr (PParamsHKD Identity era)
   , EraCertState era
   , ToExpr (CertState era)
+  , ToExpr (Tx era)
   ) =>
   ToExpr (UtxoExecContext era)
 
@@ -171,6 +171,7 @@ instance
   , EncCBOR (TxBody era)
   , EncCBOR (TxAuxData era)
   , EncCBOR (TxWits era)
+  , EncCBOR (Tx era)
   , EraCertState era
   ) =>
   EncCBOR (UtxoExecContext era)
@@ -187,9 +188,9 @@ instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (Co
   inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 
 utxoTxSpec ::
-  HasSpec (AlonzoTx era) =>
+  HasSpec (Tx era) =>
   UtxoExecContext era ->
-  Specification (AlonzoTx era)
+  Specification (Tx era)
 utxoTxSpec UtxoExecContext {uecTx} =
   constrained $ \tx -> tx ==. lit uecTx
 

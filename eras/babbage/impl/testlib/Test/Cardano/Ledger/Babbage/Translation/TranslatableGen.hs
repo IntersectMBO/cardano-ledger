@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra, Tx (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (BabbageTxBody))
 import Cardano.Ledger.Binary (mkSized)
@@ -49,7 +49,7 @@ import Test.QuickCheck (
 
 instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
-  tgTx l = genTx @BabbageEra (genTxBody l)
+  tgTx l = MkBabbageTx <$> genTx @BabbageEra (genTxBody l)
   tgUtxo = utxoWithTx @BabbageEra
 
 utxoWithTx ::

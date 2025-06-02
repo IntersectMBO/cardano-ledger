@@ -22,7 +22,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
@@ -481,7 +481,7 @@ instance EraGen AlonzoEra where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata
+  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (IsValid v) auxdata
     where
       v = all twoPhaseValidates (txscripts wit)
       twoPhaseValidates script =

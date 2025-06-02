@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Test.Cardano.Ledger.Babbage.Arbitrary () where
 
@@ -158,3 +159,5 @@ instance Arbitrary (TxBody BabbageEra) where
       <*> arbitrary
 
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
+
+deriving newtype instance Arbitrary (Tx BabbageEra)

@@ -42,8 +42,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTx (..),
-  IsValid (..),
+  IsValid (..), AlonzoEraTx (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -92,6 +91,7 @@ import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
+import Lens.Micro ((.~))
 
 -- =================================================================
 -- =========================  Shared data  =========================
@@ -170,7 +170,7 @@ initUTxO pf =
         ]
     someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
     collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
-    timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
+    timelockOut = newTxOut pf [Address timelockAddr, Amount (inject $ Coin 1)]
     timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
       where
         tlh = hashScript @era $ tls 0
@@ -218,10 +218,10 @@ mkSingleRedeemer proof tag datum =
   mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
-trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Babbage iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Conway iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP _ _ tx = tx
+trustMeP Alonzo iv = isValidTxL .~ IsValid iv
+trustMeP Babbage iv = isValidTxL .~ IsValid iv
+trustMeP Conway iv = isValidTxL .~ IsValid iv
+trustMeP _ _ = id
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
 -- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed

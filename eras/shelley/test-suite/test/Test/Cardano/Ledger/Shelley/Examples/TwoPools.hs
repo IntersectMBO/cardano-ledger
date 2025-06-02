@@ -98,7 +98,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -142,7 +142,7 @@ bobInitCoin = Coin 1_000_000_000_000_000
 carlInitCoin :: Coin
 carlInitCoin = Coin 5_000_000_000_000_000
 
-initUTxO :: UTxO C
+initUTxO :: UTxO ShelleyEra
 initUTxO =
   genesisCoins
     genesisId
@@ -151,7 +151,7 @@ initUTxO =
     , ShelleyTxOut Cast.carlAddr (Val.inject carlInitCoin)
     ]
 
-initStTwoPools :: ChainState C
+initStTwoPools :: ChainState ShelleyEra
 initStTwoPools = initSt initUTxO
 
 --
@@ -174,7 +174,7 @@ alicePoolParams' = Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet
 bobPoolParams' :: PoolParams
 bobPoolParams' = Cast.bobPoolParams {ppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
-txbodyEx1 :: TxBody C
+txbodyEx1 :: TxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -196,7 +196,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx C
+txEx1 :: ShelleyTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -211,12 +211,12 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: HasCallStack => Block (BHeader MockCrypto) C
+blockEx1 :: HasCallStack => Block (BHeader MockCrypto) ShelleyEra
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule @C ppEx 10)
-    [txEx1]
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -224,9 +224,9 @@ blockEx1 =
     minBound
     0
     0
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: ChainState C
+expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
@@ -255,17 +255,17 @@ expectedStEx1 =
 -- This is the only block in this example that includes a transaction,
 -- and after this block is processed, the UTxO will consist entirely
 -- of Alice's new coin aliceCoinEx1, and Bob and Carls initial genesis coins.
-twoPools1 :: CHAINExample C
+twoPools1 :: CHAINExample ShelleyEra
 twoPools1 = CHAINExample initStTwoPools blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 90, Epoch 0
 --
-blockEx2 :: Block (BHeader MockCrypto) C
+blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
-    (coreNodeKeysBySchedule @C ppEx 90)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
     []
     (SlotNo 90)
     (BlockNo 2)
@@ -274,9 +274,9 @@ blockEx2 =
     minBound
     4
     0
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 90) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 90) 0 (KESPeriod 0))
 
-expectedStEx2 :: ChainState C
+expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
@@ -286,7 +286,7 @@ expectedStEx2 =
 -- === Block 2, Slot 90, Epoch 0
 --
 -- Create an empty block near the end of epoch 0 to close out the epoch.
-twoPools2 :: CHAINExample C
+twoPools2 :: CHAINExample ShelleyEra
 twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -296,11 +296,11 @@ twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 epoch1Nonce :: Nonce
 epoch1Nonce = chainCandidateNonce expectedStEx2
 
-blockEx3 :: Block (BHeader MockCrypto) C
+blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx2)
-    (coreNodeKeysBySchedule @C ppEx 110)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
@@ -309,7 +309,7 @@ blockEx3 =
     minBound
     5
     0
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 110) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 110) 0 (KESPeriod 0))
 
 snapEx3 :: SnapShot
 snapEx3 =
@@ -331,7 +331,7 @@ snapEx3 =
         ]
     }
 
-expectedStEx3 :: ChainState C
+expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 feeTx1
@@ -341,18 +341,18 @@ expectedStEx3 =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Create an empty block at the begining of epoch 1 to trigger the epoch change.
-twoPools3 :: CHAINExample C
+twoPools3 :: CHAINExample ShelleyEra
 twoPools3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 190, Epoch 1
 --
 
-blockEx4 :: Block (BHeader MockCrypto) C
+blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
-    (coreNodeKeysBySchedule @C ppEx 190)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
     []
     (SlotNo 190)
     (BlockNo 4)
@@ -361,7 +361,7 @@ blockEx4 =
     minBound
     9
     0
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 190) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 190) 0 (KESPeriod 0))
 
 deltaREx4 :: Coin
 deltaREx4 = Coin 3
@@ -376,7 +376,7 @@ rewardUpdateEx4 =
     , nonMyopic = def {rewardPotNM = feeTx1}
     }
 
-expectedStEx4 :: ChainState C
+expectedStEx4 :: ChainState ShelleyEra
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce blockEx4)
     . C.newLab blockEx4
@@ -387,7 +387,7 @@ expectedStEx4 =
 --
 -- Create an empty block near the end of epoch 0 to close out the epoch,
 -- preparing the way for the first non-empty pool distribution.
-twoPools4 :: CHAINExample C
+twoPools4 :: CHAINExample ShelleyEra
 twoPools4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 epoch2Nonce :: Nonce
@@ -399,7 +399,7 @@ epoch2Nonce =
 -- Block 5, Slot 221, Epoch 2
 --
 
-blockEx5 :: Block (BHeader MockCrypto) C
+blockEx5 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx5 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx4)
@@ -445,7 +445,7 @@ pdEx5 =
     )
     (CompactCoin $ fromIntegral activeStakeEx5)
 
-expectedStEx5 :: ChainState C
+expectedStEx5 :: ChainState ShelleyEra
 expectedStEx5 =
   C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
     . C.newSnapshot snapEx3 (Coin 0)
@@ -459,14 +459,14 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution by starting the epoch 2.
 -- Moreover, Alice's pool produces the block.
-twoPools5 :: CHAINExample C
+twoPools5 :: CHAINExample ShelleyEra
 twoPools5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: Block (BHeader MockCrypto) C
+blockEx6 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx6 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx5)
@@ -481,7 +481,7 @@ blockEx6 =
     14
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
 
-expectedStEx6 :: ChainState C
+expectedStEx6 :: ChainState ShelleyEra
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce blockEx6)
     . C.newLab blockEx6
@@ -493,14 +493,14 @@ expectedStEx6 =
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Alice's pool produces a second block.
-twoPools6 :: CHAINExample C
+twoPools6 :: CHAINExample ShelleyEra
 twoPools6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
 -- Block 7, Slot 297, Epoch 2
 --
 
-blockEx7 :: Block (BHeader MockCrypto) C
+blockEx7 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx7 =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader MockCrypto) blockEx6)
@@ -515,7 +515,7 @@ blockEx7 =
     14
     (mkOCert Cast.bobPoolKeys 0 (KESPeriod 14))
 
-expectedStEx7 :: ChainState C
+expectedStEx7 :: ChainState ShelleyEra
 expectedStEx7 =
   C.evolveNonceFrozen (getBlockNonce blockEx7)
     . C.newLab blockEx7
@@ -526,7 +526,7 @@ expectedStEx7 =
 -- === Block 7, Slot 295, Epoch 2
 --
 -- Bob's pool produces a block.
-twoPools7 :: CHAINExample C
+twoPools7 :: CHAINExample ShelleyEra
 twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
@@ -538,11 +538,11 @@ epoch3Nonce =
   chainCandidateNonce expectedStEx7
     ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
 
-blockEx8 :: Block (BHeader MockCrypto) C
+blockEx8 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx8 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx7)
-    (coreNodeKeysBySchedule @C ppEx 310)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 310)
     []
     (SlotNo 310)
     (BlockNo 8)
@@ -551,9 +551,9 @@ blockEx8 =
     minBound
     15
     15
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 310) 1 (KESPeriod 15))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 310) 1 (KESPeriod 15))
 
-expectedStEx8 :: ChainState C
+expectedStEx8 :: ChainState ShelleyEra
 expectedStEx8 =
   C.newEpoch blockEx8
     . C.newSnapshot snapEx3 (Coin 0)
@@ -561,23 +561,23 @@ expectedStEx8 =
     . C.applyRewardUpdate emptyRewardUpdate
     $ expectedStEx7
   where
-    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 310
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @ShelleyEra ppEx 310
 
 -- === Block 8, Slot 310, Epoch 3
 --
 -- Create an empty block to start epoch 3.
-twoPools8 :: CHAINExample C
+twoPools8 :: CHAINExample ShelleyEra
 twoPools8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 --
 -- Block 9, Slot 390, Epoch 3
 --
 
-blockEx9 :: Block (BHeader MockCrypto) C
+blockEx9 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx9 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx8)
-    (coreNodeKeysBySchedule @C ppEx 390)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 390)
     []
     (SlotNo 390)
     (BlockNo 9)
@@ -586,7 +586,7 @@ blockEx9 =
     minBound
     19
     19
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 390) 2 (KESPeriod 19))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 390) 2 (KESPeriod 19))
 
 blocksMadeEpoch3 :: Integer
 blocksMadeEpoch3 = 3
@@ -691,7 +691,7 @@ nonMyopicEx9 =
     bigR
 
 rewardUpdateEx9 ::
-  PParams C ->
+  PParams ShelleyEra ->
   Map (Credential 'Staking) (Set Reward) ->
   RewardUpdate
 rewardUpdateEx9 pp rewards =
@@ -706,7 +706,7 @@ rewardUpdateEx9 pp rewards =
     pv = pp ^. ppProtocolVersionL
     deltaR2Ex9 = bigR <-> sumRewards pv rewards
 
-pulserEx9 :: PParams C -> PulsingRewUpdate
+pulserEx9 :: PParams ShelleyEra -> PulsingRewUpdate
 pulserEx9 pp =
   makeCompletedPulser
     ( BlocksMade $
@@ -717,7 +717,7 @@ pulserEx9 pp =
   where
     expectedStEx8' = C.setPrevPParams pp expectedStEx8
 
-expectedStEx9 :: PParams C -> ChainState C
+expectedStEx9 :: PParams ShelleyEra -> ChainState ShelleyEra
 expectedStEx9 pp =
   C.evolveNonceFrozen (getBlockNonce blockEx9)
     . C.newLab blockEx9
@@ -726,13 +726,13 @@ expectedStEx9 pp =
     . C.solidifyProposals
     $ expectedStEx8
   where
-    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 390
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @ShelleyEra ppEx 390
 
 -- === Block 9, Slot 390, Epoch 3
 --
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9 :: CHAINExample C
+twoPools9 :: CHAINExample ShelleyEra
 twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 
 --
@@ -749,30 +749,30 @@ carlsRewards =
 rsEx9Agg :: Map (Credential 'Staking) (Set Reward)
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
-ppProtVer3 :: PParams C
+ppProtVer3 :: PParams ShelleyEra
 ppProtVer3 = ppEx & ppProtocolVersionL .~ ProtVer (natVersion @3) 0
 
-expectedStEx8Agg :: ChainState C
+expectedStEx8Agg :: ChainState ShelleyEra
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8
 
-expectedStEx9Agg :: ChainState C
+expectedStEx9Agg :: ChainState ShelleyEra
 expectedStEx9Agg = C.solidifyProposals $ C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9Agg :: CHAINExample C
+twoPools9Agg :: CHAINExample ShelleyEra
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
 testAggregateRewardsLegacy :: HasCallStack => Assertion
 testAggregateRewardsLegacy = do
   let expectedReward = carlLeaderRewardsFromBob
   expectedReward @?= rewardAmount (minimum carlsRewards)
-  aggregateRewards (ppEx ^. ppProtocolVersionL @C) rsEx9Agg
+  aggregateRewards (ppEx ^. ppProtocolVersionL @ShelleyEra) rsEx9Agg
     @?= Map.singleton Cast.carlSHK expectedReward
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
-  aggregateRewards (ppProtVer3 ^. ppProtocolVersionL @C) rsEx9Agg
+  aggregateRewards (ppProtVer3 ^. ppProtocolVersionL @ShelleyEra) rsEx9Agg
     @?= Map.singleton Cast.carlSHK (foldMap rewardAmount carlsRewards)
 
 --
