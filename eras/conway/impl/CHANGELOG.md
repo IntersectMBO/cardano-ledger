@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+- Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
+- Change the type of `authorizedELectedCommitteeCredentials` to
+  `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091
 * Added `COMPLETE` pragma for `NativeScript ConwayEra`
 * Add default implementation for `tcConwayGenesisL`
 * Remove `tcDelegsL` and `tcInitialDRepsL`
@@ -50,6 +53,7 @@
 
 ### `testlib`
 
+- Rename `electCommittee` to `submitCommitteeElection` #5091
 * Added `ToExpr` instances for:
   * `ConwayPlutusPurpose AsIxItem`
   * `DRepPulser`
