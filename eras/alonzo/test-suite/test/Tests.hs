@@ -8,11 +8,11 @@
 module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
+import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
@@ -33,7 +33,7 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Alonzo tests"
-    [ AdaPreservation.tests @AlonzoEra @(AlonzoLEDGER AlonzoEra) 50
+    [ AdaPreservation.tests @AlonzoEra 50
     , Tripping.tests
     , Translation.tests
     , Canonical.tests
@@ -45,7 +45,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests - nightly"
-    $ Shelley.commonTests @AlonzoEra @(AlonzoLEDGER AlonzoEra)
+    $ Shelley.commonTests @AlonzoEra
       ++ [ IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AlonzoEra)
          , ChainTrace.tests
          ]

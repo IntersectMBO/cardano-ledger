@@ -2,11 +2,9 @@
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.PropertyTests (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rewards as Rewards (tests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
@@ -42,13 +40,12 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Shelley tests"
-    [ Deposits.tests @C
-    , ( localOption
-          (QuickCheckMaxRatio 50)
-          (ClassifyTraces.relevantCasesAreCovered @C (maxSuccess stdArgs))
-      )
-    , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
-    , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
+    [ Deposits.tests @ShelleyEra
+    , localOption
+        (QuickCheckMaxRatio 50)
+        (ClassifyTraces.relevantCasesAreCovered @ShelleyEra (maxSuccess stdArgs))
+    , AdaPreservation.tests @ShelleyEra (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @ShelleyEra
     , WitVKeys.tests
     , Rewards.tests
     , Serialisation.tests
@@ -64,4 +61,4 @@ nightlyTests =
     "Shelley tests - nightly"
     $ Serialisation.tests
       : IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy ShelleyEra)
-      : commonTests @C @(ShelleyLEDGER C)
+      : commonTests @ShelleyEra

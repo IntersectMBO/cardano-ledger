@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -9,7 +12,7 @@ module Test.Cardano.Ledger.Allegra.TreeDiff (
   module Test.Cardano.Ledger.Shelley.TreeDiff,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
 import Cardano.Ledger.Allegra.Rules
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
@@ -56,3 +59,5 @@ instance
   , ToExpr (Event (EraRule "PPUP" era))
   ) =>
   ToExpr (AllegraUtxoEvent era)
+
+deriving newtype instance ToExpr (Tx AllegraEra)

@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -52,7 +51,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -69,11 +68,11 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyTxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (ShelleyTx era))
+  { txSeqTxns' :: !(StrictSeq (Tx era))
   , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , txSeqBodyBytes :: BSL.ByteString
@@ -102,15 +101,11 @@ deriving via
      ]
     (ShelleyTxSeq era)
   instance
-    (Typeable era, NoThunks (ShelleyTx era)) => NoThunks (ShelleyTxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (ShelleyTxSeq era)
 
-deriving stock instance
-  Show (ShelleyTx era) =>
-  Show (ShelleyTxSeq era)
+deriving stock instance Show (Tx era) => Show (ShelleyTxSeq era)
 
-deriving stock instance
-  Eq (ShelleyTx era) =>
-  Eq (ShelleyTxSeq era)
+deriving stock instance Eq (Tx era) => Eq (ShelleyTxSeq era)
 
 -- ===========================
 -- Getting bytes from pieces of a Tx
@@ -133,7 +128,6 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 pattern ShelleyTxSeq ::
   forall era.
   ( EraTx era
-  , Tx era ~ ShelleyTx era
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
@@ -166,7 +160,7 @@ pattern ShelleyTxSeq xs <-
 
 {-# COMPLETE ShelleyTxSeq #-}
 
-txSeqTxns :: ShelleyTxSeq era -> StrictSeq (ShelleyTx era)
+txSeqTxns :: ShelleyTxSeq era -> StrictSeq (Tx era)
 txSeqTxns (TxSeq' ts _ _ _ _) = ts
 
 instance
@@ -259,10 +253,9 @@ instance
         let body' = runAnnotator bodyAnn bytes
             witnessSet = runAnnotator witsAnn' bytes
             metadata' = flip runAnnotator bytes <$> metaAnn
-         in ShelleyTx
-              body'
-              witnessSet
-              (maybeToStrictMaybe metadata')
+         in mkBasicTx @era body'
+              & witsTxL .~ witnessSet
+              & auxDataTxL .~ maybeToStrictMaybe metadata'
       txns =
         sequenceA $
           StrictSeq.forceToStrict $

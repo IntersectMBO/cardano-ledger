@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Conformance.Imp (spec) where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
@@ -52,7 +51,7 @@ testImpConformance ::
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , ExecSignal "LEDGER" era ~ AlonzoTx era
+  , ExecSignal "LEDGER" era ~ Tx era
   , ExecState "LEDGER" era ~ LedgerState era
   , SpecTranslate (ExecContext "LEDGER" era) (ExecState "LEDGER" era)
   , SpecTranslate (ExecContext "LEDGER" era) (ExecEnvironment "LEDGER" era)
@@ -61,9 +60,10 @@ testImpConformance ::
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
   , ExecEnvironment "LEDGER" era ~ LedgerEnv era
-  , Tx era ~ AlonzoTx era
   , SpecTranslate ConwayTxBodyTransContext (TxBody era)
   , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
+  , SpecTranslate (ConwayLedgerExecContext era) (Tx era)
+  , ToExpr (SpecRep (Tx era))
   ) =>
   Globals ->
   Either

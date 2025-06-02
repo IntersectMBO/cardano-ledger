@@ -18,10 +18,9 @@ import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.State
-import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
+import Cardano.Ledger.Babbage.Tx (Tx)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
-import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -61,11 +60,9 @@ instance TranslateEra BabbageEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
 instance TranslateEra BabbageEra Tx where
   type TranslationError BabbageEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -75,7 +72,11 @@ instance TranslateEra BabbageEra Tx where
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
     let validating = tx ^. Alonzo.isValidTxL
-    pure $ Tx $ AlonzoTx txBody txWits validating auxData
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ auxData
+        & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
