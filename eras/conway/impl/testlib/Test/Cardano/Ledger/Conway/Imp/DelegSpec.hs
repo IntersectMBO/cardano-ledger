@@ -540,7 +540,7 @@ spec = do
         expectDelegatedToPool cred poolKh
 
         -- when pool is retired and re-registered in the same transaction, delegations are kept
-        pps <- poolParams poolKh rewardAccount
+        pps <- freshPoolParams poolKh rewardAccount
         poolExpiry >>= \pe ->
           submitTx_ $
             mkBasicTx mkBasicTxBody
