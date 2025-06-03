@@ -99,9 +99,9 @@ instance AlonzoEraScript ConwayEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ ConwayPlutusV1 plutus
-      SPlutusV2 -> Just $ ConwayPlutusV2 plutus
-      SPlutusV3 -> Just $ ConwayPlutusV3 plutus
+      SPlutusV1 -> pure $ ConwayPlutusV1 plutus
+      SPlutusV2 -> pure $ ConwayPlutusV2 plutus
+      SPlutusV3 -> pure $ ConwayPlutusV3 plutus
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus

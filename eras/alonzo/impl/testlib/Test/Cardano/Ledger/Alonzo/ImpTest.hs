@@ -149,8 +149,9 @@ impLookupPlutusScript ::
   AlonzoEraImp era =>
   ScriptHash ->
   Maybe (PlutusScript era)
-impLookupPlutusScript sh =
-  (\(ScriptTestContext plutus _) -> mkPlutusScript plutus) =<< impLookupScriptContext @era sh
+impLookupPlutusScript sh = do
+  ScriptTestContext plutus _ <- impLookupScriptContext @era sh
+  mkPlutusScript plutus
 
 impGetPlutusContexts ::
   forall era.
@@ -243,18 +244,8 @@ fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   utxo <- getUTxO
   let ScriptsProvided provided = getScriptsProvided utxo tx
   let contextsToAdd = filter (\(_, sh, _) -> not (Map.member sh provided)) contexts
-  let
-    plutusToScript ::
-      forall l.
-      PlutusLanguage l =>
-      Plutus l ->
-      ImpTestM era (Script era)
-    plutusToScript p =
-      case mkPlutusScript @era p of
-        Just x -> pure $ fromPlutusScript x
-        Nothing -> error "Plutus version not supported by era"
   scriptWits <- forM contextsToAdd $ \(_, sh, ScriptTestContext plutus _) ->
-    (sh,) <$> plutusToScript plutus
+    (sh,) . fromPlutusScript <$> mkPlutusScript plutus
   pure $
     tx
       & witsTxL . scriptTxWitsL <>~ Map.fromList scriptWits
