@@ -1,5 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
@@ -15,11 +20,10 @@ import Cardano.Ledger.Conway.Core (
   VoidEraRule,
  )
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules
-
-data DijkstraEra
 
 instance Era DijkstraEra where
   type PreviousEra DijkstraEra = ConwayEra
