@@ -18,8 +18,9 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unTxDatsL)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Network (..),
@@ -29,6 +30,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (AlonzoEraTx (..), AlonzoEraTxBody (..), AlonzoEraTxWits (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (
   ConwayBbodyPredFailure (..),
@@ -72,7 +74,9 @@ import qualified Data.ByteString as BS (replicate)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Conway.Era
@@ -88,7 +92,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
   someScriptAddr,
   testBBODY,
-  trustMeP,
  )
 import Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
@@ -200,21 +203,21 @@ testAlonzoBlock ::
   Block BHeaderView era
 testAlonzoBlock pf =
   makeNaiveBlock
-    [ trustMeP pf True $ validatingTx pf
-    , trustMeP pf False $ notValidatingTx pf
-    , trustMeP pf True $ validatingTxWithWithdrawal pf
-    , trustMeP pf False $ notValidatingTxWithWithdrawal pf
-    , trustMeP pf True $ validatingTxWithCert pf
-    , trustMeP pf False $ notValidatingTxWithCert pf
-    , trustMeP pf True $ validatingTxWithMint pf
-    , trustMeP pf False $ notValidatingTxWithMint pf
+    [ validatingTx & isValidTxL .~ IsValid True
+    , notValidatingTx pf & isValidTxL .~ IsValid False
+    , validatingTxWithWithdrawal pf & isValidTxL .~ IsValid True
+    , notValidatingTxWithWithdrawal pf & isValidTxL .~ IsValid False
+    , validatingTxWithCert pf & isValidTxL .~ IsValid True
+    , notValidatingTxWithCert pf & isValidTxL .~ IsValid False
+    , validatingTxWithMint pf & isValidTxL .~ IsValid True
+    , notValidatingTxWithMint pf & isValidTxL .~ IsValid False
     ]
 
 testAlonzoBadPMDHBlock ::
   Proof era -> Block BHeaderView era
-testAlonzoBadPMDHBlock pf@Alonzo = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
-testAlonzoBadPMDHBlock pf@Babbage = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
-testAlonzoBadPMDHBlock pf@Conway = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Alonzo = makeNaiveBlock [poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Babbage = makeNaiveBlock [poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Conway = makeNaiveBlock [poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock other = error ("testAlonzoBadPMDHBlock does not work in era " ++ show other)
 
 -- ============================== DATA ===============================
@@ -230,43 +233,51 @@ validatingTx ::
   ( Scriptic era
   , EraTx era
   ) =>
-  Proof era ->
   Tx era
-validatingTx pf =
-  newTx
-    pf
-    [ Body (validatingBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [someDatum]
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    ]
+validatingTx =
+  mkBasicTx validatingBody
+    & witsTxL . addrTxWitsL .~ undefined
+    & witsTxL . scriptTxWitsL .~ undefined
+    & witsTxL . datsTxWitsL .~ undefined
+    & witsTxL . rdmrsTxWitsL .~ undefined
 
-validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
-validatingBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 1]
-    , Collateral' [mkGenesisTxIn 11]
-    , Outputs' [validatingTxOut pf]
-    , Txfee (Coin 5)
-    , WppHash
-        ( newScriptIntegrityHash
-            pf
-            (pp pf)
-            [PlutusV1]
-            (validatingRedeemers pf)
-            (mkTxDats someDatum)
-        )
-    ]
+-- [ WitnessesI
+--    [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
+--    , ScriptWits' [always 3 pf]
+--    , DataWits' [someDatum]
+--    , RdmrWits $ validatingRedeemers pf
+--    ]
+-- ]
+
+validatingBody :: EraTxBody era => TxBody era
+validatingBody =
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 1)
+    & collateralInputsTxBodyL .~ Set.singleton (mkGenesisTxIn 11)
+    & outputsTxBodyL .~ SSeq.singleton (validatingTxOut)
+    & feeTxBodyL .~ Coin 5
+    & scriptIntegrityHashTxBodyL
+      .~ newScriptIntegrityHash pp [PlutusV1] validatingRedeemers (mkTxDats someDatum)
+
+-- [ Inputs' [mkGenesisTxIn 1]
+-- , Collateral' [mkGenesisTxIn 11]
+-- , Outputs' [validatingTxOut pf]
+-- , Txfee (Coin 5)
+-- , WppHash
+--    ( newScriptIntegrityHash
+--        pf
+--        (pp pf)
+--        [PlutusV1]
+--        (validatingRedeemers pf)
+--        (mkTxDats someDatum)
+--    )
+-- ]
 
 validatingRedeemers :: Era era => Proof era -> Redeemers era
 validatingRedeemers pf = mkSingleRedeemer pf Spending (Data (PV1.I 42))
 
-validatingTxOut :: EraTxOut era => Proof era -> TxOut era
-validatingTxOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
+validatingTxOut :: EraTxOut era => TxOut era
+validatingTxOut = mkBasicTxOut someAddr (inject $ Coin 4995)
 
 notValidatingTx ::
   ( Scriptic era
@@ -275,17 +286,20 @@ notValidatingTx ::
   Proof era ->
   Tx era
 notValidatingTx pf =
-  newTx
-    pf
-    [ Body notValidatingBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
-        , ScriptWits' [never 0 pf]
-        , DataWits' [anotherDatum]
-        , RdmrWits notValidatingRedeemers
-        ]
-    ]
+  mkBasicTx notValidatingBody
+    & witsTxL . addrTxWitsL .~ Set.singleton undefined
+    & witsTxL . scriptTxWitsL .~ Map.singleton undefined undefined
+    & witsTxL . datsTxWitsL . unTxDatsL .~ undefined
+    & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
+    -- , WitnessesI
+    --    [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
+    --    , ScriptWits' [never 0 pf]
+    --    , DataWits' [anotherDatum]
+    --    , RdmrWits notValidatingRedeemers
+    --    ]
+    -- ]
+
     notValidatingBody =
       newTxBody
         pf

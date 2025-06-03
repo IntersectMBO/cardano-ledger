@@ -91,6 +91,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -147,7 +148,6 @@ import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
-  primaryLanguage,
   protocolVersion,
   txoutFields,
  )
@@ -854,11 +854,11 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era ScriptHash
-genScript proof tag = case proof of
-  Conway -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Babbage -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Alonzo -> elementsT [genTimelockScript, genPlutusScript proof tag]
+genScript :: forall era. Reflect era => PlutusPurposeTag -> GenRS era ScriptHash
+genScript tag = case reify @era of
+  Conway -> elementsT [genTimelockScript, genPlutusScript tag]
+  Babbage -> elementsT [genTimelockScript, genPlutusScript tag]
+  Alonzo -> elementsT [genTimelockScript, genPlutusScript tag]
   Mary -> genTimelockScript
   Allegra -> genTimelockScript
   Shelley -> genMultiSigScript
@@ -944,18 +944,19 @@ genMultiSigScript = do
 -- Adds to gsPlutusScripts
 genPlutusScript ::
   forall era.
-  Reflect era =>
-  Proof era ->
+  ( Reflect era
+  , EraPlutusContext era
+  ) =>
   PlutusPurposeTag ->
   GenRS era ScriptHash
-genPlutusScript proof tag = do
+genPlutusScript tag = do
   falseFreq <- asks $ invalidScriptFreq . geSize
   isValid <- lift $ frequency [(falseFreq, pure False), (100 - falseFreq, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
   -- alwaysFails needs exactly numArgs to have the desired affect.
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
-  let numArgs = case (proof, tag) of
+  let numArgs = case (reify @era, tag) of
         (Conway, Spending) -> 2
         (Conway, _) -> 1
         (Babbage, Spending) -> 2
@@ -964,25 +965,14 @@ genPlutusScript proof tag = do
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  let mlanguage = primaryLanguage proof
+  let mlanguage = undefined
   script <-
     if isValid
-      then alwaysTrue proof mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
-      else pure $ alwaysFalse proof mlanguage numArgs
+      then alwaysTrue mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
+      else pure $ alwaysFalse mlanguage numArgs
 
-  let corescript :: Script era
-      corescript = case proof of
-        Alonzo -> script
-        Babbage -> script
-        Conway -> script
-        _ ->
-          error
-            ( "PlutusScripts are available starting in the Alonzo era. "
-                ++ show proof
-                ++ " does not support PlutusScripts."
-            )
-      scriptHash = hashScript @era corescript
-  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, corescript))
+  let scriptHash = hashScript @era script
+  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, script))
   pure scriptHash
 
 -- ======================================================================
@@ -1015,7 +1005,7 @@ genCredential tag =
         f n
           | n <= 0 = error "Failed to generate a fresh script hash"
           | otherwise = do
-              sh <- genScript @era reify tag
+              sh <- genScript @era tag
               initialRewards <- gets gsInitialRewards
               avoidCredentials <- gets gsAvoidCred
               let newcred = ScriptHashObj sh
@@ -1040,16 +1030,16 @@ genCredential tag =
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
       lift (genMapElem plutusScriptsMap) >>= \case
         Just ((h, _), _) -> pure h
-        Nothing -> genScript reify tag
+        Nothing -> genScript tag
     pickExistingTimelockScript = do
       -- Only pick one if it matches the
       vi <- gets gsValidityInterval -- current ValidityInterval
       vimap <- gets gsVI
       case Map.lookup vi vimap of
-        Nothing -> genScript @era reify tag
+        Nothing -> genScript @era tag
         Just s ->
           lift (genSetElem s) >>= \case
-            Nothing -> genScript reify tag
+            Nothing -> genScript tag
             Just hash -> pure hash
 
 -- Return a fresh credential, one that is not a member of the set 'old'.

@@ -5,7 +5,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,7 +27,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   testUTXOW,
   testUTXOWsubset,
   testUTXOspecialCase,
-  trustMeP,
   alwaysFailsHash,
   alwaysSucceedsHash,
   timelockScript,
@@ -34,22 +35,20 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, pattern RequireTimeStart)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTx (..),
-  IsValid (..),
- )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -66,6 +65,12 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -75,17 +80,15 @@ import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
-import GHC.Natural (Natural)
 import GHC.Stack
+import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Era
-import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
+import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
@@ -95,49 +98,53 @@ import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 --   Data with specific semantics ("constants")
 -- =================================================================
 
-alwaysFailsHash :: forall era. Scriptic era => Natural -> Proof era -> ScriptHash
-alwaysFailsHash n pf = hashScript @era $ never n pf
+alwaysFailsHash :: forall era. ShelleyEraScript era => ScriptHash
+alwaysFailsHash = hashScript @era . fromNativeScript $ RequireAnyOf mempty
 
-alwaysSucceedsHash ::
-  forall era.
-  Scriptic era =>
-  Natural ->
-  Proof era ->
-  ScriptHash
-alwaysSucceedsHash n pf = hashScript @era $ always n pf
+alwaysSucceedsHash :: forall era. ShelleyEraScript era => ScriptHash
+alwaysSucceedsHash = hashScript @era . fromNativeScript $ RequireAllOf mempty
 
-someKeys :: forall era. Proof era -> KeyPair 'Payment
-someKeys _pf = KeyPair vk sk
+someKeys :: KeyPair 'Payment
+someKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
-someAddr :: forall era. Proof era -> Addr
-someAddr pf = mkAddr (someKeys pf) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
+someAddr :: Addr
+someAddr = mkAddr someKeys $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
 
 -- Create an address with a given payment script.
-someScriptAddr :: forall era. Scriptic era => Script era -> Addr
+someScriptAddr :: forall era. EraScript era => Script era -> Addr
 someScriptAddr s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
 
-timelockScript :: PostShelley era => Int -> Proof era -> Script era
-timelockScript s = fromNativeScript . allOf [matchkey 1, after (100 + s)]
+timelockScript :: AllegraEraScript era => SlotNo -> Script era
+timelockScript s =
+  fromNativeScript $
+    RequireAllOf
+      [ RequireSignature $ theKeyHash 1
+      , RequireTimeStart (100 + s)
+      ]
 
 timelockHash ::
   forall era.
-  PostShelley era =>
-  Int ->
-  Proof era ->
+  AllegraEraScript era =>
+  SlotNo ->
   ScriptHash
-timelockHash n pf = hashScript @era $ timelockScript n pf
+timelockHash n = hashScript @era $ timelockScript n
 
-timelockStakeCred :: PostShelley era => Proof era -> StakeCredential
-timelockStakeCred pf = ScriptHashObj (timelockHash 2 pf)
+timelockStakeCred :: forall era. AllegraEraScript era => StakeCredential
+timelockStakeCred = ScriptHashObj (timelockHash @era 2)
 
 -- ======================================================================
 -- ========================= Initial Utxo ===============================
 -- ======================================================================
 
-initUTxO :: forall era. (EraTxOut era, PostShelley era) => Proof era -> UTxO era
-initUTxO pf =
+initUTxO ::
+  forall era.
+  ( AllegraEraScript era
+  , AlonzoEraTxOut era
+  ) =>
+  UTxO era
+initUTxO =
   UTxO $
     Map.fromList $
       [ (mkGenesisTxIn 1, alwaysSucceedsOutput)
@@ -152,47 +159,31 @@ initUTxO pf =
            ]
   where
     alwaysSucceedsOutput =
-      newTxOut
-        pf
-        [ Address (someScriptAddr (always 3 pf))
-        , Amount (inject $ Coin 5000)
-        , DHash' [hashData $ datumExample1 @era]
-        ]
+      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAllOf mempty)) (inject $ Coin 5000)
+        & dataHashTxOutL .~ SJust (hashData $ datumExample1 @era)
     alwaysFailsOutput =
-      newTxOut
-        pf
-        [ Address (someScriptAddr (never 0 pf))
-        , Amount (inject $ Coin 3000)
-        , DHash' [hashData $ datumExample2 @era]
-        ]
-    someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
-    collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
-    timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
+      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAnyOf mempty)) (inject $ Coin 3000)
+        & dataHashTxOutL .~ SJust (hashData $ datumExample2 @era)
+    someOutput = mkBasicTxOut someAddr (inject $ Coin 1000)
+    collateralOutput = mkBasicTxOut someAddr (inject $ Coin 5)
+    timelockOut = mkBasicTxOut timelockAddr (inject $ Coin 1)
     timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
       where
         tlh = hashScript @era $ tls 0
-        tls s = fromNativeScript $ allOf [matchkey 1, after (100 + s)] pf
+        tls s =
+          fromNativeScript @era $
+            RequireAllOf
+              [ RequireSignature $ theKeyHash 1
+              , RequireTimeStart (100 + s)
+              ]
     -- This output is unspendable since it is locked by a plutus script, but has no datum hash.
     unspendableOut =
-      newTxOut
-        pf
-        [ Address (someScriptAddr (always 3 pf))
-        , Amount (inject $ Coin 5000)
-        ]
+      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAllOf mempty)) (inject $ Coin 5000)
     alwaysSucceedsOutputV1 =
-      newTxOut
-        pf
-        [ Address (someScriptAddr (always 3 pf))
-        , Amount (inject $ Coin 5000)
-        , DHash' [hashData $ datumExample1 @era]
-        ]
+      unspendableOut & dataHashTxOutL .~ SJust (hashData (datumExample1 @era))
     nonScriptOutWithDatum =
-      newTxOut
-        pf
-        [ Address (someAddr pf)
-        , Amount (inject $ Coin 1221)
-        , DHash' [hashData $ datumExample1 @era]
-        ]
+      mkBasicTxOut someAddr (inject $ Coin 1221)
+        & dataHashTxOutL .~ SJust (hashData (datumExample1 @era))
 
 datumExample1 :: Era era => Data era
 datumExample1 = Data (PV1.I 123)
@@ -213,12 +204,6 @@ mkTxDats d = TxDats $ Map.singleton (hashData d) d
 mkSingleRedeemer :: Proof era -> PlutusPurposeTag -> Data era -> Redeemers era
 mkSingleRedeemer proof tag datum =
   mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
-
-trustMeP :: Proof era -> Bool -> Tx era -> Tx era
-trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Babbage iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Conway iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP _ _ tx = tx
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
 -- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed
