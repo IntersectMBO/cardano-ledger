@@ -32,7 +32,12 @@ module Cardano.Ledger.Shelley.RewardUpdate (
   PulsingRewUpdate (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  ProtVer (..),
+  ShelleyBase,
+  ToKeyValuePairs (..),
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -59,7 +64,7 @@ import Cardano.Ledger.Shelley.Rewards (
   rewardOnePoolMember,
  )
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (KeyValue, ToJSON (..), Value (Null), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), Value (Null), (.=))
 import Data.Default (def)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -109,6 +114,7 @@ data RewardUpdate = RewardUpdate
   , nonMyopic :: !NonMyopic
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs RewardUpdate
 
 instance NoThunks RewardUpdate
 
@@ -133,19 +139,15 @@ instance DecCBOR RewardUpdate where
       nm <- decNoShareCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
-instance ToJSON RewardUpdate where
-  toJSON = object . toRewardUpdatePair
-  toEncoding = pairs . mconcat . toRewardUpdatePair
-
-toRewardUpdatePair :: KeyValue e a => RewardUpdate -> [a]
-toRewardUpdatePair ru@(RewardUpdate _ _ _ _ _) =
-  let RewardUpdate {..} = ru
-   in [ "deltaT" .= deltaT
-      , "deltaR" .= deltaR
-      , "rs" .= rs
-      , "deltaF" .= deltaF
-      , "nonMyopic" .= nonMyopic
-      ]
+instance ToKeyValuePairs RewardUpdate where
+  toKeyValuePairs ru@(RewardUpdate _ _ _ _ _) =
+    let RewardUpdate {..} = ru
+     in [ "deltaT" .= deltaT
+        , "deltaR" .= deltaR
+        , "rs" .= rs
+        , "deltaF" .= deltaF
+        , "nonMyopic" .= nonMyopic
+        ]
 
 emptyRewardUpdate :: RewardUpdate
 emptyRewardUpdate =

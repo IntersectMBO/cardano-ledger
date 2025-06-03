@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,7 +19,7 @@ module Cardano.Ledger.Conway.State.VState (
   lookupDepositVState,
 ) where
 
-import Cardano.Ledger.BaseTypes (binOpEpochNo)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..), binOpEpochNo)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -36,7 +37,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -59,6 +60,7 @@ data VState era = VState
   -- an opportunity to vote on anything.
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs (VState era)
 
 -- | Function that looks up the deposit for currently registered DRep
 lookupDepositVState :: VState era -> Credential 'DRepRole -> Maybe Coin
@@ -98,17 +100,13 @@ instance Era era => EncCBOR (VState era) where
         !> To vsCommitteeState
         !> To vsNumDormantEpochs
 
-instance ToJSON (VState era) where
-  toJSON = object . toVStatePair
-  toEncoding = pairs . mconcat . toVStatePair
-
-toVStatePair :: KeyValue e a => VState era -> [a]
-toVStatePair vs@(VState _ _ _) =
-  let VState {..} = vs
-   in [ "dreps" .= vsDReps
-      , "committeeState" .= vsCommitteeState
-      , "numDormantEpochs" .= vsNumDormantEpochs
-      ]
+instance ToKeyValuePairs (VState era) where
+  toKeyValuePairs vs@(VState _ _ _) =
+    let VState {..} = vs
+     in [ "dreps" .= vsDReps
+        , "committeeState" .= vsCommitteeState
+        , "numDormantEpochs" .= vsNumDormantEpochs
+        ]
 
 vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole) DRepState)
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})

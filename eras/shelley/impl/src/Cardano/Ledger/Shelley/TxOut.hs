@@ -25,6 +25,7 @@ module Cardano.Ledger.Shelley.TxOut (
 ) where
 
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -45,7 +46,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData (rnf))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import GHC.Stack (HasCallStack)
@@ -177,12 +178,13 @@ instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut er
 instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
   fromCBOR = fromEraCBOR @era
 
-instance (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era) where
-  toJSON = object . toTxOutPair
-  toEncoding = pairs . mconcat . toTxOutPair
+deriving via
+  KeyValuePairs (ShelleyTxOut era)
+  instance
+    (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era)
 
-toTxOutPair :: (KeyValue e a, Era era, Val (Value era)) => ShelleyTxOut era -> [a]
-toTxOutPair (ShelleyTxOut !addr !amount) =
-  [ "address" .= addr
-  , "amount" .= amount
-  ]
+instance (Era era, Val (Value era)) => ToKeyValuePairs (ShelleyTxOut era) where
+  toKeyValuePairs (ShelleyTxOut !addr !amount) =
+    [ "address" .= addr
+    , "amount" .= amount
+    ]
