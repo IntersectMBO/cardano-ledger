@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,7 +17,7 @@ module Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor, UnitInterval)
+import Cardano.Ledger.BaseTypes (Anchor, KeyValuePairs (..), ToKeyValuePairs (..), UnitInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
@@ -25,13 +26,9 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (
-  KeyRole (..),
- )
-import Cardano.Ledger.Slot (
-  EpochNo (..),
- )
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Slot (EpochNo (..))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 
@@ -111,6 +108,7 @@ data CommitteeMemberState = CommitteeMemberState
   -- ^ Changes to the member at the next epoch
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs CommitteeMemberState
 
 deriving instance Ord CommitteeMemberState
 
@@ -132,18 +130,14 @@ instance DecCBOR CommitteeMemberState where
         <! From
         <! From
 
-instance ToJSON CommitteeMemberState where
-  toJSON = object . toCommitteeMemberStatePairs
-  toEncoding = pairs . mconcat . toCommitteeMemberStatePairs
-
-toCommitteeMemberStatePairs :: KeyValue e a => CommitteeMemberState -> [a]
-toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
-  let CommitteeMemberState {..} = c
-   in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
-      , "status" .= cmsStatus
-      , "expiration" .= cmsExpiration
-      , "nextEpochChange" .= cmsNextEpochChange
-      ]
+instance ToKeyValuePairs CommitteeMemberState where
+  toKeyValuePairs c@(CommitteeMemberState _ _ _ _) =
+    let CommitteeMemberState {..} = c
+     in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
+        , "status" .= cmsStatus
+        , "expiration" .= cmsExpiration
+        , "nextEpochChange" .= cmsNextEpochChange
+        ]
 
 data CommitteeMembersState = CommitteeMembersState
   { csCommittee :: !(Map (Credential 'ColdCommitteeRole) CommitteeMemberState)
@@ -152,6 +146,7 @@ data CommitteeMembersState = CommitteeMembersState
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
   deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs CommitteeMembersState
 
 deriving instance Ord CommitteeMembersState
 
@@ -172,14 +167,10 @@ instance DecCBOR CommitteeMembersState where
         <! From
         <! From
 
-instance ToJSON CommitteeMembersState where
-  toJSON = object . toCommitteeMembersStatePairs
-  toEncoding = pairs . mconcat . toCommitteeMembersStatePairs
-
-toCommitteeMembersStatePairs :: KeyValue e a => CommitteeMembersState -> [a]
-toCommitteeMembersStatePairs c@(CommitteeMembersState _ _ _) =
-  let CommitteeMembersState {..} = c
-   in [ "committee" .= csCommittee
-      , "threshold" .= csThreshold
-      , "epoch" .= csEpochNo
-      ]
+instance ToKeyValuePairs CommitteeMembersState where
+  toKeyValuePairs c@(CommitteeMembersState _ _ _) =
+    let CommitteeMembersState {..} = c
+     in [ "committee" .= csCommittee
+        , "threshold" .= csThreshold
+        , "epoch" .= csEpochNo
+        ]

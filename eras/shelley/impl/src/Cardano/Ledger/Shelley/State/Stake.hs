@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Shelley.State.Stake (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -35,7 +37,7 @@ import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Coerce
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
@@ -52,6 +54,7 @@ data ShelleyInstantStake era = ShelleyInstantStake
   , sisPtrStake :: !(Map.Map Ptr (CompactForm Coin))
   }
   deriving (Generic, Show, Eq, Ord)
+  deriving (ToJSON) via KeyValuePairs (ShelleyInstantStake era)
 
 instance NFData (ShelleyInstantStake era)
 
@@ -79,16 +82,12 @@ instance Monoid (ShelleyInstantStake era) where
 instance Default (ShelleyInstantStake era) where
   def = mempty
 
-instance ToJSON (ShelleyInstantStake era) where
-  toJSON = object . toIncrementalStakePairs
-  toEncoding = pairs . mconcat . toIncrementalStakePairs
-
-toIncrementalStakePairs :: KeyValue e a => ShelleyInstantStake era -> [a]
-toIncrementalStakePairs iStake@(ShelleyInstantStake _ _) =
-  let ShelleyInstantStake {..} = iStake -- guard against addition or removal of fields
-   in [ "credentials" .= sisCredentialStake
-      , "pointers" .= sisPtrStake
-      ]
+instance ToKeyValuePairs (ShelleyInstantStake era) where
+  toKeyValuePairs iStake@(ShelleyInstantStake _ _) =
+    let ShelleyInstantStake {..} = iStake -- guard against addition or removal of fields
+     in [ "credentials" .= sisCredentialStake
+        , "pointers" .= sisPtrStake
+        ]
 
 instance EraStake ShelleyEra where
   type InstantStake ShelleyEra = ShelleyInstantStake ShelleyEra

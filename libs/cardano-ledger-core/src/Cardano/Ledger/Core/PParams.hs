@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -79,10 +80,12 @@ module Cardano.Ledger.Core.PParams (
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   UnitInterval,
   maybeToStrictMaybe,
  )
@@ -94,8 +97,7 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
-import qualified Data.Aeson as Aeson (KeyValue, withObject)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldlM)
@@ -132,13 +134,14 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
-instance EraPParams era => ToJSON (PParams era) where
-  toJSON = object . jsonPairsPParams
-  toEncoding = pairs . mconcat . jsonPairsPParams
+deriving via
+  KeyValuePairs (PParams era)
+  instance
+    EraPParams era => ToJSON (PParams era)
 
 instance EraPParams era => FromJSON (PParams era) where
   parseJSON =
-    Aeson.withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+    withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
       let accum acc PParam {ppName, ppLens} =
             set ppLens <$> obj .: Aeson.fromText ppName <*> pure acc
        in F.foldlM accum (emptyPParams @era) (eraPParams @era)
@@ -229,9 +232,10 @@ instance EraPParams era => ToCBOR (PParamsUpdate era) where
 instance EraPParams era => FromCBOR (PParamsUpdate era) where
   fromCBOR = fromEraCBOR @era
 
-instance EraPParams era => ToJSON (PParamsUpdate era) where
-  toJSON = object . jsonPairsPParamsUpdate
-  toEncoding = pairs . mconcat . jsonPairsPParamsUpdate
+deriving via
+  KeyValuePairs (PParamsUpdate era)
+  instance
+    EraPParams era => ToJSON (PParamsUpdate era)
 
 deriving instance Generic (PParamsUpdate era)
 
@@ -553,21 +557,18 @@ ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueL @era @StrictMaybe
 ppuMinPoolCostL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
 ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostL @era @StrictMaybe
 
-jsonPairsPParams :: forall era e a. EraPParams era => Aeson.KeyValue e a => PParams era -> [a]
-jsonPairsPParams pp =
-  [ Aeson.fromText ppName .= toJSON (pp ^. ppLens)
-  | PParam {ppName, ppLens} <- eraPParams @era
-  ]
+instance EraPParams era => ToKeyValuePairs (PParams era) where
+  toKeyValuePairs pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens)
+    | PParam {ppName, ppLens} <- eraPParams @era
+    ]
 
-jsonPairsPParamsUpdate ::
-  forall era e a.
-  (EraPParams era, Aeson.KeyValue e a) =>
-  PParamsUpdate era -> [a]
-jsonPairsPParamsUpdate ppu =
-  [ Aeson.fromText ppName .= toJSON v
-  | PParam {ppName, ppUpdate = Just (PParamUpdate {ppuLens})} <- eraPParams @era
-  , SJust v <- [ppu ^. ppuLens]
-  ]
+instance EraPParams era => ToKeyValuePairs (PParamsUpdate era) where
+  toKeyValuePairs ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam {ppName, ppUpdate = Just (PParamUpdate {ppuLens})} <- eraPParams @era
+    , SJust v <- [ppu ^. ppuLens]
+    ]
 
 mapPParams :: (PParamsHKD Identity era1 -> PParamsHKD Identity era2) -> PParams era1 -> PParams era2
 mapPParams f (PParams pp) = PParams $ f pp

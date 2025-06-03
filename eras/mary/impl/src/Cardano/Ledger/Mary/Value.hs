@@ -41,7 +41,7 @@ module Cardano.Ledger.Mary.Value (
 ) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.BaseTypes (Inject (..), KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -72,7 +72,7 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
 import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), object, (.=))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
@@ -183,6 +183,7 @@ instance DecCBOR MultiAsset where
 -- | The Value representing MultiAssets
 data MaryValue = MaryValue !Coin !MultiAsset
   deriving (Show, Generic)
+  deriving (ToJSON) via KeyValuePairs MaryValue
 
 instance Eq MaryValue where
   x == y = pointwise (==) x y
@@ -373,15 +374,11 @@ decodeIntegerBounded64 = do
 -- ========================================================================
 -- JSON
 
-instance ToJSON MaryValue where
-  toJSON = object . toMaryValuePairs
-  toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
-
-toMaryValuePairs :: Aeson.KeyValue e a => MaryValue -> [a]
-toMaryValuePairs (MaryValue l ps) =
-  [ "lovelace" .= l
-  , "policies" .= ps
-  ]
+instance ToKeyValuePairs MaryValue where
+  toKeyValuePairs (MaryValue l ps) =
+    [ "lovelace" .= l
+    , "policies" .= ps
+    ]
 
 instance ToJSON AssetName where
   toJSON = Aeson.String . assetNameToTextAsHex

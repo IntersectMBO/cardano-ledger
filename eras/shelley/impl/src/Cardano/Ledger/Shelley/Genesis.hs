@@ -2,13 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -50,10 +48,12 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational (boundRational, unboundRational),
   EpochSize (..),
   Globals (..),
+  KeyValuePairs (..),
   Network,
   NonZero (..),
   Nonce (..),
   PositiveUnitInterval,
+  ToKeyValuePairs (..),
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
@@ -136,6 +136,7 @@ data ShelleyGenesisStaking = ShelleyGenesisStaking
   -- - Avoid script credentials.
   }
   deriving stock (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs ShelleyGenesisStaking
 
 instance NoThunks ShelleyGenesisStaking
 
@@ -228,6 +229,7 @@ data ShelleyGenesis = ShelleyGenesis
   --   out-of-memory problems in testing and benchmarking.
   }
   deriving stock (Generic, Show, Eq)
+  deriving (ToJSON) via KeyValuePairs ShelleyGenesis
 
 sgInitialFundsL :: Lens' ShelleyGenesis (LM.ListMap Addr Coin)
 sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
@@ -243,9 +245,43 @@ deriving via
 sgActiveSlotCoeff :: ShelleyGenesis -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
-instance ToJSON ShelleyGenesis where
-  toJSON = Aeson.object . toShelleyGenesisPairs
-  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
+instance ToKeyValuePairs ShelleyGenesis where
+  toKeyValuePairs
+    ShelleyGenesis
+      { sgSystemStart
+      , sgNetworkMagic
+      , sgNetworkId
+      , sgActiveSlotsCoeff
+      , sgSecurityParam
+      , sgEpochLength
+      , sgSlotsPerKESPeriod
+      , sgMaxKESEvolutions
+      , sgSlotLength
+      , sgUpdateQuorum
+      , sgMaxLovelaceSupply
+      , sgProtocolParams
+      , sgGenDelegs
+      , sgInitialFunds
+      , sgStaking
+      } =
+      let !strictSgInitialFunds = sgInitialFunds
+          !strictSgStaking = sgStaking
+       in [ "systemStart" .= sgSystemStart
+          , "networkMagic" .= sgNetworkMagic
+          , "networkId" .= sgNetworkId
+          , "activeSlotsCoeff" .= sgActiveSlotsCoeff
+          , "securityParam" .= sgSecurityParam
+          , "epochLength" .= sgEpochLength
+          , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod
+          , "maxKESEvolutions" .= sgMaxKESEvolutions
+          , "slotLength" .= sgSlotLength
+          , "updateQuorum" .= sgUpdateQuorum
+          , "maxLovelaceSupply" .= sgMaxLovelaceSupply
+          , "protocolParams" .= legacyToJSONPParams sgProtocolParams
+          , "genDelegs" .= sgGenDelegs
+          , "initialFunds" .= strictSgInitialFunds
+          , "staking" .= strictSgStaking
+          ]
 
 instance EraGenesis ShelleyEra where
   type Genesis ShelleyEra = ShelleyGenesis
@@ -350,42 +386,8 @@ instance ToJSON LegacyJSONPParams where
         ]
 
 toShelleyGenesisPairs :: Aeson.KeyValue e a => ShelleyGenesis -> [a]
-toShelleyGenesisPairs
-  ShelleyGenesis
-    { sgSystemStart
-    , sgNetworkMagic
-    , sgNetworkId
-    , sgActiveSlotsCoeff
-    , sgSecurityParam
-    , sgEpochLength
-    , sgSlotsPerKESPeriod
-    , sgMaxKESEvolutions
-    , sgSlotLength
-    , sgUpdateQuorum
-    , sgMaxLovelaceSupply
-    , sgProtocolParams
-    , sgGenDelegs
-    , sgInitialFunds
-    , sgStaking
-    } =
-    let !strictSgInitialFunds = sgInitialFunds
-        !strictSgStaking = sgStaking
-     in [ "systemStart" .= sgSystemStart
-        , "networkMagic" .= sgNetworkMagic
-        , "networkId" .= sgNetworkId
-        , "activeSlotsCoeff" .= sgActiveSlotsCoeff
-        , "securityParam" .= sgSecurityParam
-        , "epochLength" .= sgEpochLength
-        , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod
-        , "maxKESEvolutions" .= sgMaxKESEvolutions
-        , "slotLength" .= sgSlotLength
-        , "updateQuorum" .= sgUpdateQuorum
-        , "maxLovelaceSupply" .= sgMaxLovelaceSupply
-        , "protocolParams" .= legacyToJSONPParams sgProtocolParams
-        , "genDelegs" .= sgGenDelegs
-        , "initialFunds" .= strictSgInitialFunds
-        , "staking" .= strictSgStaking
-        ]
+toShelleyGenesisPairs = toKeyValuePairs
+{-# DEPRECATED toShelleyGenesisPairs "In favor of `toKeyValuePairs`" #-}
 
 instance FromJSON ShelleyGenesis where
   parseJSON =
@@ -412,18 +414,11 @@ instance FromJSON ShelleyGenesis where
             !time = utctDayTime date
          in UTCTime day time
 
-instance ToJSON ShelleyGenesisStaking where
-  toJSON = Aeson.object . toShelleyGenesisStakingPairs
-  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
-
-toShelleyGenesisStakingPairs ::
-  Aeson.KeyValue e a =>
-  ShelleyGenesisStaking ->
-  [a]
-toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
-  [ "pools" .= sgsPools
-  , "stake" .= sgsStake
-  ]
+instance ToKeyValuePairs ShelleyGenesisStaking where
+  toKeyValuePairs ShelleyGenesisStaking {sgsPools, sgsStake} =
+    [ "pools" .= sgsPools
+    , "stake" .= sgsStake
+    ]
 
 instance FromJSON ShelleyGenesisStaking where
   parseJSON =

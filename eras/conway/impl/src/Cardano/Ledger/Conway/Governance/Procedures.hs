@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -85,7 +86,9 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   AnchorData (..),
+  KeyValuePairs (..),
   ProtVer,
+  ToKeyValuePairs (..),
   UnitInterval,
   maybeToStrictMaybe,
  )
@@ -132,8 +135,6 @@ import Data.Aeson (
   KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
-  object,
-  pairs,
   withObject,
   (.:),
   (.:?),
@@ -173,6 +174,7 @@ data GovActionId = GovActionId
   , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Show, Eq, Ord)
+  deriving (ToJSON) via KeyValuePairs GovActionId
 
 instance DecCBOR GovActionId where
   decCBOR =
@@ -192,16 +194,12 @@ instance NoThunks GovActionId
 
 instance NFData GovActionId
 
-instance ToJSON GovActionId where
-  toJSON = object . toGovActionIdPairs
-  toEncoding = pairs . mconcat . toGovActionIdPairs
-
-toGovActionIdPairs :: KeyValue e a => GovActionId -> [a]
-toGovActionIdPairs gaid@(GovActionId _ _) =
-  let GovActionId {..} = gaid
-   in [ "txId" .= gaidTxId
-      , "govActionIx" .= gaidGovActionIx
-      ]
+instance ToKeyValuePairs GovActionId where
+  toKeyValuePairs gaid@(GovActionId _ _) =
+    let GovActionId {..} = gaid
+     in [ "txId" .= gaidTxId
+        , "govActionIx" .= gaidGovActionIx
+        ]
 
 instance ToJSONKey GovActionId where
   toJSONKey = toJSONKeyText govActionIdToText
@@ -263,21 +261,22 @@ gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
 gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
 gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 
-instance EraPParams era => ToJSON (GovActionState era) where
-  toJSON = object . toGovActionStatePairs
-  toEncoding = pairs . mconcat . toGovActionStatePairs
+deriving via
+  KeyValuePairs (GovActionState era)
+  instance
+    EraPParams era => ToJSON (GovActionState era)
 
-toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _) =
-  let GovActionState {..} = gas
-   in [ "actionId" .= gasId
-      , "committeeVotes" .= gasCommitteeVotes
-      , "dRepVotes" .= gasDRepVotes
-      , "stakePoolVotes" .= gasStakePoolVotes
-      , "proposalProcedure" .= gasProposalProcedure
-      , "proposedIn" .= gasProposedIn
-      , "expiresAfter" .= gasExpiresAfter
-      ]
+instance EraPParams era => ToKeyValuePairs (GovActionState era) where
+  toKeyValuePairs gas@(GovActionState _ _ _ _ _ _ _) =
+    let GovActionState {..} = gas
+     in [ "actionId" .= gasId
+        , "committeeVotes" .= gasCommitteeVotes
+        , "dRepVotes" .= gasDRepVotes
+        , "stakePoolVotes" .= gasStakePoolVotes
+        , "proposalProcedure" .= gasProposalProcedure
+        , "proposedIn" .= gasProposedIn
+        , "expiresAfter" .= gasExpiresAfter
+        ]
 
 deriving instance EraPParams era => Eq (GovActionState era)
 
@@ -463,16 +462,17 @@ instance Era era => EncCBOR (VotingProcedure era) where
         !> To vProcVote
         !> E (encodeNullStrictMaybe encCBOR) vProcAnchor
 
-instance EraPParams era => ToJSON (VotingProcedure era) where
-  toJSON = object . toVotingProcedurePairs
-  toEncoding = pairs . mconcat . toVotingProcedurePairs
+deriving via
+  KeyValuePairs (VotingProcedure era)
+  instance
+    EraPParams era => ToJSON (VotingProcedure era)
 
-toVotingProcedurePairs :: KeyValue e a => VotingProcedure era -> [a]
-toVotingProcedurePairs vProc@(VotingProcedure _ _) =
-  let VotingProcedure {..} = vProc
-   in [ "anchor" .= vProcAnchor
-      , "decision" .= vProcVote
-      ]
+instance EraPParams era => ToKeyValuePairs (VotingProcedure era) where
+  toKeyValuePairs vProc@(VotingProcedure _ _) =
+    let VotingProcedure {..} = vProc
+     in [ "anchor" .= vProcAnchor
+        , "decision" .= vProcVote
+        ]
 
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
@@ -527,18 +527,19 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcGovAction
         !> To pProcAnchor
 
-instance EraPParams era => ToJSON (ProposalProcedure era) where
-  toJSON = object . toProposalProcedurePairs
-  toEncoding = pairs . mconcat . toProposalProcedurePairs
+deriving via
+  KeyValuePairs (ProposalProcedure era)
+  instance
+    EraPParams era => ToJSON (ProposalProcedure era)
 
-toProposalProcedurePairs :: (KeyValue e a, EraPParams era) => ProposalProcedure era -> [a]
-toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
-  let ProposalProcedure {..} = proposalProcedure
-   in [ "deposit" .= pProcDeposit
-      , "returnAddr" .= pProcReturnAddr
-      , "govAction" .= pProcGovAction
-      , "anchor" .= pProcAnchor
-      ]
+instance EraPParams era => ToKeyValuePairs (ProposalProcedure era) where
+  toKeyValuePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
+    let ProposalProcedure {..} = proposalProcedure
+     in [ "deposit" .= pProcDeposit
+        , "returnAddr" .= pProcReturnAddr
+        , "govAction" .= pProcGovAction
+        , "anchor" .= pProcAnchor
+        ]
 
 data Committee era = Committee
   { committeeMembers :: !(Map (Credential 'ColdCommitteeRole) EpochNo)
@@ -547,6 +548,7 @@ data Committee era = Committee
   -- ^ Threshold of the committee that is necessary for a successful vote
   }
   deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs (Committee era)
 
 instance Era era => NoThunks (Committee era)
 
@@ -577,10 +579,6 @@ instance Era era => EncCBOR (Committee era) where
         !> To committeeMembers
         !> To committeeThreshold
 
-instance EraPParams era => ToJSON (Committee era) where
-  toJSON = object . toCommitteePairs
-  toEncoding = pairs . mconcat . toCommitteePairs
-
 instance Era era => FromJSON (Committee era) where
   parseJSON = withObject "Committee" parseCommittee
     where
@@ -589,12 +587,12 @@ instance Era era => FromJSON (Committee era) where
           <$> (forceElemsToWHNF <$> o .: "members")
           <*> o .: "threshold"
 
-toCommitteePairs :: KeyValue e a => Committee era -> [a]
-toCommitteePairs committee@(Committee _ _) =
-  let Committee {..} = committee
-   in [ "members" .= committeeMembers
-      , "threshold" .= committeeThreshold
-      ]
+instance ToKeyValuePairs (Committee era) where
+  toKeyValuePairs committee@(Committee _ _) =
+    let Committee {..} = committee
+     in [ "members" .= committeeMembers
+        , "threshold" .= committeeThreshold
+        ]
 
 data GovActionPurpose
   = PParamUpdatePurpose
@@ -733,26 +731,22 @@ instance
           <> encCBOR grCommittee
           <> encCBOR grConstitution
 
-toPrevGovActionIdsPairs ::
-  ( KeyValue e a
-  , (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose))))
-  ) =>
-  GovRelation f ->
-  [a]
-toPrevGovActionIdsPairs govPurpose@(GovRelation _ _ _ _) =
-  let GovRelation {..} = govPurpose
-   in [ "PParamUpdate" .= grPParamUpdate
-      , "HardFork" .= grHardFork
-      , "Committee" .= grCommittee
-      , "Constitution" .= grConstitution
-      ]
-
 instance
   (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) =>
-  ToJSON (GovRelation f)
+  ToKeyValuePairs (GovRelation f)
   where
-  toJSON = object . toPrevGovActionIdsPairs
-  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
+  toKeyValuePairs govPurpose@(GovRelation _ _ _ _) =
+    let GovRelation {..} = govPurpose
+     in [ "PParamUpdate" .= grPParamUpdate
+        , "HardFork" .= grHardFork
+        , "Committee" .= grCommittee
+        , "Constitution" .= grConstitution
+        ]
+
+deriving via
+  KeyValuePairs (GovRelation f)
+  instance
+    (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) => ToJSON (GovRelation f)
 
 grPParamUpdateL :: Lens' (GovRelation f) (f (GovPurposeId 'PParamUpdatePurpose))
 grPParamUpdateL = lens grPParamUpdate $ \x y -> x {grPParamUpdate = y}
@@ -904,6 +898,7 @@ data Constitution era = Constitution
   , constitutionScript :: !(StrictMaybe ScriptHash)
   }
   deriving (Generic, Ord)
+  deriving (ToJSON) via KeyValuePairs (Constitution era)
 
 constitutionAnchorL :: Lens' (Constitution era) Anchor
 constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})
@@ -911,21 +906,17 @@ constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y
 constitutionScriptL :: Lens' (Constitution era) (StrictMaybe ScriptHash)
 constitutionScriptL = lens constitutionScript (\x y -> x {constitutionScript = y})
 
-instance Era era => ToJSON (Constitution era) where
-  toJSON = object . toConstitutionPairs
-  toEncoding = pairs . mconcat . toConstitutionPairs
-
 instance Era era => FromJSON (Constitution era) where
   parseJSON = withObject "Constitution" $ \o ->
     Constitution
       <$> o .: "anchor"
       <*> (maybeToStrictMaybe <$> (o .:? "script"))
 
-toConstitutionPairs :: KeyValue e a => Constitution era -> [a]
-toConstitutionPairs c@(Constitution _ _) =
-  let Constitution {..} = c
-   in ["anchor" .= constitutionAnchor]
-        <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
+instance ToKeyValuePairs (Constitution era) where
+  toKeyValuePairs c@(Constitution _ _) =
+    let Constitution {..} = c
+     in ["anchor" .= constitutionAnchor]
+          <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
 
 deriving instance Eq (Constitution era)
 

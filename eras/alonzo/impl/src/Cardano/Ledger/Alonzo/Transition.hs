@@ -10,8 +10,9 @@ module Cardano.Ledger.Alonzo.Transition (
 ) where
 
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, toAlonzoGenesisPairs)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.BaseTypes (toKeyValuePairs)
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
 import Cardano.Ledger.Shelley.Transition
@@ -55,7 +56,7 @@ instance ToJSON (TransitionConfig AlonzoEra) where
 toAlonzoTransitionConfigPairs :: KeyValue e a => TransitionConfig AlonzoEra -> [a]
 toAlonzoTransitionConfigPairs alonzoConfig =
   toShelleyTransitionConfigPairs shelleyConfig
-    ++ ["alonzo" .= object (toAlonzoGenesisPairs (alonzoConfig ^. tcTranslationContextL))]
+    ++ ["alonzo" .= object (toKeyValuePairs (alonzoConfig ^. tcTranslationContextL))]
   where
     maryConfig = alonzoConfig ^. tcPreviousEraConfigL
     allegraConfig = maryConfig ^. tcPreviousEraConfigL

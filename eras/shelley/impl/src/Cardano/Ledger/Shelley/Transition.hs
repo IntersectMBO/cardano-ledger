@@ -242,7 +242,7 @@ toShelleyTransitionConfigPairs ::
   TransitionConfig ShelleyEra ->
   [a]
 toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
-  ["shelley" .= object (toShelleyGenesisPairs (stcShelleyGenesis stc))]
+  ["shelley" .= object (toKeyValuePairs (stcShelleyGenesis stc))]
 
 -- | Helper function for constructing the initial state for any era
 --

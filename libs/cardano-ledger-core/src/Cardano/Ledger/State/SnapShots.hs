@@ -47,8 +47,10 @@ module Cardano.Ledger.State.SnapShots (
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
+  ToKeyValuePairs (..),
   knownNonZeroBounded,
   nonZeroOr,
   recipNonZero,
@@ -85,7 +87,7 @@ import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -183,6 +185,7 @@ data SnapShot = SnapShot
   , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool) PoolParams)
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs SnapShot
 
 instance NoThunks SnapShot
 
@@ -203,17 +206,13 @@ instance DecShareCBOR SnapShot where
     ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
-instance ToJSON SnapShot where
-  toJSON = object . toSnapShotPair
-  toEncoding = pairs . mconcat . toSnapShotPair
-
-toSnapShotPair :: KeyValue e a => SnapShot -> [a]
-toSnapShotPair ss@(SnapShot _ _ _) =
-  let SnapShot {..} = ss
-   in [ "stake" .= ssStake
-      , "delegations" .= ssDelegations
-      , "poolParams" .= ssPoolParams
-      ]
+instance ToKeyValuePairs SnapShot where
+  toKeyValuePairs ss@(SnapShot _ _ _) =
+    let SnapShot {..} = ss
+     in [ "stake" .= ssStake
+        , "delegations" .= ssDelegations
+        , "poolParams" .= ssPoolParams
+        ]
 
 -- | Snapshots of the stake distribution.
 --
@@ -229,6 +228,7 @@ data SnapShots = SnapShots
   , ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs SnapShots
   -- TODO: switch `AllowThunksIn` to `OnlyCheckWhnfNamed`
   deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] SnapShots
 
@@ -259,19 +259,15 @@ instance DecShareCBOR SnapShots where
 instance Default SnapShots where
   def = emptySnapShots
 
-instance ToJSON SnapShots where
-  toJSON = object . toSnapShotsPair
-  toEncoding = pairs . mconcat . toSnapShotsPair
-
-toSnapShotsPair :: KeyValue e a => SnapShots -> [a]
-toSnapShotsPair ss@(SnapShots !_ _ _ _ _) =
-  -- ssStakeMarkPoolDistr is omitted on purpose
-  let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
-   in [ "pstakeMark" .= ssStakeMark
-      , "pstakeSet" .= ssStakeSet
-      , "pstakeGo" .= ssStakeGo
-      , "feeSS" .= ssFee
-      ]
+instance ToKeyValuePairs SnapShots where
+  toKeyValuePairs ss@(SnapShots !_ _ _ _ _) =
+    -- ssStakeMarkPoolDistr is omitted on purpose
+    let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
+     in [ "pstakeMark" .= ssStakeMark
+        , "pstakeSet" .= ssStakeSet
+        , "pstakeGo" .= ssStakeGo
+        , "feeSS" .= ssFee
+        ]
 
 emptySnapShot :: SnapShot
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
