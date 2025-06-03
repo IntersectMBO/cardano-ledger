@@ -139,6 +139,7 @@ library testlib
     -Wunused-packages
 
   build-depends:
+    FailT,
     HUnit,
     base,
     bytestring,

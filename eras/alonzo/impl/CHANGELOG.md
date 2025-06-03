@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Added `eraUnsupportedLanguage`
+* Changed return type of `mkPlutusScript` and `mkBinaryPlutusScript` from `Maybe` to `MonadFail`
 * Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
 * Renamed fields of `AlonzoTx`
   * `body` to `atBody`
