@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Add default implementation for `tcConwayGenesisL`
+* Remove `tcDelegsL` and `tcInitialDRepsL`
+* Export `registerDRepsThenDelegs`
 * Deprecated `toUpgradeConwayPParamsUpdatePairs` and `toConwayGenesisPairs`
 * Add:
   * `alonzoToConwayUtxosPredFailure`

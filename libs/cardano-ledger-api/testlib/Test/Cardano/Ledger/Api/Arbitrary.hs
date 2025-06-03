@@ -2,9 +2,9 @@
 
 module Test.Cardano.Ledger.Api.Arbitrary () where
 
-import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Cardano.Ledger.Api.State.Query (MemberStatus)
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
 instance Arbitrary MemberStatus where
   arbitrary = arbitraryBoundedEnum
