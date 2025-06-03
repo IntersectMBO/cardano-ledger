@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -71,23 +70,22 @@ instance AlonzoEraScript era => Merge (Redeemers era) where
 instance Merge (Map ScriptHash v) where
   merge = Map.union
 
--- ====================================
+-- ====================================================================
+-- Building Era parametric Records
+-- ====================================================================
 
 -- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
 newScriptIntegrityHash ::
-  Proof era ->
+  ( AlonzoEraScript era
+  , AlonzoEraPParams era
+  ) =>
   PParams era ->
   [Language] ->
   Redeemers era ->
   TxDats era ->
   StrictMaybe Alonzo.ScriptIntegrityHash
-newScriptIntegrityHash Conway pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Babbage pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Alonzo pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
+newScriptIntegrityHash pp ls =
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls))
 
 languages :: Proof era -> [Language]
 languages Shelley = []

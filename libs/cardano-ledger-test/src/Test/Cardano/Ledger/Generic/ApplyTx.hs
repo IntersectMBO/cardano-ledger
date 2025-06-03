@@ -11,12 +11,18 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import Cardano.Ledger.Conway.Core (AlonzoEraTxWits (..))
+import Cardano.Ledger.Conway.Core (
+  AlonzoEraTxWits (..),
+  ppCollateralPercentageL,
+  ppCostModelsL,
+  ppMaxBlockExUnitsL,
+  ppMaxTxExUnitsL,
+  ppMaxValSizeL,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..))
@@ -47,18 +53,9 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxField (..),
-  TxOutField (..),
-  abstractTx,
-  abstractTxBody,
- )
 import Test.Cardano.Ledger.Generic.Functions (
   createRUpdNonPulsing',
   getBody,
-  getOutputs,
   txInBalance,
  )
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersFromTags)
@@ -67,12 +64,8 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (
-  newPParams,
   newScriptIntegrityHash,
-  newTxBody,
-  newTxOut,
  )
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
@@ -80,40 +73,34 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ========================================================================
 
-defaultPPs :: [PParamsField era]
-defaultPPs =
-  [ Costmdls $ zeroTestingCostModels [PlutusV1]
-  , MaxValSize 1000000000
-  , MaxTxExUnits $ ExUnits 1000000 1000000
-  , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ ProtVer (natVersion @5) 0
-  , KeyDeposit (Coin 2)
-  , PoolDeposit (Coin 5)
-  , CollateralPercentage 100
-  ]
+defaultPPs :: Era era => PParams era -> PParams era
+defaultPPs pp =
+  pp
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeL .~ 1000000000
+    & ppMaxTxExUnitsL .~ ExUnits 1000000 1000000
+    & ppMaxBlockExUnitsL .~ ExUnits 1000000 1000000
+    & ppProtocolVersionL .~ ProtVer (natVersion @5) 0
+    & ppKeyDepositL .~ Coin 2
+    & ppPoolDepositL .~ Coin 5
+    & ppCollateralPercentageL .~ 100
 
-pparams :: EraPParams era => Proof era -> PParams era
-pparams pf = newPParams pf defaultPPs
+pparams :: EraPParams era => PParams era
+pparams = defaultPPs emptyPParams
 
-hasValid :: [TxField era] -> Maybe Bool
-hasValid [] = Nothing
-hasValid (Valid (IsValid b) : _) = Just b
-hasValid (_ : fs) = hasValid fs
-
-applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Tx era -> Model era
-applyTx proof count slot model tx = ans
+applyTx :: forall era. Reflect era => Int -> SlotNo -> Model era -> Tx era -> Model era
+applyTx count slot model tx = case hasValid fields of
+  Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+  Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+  Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
   where
+    proof = reify @era
     transactionEpoch = epochFromSlotNo slot
     modelEpoch = mEL model
     epochAccurateModel = epochBoundary proof transactionEpoch modelEpoch model
     txbody = getBody proof tx
-    outputs = getOutputs proof txbody
-    fields = abstractTx proof tx
+    outputs = txbody ^. outputsTxBodyL
     nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
-    ans = case hasValid fields of
-      Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
-      Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
-      Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
 
 epochBoundary :: forall era. Proof era -> EpochNo -> EpochNo -> Model era -> Model era
 epochBoundary proof transactionEpoch modelEpoch model =
@@ -127,30 +114,8 @@ epochBoundary proof transactionEpoch modelEpoch model =
   where
     ru = createRUpdNonPulsing' proof model
 
-applyTxSimple :: Reflect era => Proof era -> Int -> Model era -> TxField era -> Model era
-applyTxSimple proof count model field = case field of
-  Body body1 -> applyTxBody proof count model body1
-  BodyI fs -> List.foldl' (applyField proof count) model fs
-  TxWits _ -> model
-  WitnessesI _ -> model
-  AuxData _ -> model
-  Valid _ -> model
-
 applyTxBody :: Reflect era => Proof era -> Int -> Model era -> TxBody era -> Model era
 applyTxBody proof count model tx = List.foldl' (applyField proof count) model (abstractTxBody proof tx)
-
-applyField :: Reflect era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
-applyField proof count model field = case field of
-  Inputs txins -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
-  Outputs seqo -> case Map.lookup count (mIndex model) of
-    Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
-    Just (TxId hash) -> model {mUTxO = Map.union newstuff (mUTxO model)}
-      where
-        newstuff = additions hash minBound (toList seqo)
-  Txfee coin -> model {mFees = coin <+> mFees model}
-  Certs seqc -> List.foldl' applyCert model (toList seqc)
-  Withdrawals' (Withdrawals m) -> Map.foldlWithKey' (applyWithdrawals proof) model m
-  _other -> model
 
 applyWithdrawals :: Proof era -> Model era -> RewardAccount -> Coin -> Model era
 applyWithdrawals _proof model (RewardAccount _network cred) coin =
@@ -228,53 +193,12 @@ data CollInfo era = CollInfo
 emptyCollInfo :: CollInfo era
 emptyCollInfo = CollInfo (Coin 0) (Coin 0) Set.empty Map.empty
 
--- | Collect information about how to process Collateral, in a second phase failure.
-collInfo ::
-  (Reflect era, HasCallStack) =>
-  Int ->
-  TxIx ->
-  Model era ->
-  CollInfo era ->
-  TxBodyField era ->
-  CollInfo era
-collInfo count firstTxIx model info field = case field of
-  CollateralReturn SNothing -> info
-  CollateralReturn (SJust txout) ->
-    case Map.lookup count (mIndex model) of
-      Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
-      Just (TxId hash) ->
-        info
-          { ciRet = txout ^. coinTxOutL
-          , ciAddmap = newstuff
-          }
-        where
-          newstuff = additions hash firstTxIx [txout]
-  Collateral inputs ->
-    info
-      { ciDelset = inputs
-      , ciBal = txInBalance inputs (mUTxO model)
-      }
-  _ -> info
-
 updateInfo :: CollInfo era -> Model era -> Model era
 updateInfo info m =
   m
     { mUTxO = Map.union (ciAddmap info) (Map.withoutKeys (mUTxO m) (ciDelset info))
     , mFees = mFees m <+> ciBal info <-> ciRet info
     }
-
-applyTxFail :: Reflect era => Proof era -> Int -> TxIx -> Model era -> TxField era -> Model era
-applyTxFail proof count nextTxIx model field = case field of
-  Body body2 -> updateInfo info model
-    where
-      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo (abstractTxBody proof body2)
-  BodyI fs -> updateInfo info model
-    where
-      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo fs
-  TxWits _ -> model
-  WitnessesI _ -> model
-  AuxData _ -> model
-  Valid _ -> model
 
 -- =======================================
 
@@ -337,8 +261,7 @@ applyRUpd ru m =
     }
 
 notValidatingTx ::
-  ( Scriptic era
-  , EraTx era
+  ( EraTx era
   , AlonzoEraTxWits era
   ) =>
   Proof era ->
