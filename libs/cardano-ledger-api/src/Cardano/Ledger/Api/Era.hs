@@ -75,4 +75,4 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 
 -- | Sometimes it is useful to specify that a type corresponds to a latest era that is
 -- currently implemented
-type LatestKnownEra = ConwayEra
+type LatestKnownEra = DijkstraEra
