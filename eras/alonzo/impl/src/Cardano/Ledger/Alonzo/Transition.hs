@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -29,10 +27,6 @@ import Data.Aeson (
   withObject,
   (.:),
  )
-import qualified Data.Aeson as Aeson (Value)
-import Data.Aeson.Key (fromString)
-import Data.Aeson.Types (Parser)
-import Data.Char (toLower)
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))

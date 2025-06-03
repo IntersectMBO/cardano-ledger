@@ -10,6 +10,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -28,6 +29,7 @@ module Cardano.Ledger.Shelley.Transition (
   toShelleyTransitionConfigPairs,
   protectMainnet,
   protectMainnetLens,
+  parseTransitionConfigJSON,
 ) where
 
 import Cardano.Ledger.Address
@@ -35,7 +37,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Genesis (EraGenesis)
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
@@ -48,12 +50,26 @@ import Cardano.Ledger.Shelley.Translation (
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
-import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
+import Data.Aeson (
+  FromJSON (..),
+  KeyValue (..),
+  ToJSON (..),
+  Value (..),
+  object,
+  pairs,
+  withObject,
+  (.:),
+ )
+import qualified Data.Aeson as Aeson (Value)
+import Data.Aeson.Key (fromString)
+import Data.Aeson.Types (Parser)
+import Data.Char (toLower)
 import Data.Default
 import Data.Kind
 import qualified Data.ListMap as LM
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import Data.Typeable
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -475,13 +491,30 @@ registerInitialFunds tc nes =
           m1
           m2
 
+-- toTransitionConfigPairs :: KeyValue e a => TransitionConfig AlonzoEra -> [a]
+-- toTransitionConfigPairs alonzoConfig =
+--   toShelleyTransitionConfigPairs shelleyConfig
+--     ++ ["alonzo" .= object (toAlonzoGenesisPairs (alonzoConfig ^. tcTranslationContextL))]
+--   where
+--     maryConfig = alonzoConfig ^. tcPreviousEraConfigL
+--     allegraConfig = maryConfig ^. tcPreviousEraConfigL
+--     shelleyConfig = allegraConfig ^. tcPreviousEraConfigL
 
-
+-- | Helper function that works for defining a FromJSON instance for `TransitionConfig` for any era
+-- except Shelley.
 parseTransitionConfigJSON ::
   forall era.
-  (EraTransition era, FromJSON (TransitionConfig (PreviousEra era))) =>
+  ( EraTransition era
+  , Typeable (TranslationContext era)
+  , FromJSON (TranslationContext era)
+  , FromJSON (TransitionConfig (PreviousEra era))
+  ) =>
   Aeson.Value -> Parser (TransitionConfig era)
 parseTransitionConfigJSON = withObject (eraName @era <> "TransitionConfig") $ \o -> do
-  transitionContext :: TranslationContext era <- o .: fromString (map toLower (eraName @era))
   prevTransitionConfig <- parseJSON (Object o)
-  pure $ mkTransitionConfig transitionContext prevTransitionConfig
+  case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
+    Nothing -> do
+      translationContext :: TranslationContext era <- o .: fromString (map toLower (eraName @era))
+      pure $ mkTransitionConfig translationContext prevTransitionConfig
+    Just Refl ->
+      pure $ mkTransitionConfig (NoGenesis :: NoGenesis era) prevTransitionConfig
