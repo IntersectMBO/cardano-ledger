@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Remove `tcDelegsL` and `tcInitialDRepsL` from `ConwayEraTransition`
+* Provide default implementation for `tcConwayGenesisL`
+* Expose `registerDRepsThenDelegs`
 * Add:
   * `alonzoToConwayUtxosPredFailure`
   * `alonzoToConwayUtxosEvent`

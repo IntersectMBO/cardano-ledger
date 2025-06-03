@@ -474,3 +474,14 @@ registerInitialFunds tc nes =
           (\k _ _ -> error $ "initial fund part of UTxO: " <> show k)
           m1
           m2
+
+
+
+parseTransitionConfigJSON ::
+  forall era.
+  (EraTransition era, FromJSON (TransitionConfig (PreviousEra era))) =>
+  Aeson.Value -> Parser (TransitionConfig era)
+parseTransitionConfigJSON = withObject (eraName @era <> "TransitionConfig") $ \o -> do
+  transitionContext :: TranslationContext era <- o .: fromString (map toLower (eraName @era))
+  prevTransitionConfig <- parseJSON (Object o)
+  pure $ mkTransitionConfig transitionContext prevTransitionConfig

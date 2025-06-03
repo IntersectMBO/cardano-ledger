@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -12,6 +15,7 @@ module Cardano.Ledger.Alonzo.Transition (
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, toAlonzoGenesisPairs)
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
 import Cardano.Ledger.Shelley.Transition
@@ -25,6 +29,10 @@ import Data.Aeson (
   withObject,
   (.:),
  )
+import qualified Data.Aeson as Aeson (Value)
+import Data.Aeson.Key (fromString)
+import Data.Aeson.Types (Parser)
+import Data.Char (toLower)
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -62,7 +70,4 @@ toAlonzoTransitionConfigPairs alonzoConfig =
     shelleyConfig = allegraConfig ^. tcPreviousEraConfigL
 
 instance FromJSON (TransitionConfig AlonzoEra) where
-  parseJSON = withObject "AlonzoTransitionConfig" $ \o -> do
-    pc <- parseJSON (Object o)
-    ag <- o .: "alonzo"
-    pure $ mkTransitionConfig pc ag
+  parseJSON = parseTransitionConfigJSON
