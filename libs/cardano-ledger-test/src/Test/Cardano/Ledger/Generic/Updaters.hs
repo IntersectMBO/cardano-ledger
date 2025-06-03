@@ -15,12 +15,10 @@ module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Scripts (emptyCostModels)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
   ppCommitteeMinSizeL,
@@ -32,12 +30,7 @@ import Cardano.Ledger.Conway.PParams (
   ppPoolVotingThresholdsL,
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.Tx as Shelley (
-  ShelleyTx (..),
- )
-import Cardano.Ledger.Shelley.TxOut as Shelley (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as Shelley (
   addrWits,
   bootWits,
@@ -102,62 +95,6 @@ instance Merge (Map ScriptHash v) where
 -- ====================================================================
 -- Building Era parametric Records
 -- ====================================================================
-
--- Updaters for Tx
-
-updateTx :: Proof era -> Tx era -> TxField era -> Tx era
-updateTx wit@Shelley tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Allegra tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Mary tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Alonzo (Alonzo.AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> Alonzo.AlonzoTx fbody w iv d
-    BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> Alonzo.AlonzoTx b fwit iv d
-    WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> Alonzo.AlonzoTx b w iv faux
-    Valid iv' -> Alonzo.AlonzoTx b w iv' d
-updateTx wit@Babbage (AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> AlonzoTx fbody w iv d
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> AlonzoTx b fwit iv d
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> AlonzoTx b w iv faux
-    Valid iv' -> AlonzoTx b w iv' d
-updateTx wit@Conway (AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> AlonzoTx fbody w iv d
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> AlonzoTx b fwit iv d
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> AlonzoTx b w iv faux
-    Valid iv' -> AlonzoTx b w iv' d
-{-# NOINLINE updateTx #-}
-
-newTx :: Proof era -> [TxField era] -> Tx era
-newTx era = List.foldl' (updateTx era) (initialTx era)
 
 --------------------------------------------------------------------
 -- Updaters for TxBody
@@ -282,48 +219,6 @@ notAddress :: TxOutField era -> Bool
 notAddress (Address _) = False
 notAddress _ = True
 
-updateTxOut :: Proof era -> TxOut era -> TxOutField era -> TxOut era
-updateTxOut Shelley (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Allegra (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Mary (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Alonzo (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
-  Address addr -> AlonzoTxOut addr v h
-  Amount val -> AlonzoTxOut a val h
-  DHash mdh -> AlonzoTxOut a v mdh
-  FDatum d -> error ("This feature is only available from Babbage onward " ++ show d)
-  _ -> out
-updateTxOut Babbage (BabbageTxOut a v h refscript) txoutd = case txoutd of
-  Address addr -> BabbageTxOut addr v h refscript
-  Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
-  FDatum d -> BabbageTxOut a v d refscript
-  RefScript s -> BabbageTxOut a v h s
-updateTxOut Conway (BabbageTxOut a v h refscript) txoutd = case txoutd of
-  Address addr -> BabbageTxOut addr v h refscript
-  Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
-  FDatum d -> BabbageTxOut a v d refscript
-  RefScript s -> BabbageTxOut a v h s
-{-# NOINLINE updateTxOut #-}
-
-newTxOut :: Proof era -> [TxOutField era] -> TxOut era
-newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
--- This is because we don't have a good story about an initial Address, so the user MUST supply one
-newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
-
--- =====================================================
-
 -- | updatePParams uses the Override policy exclusively
 updatePParams :: EraPParams era => Proof era -> PParams era -> PParamsField era -> PParams era
 updatePParams proof pp' ppf =
@@ -414,19 +309,16 @@ newPParams era = List.foldl' (updatePParams era) emptyPParams
 
 -- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
 newScriptIntegrityHash ::
-  Proof era ->
+  ( AlonzoEraScript era
+  , AlonzoEraPParams era
+  ) =>
   PParams era ->
   [Language] ->
   Redeemers era ->
   TxDats era ->
   StrictMaybe Alonzo.ScriptIntegrityHash
-newScriptIntegrityHash Conway pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Babbage pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Alonzo pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
+newScriptIntegrityHash pp ls =
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls))
 
 defaultCostModels :: Proof era -> PParamsField era
 defaultCostModels Shelley = Costmdls emptyCostModels
