@@ -31,6 +31,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   eqAlonzoScriptRaw,
   AlonzoEraScript (..),
   eraLanguages,
+  eraUnsupportedLanguage,
   PlutusScript (..),
   withPlutusScriptLanguage,
   plutusScriptLanguage,
@@ -172,7 +173,7 @@ class
   fromPlutusScript = PlutusScript
 
   -- | Returns Nothing, whenver plutus language is not supported for this era.
-  mkPlutusScript :: PlutusLanguage l => Plutus l -> Maybe (PlutusScript era)
+  mkPlutusScript :: (PlutusLanguage l, MonadFail m) => Plutus l -> m (PlutusScript era)
 
   -- | Give a `PlutusScript` apply a function that can handle `Plutus` scripts of all
   -- known versions.
@@ -207,7 +208,11 @@ class
     PlutusPurpose AsIx (PreviousEra era) ->
     PlutusPurpose AsIx era
 
-mkBinaryPlutusScript :: AlonzoEraScript era => Language -> PlutusBinary -> Maybe (PlutusScript era)
+mkBinaryPlutusScript ::
+  (MonadFail m, AlonzoEraScript era) =>
+  Language ->
+  PlutusBinary ->
+  m (PlutusScript era)
 mkBinaryPlutusScript lang pb = withSLanguage lang (mkPlutusScript . (`asSLanguage` Plutus pb))
 
 -- | Apply a function to a plutus script, but only if it is of expected language version,
@@ -516,8 +521,8 @@ instance AlonzoEraScript AlonzoEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ AlonzoPlutusV1 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ AlonzoPlutusV1 plutus
+      slang -> eraUnsupportedLanguage @AlonzoEra slang
 
   withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
 
@@ -584,10 +589,7 @@ decodePlutusScript ::
   Decoder s (PlutusScript era)
 decodePlutusScript slang = do
   pb <- decCBOR
-  case mkPlutusScript $ asSLanguage slang $ Plutus pb of
-    Nothing ->
-      fail $ show (plutusLanguage slang) ++ " is not supported in " ++ eraName @era ++ " era."
-    Just plutusScript -> pure plutusScript
+  mkPlutusScript $ asSLanguage slang $ Plutus pb
 
 instance AlonzoEraScript era => EncCBOR (AlonzoScript era)
 
@@ -641,6 +643,11 @@ eqAlonzoScriptRaw _ _ = False
 
 eraLanguages :: forall era. AlonzoEraScript era => [Language]
 eraLanguages = [minBound .. eraMaxLanguage @era]
+
+eraUnsupportedLanguage ::
+  forall era l m proxy a. (Era era, PlutusLanguage l, MonadFail m) => proxy l -> m a
+eraUnsupportedLanguage slang =
+  fail $ show (plutusLanguage slang) <> " isn't supported in the " <> eraName @era <> " era"
 
 -- | Having a Map with scripts and a script hash, lookup the plutus script. Returns
 -- Nothing when script is missing or it is not a PlutusScript

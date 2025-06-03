@@ -31,6 +31,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
   alonzoScriptPrefixTag,
+  eraUnsupportedLanguage,
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Core
@@ -99,10 +100,10 @@ instance AlonzoEraScript ConwayEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ ConwayPlutusV1 plutus
-      SPlutusV2 -> Just $ ConwayPlutusV2 plutus
-      SPlutusV3 -> Just $ ConwayPlutusV3 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ ConwayPlutusV1 plutus
+      SPlutusV2 -> pure $ ConwayPlutusV2 plutus
+      SPlutusV3 -> pure $ ConwayPlutusV3 plutus
+      slang -> eraUnsupportedLanguage @ConwayEra slang
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
