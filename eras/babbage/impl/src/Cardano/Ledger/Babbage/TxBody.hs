@@ -49,7 +49,6 @@ module Cardano.Ledger.Babbage.TxBody (
   allSizedOutputsBabbageTxBodyF,
   babbageMinUTxOValue,
   BabbageTxBodyRaw (..),
-  BabbageTxBodyUpgradeError (..),
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
   BabbageEraTxBody (..),
@@ -77,19 +76,15 @@ module Cardano.Ledger.Babbage.TxBody (
   txOutScript,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.TxBody (alonzoRedeemerPointer, alonzoRedeemerPointerInverse)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
-  isSJust,
  )
 import Cardano.Ledger.Binary (
   Annotator,
@@ -115,18 +110,15 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
   zipMemoRawType,
  )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
 import Data.Foldable as F (foldl')
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -246,19 +238,9 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
-data BabbageTxBodyUpgradeError
-  = -- | The update attempts to update the decentralistion parameter, which is
-    -- dropped in Babbage.
-    BTBUEUpdatesD
-  | -- | The update attempts to update the extra entropy, which is dropped in
-    --   Babbage.
-    BTBUEUpdatesExtraEntropy
-  deriving (Eq, Show)
-
 instance EraTxBody BabbageEra where
   newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes BabbageTxBodyRaw)
     deriving newtype (Generic, SafeToHash, ToCBOR)
-  type TxBodyUpgradeError BabbageEra = BabbageTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoizedEra @BabbageEra basicBabbageTxBodyRaw
 
@@ -296,58 +278,6 @@ instance EraTxBody BabbageEra where
   {-# INLINE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
-
-  upgradeTxBody txBody = do
-    certs <-
-      traverse
-        (left absurd . upgradeTxCert)
-        (txBody ^. certsTxBodyL)
-    updates <- traverse upgradeUpdate (txBody ^. updateTxBodyL)
-    pure $
-      BabbageTxBody
-        { btbInputs = txBody ^. inputsTxBodyL
-        , btbOutputs =
-            mkSized (eraProtVerLow @BabbageEra) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
-        , btbCerts = certs
-        , btbWithdrawals = txBody ^. withdrawalsTxBodyL
-        , btbTxFee = txBody ^. feeTxBodyL
-        , btbValidityInterval = txBody ^. vldtTxBodyL
-        , btbUpdate = updates
-        , btbAuxDataHash = txBody ^. auxDataHashTxBodyL
-        , btbMint = txBody ^. mintTxBodyL
-        , btbCollateral = txBody ^. collateralInputsTxBodyL
-        , btbReqSignerHashes = txBody ^. reqSignerHashesTxBodyL
-        , btbScriptIntegrityHash = txBody ^. scriptIntegrityHashTxBodyL
-        , btbTxNetworkId = txBody ^. networkIdTxBodyL
-        , btbReferenceInputs = mempty
-        , btbCollateralReturn = SNothing
-        , btbTotalCollateral = SNothing
-        }
-    where
-      upgradeUpdate ::
-        Update AlonzoEra ->
-        Either BabbageTxBodyUpgradeError (Update BabbageEra)
-      upgradeUpdate (Update pp epoch) =
-        Update <$> upgradeProposedPPUpdates pp <*> pure epoch
-
-      -- Note that here we use 'upgradeBabbagePParams False' in order to
-      -- preserve 'CoinsPerUTxOWord', in spite of the value now being
-      -- semantically incorrect. Anything else will result in an invalid
-      -- transaction.
-      upgradeProposedPPUpdates ::
-        ProposedPPUpdates AlonzoEra ->
-        Either BabbageTxBodyUpgradeError (ProposedPPUpdates BabbageEra)
-      upgradeProposedPPUpdates (ProposedPPUpdates m) =
-        ProposedPPUpdates
-          <$> traverse
-            ( \(PParamsUpdate pphkd) -> do
-                when (isSJust $ appD pphkd) $
-                  Left BTBUEUpdatesD
-                when (isSJust $ appExtraEntropy pphkd) $
-                  Left BTBUEUpdatesExtraEntropy
-                pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
-            )
-            m
 
 instance ShelleyEraTxBody BabbageEra where
   ttlTxBodyL = notSupportedInThisEraL
