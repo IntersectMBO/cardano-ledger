@@ -259,6 +259,7 @@ protocol_param_update =
   , ? 13 : nonce                  ; extra entropy
   , ? 14 : [protocol_version] ; protocol version
   , ? 15 : coin                   ; min utxo value
+  , ? 16 : coin                   ; min pool cost
   }
 
 

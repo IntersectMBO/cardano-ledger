@@ -276,6 +276,7 @@ protocol_param_update =
       , opt (idx 13 ==> nonce) //- "extra entropy"
       , opt (idx 14 ==> arr [a $ protocol_version @era]) //- "protocol version"
       , opt (idx 15 ==> coin) //- "min utxo value"
+      , opt (idx 16 ==> coin) //- "min pool cost"
       ]
 
 transaction_witness_set :: Rule
