@@ -64,7 +64,11 @@ module Cardano.Ledger.Api.Tx.Body (
   -- * Conway Era
   ConwayEraTxBody,
   votingProceduresTxBodyL,
+  VotingProcedure (..),
   proposalProceduresTxBodyL,
+  ProposalProcedure (..),
+  currentTreasuryValueTxBodyL,
+  treasuryDonationTxBodyL,
 ) where
 
 import Cardano.Ledger.Address (Withdrawals (..))
@@ -77,6 +81,10 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.Governance (
+  ProposalProcedure (..),
+  VotingProcedure (..),
+ )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (EraTxBody (..), PParams, TxAuxDataHash (..), Value, txIdTxBody)
 import Cardano.Ledger.Credential (Credential)

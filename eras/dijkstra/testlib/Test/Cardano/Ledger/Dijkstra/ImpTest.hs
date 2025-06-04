@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
@@ -26,7 +26,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era ()
 
 instance ShelleyEraImp DijkstraEra where
-  initGenesis = pure NoGenesis
+  initGenesis = pure DijkstraGenesis
 
   initNewEpochState = defaultInitNewEpochState $ \nes ->
     nes
