@@ -26,34 +26,16 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  TxOutSource (TxOutFromInput, TxOutFromOutput),
- )
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxosPredFailure (CollectErrors),
-  AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
- )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.TxInfo (
-  BabbageContextError (
-    InlineDatumsNotSupported,
-    ReferenceInputsNotSupported,
-    ReferenceScriptsNotSupported
-  ),
- )
 import Cardano.Ledger.BaseTypes (
   SlotNo (..),
   StrictMaybe (..),
   TxIx (..),
  )
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
-import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Plutus.Language (
@@ -64,7 +46,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
@@ -164,9 +146,6 @@ simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 datumExampleEven :: Era era => Data era
 datumExampleEven = Data (PV1.I 2)
 
-datumExampleOdd :: Era era => Data era
-datumExampleOdd = Data (PV1.I 3)
-
 validatingRedeemers :: Era era => Proof era -> Redeemers era
 validatingRedeemers proof =
   mkRedeemersFromTags
@@ -235,38 +214,6 @@ inlineDatum pf =
                   [ Address (scriptAddr pf (evenData3ArgsScript pf))
                   , Amount (inject $ Coin 5000)
                   , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    }
-
-inlineDatumFailingScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-inlineDatumFailingScript pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleOdd @era)
                   ]
               ]
           , ofRefInputs = []
@@ -416,55 +363,6 @@ inlineDatumAndRefScript pf =
         ]
     }
 
--- =========================================================================
--- Invalid: Spend a EUTxO with an inline datum, using a reference script,
--- and also redundantly supply the script witness.
--- =========================================================================
-
-inlineDatumAndRefScriptWithRedundantWitScript ::
-  forall era.
-  (Scriptic era, Reflect era) =>
-  Proof era ->
-  TestCaseData era
-inlineDatumAndRefScriptWithRedundantWitScript pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
-              ]
-          , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ evenData3ArgsScript pf)
-                  ]
-              ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf] -- This is redundant with the reference script
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    }
-
 -- ====================================================================================
 -- Valid: Use a reference input with a data hash in the correspending output and
 -- without supplying the correspending data witness.
@@ -591,248 +489,6 @@ refscriptForDelegCert pf =
     }
 
 -- ====================================================================================
---  Invalid: Use a collateral output
--- ====================================================================================
-
-useCollateralReturn :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-useCollateralReturn pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , CollateralReturn' [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)]]
-          , TotalCol (SJust $ Coin 5)
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (never 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [never 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    }
-
--- ====================================================================================
--- Invalid: Invalid collateral total
--- ====================================================================================
-
-incorrectCollateralTotal :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-incorrectCollateralTotal pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , CollateralReturn' [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)]]
-          , TotalCol (SJust $ Coin 6)
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    }
-
--- ====================================================================================
--- Invalid: Inline datum used with redundant datum in witness set
--- ====================================================================================
-
-inlineDatumRedundantDatumWit ::
-  forall era.
-  (Scriptic era, Reflect era) =>
-  Proof era ->
-  TestCaseData era
-inlineDatumRedundantDatumWit pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
-    }
-
--- ====================================================================================
--- Invalid:  Using inline datums with Plutus V1 script
--- ====================================================================================
-
-inlineDatumWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-inlineDatumWithPlutusV1Script pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) mempty)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
-    }
-
--- ====================================================================================
--- Invalid:  Using reference script with Plutus V1 script
--- ====================================================================================
-
-referenceScriptWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-referenceScriptWithPlutusV1Script pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs'
-              [ newTxOut
-                  pf
-                  [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]
-              ]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
-    }
-
--- ====================================================================================
--- Invalid:  Using reference input with Plutus V1 script
--- ====================================================================================
-
-referenceInputWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-referenceInputWithPlutusV1Script pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
-              ]
-          , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  ]
-              ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
-    }
-
--- ====================================================================================
 --  Valid: Don't run reference scripts in output for validation
 -- ====================================================================================
 
@@ -900,90 +556,6 @@ simpleScriptOutWithRefScriptUTxOState pf =
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf]
     , otherWitsFields = []
-    }
-
--- ========================================================================================
--- Invalid: TxOut too large for the included ADA, using a large inline datum
--- ========================================================================================
-
-largeDatum :: Era era => Data era
-largeDatum = Data (PV1.B . BS.pack $ replicate 1500 0)
-
-largeOutput' :: forall era. EraTxOut era => Proof era -> TxOut era
-largeOutput' pf =
-  newTxOut
-    pf
-    [ Address (plainAddr pf)
-    , Amount (inject $ Coin 1135)
-    , FDatum . Datum . dataToBinaryData $ largeDatum @era
-    ]
-
-largeOutput :: forall era. BabbageEraTxBody era => Proof era -> TestCaseData era
-largeOutput pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Outputs' [largeOutput' pf]
-          , Txfee (Coin 5)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]]
-          , ofRefInputs = []
-          , ofCollateral = []
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = []
-    }
-
--- =============================================================================
--- Invalid:  There is no such thing as a "reference datum".
--- In other words,  you cannot include a reference input that contains an
--- inline datum and have it count for the datum witness where ever it is needed.
--- =============================================================================
-
-noSuchThingAsReferenceDatum ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-noSuchThingAsReferenceDatum pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn] -- Note that this reference input has the required datum
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) (TxDats mempty))
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
-              ]
-          , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
-                  -- Note that this inline datum does not witness the datum for the plutus script
-                  ]
-              ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
     }
 
 -- ====================================================================================
@@ -1113,61 +685,6 @@ testExpectSuccessValid
         assumedValidTx = trustMeP pf True tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedValidTx (Right expectedState)
 
-newColReturn ::
-  forall era.
-  BabbageEraTxBody era =>
-  TxBody era ->
-  [InOut era]
-newColReturn
-  txBody' =
-    let newColReturnTxIn = mkTxInPartial (txIdTxBody txBody') 1
-        colReturnOut = case txBody' ^. collateralReturnTxBodyL of
-          SNothing -> []
-          SJust rOut -> [rOut]
-     in [newColReturnTxIn] `zip` colReturnOut
-
-testExpectSuccessInvalid ::
-  forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
-  , Reflect era
-  , BabbageEraTxBody era
-  ) =>
-  Proof era ->
-  TestCaseData era ->
-  Assertion
-testExpectSuccessInvalid
-  pf
-  tc =
-    let txBody' = txBody tc
-        tx' = txFromTestCaseData pf tc
-        (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
-        initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
-        DeltaCoin colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
-        expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) (Coin colBallance) def mempty
-        assumedInvalidTx = trustMeP pf False tx'
-     in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
-
-testExpectFailure ::
-  forall era.
-  ( PostShelley era
-  , BabbageEraTxBody era
-  , Reflect era
-  ) =>
-  Proof era ->
-  TestCaseData era ->
-  PredicateFailure (EraRule "UTXOW" era) ->
-  Assertion
-testExpectFailure
-  pf
-  tc
-  predicateFailure =
-    let tx' = txFromTestCaseData pf tc
-        (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
-        utxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
-     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left $ pure predicateFailure)
-
 genericBabbageFeatures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
@@ -1197,125 +714,12 @@ genericBabbageFeatures pf =
         ]
     ]
 
-badTranslation :: Proof era -> BabbageContextError era -> CollectError era
-badTranslation proof x =
-  case proof of
-    Babbage -> BadTranslation x
-    Conway -> BadTranslation (BabbageContextError x)
-    _ -> error "No reference inputs before BabbageEra"
-
-plutusV1RefScriptFailures ::
-  forall era.
-  ( PostShelley era
-  , BabbageEraTxBody era
-  , Reflect era
-  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
-  , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
-  ) =>
-  Proof era ->
-  TestTree
-plutusV1RefScriptFailures pf =
-  testGroup
-    (show pf ++ " PlutusV1 reference script failure examples")
-    [ testCase "reference script with Plutus V1" $
-        testExpectFailure
-          pf
-          (referenceScriptWithPlutusV1Script pf)
-          ( injectFailure
-              ( CollectErrors
-                  [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (TxIx 0))]
-              )
-          )
-    , testCase "reference input with Plutus V1" $
-        testExpectFailure
-          pf
-          (referenceInputWithPlutusV1Script pf)
-          ( injectFailure
-              ( CollectErrors
-                  [badTranslation pf $ ReferenceInputsNotSupported @era $ Set.singleton anotherTxIn]
-              )
-          )
-    ]
-
-genericBabbageFailures ::
-  forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
-  , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
-  , InjectRuleFailure "UTXOW" BabbageUtxoPredFailure era
-  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
-  , BabbageEraTxBody era
-  , PostShelley era
-  , Reflect era
-  ) =>
-  Proof era ->
-  TestTree
-genericBabbageFailures pf =
-  testGroup
-    (show pf ++ " UTXOW failure examples")
-    [ testGroup
-        "invalid transactions"
-        [ testCase "inline datum failing script" $ testExpectSuccessInvalid pf (inlineDatumFailingScript pf)
-        , testCase "use a collateral output" $ testExpectSuccessInvalid pf (useCollateralReturn pf)
-        , testCase "incorrect collateral total" $
-            testExpectFailure
-              pf
-              (incorrectCollateralTotal pf)
-              (injectFailure (IncorrectTotalCollateralField (DeltaCoin 5) (Coin 6)))
-        , testCase "inline datum and ref script and redundant script witness" $
-            testExpectFailure
-              pf
-              (inlineDatumAndRefScriptWithRedundantWitScript pf)
-              ( injectFailure
-                  (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf)))
-              )
-        , testCase "inline datum with redundant datum witness" $
-            testExpectFailure
-              pf
-              (inlineDatumRedundantDatumWit pf)
-              ( injectFailure
-                  ( NotAllowedSupplementalDatums
-                      (Set.singleton $ hashData @era datumExampleSixtyFiveBytes)
-                      mempty
-                  )
-              )
-        , testCase "inline datum with Plutus V1" $
-            testExpectFailure
-              pf
-              (inlineDatumWithPlutusV1Script pf)
-              ( injectFailure
-                  ( CollectErrors
-                      [badTranslation pf $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
-                  )
-              )
-        , testCase "min-utxo value with output too large" $
-            testExpectFailure
-              pf
-              (largeOutput pf)
-              (injectFailure $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
-        , testCase "no such thing as a reference datum" $
-            testExpectFailure
-              pf
-              (noSuchThingAsReferenceDatum pf)
-              ( injectFailure
-                  ( MissingRequiredDatums
-                      (Set.singleton (hashData $ datumExampleSixtyFiveBytes @era))
-                      mempty
-                  )
-              )
-        ]
-    ]
-
 babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
     [ genericBabbageFeatures Babbage
-    , genericBabbageFailures Babbage
-    , plutusV1RefScriptFailures Babbage
     , genericBabbageFeatures Conway
-    , genericBabbageFailures Conway
     , testCase "inputs and refinputs overlap in Babbage and don't Fail" $
         testExpectSuccessValid Babbage (commonReferenceScript Babbage)
     , testCase "inputs and refinputs overlap in Conway and Fail" $
