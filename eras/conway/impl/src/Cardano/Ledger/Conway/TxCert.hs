@@ -342,7 +342,8 @@ pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAn
   , ResignCommitteeColdTxCert
   , RegDRepTxCert
   , UnRegDRepTxCert
-  , UpdateDRepTxCert
+  , UpdateDRepTxCert ::
+    ConwayEra
   #-}
 
 getDelegateeTxCert :: ConwayEraTxCert era => TxCert era -> Maybe Delegatee

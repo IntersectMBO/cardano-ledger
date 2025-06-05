@@ -302,6 +302,7 @@ mkTimelockWit era mTag =
       F.fold <$> mapM (mkTimelockWit era mTag) ts
     RequireTimeStart _ -> pure (const [])
     RequireTimeExpire _ -> pure (const [])
+    _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Same as `genCredKeyWit`, but for `TxOuts`
 genTxOutKeyWitness ::
