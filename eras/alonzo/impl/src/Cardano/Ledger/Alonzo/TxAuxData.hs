@@ -126,7 +126,7 @@ instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
     encode $
       Tag 259 $
         Keyed
-          ( \m ts mps1 mps2 mps3 ->
+          ( \m ts mps1 mps2 mps3 mps4 ->
               AlonzoTxAuxDataRaw m ts $
                 Map.fromList
                   [ (pv, ps)
@@ -134,6 +134,7 @@ instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
                       [ (PlutusV1, mps1)
                       , (PlutusV2, mps2)
                       , (PlutusV3, mps3)
+                      , (PlutusV4, mps4)
                       ]
                   ]
           )
@@ -142,6 +143,7 @@ instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
           !> Omit isNothing (Key 2 $ E (maybe mempty encCBOR) (Map.lookup PlutusV1 atadrPlutus))
           !> Omit isNothing (Key 3 $ E (maybe mempty encCBOR) (Map.lookup PlutusV2 atadrPlutus))
           !> Omit isNothing (Key 4 $ E (maybe mempty encCBOR) (Map.lookup PlutusV3 atadrPlutus))
+          !> Omit isNothing (Key 5 $ E (maybe mempty encCBOR) (Map.lookup PlutusV4 atadrPlutus))
 
 -- | Helper function that will construct Auxiliary data from Metadatum map and a list of scripts.
 --
@@ -220,6 +222,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
+      auxDataField 5 = fieldA (addPlutusScripts PlutusV4) (D (guardPlutus PlutusV4 >> decCBOR))
       auxDataField n = invalidField n
 
 decodeTxAuxDataByTokenType :: forall t s. Decoder s t -> Decoder s t -> Decoder s t -> Decoder s t

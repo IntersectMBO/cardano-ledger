@@ -104,6 +104,7 @@ testingCostModel = \case
   PlutusV1 -> testingCostModelV1
   PlutusV2 -> testingCostModelV2
   PlutusV3 -> testingCostModelV3
+  PlutusV4 -> testingCostModelV4
 
 testingCostModelV1 :: HasCallStack => CostModel
 testingCostModelV1 = mkCostModel' PlutusV1 $ snd <$> PV1.costModelParamsForTesting
@@ -113,6 +114,9 @@ testingCostModelV2 = mkCostModel' PlutusV2 $ snd <$> PV2.costModelParamsForTesti
 
 testingCostModelV3 :: HasCallStack => CostModel
 testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
+
+testingCostModelV4 :: HasCallStack => CostModel
+testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> PV3.costModelParamsForTesting
 
 testingEvaluationContext :: Language -> PV1.EvaluationContext
 testingEvaluationContext = getCostModelEvaluationContext . testingCostModel
