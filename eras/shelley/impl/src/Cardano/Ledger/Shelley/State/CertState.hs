@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,6 +17,7 @@ module Cardano.Ledger.Shelley.State.CertState (
   shelleyCertsTotalRefundsTxBody,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -31,7 +33,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
@@ -44,6 +46,7 @@ data ShelleyCertState era = ShelleyCertState
   , shelleyCertDState :: !(DState era)
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs (ShelleyCertState era)
 
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
@@ -58,13 +61,6 @@ shelleyCertDStateL = lens shelleyCertDState (\ds u -> ds {shelleyCertDState = u}
 shelleyCertPStateL :: Lens' (ShelleyCertState era) (PState era)
 shelleyCertPStateL = lens shelleyCertPState (\ds u -> ds {shelleyCertPState = u})
 {-# INLINE shelleyCertPStateL #-}
-
-toCertStatePairs :: KeyValue e a => ShelleyCertState era -> [a]
-toCertStatePairs certState@(ShelleyCertState _ _) =
-  let ShelleyCertState {..} = certState
-   in [ "dstate" .= shelleyCertDState
-      , "pstate" .= shelleyCertPState
-      ]
 
 shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
 shelleyObligationCertState certState =
@@ -104,9 +100,12 @@ instance EraCertState ShelleyEra where
 
   certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
-instance ToJSON (ShelleyCertState era) where
-  toJSON = object . toCertStatePairs
-  toEncoding = pairs . mconcat . toCertStatePairs
+instance ToKeyValuePairs (ShelleyCertState era) where
+  toKeyValuePairs certState@(ShelleyCertState _ _) =
+    let ShelleyCertState {..} = certState
+     in [ "dstate" .= shelleyCertDState
+        , "pstate" .= shelleyCertPState
+        ]
 
 instance Era era => EncCBOR (ShelleyCertState era) where
   encCBOR ShelleyCertState {shelleyCertPState, shelleyCertDState} =

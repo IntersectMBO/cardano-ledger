@@ -2,19 +2,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Rewards (
   RewardType (..),
   Reward (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..), invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -25,7 +23,7 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -73,6 +71,7 @@ data Reward = Reward
   , rewardAmount :: !Coin
   }
   deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs Reward
 
 -- | Note that this Ord instance is chosen to align precisely
 --  with the Allegra reward aggregation, as given by the
@@ -95,14 +94,10 @@ instance DecCBOR Reward where
   decCBOR =
     decode $ RecD Reward <! From <! From <! From
 
-instance ToJSON Reward where
-  toJSON = object . toRewardPair
-  toEncoding = pairs . mconcat . toRewardPair
-
-toRewardPair :: KeyValue e a => Reward -> [a]
-toRewardPair r@(Reward _ _ _) =
-  let Reward {..} = r
-   in [ "rewardType" .= rewardType
-      , "rewardPool" .= rewardPool
-      , "rewardAmount" .= rewardAmount
-      ]
+instance ToKeyValuePairs Reward where
+  toKeyValuePairs r@(Reward _ _ _) =
+    let Reward {..} = r
+     in [ "rewardType" .= rewardType
+        , "rewardPool" .= rewardPool
+        , "rewardAmount" .= rewardAmount
+        ]

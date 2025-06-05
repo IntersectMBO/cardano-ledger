@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Genesis (
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (..))
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR,
@@ -49,7 +50,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import GHC.Generics (Generic)
@@ -62,6 +63,7 @@ newtype AlonzoGenesis = AlonzoGenesisWrapper
   }
   deriving stock (Eq, Generic)
   deriving newtype (Show, NoThunks)
+  deriving (ToJSON) via KeyValuePairs AlonzoGenesis
 
 pattern AlonzoGenesis ::
   CoinPerWord ->
@@ -177,18 +179,18 @@ instance FromJSON AlonzoGenesis where
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
     return AlonzoGenesis {..}
 
-instance ToJSON AlonzoGenesis where
-  toJSON = object . toAlonzoGenesisPairs
-  toEncoding = pairs . mconcat . toAlonzoGenesisPairs
+instance ToKeyValuePairs AlonzoGenesis where
+  toKeyValuePairs ag =
+    [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
+    , "costModels" .= agCostModels ag
+    , "executionPrices" .= agPrices ag
+    , "maxTxExUnits" .= agMaxTxExUnits ag
+    , "maxBlockExUnits" .= agMaxBlockExUnits ag
+    , "maxValueSize" .= agMaxValSize ag
+    , "collateralPercentage" .= agCollateralPercentage ag
+    , "maxCollateralInputs" .= agMaxCollateralInputs ag
+    ]
 
 toAlonzoGenesisPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
-toAlonzoGenesisPairs ag =
-  [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
-  , "costModels" .= agCostModels ag
-  , "executionPrices" .= agPrices ag
-  , "maxTxExUnits" .= agMaxTxExUnits ag
-  , "maxBlockExUnits" .= agMaxBlockExUnits ag
-  , "maxValueSize" .= agMaxValSize ag
-  , "collateralPercentage" .= agCollateralPercentage ag
-  , "maxCollateralInputs" .= agMaxCollateralInputs ag
-  ]
+toAlonzoGenesisPairs = toKeyValuePairs
+{-# DEPRECATED toAlonzoGenesisPairs "In favor of `toKeyValuePairs`" #-}

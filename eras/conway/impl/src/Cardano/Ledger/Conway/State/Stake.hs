@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Conway.State.Stake (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -34,7 +36,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Coerce
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
@@ -48,6 +50,7 @@ newtype ConwayInstantStake era = ConwayInstantStake
   { cisCredentialStake :: Map.Map (Credential 'Staking) (CompactForm Coin)
   }
   deriving (Generic, Show, Eq, Ord, EncCBOR, NFData, NoThunks, Default, Monoid)
+  deriving (ToJSON) via KeyValuePairs (ConwayInstantStake era)
 
 instance DecShareCBOR (ConwayInstantStake era) where
   type Share (ConwayInstantStake era) = Interns (Credential 'Staking)
@@ -65,15 +68,10 @@ instance Semigroup (ConwayInstantStake era) where
   ConwayInstantStake cs1 <> ConwayInstantStake cs2 =
     ConwayInstantStake (Map.unionWith (<>) cs1 cs2)
 
-instance ToJSON (ConwayInstantStake era) where
-  toJSON = object . toIncrementalStakePairs
-  toEncoding = pairs . mconcat . toIncrementalStakePairs
-
-toIncrementalStakePairs :: KeyValue e a => ConwayInstantStake era -> [a]
-toIncrementalStakePairs iStake@(ConwayInstantStake _) =
-  let ConwayInstantStake {..} = iStake -- guard against addition or removal of fields
-   in [ "credentials" .= cisCredentialStake
-      ]
+instance ToKeyValuePairs (ConwayInstantStake era) where
+  toKeyValuePairs iStake@(ConwayInstantStake _) =
+    let ConwayInstantStake {..} = iStake -- guard against addition or removal of fields
+     in ["credentials" .= cisCredentialStake]
 
 instance EraStake ConwayEra where
   type InstantStake ConwayEra = ConwayInstantStake ConwayEra
@@ -124,7 +122,9 @@ applyUTxOConwayInstantStake f (UTxO u) instantInstantStake =
 -- The invariant in `InstantStake` is that stake is never zero.
 resolveConwayInstantStake ::
   (EraStake era, InstantStake era ~ ConwayInstantStake era) =>
-  ConwayInstantStake era -> UM.UMap -> Stake
+  ConwayInstantStake era ->
+  UM.UMap ->
+  Stake
 resolveConwayInstantStake instantStake umap =
   Stake $ VMap.fromMap $ resolveActiveInstantStakeCredentials instantStake umap
 {-# INLINE resolveConwayInstantStake #-}

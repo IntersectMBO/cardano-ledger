@@ -103,6 +103,7 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
   ProtVer (ProtVer),
+  ToKeyValuePairs (..),
   UnitInterval,
   integralToBounded,
   strictMaybeToMaybe,
@@ -996,12 +997,15 @@ emptyConwayPParamsUpdate =
     }
 
 instance ToJSON (UpgradeConwayPParams Identity) where
-  toJSON = object . toUpgradeConwayPParamsUpdatePairs
-  toEncoding = pairs . mconcat . toUpgradeConwayPParamsUpdatePairs
+  toJSON = object . toKeyValuePairs
+  toEncoding = pairs . mconcat . toKeyValuePairs
+
+instance ToKeyValuePairs (UpgradeConwayPParams Identity) where
+  toKeyValuePairs upp = uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
 
 toUpgradeConwayPParamsUpdatePairs :: KeyValue e a => UpgradeConwayPParams Identity -> [a]
-toUpgradeConwayPParamsUpdatePairs upp =
-  uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
+toUpgradeConwayPParamsUpdatePairs = toKeyValuePairs
+{-# DEPRECATED toUpgradeConwayPParamsUpdatePairs "In favor of `toKeyValuePairs`" #-}
 
 upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Value)]
 upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
