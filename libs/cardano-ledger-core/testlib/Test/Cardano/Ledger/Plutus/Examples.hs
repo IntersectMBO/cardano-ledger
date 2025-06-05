@@ -83,6 +83,7 @@ alwaysSucceedsNoDatum =
       , "003755264650013574200535742003357426ae880046ae88004d55cf1baa002911000a29344c00524103505435"
       , "00119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that always succeeds, unless arguments are malformed or context does not contain a datum
 alwaysSucceedsWithDatum :: SLanguage l -> Plutus l
@@ -139,6 +140,7 @@ alwaysSucceedsWithDatum =
       , "023755264650013574200535742003357426ae880046ae88004d55cf1baa002911000a29344c00524103505435"
       , "00119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that always fails, unless arguments are malformed or context contains a datum
 alwaysFailsNoDatum :: SLanguage l -> Plutus l
@@ -197,6 +199,7 @@ alwaysFailsNoDatum =
       , "200000218009aba100109802a481035054310035573c0046aae74004dd51aba1357446aae78006430008c00830"
       , "0237546ae84d5d11aba235573c6ea800a29344c00524010350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that always fails, unless arguments are malformed or context does not contain a datum
 alwaysFailsWithDatum :: SLanguage l -> Plutus l
@@ -261,6 +264,7 @@ alwaysFailsWithDatum =
       , "200000218009aba100109802a481035054310035573c0046aae74004dd51aba1357446aae78006430028c00030"
       , "0037546ae84d5d11aba235573c6ea800a29344c00524010350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds whenever redeemer equals to the datum
 -- Fails on malformed arguments
@@ -319,6 +323,7 @@ redeemerSameAsDatum =
       , "dd78009aba1003800400a30020c008dd51aba1357440026ae88d55cf1baa0028a4d13001490103505435001193"
       , "19ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds whenever Integer datum is supplied and it's value is even.
 -- Fails on malformed arguments
@@ -376,6 +381,7 @@ evenDatum =
       , "3a400066e18dd6800a400900080144ca400600260994800c004c6ea8d5d09aba2357446aae78dd500145268980"
       , "0a490350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds whenever Integer redeemer is supplied and it's value is even
 -- Fails on malformed arguments or whenever datum is present in the context
@@ -437,6 +443,7 @@ evenRedeemerNoDatum =
       , "00a4c130014988ccd5cd19b8748000cdc31bad35742006900240020046ea8d5d09aba2001357446aae78dd5001"
       , "452689800a490350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds whenever Integer redeemer is supplied and it's value is even
 -- Fails on malformed arguments or whenever datum is missing from the context
@@ -495,6 +502,7 @@ evenRedeemerWithDatum =
       , "dc3a400066e18dd69aba1003480120010028c008300237546ae84d5d10009aba235573c6ea800a29344c005241"
       , "0350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds when datum is not expected and purpose arguments are validated against txInfo
 -- Fails on malformed arguments
@@ -681,6 +689,7 @@ purposeIsWellformedNoDatum =
       , "006005330040040010c01800ccc010010004444664600200246600b00022801c004c018d55ce8014c014d55cf0"
       , "0126600600600200122253335573e00220062660046ae84004d5d10009"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds when datum is expected and purpose arguments are validated against txInfo
 -- Fails on malformed arguments
@@ -754,6 +763,7 @@ purposeIsWellformedWithDatum =
       , "aa00135573c002300237546ae84d5d11aba200135573c6ea800a29344c0052410350543500119319ab9c001800"
       , "01"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds when datum is expected and datum is validated against txInfo
 -- Fails on malformed arguments
@@ -825,6 +835,7 @@ datumIsWellformed =
       , "180084cd5d0001198020020008998020020008009112999aab9f0011003133002357420026ae8800630020c008"
       , "dd51aba1357446ae88004d55cf1baa0028a4d1300149010350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds when inputs and outputs are not empty validated against txInfo
 -- Fails on malformed arguments and also if inputs or outputs are empty
@@ -892,6 +903,7 @@ inputsOutputsAreNotEmptyNoDatum =
       , "4004300215333573466e1d2000002180098029aba1001098042481035054310035573c0046aae74004dd50009b"
       , "aa357426ae88d5d10009aab9e3754005149a260029210350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds when inputs and outputs are not empty validated against txInfo
 -- Fails on malformed arguments and also if inputs or outputs are empty
@@ -963,6 +975,7 @@ inputsOutputsAreNotEmptyWithDatum =
       , "4004300215333573466e1d2000002180098029aba1001098042481035054310035573c0046aae74004dd50009b"
       , "aa357426ae88d5d10009aab9e3754005149a260029210350543500119319ab9c00180001"
       ]
+    SPlutusV4 -> []
 
 -- | Script that succeeds only if any the inputs also appears in the reference inputs
 inputsOverlapsWithRefInputs :: SLanguage l -> Plutus l
@@ -1067,3 +1080,4 @@ inputsOverlapsWithRefInputs =
       , "9a3370e90000010c004c014d5d080084c0192401035054310035573c0046aae74004dd5000919319ab9c001800"
       , "11bae357426aae78dd500091bad357426ae88d55cf1baa00122253335573e00220062660046ae84004d5d10009"
       ]
+    SPlutusV4 -> []
