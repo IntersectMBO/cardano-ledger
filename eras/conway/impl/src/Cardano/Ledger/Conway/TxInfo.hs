@@ -38,6 +38,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transPlutusPurposeV1V2,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
+  scriptPurposeToScriptInfo,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
