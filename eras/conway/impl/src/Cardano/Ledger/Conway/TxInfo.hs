@@ -142,26 +142,31 @@ instance EraPlutusContext ConwayEra where
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV1))
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV2))
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV3))
+        (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV4))
 
   mkSupportedLanguage = \case
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
     PlutusV2 -> Just $ SupportedLanguage SPlutusV2
     PlutusV3 -> Just $ SupportedLanguage SPlutusV3
+    PlutusV4 -> Just $ SupportedLanguage SPlutusV4
 
   mkTxInfoResult lti =
     ConwayTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
       (toPlutusTxInfo SPlutusV2 lti)
       (toPlutusTxInfo SPlutusV3 lti)
+      (toPlutusTxInfo SPlutusV4 lti)
 
-  lookupTxInfoResult SPlutusV1 (ConwayTxInfoResult tirPlutusV1 _ _) = tirPlutusV1
-  lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
-  lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
+  lookupTxInfoResult SPlutusV1 (ConwayTxInfoResult tirPlutusV1 _ _ _) = tirPlutusV1
+  lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _ _) = tirPlutusV2
+  lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3 _) = tirPlutusV3
+  lookupTxInfoResult SPlutusV4 (ConwayTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
 
   mkPlutusWithContext = \case
     ConwayPlutusV1 p -> toPlutusWithContext $ Left p
     ConwayPlutusV2 p -> toPlutusWithContext $ Left p
     ConwayPlutusV3 p -> toPlutusWithContext $ Left p
+    ConwayPlutusV4 p -> toPlutusWithContext $ Left p
 
 data ConwayContextError era
   = BabbageContextError !(BabbageContextError era)
@@ -515,6 +520,12 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV3Args
+
+instance EraPlutusTxInfo 'PlutusV4 ConwayEra where
+  toPlutusTxCert = error "TODO"
+  toPlutusScriptPurpose = error "TODO"
+  toPlutusTxInfo = error "TODO"
+  toPlutusArgs = error "TODO"
 
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
