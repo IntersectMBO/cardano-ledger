@@ -72,27 +72,32 @@ instance EraPlutusContext DijkstraEra where
         (Either (ContextError DijkstraEra) (PlutusTxInfo 'PlutusV1))
         (Either (ContextError DijkstraEra) (PlutusTxInfo 'PlutusV2))
         (Either (ContextError DijkstraEra) (PlutusTxInfo 'PlutusV3))
+        (Either (ContextError DijkstraEra) (PlutusTxInfo 'PlutusV4))
 
   mkSupportedLanguage = \case
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
     PlutusV2 -> Just $ SupportedLanguage SPlutusV2
     PlutusV3 -> Just $ SupportedLanguage SPlutusV3
+    PlutusV4 -> Just $ SupportedLanguage SPlutusV4
 
   mkTxInfoResult lti =
     DijkstraTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
       (toPlutusTxInfo SPlutusV2 lti)
       (toPlutusTxInfo SPlutusV3 lti)
+      (toPlutusTxInfo SPlutusV4 lti)
 
-  lookupTxInfoResult SPlutusV1 (DijkstraTxInfoResult tirPlutusV1 _ _) = tirPlutusV1
-  lookupTxInfoResult SPlutusV2 (DijkstraTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
-  lookupTxInfoResult SPlutusV3 (DijkstraTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
+  lookupTxInfoResult SPlutusV1 (DijkstraTxInfoResult tirPlutusV1 _ _ _) = tirPlutusV1
+  lookupTxInfoResult SPlutusV2 (DijkstraTxInfoResult _ tirPlutusV2 _ _) = tirPlutusV2
+  lookupTxInfoResult SPlutusV3 (DijkstraTxInfoResult _ _ tirPlutusV3 _) = tirPlutusV3
+  lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
 
   mkPlutusWithContext =
     ( \case
         ConwayPlutusV1 p -> toPlutusWithContext $ Left p
         ConwayPlutusV2 p -> toPlutusWithContext $ Left p
         ConwayPlutusV3 p -> toPlutusWithContext $ Left p
+        ConwayPlutusV4 p -> toPlutusWithContext $ Left p
     )
       . unDijkstraPlutusScript
 
@@ -225,3 +230,9 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
+
+instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
+  toPlutusTxCert = error "TODO"
+  toPlutusScriptPurpose = error "TODO"
+  toPlutusTxInfo = error "TODO"
+  toPlutusArgs = error "TODO"
