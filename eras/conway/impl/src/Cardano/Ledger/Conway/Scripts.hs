@@ -102,6 +102,7 @@ instance AlonzoEraScript ConwayEra where
       SPlutusV1 -> Just $ ConwayPlutusV1 plutus
       SPlutusV2 -> Just $ ConwayPlutusV2 plutus
       SPlutusV3 -> Just $ ConwayPlutusV3 plutus
+      _ -> Nothing
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
