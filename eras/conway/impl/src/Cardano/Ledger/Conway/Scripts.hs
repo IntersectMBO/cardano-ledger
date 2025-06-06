@@ -91,6 +91,7 @@ instance AlonzoEraScript ConwayEra where
     = ConwayPlutusV1 !(Plutus 'PlutusV1)
     | ConwayPlutusV2 !(Plutus 'PlutusV2)
     | ConwayPlutusV3 !(Plutus 'PlutusV3)
+    | ConwayPlutusV4 !(Plutus 'PlutusV4)
     deriving (Eq, Ord, Show, Generic)
 
   type PlutusPurpose f ConwayEra = ConwayPlutusPurpose f ConwayEra
@@ -102,10 +103,12 @@ instance AlonzoEraScript ConwayEra where
       SPlutusV1 -> Just $ ConwayPlutusV1 plutus
       SPlutusV2 -> Just $ ConwayPlutusV2 plutus
       SPlutusV3 -> Just $ ConwayPlutusV3 plutus
+      SPlutusV4 -> Just $ ConwayPlutusV4 plutus
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV3 plutus) f = f plutus
+  withPlutusScript (ConwayPlutusV4 plutus) f = f plutus
 
   hoistPlutusPurpose f = \case
     ConwaySpending x -> ConwaySpending $ f x
@@ -185,16 +188,19 @@ instance MemPack (PlutusScript ConwayEra) where
     ConwayPlutusV1 script -> packedTagByteCount + packedByteCount script
     ConwayPlutusV2 script -> packedTagByteCount + packedByteCount script
     ConwayPlutusV3 script -> packedTagByteCount + packedByteCount script
+    ConwayPlutusV4 script -> packedTagByteCount + packedByteCount script
   packM = \case
     ConwayPlutusV1 script -> packTagM 0 >> packM script
     ConwayPlutusV2 script -> packTagM 1 >> packM script
     ConwayPlutusV3 script -> packTagM 2 >> packM script
+    ConwayPlutusV4 script -> packTagM 3 >> packM script
   {-# INLINE packM #-}
   unpackM =
     unpackTagM >>= \case
       0 -> ConwayPlutusV1 <$> unpackM
       1 -> ConwayPlutusV2 <$> unpackM
       2 -> ConwayPlutusV3 <$> unpackM
+      3 -> ConwayPlutusV4 <$> unpackM
       n -> unknownTagM @(PlutusScript ConwayEra) n
   {-# INLINE unpackM #-}
 

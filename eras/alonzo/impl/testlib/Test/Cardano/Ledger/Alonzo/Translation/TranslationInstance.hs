@@ -48,6 +48,7 @@ data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
   | TxInfoPV2 PV2.TxInfo
   | TxInfoPV3 PV3.TxInfo
+  | TxInfoPV4 PV3.TxInfo
   deriving (Show, Eq, Generic)
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
