@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.API (
   VKey,
  )
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.Era (hardforkAllowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   availableAfterMIR,
   dsFutureGenDelegsL,
@@ -552,7 +552,7 @@ genInstantaneousRewards ::
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =
-  if HardForks.allowMIRTransfer (pparams ^. ppProtocolVersionL)
+  if hardforkAllowMIRTransfer (pparams ^. ppProtocolVersionL)
     then
       QC.oneof
         [ genInstantaneousRewardsAccounts

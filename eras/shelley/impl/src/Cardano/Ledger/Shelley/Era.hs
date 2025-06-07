@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 #if __GLASGOW_HASKELL__ >= 908
@@ -28,8 +29,12 @@ module Cardano.Ledger.Shelley.Era (
   ShelleyUPEC,
   ShelleyUTXO,
   ShelleyUTXOW,
+  hardforkAggregatedRewards,
+  hardforkAllowMIRTransfer,
+  hardforkValidatePoolRewardAccountNetID,
 ) where
 
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
 import Cardano.Ledger.Internal.Era (ShelleyEra)
@@ -121,3 +126,26 @@ type instance EraRule "UPEC" ShelleyEra = ShelleyUPEC ShelleyEra
 type instance EraRule "UTXO" ShelleyEra = ShelleyUTXO ShelleyEra
 
 type instance EraRule "UTXOW" ShelleyEra = ShelleyUTXOW ShelleyEra
+
+hardforkAggregatedRewards :: ProtVer -> Bool
+hardforkAggregatedRewards pv = pvMajor pv > natVersion @2
+
+-- | Starting with protocol version 5, the MIR certs will also be
+-- able to transfer funds between the reserves and the treasury.
+-- Additionally, the semantics for the pervious functionality will
+-- change a bit. Before version 5 redundancies in the instantaneous
+-- reward mapping were handled by overriding. Now they are handled
+-- by adding the values and allowing for negatives updates, provided
+-- the sum for each key remains positive.
+hardforkAllowMIRTransfer ::
+  ProtVer ->
+  Bool
+hardforkAllowMIRTransfer pv = pvMajor pv > natVersion @4
+
+-- | Starting with protocol version 5, we will validate the network ID
+-- for the reward account listed in stake pool registration certificates.
+hardforkValidatePoolRewardAccountNetID ::
+  ProtVer ->
+  Bool
+hardforkValidatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
+

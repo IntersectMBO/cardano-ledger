@@ -3,40 +3,14 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.HardForks (
-  aggregatedRewards,
-  allowMIRTransfer,
   bootstrapPhase,
-  validatePoolRewardAccountNetID,
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
   forgoPointerAddressResolution,
+  disallowUnelectedCommitteeFromVoting,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-
-aggregatedRewards ::
-  ProtVer ->
-  Bool
-aggregatedRewards pv = pvMajor pv > natVersion @2
-
--- | Starting with protocol version 5, the MIR certs will also be
--- able to transfer funds between the reserves and the treasury.
--- Additionally, the semantics for the pervious functionality will
--- change a bit. Before version 5 redundancies in the instantaneous
--- reward mapping were handled by overriding. Now they are handled
--- by adding the values and allowing for negatives updates, provided
--- the sum for each key remains positive.
-allowMIRTransfer ::
-  ProtVer ->
-  Bool
-allowMIRTransfer pv = pvMajor pv > natVersion @4
-
--- | Starting with protocol version 5, we will validate the network ID
--- for the reward account listed in stake pool registration certificates.
-validatePoolRewardAccountNetID ::
-  ProtVer ->
-  Bool
-validatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
 
 -- | Starting with protocol version 7, the reward calculation no longer
 -- filters out unregistered stake addresses at the moment the calculation begins.
@@ -70,3 +44,10 @@ bootstrapPhase ::
   ProtVer ->
   Bool
 bootstrapPhase pv = pvMajor pv == natVersion @9
+
+-- | Starting with protocol version 11, we do not allow unelected committee
+-- members to submit votes.
+disallowUnelectedCommitteeFromVoting ::
+  ProtVer ->
+  Bool
+disallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion @10

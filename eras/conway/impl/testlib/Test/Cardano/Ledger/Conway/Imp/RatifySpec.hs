@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
+import Cardano.Ledger.Shelley.HardForks (bootstrapPhase, disallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
@@ -1627,7 +1627,7 @@ delayingActionsSpec =
             let exceedingExpiry = addEpochInterval (addEpochInterval currentEpoch maxTermLength) (EpochInterval 7)
                 membersExceedingExpiry = [(KeyHashObj c3, exceedingExpiry), (KeyHashObj c4, addEpochInterval currentEpoch maxTermLength)]
             GovPurposeId gaid <-
-              electCommittee
+              submitCommitteeElection
                 SNothing
                 drep
                 Set.empty
@@ -1696,7 +1696,7 @@ committeeMaxTermLengthSpec =
         let expiry = addEpochInterval (addEpochInterval currentEpoch $ EpochInterval 1) maxTermLength
             members = [(m1, expiry), (m2, expiry)]
         GovPurposeId gaid <-
-          electCommittee
+          submitCommitteeElection
             SNothing
             drep
             Set.empty
@@ -1733,34 +1733,41 @@ committeeMaxTermLengthSpec =
       -- ======== EPOCH e+1 ========
 
       hotCs <- mapM registerCommitteeHotKey newMembers
-      -- CC members can now vote for the hard-fork
+
+      -- Upto protocol version 10, CC members can vote for the hard-fork
+      -- although their election hasn't been enacted yet. We need to pass
+      -- another epoch to have their enactment.
+      when (disallowUnelectedCommitteeFromVoting curProtVer) passEpoch
       submitYesVoteCCs_ hotCs gid
 
-      -- Although elected, new CC members are not yet active at this point
-      -- since it takes two epochs for their election to take effect, hence
-      -- the check fails
-      isCommitteeAccepted gid `shouldReturn` False
-      mapM_ expectCommitteeMemberAbsence newMembers
+      unless (disallowUnelectedCommitteeFromVoting curProtVer) $ do
+        -- Although elected, new CC members are not yet active at this point
+        -- since it takes two epochs for their election to take effect, hence
+        -- the check fails
+        isCommitteeAccepted gid `shouldReturn` False
+        mapM_ expectCommitteeMemberAbsence newMembers
 
       passEpoch
-      -- ======== EPOCH e+2 ========
+      -- ======== EPOCH e+(2 or 3) ========
 
-      -- Two epochs passed since the proposal and all the governing bodies except the
-      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
-      -- vote in the next epoch, the hard-fork is not yet enacted...
+      -- Two (or three) epochs passed since the proposal and all the governing
+      -- bodies except the CC have voted 'Yes' for the hard-fork immediately.
+      -- However, since the CC could only vote in the next epoch, the hard-fork
+      -- is not yet enacted...
       getLastEnactedHardForkInitiation `shouldReturn` SNothing
-      -- ...but now we can see that the CC accepted the proposal...
-      isCommitteeAccepted gid `shouldReturn` True
+      -- ...but now, until PV 10, we can see that the CC accepted the proposal...
+      unless (disallowUnelectedCommitteeFromVoting curProtVer) $
+        isCommitteeAccepted gid `shouldReturn` True
       -- ...and that they are elected members now, albeit already expired ones
       expectMembers $ initialMembers <> Set.fromList newMembers
       mapM_ ccShouldBeExpired newMembers
 
       passEpoch
-      -- ======== EPOCH e+3 ========
+      -- ======== EPOCH e+(3 or 4) ========
 
-      -- Two epochs passed since the CCs also accepted the hard-fork, however
-      -- it didn't get enacted because the CCs expired by now and thus
-      -- their votes don't count
+      -- Three (or four) epochs passed since the CCs also accepted the
+      -- hard-fork, however it didn't get enacted because the CCs expired by now
+      -- and thus their votes don't count
       getLastEnactedHardForkInitiation `shouldReturn` SNothing
       getProtVer `shouldReturn` curProtVer
       isCommitteeAccepted gid `shouldReturn` False
@@ -1776,7 +1783,7 @@ committeeMaxTermLengthSpec =
       (spoC, _, _) <- setupPoolWithStake $ Coin 10_000_000
       initialMembers <- getCommitteeMembers
 
-      -- Setup new committee members with max term length of 1 epoch
+      -- Setup new committee members with max term length of 0 epoch
       newMembers <- electMembersWithMaxTermLength spoC drep
 
       curProtVer <- getProtVer
@@ -1790,21 +1797,65 @@ committeeMaxTermLengthSpec =
       submitYesVote_ (StakePoolVoter spoC) gid
       submitYesVote_ (DRepVoter drep) gid
 
-      passEpoch
-      -- ======== EPOCH e+1 ========
+      passNEpochs 2
+      -- ======== EPOCH e+2 ========
 
       hotCs <- mapM registerCommitteeHotKey newMembers
       -- CC members can now vote for the hard-fork
       submitYesVoteCCs_ hotCs gid
 
-      -- Although elected, new CC members are not yet active at this point
-      -- since it takes two epochs for their election to take effect, hence
-      -- the check fails
-      isCommitteeAccepted gid `shouldReturn` False
-      mapM_ expectCommitteeMemberAbsence newMembers
+      -- Two epochs passed since the proposal and all the governing bodies except the
+      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
+      -- vote in the next epoch, the hard-fork is not yet enacted...
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      -- ...but now we can see that the CC accepted the proposal...
+      isCommitteeAccepted gid `shouldReturn` True
+      -- ...and that they are elected members now, albeit already expired ones
+      expectMembers $ initialMembers <> Set.fromList newMembers
+      mapM_ ccShouldNotBeExpired newMembers
 
-      passEpoch
+      passNEpochs 2
+      -- ======== EPOCH e+4 ========
+      mapM_ ccShouldBeExpired newMembers
+
+      -- Two epochs passed since the CCs also accepted the hard-fork, however
+      -- it didn't get enacted because the CCs expired by now and thus
+      -- their votes don't count
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      getProtVer `shouldReturn` curProtVer
+      isCommitteeAccepted gid `shouldReturn` False
+    it "maxTermLength = 2" $ whenPostBootstrap $ do
+      -- ======== EPOCH e ========
+
+      let termLength = EpochInterval 2
+      modifyPParams $ \pp ->
+        pp
+          & ppCommitteeMaxTermLengthL .~ termLength
+
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 10_000_000
+      initialMembers <- getCommitteeMembers
+
+      -- Setup new committee members with max term length of 2 epoch
+      newMembers <- electMembersWithMaxTermLength spoC drep
+
+      curProtVer <- getProtVer
+      nextMajorVersion <- succVersion $ pvMajor curProtVer
+      let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+
+      -- Create a proposal for a hard-fork initiation
+      gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+      -- Accept the proposal with all the governing bodies except for the CC
+      submitYesVote_ (StakePoolVoter spoC) gid
+      submitYesVote_ (DRepVoter drep) gid
+
+      passNEpochs 2
       -- ======== EPOCH e+2 ========
+
+      hotCs <- mapM registerCommitteeHotKey newMembers
+      -- CC members can now vote for the hard-fork
+      submitYesVoteCCs_ hotCs gid
 
       -- Two epochs passed since the proposal and all the governing bodies except the
       -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
@@ -1816,8 +1867,9 @@ committeeMaxTermLengthSpec =
       expectMembers $ initialMembers <> Set.fromList newMembers
       mapM_ ccShouldNotBeExpired newMembers
 
-      passEpoch
-      -- ======== EPOCH e+3 ========
+      passNEpochs 2
+      -- ======== EPOCH e+4 ========
+      mapM_ ccShouldBeExpired newMembers
 
       -- Two epochs passed since the CCs also accepted the hard-fork, which
       -- is now enacted since the CCs were active during the check
