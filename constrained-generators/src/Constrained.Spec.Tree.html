@@ -1,0 +1,1236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FunctionalDependencies #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Spec.Tree</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier">BinTree</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier">TreeW</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#rootLabel_"><span class="hs-identifier">rootLabel_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier">TreeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.AbstractSyntax.html"><span class="hs-identifier">Constrained.AbstractSyntax</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Base.html"><span class="hs-identifier">Constrained.Base</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Forallable"><span class="hs-identifier">Forallable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#HOLE"><span class="hs-identifier">HOLE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#HasGenHint"><span class="hs-identifier">HasGenHint</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Logic"><span class="hs-identifier">Logic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier">Specification</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier">Term</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#appTerm"><span class="hs-identifier">appTerm</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#constrained"><span class="hs-identifier">constrained</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#errorLikeMessage"><span class="hs-identifier">errorLikeMessage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#explainSpec"><span class="hs-identifier">explainSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#isErrorLike"><span class="hs-identifier">isErrorLike</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier">typeSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier">TypeSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Constrained.Base.html#Unary"><span class="hs-identifier">Unary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Conformance.html"><span class="hs-identifier">Constrained.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Constrained.Conformance.html#conformsToSpec"><span class="hs-identifier">conformsToSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Constrained.Conformance.html#satisfies"><span class="hs-identifier">satisfies</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Core.html"><span class="hs-identifier">Constrained.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Constrained.Core.html#unionWithMaybe"><span class="hs-identifier">unionWithMaybe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.FunctionSymbol.html"><span class="hs-identifier">Constrained.FunctionSymbol</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.GenT.html"><span class="hs-identifier">Constrained.GenT</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Constrained.GenT.html#oneofT"><span class="hs-identifier">oneofT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.List.html"><span class="hs-identifier">Constrained.List</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Constrained.List.html#List"><span class="hs-identifier">List</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Spec.SumProd.html"><span class="hs-identifier">Constrained.Spec.SumProd</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Constrained.Spec.SumProd.html#match"><span class="hs-identifier">match</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Syntax.html"><span class="hs-identifier">Constrained.Syntax</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier">forAll</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Constrained.Syntax.html#genHint"><span class="hs-identifier">genHint</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.TheKnot.html"><span class="hs-identifier">Constrained.TheKnot</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Constrained.TheKnot.html#FoldSpec"><span class="hs-identifier">FoldSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="Constrained.TheKnot.html#ListSpec"><span class="hs-identifier">ListSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="Constrained.TheKnot.html#PairSpec"><span class="hs-identifier">PairSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Constrained.TheKnot.html#genFromSpecT"><span class="hs-identifier">genFromSpecT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Constrained.TheKnot.html#shrinkWithSpec"><span class="hs-identifier">shrinkWithSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Tree</span></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-36a714fad189d2f969f84284bc3d269c3078f8b44e476d1c2e75fd48d6b5004b/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-36a714fad189d2f969f84284bc3d269c3078f8b44e476d1c2e75fd48d6b5004b/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrinkList"><span class="hs-identifier">shrinkList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- The types</span><span>
+</span><span id="line-72"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">data</span><span> </span><span id="BinTree"><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-var">BinTree</span></a></span></span><span> </span><span id="local-6989586621679867763"><span class="annot"><a href="#local-6989586621679867763"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="BinTip"><span class="annot"><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BinNode"><span class="annot"><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-var">BinNode</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867763"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679867763"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867763"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679867972"><span id="local-6989586621679867978"><span id="local-6989586621679867983"><span id="local-6989586621679867986"><span id="local-6989586621679867989"><span id="local-6989586621679867992"><span id="local-6989586621679867995"><span class="annot"><span class="annottext">Eq (BinTree a)
+Eq (BinTree a) =&gt;
+(BinTree a -&gt; BinTree a -&gt; Ordering)
+-&gt; (BinTree a -&gt; BinTree a -&gt; Bool)
+-&gt; (BinTree a -&gt; BinTree a -&gt; Bool)
+-&gt; (BinTree a -&gt; BinTree a -&gt; Bool)
+-&gt; (BinTree a -&gt; BinTree a -&gt; Bool)
+-&gt; (BinTree a -&gt; BinTree a -&gt; BinTree a)
+-&gt; (BinTree a -&gt; BinTree a -&gt; BinTree a)
+-&gt; Ord (BinTree a)
+BinTree a -&gt; BinTree a -&gt; Bool
+BinTree a -&gt; BinTree a -&gt; Ordering
+BinTree a -&gt; BinTree a -&gt; BinTree a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (BinTree a)
+forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Ordering
+forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; BinTree a
+$ccompare :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Ordering
+compare :: BinTree a -&gt; BinTree a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+&lt; :: BinTree a -&gt; BinTree a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+&lt;= :: BinTree a -&gt; BinTree a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+&gt; :: BinTree a -&gt; BinTree a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+&gt;= :: BinTree a -&gt; BinTree a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; BinTree a
+max :: BinTree a -&gt; BinTree a -&gt; BinTree a
+$cmin :: forall a. Ord a =&gt; BinTree a -&gt; BinTree a -&gt; BinTree a
+min :: BinTree a -&gt; BinTree a -&gt; BinTree a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868001"><span id="local-6989586621679868006"><span class="annot"><span class="annottext">BinTree a -&gt; BinTree a -&gt; Bool
+(BinTree a -&gt; BinTree a -&gt; Bool)
+-&gt; (BinTree a -&gt; BinTree a -&gt; Bool) -&gt; Eq (BinTree a)
+forall a. Eq a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+== :: BinTree a -&gt; BinTree a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; BinTree a -&gt; BinTree a -&gt; Bool
+/= :: BinTree a -&gt; BinTree a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868011"><span id="local-6989586621679868019"><span id="local-6989586621679868022"><span class="annot"><span class="annottext">Int -&gt; BinTree a -&gt; ShowS
+[BinTree a] -&gt; ShowS
+BinTree a -&gt; String
+(Int -&gt; BinTree a -&gt; ShowS)
+-&gt; (BinTree a -&gt; String)
+-&gt; ([BinTree a] -&gt; ShowS)
+-&gt; Show (BinTree a)
+forall a. Show a =&gt; Int -&gt; BinTree a -&gt; ShowS
+forall a. Show a =&gt; [BinTree a] -&gt; ShowS
+forall a. Show a =&gt; BinTree a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; BinTree a -&gt; ShowS
+showsPrec :: Int -&gt; BinTree a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; BinTree a -&gt; String
+show :: BinTree a -&gt; String
+$cshowList :: forall a. Show a =&gt; [BinTree a] -&gt; ShowS
+showList :: [BinTree a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868026"><span id="local-6989586621679868028"><span class="annot"><span class="annottext">(forall x. BinTree a -&gt; Rep (BinTree a) x)
+-&gt; (forall x. Rep (BinTree a) x -&gt; BinTree a)
+-&gt; Generic (BinTree a)
+forall x. Rep (BinTree a) x -&gt; BinTree a
+forall x. BinTree a -&gt; Rep (BinTree a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (BinTree a) x -&gt; BinTree a
+forall a x. BinTree a -&gt; Rep (BinTree a) x
+$cfrom :: forall a x. BinTree a -&gt; Rep (BinTree a) x
+from :: forall x. BinTree a -&gt; Rep (BinTree a) x
+$cto :: forall a x. Rep (BinTree a) x -&gt; BinTree a
+to :: forall x. Rep (BinTree a) x -&gt; BinTree a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- HasSpec for BinTree</span><span>
+</span><span id="line-81"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">data</span><span> </span><span id="BinTreeSpec"><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span></span><span> </span><span id="local-6989586621679867704"><span class="annot"><a href="#local-6989586621679867704"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BinTreeSpec"><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867704"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679867704"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867704"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679868034"><span id="local-6989586621679868045"><span id="local-6989586621679868049"><span class="annot"><span class="annottext">Int -&gt; BinTreeSpec a -&gt; ShowS
+[BinTreeSpec a] -&gt; ShowS
+BinTreeSpec a -&gt; String
+(Int -&gt; BinTreeSpec a -&gt; ShowS)
+-&gt; (BinTreeSpec a -&gt; String)
+-&gt; ([BinTreeSpec a] -&gt; ShowS)
+-&gt; Show (BinTreeSpec a)
+forall a. HasSpec a =&gt; Int -&gt; BinTreeSpec a -&gt; ShowS
+forall a. HasSpec a =&gt; [BinTreeSpec a] -&gt; ShowS
+forall a. HasSpec a =&gt; BinTreeSpec a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. HasSpec a =&gt; Int -&gt; BinTreeSpec a -&gt; ShowS
+showsPrec :: Int -&gt; BinTreeSpec a -&gt; ShowS
+$cshow :: forall a. HasSpec a =&gt; BinTreeSpec a -&gt; String
+show :: BinTreeSpec a -&gt; String
+$cshowList :: forall a. HasSpec a =&gt; [BinTreeSpec a] -&gt; ShowS
+showList :: [BinTreeSpec a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867699"><span class="annot"><a href="Constrained.Base.html#Forallable"><span class="hs-identifier hs-type">Forallable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679867699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867699"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679868081"><span class="annot"><span class="annottext">fromForAllSpec :: (HasSpec (BinTree a), HasSpec (BinTree a, a, BinTree a)) =&gt;
+Specification (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a)
+</span><a href="#local-6989586621679868081"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromForAllSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+BinTreeSpec a -&gt; Specification (BinTree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(BinTreeSpec a -&gt; Specification (BinTree a))
+-&gt; (Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a)
+-&gt; Specification (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+forall a.
+Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+</span><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679868086"><span class="annot"><span class="annottext">forAllToList :: BinTree a -&gt; [(BinTree a, a, BinTree a)]
+</span><a href="#local-6989586621679868086"><span class="hs-identifier hs-var hs-var hs-var hs-var">forAllToList</span></a></span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#forAllToList"><span class="hs-identifier hs-var">forAllToList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-type">BinNode</span></a></span><span> </span><span id="local-6989586621679868088"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868088"><span class="hs-identifier hs-var">left</span></a></span></span><span> </span><span id="local-6989586621679868089"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868089"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868090"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868090"><span class="hs-identifier hs-var">right</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868088"><span class="hs-identifier hs-var">left</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868089"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868090"><span class="hs-identifier hs-var">right</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BinTree a, a, BinTree a)
+-&gt; [(BinTree a, a, BinTree a)] -&gt; [(BinTree a, a, BinTree a)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; [(BinTree a, a, BinTree a)]
+forall t e. Forallable t e =&gt; t -&gt; [e]
+</span><a href="Constrained.Base.html#forAllToList"><span class="hs-identifier hs-var">forAllToList</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868088"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">[(BinTree a, a, BinTree a)]
+-&gt; [(BinTree a, a, BinTree a)] -&gt; [(BinTree a, a, BinTree a)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; [(BinTree a, a, BinTree a)]
+forall t e. Forallable t e =&gt; t -&gt; [e]
+</span><a href="Constrained.Base.html#forAllToList"><span class="hs-identifier hs-var">forAllToList</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868090"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867693"><span id="local-6989586621679868113"><span id="local-6989586621679868116"><span id="local-6989586621679868119"><span id="local-6989586621679868122"><span id="local-6989586621679868125"><span id="local-6989586621679868128"><span id="local-6989586621679868131"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679868141"><span class="annot"><span class="annottext">emptySpec :: TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868141"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+forall a.
+Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+</span><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679868151"><span class="annot"><span class="annottext">combineSpec :: TypeSpec (BinTree a)
+-&gt; TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+</span><a href="#local-6989586621679868151"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span id="local-6989586621679868153"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868153"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span id="local-6989586621679868154"><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868154"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span id="local-6989586621679868155"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868155"><span class="hs-identifier hs-var">sz'</span></a></span></span><span> </span><span id="local-6989586621679868156"><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868156"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec (BinTree a) -&gt; Specification (BinTree a))
+-&gt; TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+forall a.
+Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+</span><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; Integer -&gt; Integer)
+-&gt; Maybe Integer -&gt; Maybe Integer -&gt; Maybe Integer
+forall a. (a -&gt; a -&gt; a) -&gt; Maybe a -&gt; Maybe a -&gt; Maybe a
+</span><a href="Constrained.Core.html#unionWithMaybe"><span class="hs-identifier hs-var">unionWithMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">min</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868153"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868155"><span class="hs-identifier hs-var">sz'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868154"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868156"><span class="hs-identifier hs-var">s'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679868170"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; BinTree a -&gt; TypeSpec (BinTree a) -&gt; Bool
+</span><a href="#local-6989586621679868170"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#conformsTo"><span class="hs-identifier hs-var">conformsTo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-type">BinNode</span></a></span><span> </span><span id="local-6989586621679868172"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868172"><span class="hs-identifier hs-var">left</span></a></span></span><span> </span><span id="local-6989586621679868173"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868173"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868174"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868174"><span class="hs-identifier hs-var">right</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679868175"><span class="annot"><span class="annottext">s :: TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868175"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868176"><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868176"><span class="hs-identifier hs-var">es</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">and</span></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868172"><span class="hs-identifier hs-var">left</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868173"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868174"><span class="hs-identifier hs-var">right</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; Bool
+forall a. HasSpec a =&gt; a -&gt; Specification a -&gt; Bool
+</span><a href="Constrained.Conformance.html#conformsToSpec"><span class="hs-operator hs-var">`conformsToSpec`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868176"><span class="hs-identifier hs-var">es</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868172"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; TypeSpec (BinTree a) -&gt; Bool
+forall a. (HasSpec a, HasCallStack) =&gt; a -&gt; TypeSpec a -&gt; Bool
+</span><a href="Constrained.Base.html#conformsTo"><span class="hs-operator hs-var">`conformsTo`</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868175"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868174"><span class="hs-identifier hs-var">right</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; TypeSpec (BinTree a) -&gt; Bool
+forall a. (HasSpec a, HasCallStack) =&gt; a -&gt; TypeSpec a -&gt; Bool
+</span><a href="Constrained.Base.html#conformsTo"><span class="hs-operator hs-var">`conformsTo`</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868175"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679868252"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec (BinTree a) -&gt; GenT m (BinTree a)
+</span><a href="#local-6989586621679868252"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span id="local-6989586621679868254"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868254"><span class="hs-identifier hs-var">msz</span></a></span></span><span> </span><span id="local-6989586621679868255"><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868255"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679868256"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868256"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868254"><span class="hs-identifier hs-var">msz</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868256"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; GenT m (BinTree a)
+forall a. a -&gt; GenT m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+forall a. BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679868258"><span class="annot"><span class="annottext">sz :: Integer
+</span><a href="#local-6989586621679868258"><span class="hs-identifier hs-var hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; (Integer -&gt; Integer) -&gt; Maybe Integer -&gt; Integer
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868254"><span class="hs-identifier hs-var">msz</span></a></span><span>
+</span><span id="line-111"></span><span>            </span><span id="local-6989586621679868261"><span class="annot"><span class="annottext">sz' :: Integer
+</span><a href="#local-6989586621679868261"><span class="hs-identifier hs-var hs-var">sz'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868258"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">[GenT GE (BinTree a)] -&gt; GenT m (BinTree a)
+forall a (m :: * -&gt; *).
+(Typeable a, MonadGenError m) =&gt;
+[GenT GE a] -&gt; GenT m a
+</span><a href="Constrained.GenT.html#oneofT"><span class="hs-identifier hs-var">oneofT</span></a></span><span>
+</span><span id="line-113"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-114"></span><span>              </span><span class="hs-special">(</span><span id="local-6989586621679868263"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868263"><span class="hs-identifier hs-var">left</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868264"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868264"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868265"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868265"><span class="hs-identifier hs-var">right</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, HasSpec a, MonadGenError m) =&gt;
+Specification a -&gt; GenT m a
+</span><a href="Constrained.TheKnot.html#genFromSpecT"><span class="hs-identifier hs-var">genFromSpecT</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867693"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Specification (BinTree a, a, BinTree a)
+ -&gt; GenT GE (BinTree a, a, BinTree a))
+-&gt; Specification (BinTree a, a, BinTree a)
+-&gt; GenT GE (BinTree a, a, BinTree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-115"></span><span>                </span><span class="annot"><span class="annottext">(Term (BinTree a, a, BinTree a) -&gt; [Pred])
+-&gt; Specification (BinTree a, a, BinTree a)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (BinTree a, a, BinTree a) -&gt; [Pred])
+ -&gt; Specification (BinTree a, a, BinTree a))
+-&gt; (Term (BinTree a, a, BinTree a) -&gt; [Pred])
+-&gt; Specification (BinTree a, a, BinTree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679868266"><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868266"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+-&gt; FunTy
+     (MapList Term (ProductAsList (BinTree a, a, BinTree a))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868266"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (BinTree a, a, BinTree a))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (BinTree a, a, BinTree a))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679868267"><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868267"><span class="hs-identifier hs-var">left</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868268"><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868268"><span class="hs-identifier hs-var">right</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>                      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+-&gt; (Term (BinTree a, a, BinTree a) -&gt; Pred) -&gt; Pred
+forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868267"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868255"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hint (BinTree a) -&gt; Term (BinTree a) -&gt; Pred
+forall t. HasGenHint t =&gt; Hint t -&gt; Term t -&gt; Pred
+</span><a href="Constrained.Syntax.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+Hint (BinTree a)
+</span><a href="#local-6989586621679868261"><span class="hs-identifier hs-var">sz'</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868267"><span class="hs-identifier hs-var">left</span></a></span><span>
+</span><span id="line-119"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+-&gt; (Term (BinTree a, a, BinTree a) -&gt; Pred) -&gt; Pred
+forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868268"><span class="hs-identifier hs-var">right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868255"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>                      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hint (BinTree a) -&gt; Term (BinTree a) -&gt; Pred
+forall t. HasGenHint t =&gt; Hint t -&gt; Term t -&gt; Pred
+</span><a href="Constrained.Syntax.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+Hint (BinTree a)
+</span><a href="#local-6989586621679868261"><span class="hs-identifier hs-var">sz'</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868268"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-121"></span><span>                      </span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868266"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868255"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-123"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span>              </span><span class="annot"><span class="annottext">BinTree a -&gt; GenT GE (BinTree a)
+forall a. a -&gt; GenT GE a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(BinTree a -&gt; GenT GE (BinTree a))
+-&gt; BinTree a -&gt; GenT GE (BinTree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+forall a. BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-var">BinNode</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868263"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868264"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868265"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-125"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; GenT GE (BinTree a)
+forall a. a -&gt; GenT GE a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+forall a. BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span>
+</span><span id="line-126"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679868274"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec (BinTree a) -&gt; BinTree a -&gt; [BinTree a]
+</span><a href="#local-6989586621679868274"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var">shrinkWithTypeSpec</span></a></span><span> </span><span id="local-6989586621679868276"><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868276"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-type">BinNode</span></a></span><span> </span><span id="local-6989586621679868277"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868277"><span class="hs-identifier hs-var">left</span></a></span></span><span> </span><span id="local-6989586621679868278"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868278"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868279"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868279"><span class="hs-identifier hs-var">right</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">BinTree a
+forall a. BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinTip"><span class="hs-identifier hs-var">BinTip</span></a></span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="annottext">BinTree a -&gt; [BinTree a] -&gt; [BinTree a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868277"><span class="hs-identifier hs-var">left</span></a></span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">BinTree a -&gt; [BinTree a] -&gt; [BinTree a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868279"><span class="hs-identifier hs-var">right</span></a></span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">BinTree a -&gt; [BinTree a] -&gt; [BinTree a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+forall a. BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-var">BinNode</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868277"><span class="hs-identifier hs-var">left</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868278"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">(BinTree a -&gt; BinTree a) -&gt; [BinTree a] -&gt; [BinTree a]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a) -&gt; BinTree a -&gt; [BinTree a]
+forall a. HasSpec a =&gt; TypeSpec a -&gt; a -&gt; [a]
+</span><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var">shrinkWithTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868276"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868279"><span class="hs-identifier hs-var">right</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><span class="annottext">[BinTree a] -&gt; [BinTree a] -&gt; [BinTree a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679868281"><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868281"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+forall a. BinTree a -&gt; a -&gt; BinTree a -&gt; BinTree a
+</span><a href="Constrained.Spec.Tree.html#BinNode"><span class="hs-identifier hs-var">BinNode</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868281"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868278"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868279"><span class="hs-identifier hs-var">right</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(BinTree a -&gt; BinTree a) -&gt; [BinTree a] -&gt; [BinTree a]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a) -&gt; BinTree a -&gt; [BinTree a]
+forall a. HasSpec a =&gt; TypeSpec a -&gt; a -&gt; [a]
+</span><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var">shrinkWithTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><a href="#local-6989586621679868276"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">BinTree a
+</span><a href="#local-6989586621679868277"><span class="hs-identifier hs-var">left</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621679868282"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec (BinTree a) -&gt; Specification Integer
+</span><a href="#local-6989586621679868282"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification Integer
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679868292"><span class="annot"><span class="annottext">toPreds :: Term (BinTree a) -&gt; TypeSpec (BinTree a) -&gt; Pred
+</span><a href="#local-6989586621679868292"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span id="local-6989586621679868294"><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868294"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-type">BinTreeSpec</span></a></span><span> </span><span id="local-6989586621679868295"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868295"><span class="hs-identifier hs-var">msz</span></a></span></span><span> </span><span id="local-6989586621679868296"><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868296"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (BinTree a)
+-&gt; (Term (BinTree a, a, BinTree a) -&gt; Pred) -&gt; Pred
+forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868294"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (BinTree a, a, BinTree a) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (BinTree a, a, BinTree a) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679868297"><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868297"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868297"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a, a, BinTree a)
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+</span><a href="#local-6989586621679868296"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">Pred -&gt; Pred -&gt; Pred
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Pred -&gt; (Integer -&gt; Pred) -&gt; Maybe Integer -&gt; Pred
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Pred
+forall deps. PredD deps
+</span><a href="Constrained.AbstractSyntax.html#TruePred"><span class="hs-identifier hs-var">TruePred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; Term (BinTree a) -&gt; Pred)
+-&gt; Term (BinTree a) -&gt; Integer -&gt; Pred
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Term (BinTree a) -&gt; Pred
+Hint (BinTree a) -&gt; Term (BinTree a) -&gt; Pred
+forall t. HasGenHint t =&gt; Hint t -&gt; Term t -&gt; Pred
+</span><a href="Constrained.Syntax.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="annot"><span class="annottext">Term (BinTree a)
+</span><a href="#local-6989586621679868294"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868295"><span class="hs-identifier hs-var">msz</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867760"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867760"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasGenHint"><span class="hs-identifier hs-type">HasGenHint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867760"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Hint"><span class="annot"><a href="Constrained.Base.html#Hint"><span class="hs-identifier hs-var">Hint</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#BinTree"><span class="hs-identifier hs-type">BinTree</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867760"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679868309"><span class="annot"><span class="annottext">giveHint :: Hint (BinTree a) -&gt; Specification (BinTree a)
+</span><a href="#local-6989586621679868309"><span class="hs-identifier hs-var hs-var hs-var hs-var">giveHint</span></a></span></span><span> </span><span id="local-6989586621679868311"><span class="annot"><span class="annottext">Hint (BinTree a)
+</span><a href="#local-6989586621679868311"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec (BinTree a) -&gt; Specification (BinTree a))
+-&gt; TypeSpec (BinTree a) -&gt; Specification (BinTree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+forall a.
+Maybe Integer
+-&gt; Specification (BinTree a, a, BinTree a) -&gt; BinTreeSpec a
+</span><a href="Constrained.Spec.Tree.html#BinTreeSpec"><span class="hs-identifier hs-var">BinTreeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Integer
+Hint (BinTree a)
+</span><a href="#local-6989586621679868311"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification (BinTree a, a, BinTree a)
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- HasSpec for Tree</span><span>
+</span><span id="line-148"></span><span class="hs-comment">------------------------------------------------------------------------</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">data</span><span> </span><span id="TreeSpec"><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span></span><span> </span><span id="local-6989586621679867797"><span class="annot"><a href="#local-6989586621679867797"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TreeSpec"><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="roseTreeAvgLength"><span class="annot"><span class="annottext">forall a. TreeSpec a -&gt; Maybe Integer
+</span><a href="Constrained.Spec.Tree.html#roseTreeAvgLength"><span class="hs-identifier hs-var hs-var">roseTreeAvgLength</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="roseTreeMaxSize"><span class="annot"><span class="annottext">forall a. TreeSpec a -&gt; Maybe Integer
+</span><a href="Constrained.Spec.Tree.html#roseTreeMaxSize"><span class="hs-identifier hs-var hs-var">roseTreeMaxSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="roseTreeRootSpec"><span class="annot"><span class="annottext">forall a. TreeSpec a -&gt; Specification a
+</span><a href="Constrained.Spec.Tree.html#roseTreeRootSpec"><span class="hs-identifier hs-var hs-var">roseTreeRootSpec</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867797"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="roseTreeCtxSpec"><span class="annot"><span class="annottext">forall a. TreeSpec a -&gt; Specification (a, [Tree a])
+</span><a href="Constrained.Spec.Tree.html#roseTreeCtxSpec"><span class="hs-identifier hs-var hs-var">roseTreeCtxSpec</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679867797"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867797"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span id="local-6989586621679867812"><span id="local-6989586621679868319"><span id="local-6989586621679868333"><span id="local-6989586621679868337"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867812"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867812"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867814"><span class="annot"><a href="Constrained.Base.html#Forallable"><span class="hs-identifier hs-type">Forallable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867814"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679867814"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867814"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621679868369"><span class="annot"><span class="annottext">fromForAllSpec :: (HasSpec (Tree a), HasSpec (a, [Tree a])) =&gt;
+Specification (a, [Tree a]) -&gt; Specification (Tree a)
+</span><a href="Constrained.Base.html#fromForAllSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromForAllSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TreeSpec a -&gt; Specification (Tree a)
+forall a. HasSpec (Tree a) =&gt; TreeSpec a -&gt; Specification (Tree a)
+</span><a href="Constrained.Spec.Tree.html#guardRoseSpec"><span class="hs-identifier hs-var">guardRoseSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TreeSpec a -&gt; Specification (Tree a))
+-&gt; (Specification (a, [Tree a]) -&gt; TreeSpec a)
+-&gt; Specification (a, [Tree a])
+-&gt; Specification (Tree a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621679868373"><span class="annot"><span class="annottext">forAllToList :: Tree a -&gt; [(a, [Tree a])]
+</span><a href="Constrained.Base.html#forAllToList"><span class="hs-identifier hs-var hs-var hs-var hs-var">forAllToList</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Node</span></span><span> </span><span id="local-6989586621679868375"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868375"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868376"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868376"><span class="hs-identifier hs-var">children</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868375"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868376"><span class="hs-identifier hs-var">children</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a, [Tree a]) -&gt; [(a, [Tree a])] -&gt; [(a, [Tree a])]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">(Tree a -&gt; [(a, [Tree a])]) -&gt; [Tree a] -&gt; [(a, [Tree a])]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="annot"><span class="annottext">Tree a -&gt; [(a, [Tree a])]
+forall t e. Forallable t e =&gt; t -&gt; [e]
+</span><a href="Constrained.Base.html#forAllToList"><span class="hs-identifier hs-var">forAllToList</span></a></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868376"><span class="hs-identifier hs-var">children</span></a></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- TODO: get rid of this when we implement `cardinality`</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- in `HasSpec`</span><span>
+</span><span id="line-165"></span><span id="local-6989586621679867815"><span class="annot"><a href="Constrained.Spec.Tree.html#guardRoseSpec"><span class="hs-identifier hs-type">guardRoseSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867815"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867815"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867815"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-166"></span><span id="guardRoseSpec"><span class="annot"><span class="annottext">guardRoseSpec :: forall a. HasSpec (Tree a) =&gt; TreeSpec a -&gt; Specification (Tree a)
+</span><a href="Constrained.Spec.Tree.html#guardRoseSpec"><span class="hs-identifier hs-var hs-var">guardRoseSpec</span></a></span></span><span> </span><span id="local-6989586621679868387"><span class="annot"><span class="annottext">spec :: TreeSpec a
+</span><a href="#local-6989586621679868387"><span class="hs-identifier hs-var">spec</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868388"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868388"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868389"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868389"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; Bool
+forall a. Specification a -&gt; Bool
+</span><a href="Constrained.Base.html#isErrorLike"><span class="hs-identifier hs-var">isErrorLike</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868388"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty String -&gt; SpecificationD Deps (Tree a)
+forall deps a. NonEmpty String -&gt; SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; NonEmpty String
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;guardRoseSpec: rootSpec is error&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a]) -&gt; Bool
+forall a. Specification a -&gt; Bool
+</span><a href="Constrained.Base.html#isErrorLike"><span class="hs-identifier hs-var">isErrorLike</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868389"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty String -&gt; SpecificationD Deps (Tree a)
+forall deps a. NonEmpty String -&gt; SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; NonEmpty String
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;guardRoseSpec: ctxSpec is error&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypeSpec (Tree a) -&gt; [Tree a] -&gt; SpecificationD Deps (Tree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; [a] -&gt; Specification a
+</span><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">TypeSpec (Tree a)
+TreeSpec a
+</span><a href="#local-6989586621679868387"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867811"><span id="local-6989586621679868414"><span id="local-6989586621679868417"><span id="local-6989586621679868420"><span id="local-6989586621679868423"><span id="local-6989586621679868426"><span id="local-6989586621679868429"><span id="local-6989586621679868432"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TypeSpec"><span class="annot"><a href="Constrained.Base.html#TypeSpec"><span class="hs-identifier hs-var">TypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679868440"><span class="annot"><span class="annottext">emptySpec :: TypeSpec (Tree a)
+</span><a href="Constrained.Base.html#emptySpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span>  </span><span id="local-6989586621679868453"><span class="annot"><span class="annottext">combineSpec :: TypeSpec (Tree a) -&gt; TypeSpec (Tree a) -&gt; Specification (Tree a)
+</span><a href="Constrained.Base.html#combineSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">combineSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span id="local-6989586621679868454"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868454"><span class="hs-identifier hs-var">mal</span></a></span></span><span> </span><span id="local-6989586621679868455"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868455"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span id="local-6989586621679868456"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868456"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868457"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868457"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span id="local-6989586621679868458"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868458"><span class="hs-identifier hs-var">mal'</span></a></span></span><span> </span><span id="local-6989586621679868459"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868459"><span class="hs-identifier hs-var">sz'</span></a></span></span><span> </span><span id="local-6989586621679868460"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868460"><span class="hs-identifier hs-var">rs'</span></a></span></span><span> </span><span id="local-6989586621679868461"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868461"><span class="hs-identifier hs-var">s'</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a]) -&gt; Bool
+forall a. Specification a -&gt; Bool
+</span><a href="Constrained.Base.html#isErrorLike"><span class="hs-identifier hs-var">isErrorLike</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868462"><span class="hs-identifier hs-var">alteredspec</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty String -&gt; Specification (Tree a)
+forall deps a. NonEmpty String -&gt; SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification (a, [Tree a]) -&gt; NonEmpty String
+forall a. Specification a -&gt; NonEmpty String
+</span><a href="Constrained.Base.html#errorLikeMessage"><span class="hs-identifier hs-var">errorLikeMessage</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868462"><span class="hs-identifier hs-var">alteredspec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-179"></span><span>        </span><span class="annot"><span class="annottext">TreeSpec a -&gt; Specification (Tree a)
+forall a. HasSpec (Tree a) =&gt; TreeSpec a -&gt; Specification (Tree a)
+</span><a href="Constrained.Spec.Tree.html#guardRoseSpec"><span class="hs-identifier hs-var">guardRoseSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TreeSpec a -&gt; Specification (Tree a))
+-&gt; TreeSpec a -&gt; Specification (Tree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-180"></span><span>          </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span>
+</span><span id="line-181"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; Integer -&gt; Integer)
+-&gt; Maybe Integer -&gt; Maybe Integer -&gt; Maybe Integer
+forall a. (a -&gt; a -&gt; a) -&gt; Maybe a -&gt; Maybe a -&gt; Maybe a
+</span><a href="Constrained.Core.html#unionWithMaybe"><span class="hs-identifier hs-var">unionWithMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">max</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868454"><span class="hs-identifier hs-var">mal</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868458"><span class="hs-identifier hs-var">mal'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; Integer -&gt; Integer)
+-&gt; Maybe Integer -&gt; Maybe Integer -&gt; Maybe Integer
+forall a. (a -&gt; a -&gt; a) -&gt; Maybe a -&gt; Maybe a -&gt; Maybe a
+</span><a href="Constrained.Core.html#unionWithMaybe"><span class="hs-identifier hs-var">unionWithMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">min</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868455"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868459"><span class="hs-identifier hs-var">sz'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>            </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868464"><span class="hs-identifier hs-var">rs''</span></a></span><span>
+</span><span id="line-184"></span><span>            </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868465"><span class="hs-identifier hs-var">s''</span></a></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-186"></span><span>      </span><span id="local-6989586621679868462"><span class="annot"><span class="annottext">alteredspec :: Specification (a, [Tree a])
+</span><a href="#local-6989586621679868462"><span class="hs-identifier hs-var hs-var">alteredspec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TypeSpec (a, [Tree a]) -&gt; Specification (a, [Tree a])
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification a -&gt; Specification [Tree a] -&gt; PairSpec a [Tree a]
+forall a b. Specification a -&gt; Specification b -&gt; PairSpec a b
+</span><a href="Constrained.TheKnot.html#Cartesian"><span class="hs-identifier hs-var">Cartesian</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868464"><span class="hs-identifier hs-var">rs''</span></a></span><span> </span><span class="annot"><span class="annottext">Specification [Tree a]
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+-&gt; Specification (a, [Tree a]) -&gt; Specification (a, [Tree a])
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868465"><span class="hs-identifier hs-var">s''</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>      </span><span id="local-6989586621679868464"><span class="annot"><span class="annottext">rs'' :: Specification a
+</span><a href="#local-6989586621679868464"><span class="hs-identifier hs-var hs-var">rs''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868456"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; Specification a -&gt; Specification a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868460"><span class="hs-identifier hs-var">rs'</span></a></span><span>
+</span><span id="line-188"></span><span>      </span><span id="local-6989586621679868465"><span class="annot"><span class="annottext">s'' :: Specification (a, [Tree a])
+</span><a href="#local-6989586621679868465"><span class="hs-identifier hs-var hs-var">s''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868457"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+-&gt; Specification (a, [Tree a]) -&gt; Specification (a, [Tree a])
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868461"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621679868476"><span class="annot"><span class="annottext">conformsTo :: HasCallStack =&gt; Tree a -&gt; TypeSpec (Tree a) -&gt; Bool
+</span><a href="Constrained.Base.html#conformsTo"><span class="hs-identifier hs-var hs-var hs-var hs-var">conformsTo</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Node</span></span><span> </span><span id="local-6989586621679868477"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868477"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868478"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868478"><span class="hs-identifier hs-var">children</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868479"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868479"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868480"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868480"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">[Bool] -&gt; Bool
+forall (t :: * -&gt; *). Foldable t =&gt; t Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">and</span></span><span>
+</span><span id="line-192"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868477"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868478"><span class="hs-identifier hs-var">children</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a, [Tree a]) -&gt; Specification (a, [Tree a]) -&gt; Bool
+forall a. HasSpec a =&gt; a -&gt; Specification a -&gt; Bool
+</span><a href="Constrained.Conformance.html#conformsToSpec"><span class="hs-operator hs-var">`conformsToSpec`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868480"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-193"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Tree a -&gt; Bool) -&gt; [Tree a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Node</span></span><span> </span><span id="local-6989586621679868482"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868482"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span id="local-6989586621679868483"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868483"><span class="hs-identifier hs-var">children'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868482"><span class="hs-identifier hs-var">a'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868483"><span class="hs-identifier hs-var">children'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a, [Tree a]) -&gt; Specification (a, [Tree a]) -&gt; Bool
+forall a. HasSpec a =&gt; a -&gt; Specification a -&gt; Bool
+</span><a href="Constrained.Conformance.html#conformsToSpec"><span class="hs-operator hs-var">`conformsToSpec`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868480"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868478"><span class="hs-identifier hs-var">children</span></a></span><span>
+</span><span id="line-194"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868477"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Specification a -&gt; Bool
+forall a. HasSpec a =&gt; a -&gt; Specification a -&gt; Bool
+</span><a href="Constrained.Conformance.html#conformsToSpec"><span class="hs-operator hs-var">`conformsToSpec`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868479"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-195"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span>  </span><span id="local-6989586621679868508"><span class="annot"><span class="annottext">genFromTypeSpec :: forall (m :: * -&gt; *).
+(HasCallStack, MonadGenError m) =&gt;
+TypeSpec (Tree a) -&gt; GenT m (Tree a)
+</span><a href="Constrained.Base.html#genFromTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">genFromTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span id="local-6989586621679868509"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868509"><span class="hs-identifier hs-var">mal</span></a></span></span><span> </span><span id="local-6989586621679868510"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868510"><span class="hs-identifier hs-var">msz</span></a></span></span><span> </span><span id="local-6989586621679868511"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868511"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868512"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868512"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679868513"><span class="annot"><span class="annottext">sz :: Integer
+</span><a href="#local-6989586621679868513"><span class="hs-identifier hs-var hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; (Integer -&gt; Integer) -&gt; Maybe Integer -&gt; Integer
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868510"><span class="hs-identifier hs-var">msz</span></a></span><span>
+</span><span id="line-199"></span><span>        </span><span id="local-6989586621679868514"><span class="annot"><span class="annottext">sz' :: Integer
+</span><a href="#local-6989586621679868514"><span class="hs-identifier hs-var hs-var">sz'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; (Integer -&gt; Integer) -&gt; Maybe Integer -&gt; Integer
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868513"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868513"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868509"><span class="hs-identifier hs-var">mal</span></a></span><span>
+</span><span id="line-200"></span><span>        </span><span id="local-6989586621679868515"><span class="annot"><span class="annottext">childrenSpec :: Specification [Tree a]
+</span><a href="#local-6989586621679868515"><span class="hs-identifier hs-var hs-var">childrenSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-201"></span><span>          </span><span class="annot"><span class="annottext">TypeSpec [Tree a] -&gt; Specification [Tree a]
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec [Tree a] -&gt; Specification [Tree a])
+-&gt; TypeSpec [Tree a] -&gt; Specification [Tree a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-202"></span><span>            </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; [Tree a]
+-&gt; Specification Integer
+-&gt; Specification (Tree a)
+-&gt; FoldSpec (Tree a)
+-&gt; ListSpec (Tree a)
+forall a.
+Maybe Integer
+-&gt; [a]
+-&gt; Specification Integer
+-&gt; Specification a
+-&gt; FoldSpec a
+-&gt; ListSpec a
+</span><a href="Constrained.TheKnot.html#ListSpec"><span class="hs-identifier hs-var">ListSpec</span></a></span><span>
+</span><span id="line-203"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868514"><span class="hs-identifier hs-var">sz'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>              </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-205"></span><span>              </span><span class="annot"><span class="annottext">Specification Integer
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-206"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TypeSpec (Tree a) -&gt; Specification (Tree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec (Tree a) -&gt; Specification (Tree a))
+-&gt; TypeSpec (Tree a) -&gt; Specification (Tree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868509"><span class="hs-identifier hs-var">mal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868514"><span class="hs-identifier hs-var">sz'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868512"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>              </span><span class="annot"><span class="annottext">FoldSpec (Tree a)
+forall a. FoldSpec a
+</span><a href="Constrained.TheKnot.html#NoFold"><span class="hs-identifier hs-var">NoFold</span></a></span><span>
+</span><span id="line-208"></span><span>        </span><span id="local-6989586621679868518"><span class="annot"><span class="annottext">innerSpec :: Specification (a, [Tree a])
+</span><a href="#local-6989586621679868518"><span class="hs-identifier hs-var hs-var">innerSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868512"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+-&gt; Specification (a, [Tree a]) -&gt; Specification (a, [Tree a])
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (a, [Tree a]) -&gt; Specification (a, [Tree a])
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification a -&gt; Specification [Tree a] -&gt; PairSpec a [Tree a]
+forall a b. Specification a -&gt; Specification b -&gt; PairSpec a b
+</span><a href="Constrained.TheKnot.html#Cartesian"><span class="hs-identifier hs-var">Cartesian</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868511"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">Specification [Tree a]
+</span><a href="#local-6989586621679868515"><span class="hs-identifier hs-var">childrenSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><span class="annottext">((a, [Tree a]) -&gt; Tree a)
+-&gt; GenT m (a, [Tree a]) -&gt; GenT m (Tree a)
+forall a b. (a -&gt; b) -&gt; GenT m a -&gt; GenT m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; [Tree a] -&gt; Tree a) -&gt; (a, [Tree a]) -&gt; Tree a
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; [Tree a] -&gt; Tree a
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><span class="hs-identifier hs-var">Node</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(GenT m (a, [Tree a]) -&gt; GenT m (Tree a))
+-&gt; GenT m (a, [Tree a]) -&gt; GenT m (Tree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-210"></span><span>      </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, HasSpec a, MonadGenError m) =&gt;
+Specification a -&gt; GenT m a
+</span><a href="Constrained.TheKnot.html#genFromSpecT"><span class="hs-identifier hs-var">genFromSpecT</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867811"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868518"><span class="hs-identifier hs-var">innerSpec</span></a></span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span>  </span><span id="local-6989586621679868523"><span class="annot"><span class="annottext">shrinkWithTypeSpec :: TypeSpec (Tree a) -&gt; Tree a -&gt; [Tree a]
+</span><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkWithTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868524"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868524"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868525"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868525"><span class="hs-identifier hs-var">ctxSpec</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Node</span></span><span> </span><span id="local-6989586621679868526"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868526"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679868527"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a -&gt; [Tree a] -&gt; Tree a
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><span class="hs-identifier hs-var">Node</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; Bool -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Tree a] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-214"></span><span>      </span><span class="annot"><span class="annottext">[Tree a] -&gt; [Tree a] -&gt; [Tree a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-215"></span><span>      </span><span class="annot"><span class="annottext">[Tree a] -&gt; [Tree a] -&gt; [Tree a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a -&gt; [Tree a] -&gt; Tree a
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><span class="hs-identifier hs-var">Node</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868530"><span class="hs-identifier hs-var">a'</span></a></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679868530"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868530"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; a -&gt; [a]
+forall a. HasSpec a =&gt; Specification a -&gt; a -&gt; [a]
+</span><a href="Constrained.TheKnot.html#shrinkWithSpec"><span class="hs-identifier hs-var">shrinkWithSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868524"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868526"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-216"></span><span>      </span><span class="annot"><span class="annottext">[Tree a] -&gt; [Tree a] -&gt; [Tree a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a -&gt; [Tree a] -&gt; Tree a
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><span class="hs-identifier hs-var">Node</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679868531"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679868531"><span class="annot"><span class="annottext">Tree a
+</span><a href="#local-6989586621679868531"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-217"></span><span>      </span><span class="annot"><span class="annottext">[Tree a] -&gt; [Tree a] -&gt; [Tree a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">a -&gt; [Tree a] -&gt; Tree a
+forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><span class="hs-identifier hs-var">Node</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679868526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868532"><span class="hs-identifier hs-var">ts'</span></a></span><span>
+</span><span id="line-218"></span><span>         </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679868532"><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868532"><span class="hs-identifier hs-var">ts'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Tree a -&gt; [Tree a]) -&gt; [Tree a] -&gt; [[Tree a]]
+forall a. (a -&gt; [a]) -&gt; [a] -&gt; [[a]]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-36a714fad189d2f969f84284bc3d269c3078f8b44e476d1c2e75fd48d6b5004b/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrinkList"><span class="hs-identifier hs-var">shrinkList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TypeSpec (Tree a) -&gt; Tree a -&gt; [Tree a]
+forall a. HasSpec a =&gt; TypeSpec a -&gt; a -&gt; [a]
+</span><a href="Constrained.Base.html#shrinkWithTypeSpec"><span class="hs-identifier hs-var">shrinkWithTypeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868525"><span class="hs-identifier hs-var">ctxSpec</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Tree a]
+</span><a href="#local-6989586621679868527"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-219"></span><span>         </span><span class="hs-special">]</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span>  </span><span id="local-6989586621679868533"><span class="annot"><span class="annottext">cardinalTypeSpec :: TypeSpec (Tree a) -&gt; Specification Integer
+</span><a href="Constrained.Base.html#cardinalTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">cardinalTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec (Tree a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification Integer
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span>  </span><span id="local-6989586621679868547"><span class="annot"><span class="annottext">toPreds :: Term (Tree a) -&gt; TypeSpec (Tree a) -&gt; Pred
+</span><a href="Constrained.Base.html#toPreds"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPreds</span></a></span></span><span> </span><span id="local-6989586621679868548"><span class="annot"><span class="annottext">Term (Tree a)
+</span><a href="#local-6989586621679868548"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span id="local-6989586621679868549"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868549"><span class="hs-identifier hs-var">mal</span></a></span></span><span> </span><span id="local-6989586621679868550"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868550"><span class="hs-identifier hs-var">msz</span></a></span></span><span> </span><span id="local-6989586621679868551"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868551"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span id="local-6989586621679868552"><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868552"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Tree a) -&gt; (Term (a, [Tree a]) -&gt; Pred) -&gt; Pred
+forall t a p.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Tree a)
+</span><a href="#local-6989586621679868548"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (a, [Tree a]) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (a, [Tree a]) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679868553"><span class="annot"><span class="annottext">Term (a, [Tree a])
+</span><a href="#local-6989586621679868553"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (a, [Tree a])
+</span><a href="#local-6989586621679868553"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Term (a, [Tree a]) -&gt; Specification (a, [Tree a]) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+</span><a href="#local-6989586621679868552"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>      </span><span class="annot"><span class="annottext">Pred -&gt; Pred -&gt; Pred
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Term (Tree a) -&gt; Term a
+forall a. HasSpec a =&gt; Term (Tree a) -&gt; Term a
+</span><a href="Constrained.Spec.Tree.html#rootLabel_"><span class="hs-identifier hs-var">rootLabel_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Tree a)
+</span><a href="#local-6989586621679868548"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-226"></span><span>        </span><span class="annot"><span class="annottext">Term a -&gt; Specification a -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679868551"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-227"></span><span>      </span><span class="annot"><span class="annottext">Pred -&gt; Pred -&gt; Pred
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Pred -&gt; (Integer -&gt; Pred) -&gt; Maybe Integer -&gt; Pred
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Pred
+forall deps. PredD deps
+</span><a href="Constrained.AbstractSyntax.html#TruePred"><span class="hs-identifier hs-var">TruePred</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679868554"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868554"><span class="hs-identifier hs-var">sz</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Hint (Tree a) -&gt; Term (Tree a) -&gt; Pred
+forall t. HasGenHint t =&gt; Hint t -&gt; Term t -&gt; Pred
+</span><a href="Constrained.Syntax.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868549"><span class="hs-identifier hs-var">mal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868554"><span class="hs-identifier hs-var">sz</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term (Tree a)
+</span><a href="#local-6989586621679868548"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868550"><span class="hs-identifier hs-var">msz</span></a></span><span>
+</span><span id="line-228"></span><span>
+</span><span id="line-229"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679867850"><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867850"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasGenHint"><span class="hs-identifier hs-type">HasGenHint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867850"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Hint"><span class="annot"><a href="Constrained.Base.html#Hint"><span class="hs-identifier hs-var">Hint</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867850"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span>  </span><span id="local-6989586621679868566"><span class="annot"><span class="annottext">giveHint :: Hint (Tree a) -&gt; Specification (Tree a)
+</span><a href="Constrained.Base.html#giveHint"><span class="hs-identifier hs-var hs-var hs-var hs-var">giveHint</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679868567"><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868567"><span class="hs-identifier hs-var">avgLen</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679868568"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868568"><span class="hs-identifier hs-var">sz</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypeSpec (Tree a) -&gt; Specification (Tree a)
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec (Tree a) -&gt; Specification (Tree a))
+-&gt; TypeSpec (Tree a) -&gt; Specification (Tree a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><a href="#local-6989586621679868567"><span class="hs-identifier hs-var">avgLen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679868568"><span class="hs-identifier hs-var">sz</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (a, [Tree a])
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="hs-keyword">data</span><span> </span><span id="TreeW"><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-var">TreeW</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679868569"><span class="annot"><a href="#local-6989586621679868569"><span class="hs-identifier hs-type">dom</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679868570"><span class="annot"><a href="#local-6989586621679868570"><span class="hs-identifier hs-type">rng</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-234"></span><span>  </span><span id="local-6989586621679867924"><span id="RootLabelW"><span class="annot"><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867924"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867924"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><a href="#local-6989586621679867924"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span id="local-6989586621679867854"><span id="local-6989586621679867855"><span id="local-6989586621679868573"><span id="local-6989586621679868575"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867854"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867855"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span id="local-6989586621679867856"><span id="local-6989586621679867857"><span id="local-6989586621679868579"><span id="local-6989586621679868581"><span id="local-6989586621679868585"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867856"><span class="hs-identifier hs-type">d</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867857"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Constrained.FunctionSymbol.html#Semantics"><span class="hs-identifier hs-type">Semantics</span></a></span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-241"></span><span>  </span><span id="local-6989586621679868590"><span class="annot"><span class="annottext">semantics :: forall (d :: [*]) r. TreeW d r -&gt; FunTy d r
+</span><a href="#local-6989586621679868590"><span class="hs-identifier hs-var hs-var hs-var hs-var">semantics</span></a></span></span><span> </span><span class="annot"><span class="annottext">TreeW d r
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Node</span></span><span> </span><span id="local-6989586621679868594"><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679868594"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><span class="annottext">[Tree r]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">r
+</span><a href="#local-6989586621679868594"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679868596"><span id="local-6989586621679868600"><span class="annot"><a href="Constrained.AbstractSyntax.html#Syntax"><span class="hs-identifier hs-type">Syntax</span></a></span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span></span></span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679868610"><span id="local-6989586621679868619"><span id="local-6989586621679868629"><span id="local-6989586621679868642"><span class="annot"><a href="Constrained.Base.html#Logic"><span class="hs-identifier hs-type">Logic</span></a></span><span> </span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeW"><span class="hs-identifier hs-type">TreeW</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-246"></span><span>  </span><span id="local-6989586621679868660"><span class="annot"><span class="annottext">propagate :: forall (as :: [*]) b a.
+(AppRequires TreeW as b, HasSpec a) =&gt;
+TreeW as b
+-&gt; ListCtx Value as (HOLE a) -&gt; Specification b -&gt; Specification a
+</span><a href="#local-6989586621679868660"><span class="hs-identifier hs-var hs-var hs-var hs-var">propagate</span></a></span></span><span> </span><span id="local-6989586621679868662"><span class="annot"><span class="annottext">TreeW as b
+</span><a href="#local-6989586621679868662"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679868663"><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679868663"><span class="hs-identifier hs-var">ctxt</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.AbstractSyntax.html#ExplainSpec"><span class="hs-identifier hs-type">ExplainSpec</span></a></span><span> </span><span id="local-6989586621679868665"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679868665"><span class="hs-identifier hs-var">es</span></a></span></span><span> </span><span id="local-6989586621679868666"><span class="annot"><span class="annottext">SpecificationD Deps b
+</span><a href="#local-6989586621679868666"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Specification a -&gt; Specification a
+forall a. [String] -&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Base.html#explainSpec"><span class="hs-identifier hs-var">explainSpec</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679868665"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">(Specification a -&gt; Specification a)
+-&gt; Specification a -&gt; Specification a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; SpecificationD Deps b
+-&gt; Specification a
+forall (as :: [*]) b a.
+(AppRequires TreeW as b, HasSpec a) =&gt;
+TreeW as b
+-&gt; ListCtx Value as (HOLE a) -&gt; Specification b -&gt; Specification a
+forall (t :: [*] -&gt; * -&gt; *) (as :: [*]) b a.
+(Logic t, AppRequires t as b, HasSpec a) =&gt;
+t as b
+-&gt; ListCtx Value as (HOLE a) -&gt; Specification b -&gt; Specification a
+</span><a href="Constrained.Base.html#propagate"><span class="hs-identifier hs-var">propagate</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+</span><a href="#local-6989586621679868662"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679868663"><span class="hs-identifier hs-var">ctxt</span></a></span><span> </span><span class="annot"><span class="annottext">SpecificationD Deps b
+</span><a href="#local-6989586621679868666"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-247"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagate"><span class="hs-identifier hs-var">propagate</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">SpecificationD Deps b
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification a
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-248"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagate"><span class="hs-identifier hs-var">propagate</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.AbstractSyntax.html#ErrorSpec"><span class="hs-identifier hs-type">ErrorSpec</span></a></span><span> </span><span id="local-6989586621679868667"><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679868667"><span class="hs-identifier hs-var">msgs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty String -&gt; Specification a
+forall deps a. NonEmpty String -&gt; SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679868667"><span class="hs-identifier hs-var">msgs</span></a></span><span>
+</span><span id="line-249"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagate"><span class="hs-identifier hs-var">propagate</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#Unary"><span class="hs-identifier hs-type">Unary</span></a></span><span> </span><span class="annot"><span class="annottext">HOLE a (Tree b)
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.AbstractSyntax.html#SuspendedSpec"><span class="hs-identifier hs-type">SuspendedSpec</span></a></span><span> </span><span id="local-6989586621679868684"><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679868684"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679868685"><span class="annot"><span class="annottext">Pred
+</span><a href="#local-6989586621679868685"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term a -&gt; Pred) -&gt; Specification a
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term a -&gt; Pred) -&gt; Specification a)
+-&gt; (Term a -&gt; Pred) -&gt; Specification a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679868686"><span class="annot"><span class="annottext">Term a
+</span><a href="#local-6989586621679868686"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TermD Deps b -&gt; BinderD Deps b -&gt; Pred
+forall deps a. TermD deps a -&gt; BinderD deps a -&gt; PredD deps
+</span><a href="Constrained.AbstractSyntax.html#Let"><span class="hs-identifier hs-var">Let</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TreeW '[Tree b] b -&gt; List Term '[Tree b] -&gt; TermD Deps b
+forall deps (t :: [*] -&gt; * -&gt; *) (dom :: [*]) a.
+AppRequiresD deps t dom a =&gt;
+t dom a -&gt; List (TermD deps) dom -&gt; TermD deps a
+</span><a href="Constrained.AbstractSyntax.html#App"><span class="hs-identifier hs-var">App</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW '[Tree b] b
+forall a. HasSpec a =&gt; TreeW '[Tree a] a
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term a
+TermD Deps (Tree b)
+</span><a href="#local-6989586621679868686"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Tree b) -&gt; List Term '[] -&gt; List Term '[Tree b]
+forall {k} (f :: k -&gt; *) (a :: k) (as1 :: [k]).
+f a -&gt; List f as1 -&gt; List f (a : as1)
+</span><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">List Term '[]
+forall {k} (f :: k -&gt; *). List f '[]
+</span><a href="Constrained.List.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679868684"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Var b -&gt; Pred -&gt; BinderD Deps b
+forall deps a.
+(HasSpecD deps a, Show a) =&gt;
+Var a -&gt; PredD deps -&gt; BinderD deps a
+</span><a href="Constrained.AbstractSyntax.html#%3A-%3E"><span class="hs-operator hs-var">:-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pred
+</span><a href="#local-6989586621679868685"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-250"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagate"><span class="hs-identifier hs-var">propagate</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW as b
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#Unary"><span class="hs-identifier hs-type">Unary</span></a></span><span> </span><span class="annot"><span class="annottext">HOLE a (Tree b)
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679868699"><span class="annot"><span class="annottext">SpecificationD Deps b
+</span><a href="#local-6989586621679868699"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TypeSpec a -&gt; Specification a
+forall a. HasSpec a =&gt; TypeSpec a -&gt; Specification a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">(TypeSpec a -&gt; Specification a) -&gt; TypeSpec a -&gt; Specification a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+-&gt; Maybe Integer
+-&gt; SpecificationD Deps b
+-&gt; Specification (b, [Tree b])
+-&gt; TreeSpec b
+forall a.
+Maybe Integer
+-&gt; Maybe Integer
+-&gt; Specification a
+-&gt; Specification (a, [Tree a])
+-&gt; TreeSpec a
+</span><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-var">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">SpecificationD Deps b
+</span><a href="#local-6989586621679868699"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (b, [Tree b])
+forall deps a. SpecificationD deps a
+</span><a href="Constrained.AbstractSyntax.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-comment">-- NOTE: this function over-approximates and returns a liberal spec.</span><span>
+</span><span id="line-253"></span><span>  </span><span id="local-6989586621679868702"><span class="annot"><span class="annottext">mapTypeSpec :: forall a b.
+(HasSpec a, HasSpec b) =&gt;
+TreeW '[a] b -&gt; TypeSpec a -&gt; Specification b
+</span><a href="#local-6989586621679868702"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">TreeW '[a] b
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Spec.Tree.html#TreeSpec"><span class="hs-identifier hs-type">TreeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679868707"><span class="annot"><span class="annottext">Specification b
+</span><a href="#local-6989586621679868707"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="annot"><span class="annottext">Specification (b, [Tree b])
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification b
+</span><a href="#local-6989586621679868707"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span class="annot"><a href="Constrained.Spec.Tree.html#rootLabel_"><span class="hs-identifier hs-type">rootLabel_</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-256"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679867851"><span class="annot"><a href="#local-6989586621679867851"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-257"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867851"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-258"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Tree</span></span><span> </span><span class="annot"><a href="#local-6989586621679867851"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-259"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679867851"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-260"></span><span id="rootLabel_"><span class="annot"><span class="annottext">rootLabel_ :: forall a. HasSpec a =&gt; Term (Tree a) -&gt; Term a
+</span><a href="Constrained.Spec.Tree.html#rootLabel_"><span class="hs-identifier hs-var hs-var">rootLabel_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TreeW '[Tree a] a -&gt; FunTy (MapList Term '[Tree a]) (TermD Deps a)
+forall (t :: [*] -&gt; * -&gt; *) (ds :: [*]) r.
+AppRequires t ds r =&gt;
+t ds r -&gt; FunTy (MapList Term ds) (Term r)
+</span><a href="Constrained.Base.html#appTerm"><span class="hs-identifier hs-var">appTerm</span></a></span><span> </span><span class="annot"><span class="annottext">TreeW '[Tree a] a
+forall a. HasSpec a =&gt; TreeW '[Tree a] a
+</span><a href="Constrained.Spec.Tree.html#RootLabelW"><span class="hs-identifier hs-var">RootLabelW</span></a></span><span>
+</span><span id="line-261"></span></pre></body></html>

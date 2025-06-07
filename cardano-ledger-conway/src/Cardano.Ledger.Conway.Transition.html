@@ -1,0 +1,752 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableSuperClasses #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Conway.Transition</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier">ConwayEraTransition</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#toConwayTransitionConfigPairs"><span class="hs-identifier">toConwayTransitionConfigPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Transition.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Transition.html#toAlonzoTransitionConfigPairs"><span class="hs-identifier">toAlonzoTransitionConfigPairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.html"><span class="hs-identifier">Cardano.Ledger.Babbage</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Transition.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Transition.html#BabbageTransitionConfig"><span class="hs-identifier">BabbageTransitionConfig</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Cardano.Ledger.Conway.Era</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier">ConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#toConwayGenesisPairs"><span class="hs-identifier">toConwayGenesisPairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Deleg.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules.Deleg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Deleg.html#processDelegation"><span class="hs-identifier">processDelegation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.CertState.html#ConwayEraCertState"><span class="hs-identifier">ConwayEraCertState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.VState.html#vsDRepsL"><span class="hs-identifier">vsDRepsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Translation.html"><span class="hs-identifier">Cardano.Ledger.Conway.Translation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.TxCert.html#Delegatee"><span class="hs-identifier">Delegatee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier">Credential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.DRep.html"><span class="hs-identifier">Cardano.Ledger.DRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.DRep.html#DRepState"><span class="hs-identifier">DRepState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier">NewEpochState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier">esLStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier">lsCertStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier">nesEsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#KeyValue"><span class="hs-identifier">KeyValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.Internal.html#Value"><span class="hs-identifier">Value</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.Internal.html#object"><span class="hs-identifier">object</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Encoding.Internal.html#pairs"><span class="hs-identifier">pairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#withObject"><span class="hs-identifier">withObject</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator">(.:)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html"><span class="hs-identifier">Data.ListMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier">ListMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html"><span class="hs-identifier">Data.ListMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ListMap</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">class</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.CertState.html#ConwayEraCertState"><span class="hs-identifier hs-type">ConwayEraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="ConwayEraTransition"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-var">ConwayEraTransition</span></a></span></span><span> </span><span id="local-6989586621679601442"><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="tcDelegsL"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#tcDelegsL"><span class="hs-identifier hs-type">tcDelegsL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier hs-type">ListMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxCert.html#Delegatee"><span class="hs-identifier hs-type">Delegatee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>  </span><span id="tcInitialDRepsL"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#tcInitialDRepsL"><span class="hs-identifier hs-type">tcInitialDRepsL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier hs-type">ListMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">DRepRole</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.DRep.html#DRepState"><span class="hs-identifier hs-type">DRepState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span id="tcConwayGenesisL"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#tcConwayGenesisL"><span class="hs-identifier hs-type">tcConwayGenesisL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601442"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">ConwayGenesis</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span id="local-6989586621679601446"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#registerDRepsThenDelegs"><span class="hs-identifier hs-type">registerDRepsThenDelegs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-type">ConwayEraTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601446"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601446"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601446"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601446"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-67"></span><span id="registerDRepsThenDelegs"><span class="annot"><span class="annottext">registerDRepsThenDelegs :: forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerDRepsThenDelegs"><span class="hs-identifier hs-var hs-var">registerDRepsThenDelegs</span></a></span></span><span> </span><span id="local-6989586621679601646"><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601646"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- NOTE: The order of registration does not matter.</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerDelegs"><span class="hs-identifier hs-var">registerDelegs</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601646"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">(NewEpochState era -&gt; NewEpochState era)
+-&gt; (NewEpochState era -&gt; NewEpochState era)
+-&gt; NewEpochState era
+-&gt; NewEpochState era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerInitialDReps"><span class="hs-identifier hs-var">registerInitialDReps</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601646"><span class="hs-identifier hs-var">cfg</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679601679"><span id="local-6989586621679601687"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="TransitionConfig"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-var">TransitionConfig</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConwayTransitionConfig"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayTransitionConfig"><span class="hs-identifier hs-var">ConwayTransitionConfig</span></a></span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="ctcConwayGenesis"><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#ctcConwayGenesis"><span class="hs-identifier hs-var hs-var">ctcConwayGenesis</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">ConwayGenesis</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="ctcBabbageTransitionConfig"><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; TransitionConfig BabbageEra
+</span><a href="Cardano.Ledger.Conway.Transition.html#ctcBabbageTransitionConfig"><span class="hs-identifier hs-var hs-var">ctcBabbageTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679601702"><span id="local-6989586621679601710"><span id="local-6989586621679601714"><span class="annot"><span class="annottext">Int -&gt; TransitionConfig ConwayEra -&gt; ShowS
+[TransitionConfig ConwayEra] -&gt; ShowS
+TransitionConfig ConwayEra -&gt; String
+(Int -&gt; TransitionConfig ConwayEra -&gt; ShowS)
+-&gt; (TransitionConfig ConwayEra -&gt; String)
+-&gt; ([TransitionConfig ConwayEra] -&gt; ShowS)
+-&gt; Show (TransitionConfig ConwayEra)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransitionConfig ConwayEra -&gt; ShowS
+showsPrec :: Int -&gt; TransitionConfig ConwayEra -&gt; ShowS
+$cshow :: TransitionConfig ConwayEra -&gt; String
+show :: TransitionConfig ConwayEra -&gt; String
+$cshowList :: [TransitionConfig ConwayEra] -&gt; ShowS
+showList :: [TransitionConfig ConwayEra] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679601718"><span id="local-6989586621679601724"><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool
+(TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool)
+-&gt; (TransitionConfig ConwayEra
+    -&gt; TransitionConfig ConwayEra -&gt; Bool)
+-&gt; Eq (TransitionConfig ConwayEra)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool
+== :: TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool
+$c/= :: TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool
+/= :: TransitionConfig ConwayEra -&gt; TransitionConfig ConwayEra -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679601729"><span id="local-6989586621679601731"><span class="annot"><span class="annottext">(forall x.
+ TransitionConfig ConwayEra -&gt; Rep (TransitionConfig ConwayEra) x)
+-&gt; (forall x.
+    Rep (TransitionConfig ConwayEra) x -&gt; TransitionConfig ConwayEra)
+-&gt; Generic (TransitionConfig ConwayEra)
+forall x.
+Rep (TransitionConfig ConwayEra) x -&gt; TransitionConfig ConwayEra
+forall x.
+TransitionConfig ConwayEra -&gt; Rep (TransitionConfig ConwayEra) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+TransitionConfig ConwayEra -&gt; Rep (TransitionConfig ConwayEra) x
+from :: forall x.
+TransitionConfig ConwayEra -&gt; Rep (TransitionConfig ConwayEra) x
+$cto :: forall x.
+Rep (TransitionConfig ConwayEra) x -&gt; TransitionConfig ConwayEra
+to :: forall x.
+Rep (TransitionConfig ConwayEra) x -&gt; TransitionConfig ConwayEra
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679601734"><span class="annot"><span class="annottext">mkTransitionConfig :: TranslationContext ConwayEra
+-&gt; TransitionConfig (PreviousEra ConwayEra)
+-&gt; TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601734"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TranslationContext ConwayEra
+-&gt; TransitionConfig (PreviousEra ConwayEra)
+-&gt; TransitionConfig ConwayEra
+ConwayGenesis
+-&gt; TransitionConfig BabbageEra -&gt; TransitionConfig ConwayEra
+</span><a href="Cardano.Ledger.Conway.Transition.html#ConwayTransitionConfig"><span class="hs-identifier hs-var">ConwayTransitionConfig</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679601739"><span class="annot"><span class="annottext">injectIntoTestState :: TransitionConfig ConwayEra
+-&gt; NewEpochState ConwayEra -&gt; NewEpochState ConwayEra
+</span><a href="#local-6989586621679601739"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectIntoTestState</span></a></span></span><span> </span><span id="local-6989586621679601741"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601741"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+-&gt; NewEpochState ConwayEra -&gt; NewEpochState ConwayEra
+forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerDRepsThenDelegs"><span class="hs-identifier hs-var">registerDRepsThenDelegs</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601741"><span class="hs-identifier hs-var">cfg</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">(NewEpochState ConwayEra -&gt; NewEpochState ConwayEra)
+-&gt; (NewEpochState ConwayEra -&gt; NewEpochState ConwayEra)
+-&gt; NewEpochState ConwayEra
+-&gt; NewEpochState ConwayEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+-&gt; NewEpochState ConwayEra -&gt; NewEpochState ConwayEra
+forall era.
+EraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#registerInitialFundsThenStaking"><span class="hs-identifier hs-var">registerInitialFundsThenStaking</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601741"><span class="hs-identifier hs-var">cfg</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679601746"><span class="annot"><span class="annottext">tcPreviousEraConfigL :: EraTransition (PreviousEra ConwayEra) =&gt;
+Lens'
+  (TransitionConfig ConwayEra)
+  (TransitionConfig (PreviousEra ConwayEra))
+</span><a href="#local-6989586621679601746"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcPreviousEraConfigL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig ConwayEra -&gt; TransitionConfig BabbageEra)
+-&gt; (TransitionConfig ConwayEra
+    -&gt; TransitionConfig BabbageEra -&gt; TransitionConfig ConwayEra)
+-&gt; Lens
+     (TransitionConfig ConwayEra)
+     (TransitionConfig ConwayEra)
+     (TransitionConfig BabbageEra)
+     (TransitionConfig BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; TransitionConfig BabbageEra
+</span><a href="Cardano.Ledger.Conway.Transition.html#ctcBabbageTransitionConfig"><span class="hs-identifier hs-var">ctcBabbageTransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679601749"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601749"><span class="hs-identifier hs-var">ctc</span></a></span></span><span> </span><span id="local-6989586621679601750"><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+</span><a href="#local-6989586621679601750"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601749"><span class="hs-identifier hs-var">ctc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ctcBabbageTransitionConfig"><span class="hs-identifier hs-var">ctcBabbageTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679601750"><span class="hs-identifier hs-type">pc</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679601753"><span class="annot"><span class="annottext">tcTranslationContextL :: Lens' (TransitionConfig ConwayEra) (TranslationContext ConwayEra)
+</span><a href="#local-6989586621679601753"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcTranslationContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig ConwayEra -&gt; ConwayGenesis)
+-&gt; (TransitionConfig ConwayEra
+    -&gt; ConwayGenesis -&gt; TransitionConfig ConwayEra)
+-&gt; Lens
+     (TransitionConfig ConwayEra)
+     (TransitionConfig ConwayEra)
+     ConwayGenesis
+     ConwayGenesis
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#ctcConwayGenesis"><span class="hs-identifier hs-var">ctcConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679601755"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601755"><span class="hs-identifier hs-var">ctc</span></a></span></span><span> </span><span id="local-6989586621679601756"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601756"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601755"><span class="hs-identifier hs-var">ctc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ctcConwayGenesis"><span class="hs-identifier hs-var">ctcConwayGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679601756"><span class="hs-identifier hs-type">ag</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-type">ConwayEraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679601768"><span class="annot"><span class="annottext">tcConwayGenesisL :: Lens
+  (TransitionConfig ConwayEra)
+  (TransitionConfig ConwayEra)
+  ConwayGenesis
+  ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcConwayGenesisL"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcConwayGenesisL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TransitionConfig ConwayEra -&gt; ConwayGenesis)
+-&gt; (TransitionConfig ConwayEra
+    -&gt; ConwayGenesis -&gt; TransitionConfig ConwayEra)
+-&gt; Lens
+     (TransitionConfig ConwayEra)
+     (TransitionConfig ConwayEra)
+     ConwayGenesis
+     ConwayGenesis
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#ctcConwayGenesis"><span class="hs-identifier hs-var">ctcConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679601769"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601769"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679601770"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601770"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601769"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ctcConwayGenesis"><span class="hs-identifier hs-var">ctcConwayGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679601770"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679601778"><span class="annot"><span class="annottext">tcDelegsL :: Lens'
+  (TransitionConfig ConwayEra)
+  (ListMap (Credential 'Staking) Delegatee)
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcDelegsL"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcDelegsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (ListMap (Credential 'Staking) Delegatee -&gt; Bool)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'Staking) Delegatee)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'Staking) Delegatee)
+forall era a.
+(HasCallStack, EraTransition era) =&gt;
+String
+-&gt; (a -&gt; Bool)
+-&gt; Lens' (TransitionConfig era) a
+-&gt; Lens' (TransitionConfig era) a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#protectMainnetLens"><span class="hs-identifier hs-var">protectMainnetLens</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ConwayDelegs&quot;</span></span><span> </span><span class="annot"><span class="annottext">ListMap (Credential 'Staking) Delegatee -&gt; Bool
+forall a. ListMap (Credential 'Staking) a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">(Lens'
+   (TransitionConfig ConwayEra)
+   (ListMap (Credential 'Staking) Delegatee)
+ -&gt; Lens'
+      (TransitionConfig ConwayEra)
+      (ListMap (Credential 'Staking) Delegatee))
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'Staking) Delegatee)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'Staking) Delegatee)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">(ConwayGenesis -&gt; f ConwayGenesis)
+-&gt; TransitionConfig ConwayEra -&gt; f (TransitionConfig ConwayEra)
+forall era.
+ConwayEraTransition era =&gt;
+Lens' (TransitionConfig era) ConwayGenesis
+Lens
+  (TransitionConfig ConwayEra)
+  (TransitionConfig ConwayEra)
+  ConwayGenesis
+  ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcConwayGenesisL"><span class="hs-identifier hs-var">tcConwayGenesisL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGenesis -&gt; f ConwayGenesis)
+ -&gt; TransitionConfig ConwayEra -&gt; f (TransitionConfig ConwayEra))
+-&gt; ((ListMap (Credential 'Staking) Delegatee
+     -&gt; f (ListMap (Credential 'Staking) Delegatee))
+    -&gt; ConwayGenesis -&gt; f ConwayGenesis)
+-&gt; (ListMap (Credential 'Staking) Delegatee
+    -&gt; f (ListMap (Credential 'Staking) Delegatee))
+-&gt; TransitionConfig ConwayEra
+-&gt; f (TransitionConfig ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(ConwayGenesis -&gt; ListMap (Credential 'Staking) Delegatee)
+-&gt; (ConwayGenesis
+    -&gt; ListMap (Credential 'Staking) Delegatee -&gt; ConwayGenesis)
+-&gt; Lens
+     ConwayGenesis
+     ConwayGenesis
+     (ListMap (Credential 'Staking) Delegatee)
+     (ListMap (Credential 'Staking) Delegatee)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis -&gt; ListMap (Credential 'Staking) Delegatee
+</span><a href="Cardano.Ledger.Conway.Genesis.html#cgDelegs"><span class="hs-identifier hs-var">cgDelegs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679601786"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601786"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679601787"><span class="annot"><span class="annottext">ListMap (Credential 'Staking) Delegatee
+</span><a href="#local-6989586621679601787"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601786"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#cgDelegs"><span class="hs-identifier hs-var">cgDelegs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679601787"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679601794"><span class="annot"><span class="annottext">tcInitialDRepsL :: Lens'
+  (TransitionConfig ConwayEra)
+  (ListMap (Credential 'DRepRole) DRepState)
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcInitialDRepsL"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcInitialDRepsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (ListMap (Credential 'DRepRole) DRepState -&gt; Bool)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'DRepRole) DRepState)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'DRepRole) DRepState)
+forall era a.
+(HasCallStack, EraTransition era) =&gt;
+String
+-&gt; (a -&gt; Bool)
+-&gt; Lens' (TransitionConfig era) a
+-&gt; Lens' (TransitionConfig era) a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#protectMainnetLens"><span class="hs-identifier hs-var">protectMainnetLens</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;InitialDReps&quot;</span></span><span> </span><span class="annot"><span class="annottext">ListMap (Credential 'DRepRole) DRepState -&gt; Bool
+forall a. ListMap (Credential 'DRepRole) a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">(Lens'
+   (TransitionConfig ConwayEra)
+   (ListMap (Credential 'DRepRole) DRepState)
+ -&gt; Lens'
+      (TransitionConfig ConwayEra)
+      (ListMap (Credential 'DRepRole) DRepState))
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'DRepRole) DRepState)
+-&gt; Lens'
+     (TransitionConfig ConwayEra)
+     (ListMap (Credential 'DRepRole) DRepState)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">(ConwayGenesis -&gt; f ConwayGenesis)
+-&gt; TransitionConfig ConwayEra -&gt; f (TransitionConfig ConwayEra)
+forall era.
+ConwayEraTransition era =&gt;
+Lens' (TransitionConfig era) ConwayGenesis
+Lens
+  (TransitionConfig ConwayEra)
+  (TransitionConfig ConwayEra)
+  ConwayGenesis
+  ConwayGenesis
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcConwayGenesisL"><span class="hs-identifier hs-var">tcConwayGenesisL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGenesis -&gt; f ConwayGenesis)
+ -&gt; TransitionConfig ConwayEra -&gt; f (TransitionConfig ConwayEra))
+-&gt; ((ListMap (Credential 'DRepRole) DRepState
+     -&gt; f (ListMap (Credential 'DRepRole) DRepState))
+    -&gt; ConwayGenesis -&gt; f ConwayGenesis)
+-&gt; (ListMap (Credential 'DRepRole) DRepState
+    -&gt; f (ListMap (Credential 'DRepRole) DRepState))
+-&gt; TransitionConfig ConwayEra
+-&gt; f (TransitionConfig ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(ConwayGenesis -&gt; ListMap (Credential 'DRepRole) DRepState)
+-&gt; (ConwayGenesis
+    -&gt; ListMap (Credential 'DRepRole) DRepState -&gt; ConwayGenesis)
+-&gt; Lens
+     ConwayGenesis
+     ConwayGenesis
+     (ListMap (Credential 'DRepRole) DRepState)
+     (ListMap (Credential 'DRepRole) DRepState)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis -&gt; ListMap (Credential 'DRepRole) DRepState
+</span><a href="Cardano.Ledger.Conway.Genesis.html#cgInitialDReps"><span class="hs-identifier hs-var">cgInitialDReps</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679601800"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601800"><span class="hs-identifier hs-var">g</span></a></span></span><span> </span><span id="local-6989586621679601801"><span class="annot"><span class="annottext">ListMap (Credential 'DRepRole) DRepState
+</span><a href="#local-6989586621679601801"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601800"><span class="hs-identifier hs-var">g</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Genesis.html#cgInitialDReps"><span class="hs-identifier hs-var">cgInitialDReps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679601801"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679601803"><span id="local-6989586621679601807"><span id="local-6989586621679601813"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679601852"><span id="local-6989586621679601855"><span id="local-6989586621679601858"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679601865"><span class="annot"><span class="annottext">toJSON :: TransitionConfig ConwayEra -&gt; Value
+</span><a href="#local-6989586621679601865"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.Internal.html#object"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="annot"><span class="annottext">([Pair] -&gt; Value)
+-&gt; (TransitionConfig ConwayEra -&gt; [Pair])
+-&gt; TransitionConfig ConwayEra
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; [Pair]
+forall e a. KeyValue e a =&gt; TransitionConfig ConwayEra -&gt; [a]
+</span><a href="Cardano.Ledger.Conway.Transition.html#toConwayTransitionConfigPairs"><span class="hs-identifier hs-var">toConwayTransitionConfigPairs</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679601871"><span class="annot"><span class="annottext">toEncoding :: TransitionConfig ConwayEra -&gt; Encoding
+</span><a href="#local-6989586621679601871"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Series -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Encoding.Internal.html#pairs"><span class="hs-identifier hs-var">pairs</span></a></span><span> </span><span class="annot"><span class="annottext">(Series -&gt; Encoding)
+-&gt; (TransitionConfig ConwayEra -&gt; Series)
+-&gt; TransitionConfig ConwayEra
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Series] -&gt; Series
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span> </span><span class="annot"><span class="annottext">([Series] -&gt; Series)
+-&gt; (TransitionConfig ConwayEra -&gt; [Series])
+-&gt; TransitionConfig ConwayEra
+-&gt; Series
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; [Series]
+forall e a. KeyValue e a =&gt; TransitionConfig ConwayEra -&gt; [a]
+</span><a href="Cardano.Ledger.Conway.Transition.html#toConwayTransitionConfigPairs"><span class="hs-identifier hs-var">toConwayTransitionConfigPairs</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span id="local-6989586621679601560"><span id="local-6989586621679601561"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#toConwayTransitionConfigPairs"><span class="hs-identifier hs-type">toConwayTransitionConfigPairs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#KeyValue"><span class="hs-identifier hs-type">KeyValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601560"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601561"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679601561"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-108"></span><span id="toConwayTransitionConfigPairs"><span class="annot"><span class="annottext">toConwayTransitionConfigPairs :: forall e a. KeyValue e a =&gt; TransitionConfig ConwayEra -&gt; [a]
+</span><a href="Cardano.Ledger.Conway.Transition.html#toConwayTransitionConfigPairs"><span class="hs-identifier hs-var hs-var">toConwayTransitionConfigPairs</span></a></span></span><span> </span><span id="local-6989586621679601895"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601895"><span class="hs-identifier hs-var">conwayConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; [a]
+forall e a. KeyValue e a =&gt; TransitionConfig AlonzoEra -&gt; [a]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Transition.html#toAlonzoTransitionConfigPairs"><span class="hs-identifier hs-var">toAlonzoTransitionConfigPairs</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679601896"><span class="hs-identifier hs-var">alonzoConfig</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">[a] -&gt; [a] -&gt; [a]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;conway&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.Internal.html#object"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayGenesis -&gt; [Pair]
+forall e a. KeyValue e a =&gt; ConwayGenesis -&gt; [a]
+</span><a href="Cardano.Ledger.Conway.Genesis.html#toConwayGenesisPairs"><span class="hs-identifier hs-var">toConwayGenesisPairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601895"><span class="hs-identifier hs-var">conwayConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+-&gt; Getting ConwayGenesis (TransitionConfig ConwayEra) ConwayGenesis
+-&gt; ConwayGenesis
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TranslationContext ConwayEra
+ -&gt; Const ConwayGenesis (TranslationContext ConwayEra))
+-&gt; TransitionConfig ConwayEra
+-&gt; Const ConwayGenesis (TransitionConfig ConwayEra)
+Getting ConwayGenesis (TransitionConfig ConwayEra) ConwayGenesis
+forall era.
+EraTransition era =&gt;
+Lens' (TransitionConfig era) (TranslationContext era)
+Lens' (TransitionConfig ConwayEra) (TranslationContext ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcTranslationContextL"><span class="hs-identifier hs-var">tcTranslationContextL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>    </span><span id="local-6989586621679601899"><span class="annot"><span class="annottext">babbageConfig :: TransitionConfig BabbageEra
+</span><a href="#local-6989586621679601899"><span class="hs-identifier hs-var hs-var">babbageConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679601895"><span class="hs-identifier hs-var">conwayConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+-&gt; Getting
+     (TransitionConfig BabbageEra)
+     (TransitionConfig ConwayEra)
+     (TransitionConfig BabbageEra)
+-&gt; TransitionConfig BabbageEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TransitionConfig (PreviousEra ConwayEra)
+ -&gt; Const
+      (TransitionConfig BabbageEra)
+      (TransitionConfig (PreviousEra ConwayEra)))
+-&gt; TransitionConfig ConwayEra
+-&gt; Const (TransitionConfig BabbageEra) (TransitionConfig ConwayEra)
+Getting
+  (TransitionConfig BabbageEra)
+  (TransitionConfig ConwayEra)
+  (TransitionConfig BabbageEra)
+forall era.
+(EraTransition era, EraTransition (PreviousEra era)) =&gt;
+Lens' (TransitionConfig era) (TransitionConfig (PreviousEra era))
+Lens'
+  (TransitionConfig ConwayEra)
+  (TransitionConfig (PreviousEra ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcPreviousEraConfigL"><span class="hs-identifier hs-var">tcPreviousEraConfigL</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679601896"><span class="annot"><span class="annottext">alonzoConfig :: TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679601896"><span class="hs-identifier hs-var hs-var">alonzoConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+</span><a href="#local-6989586621679601899"><span class="hs-identifier hs-var">babbageConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+-&gt; Getting
+     (TransitionConfig AlonzoEra)
+     (TransitionConfig BabbageEra)
+     (TransitionConfig AlonzoEra)
+-&gt; TransitionConfig AlonzoEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TransitionConfig (PreviousEra BabbageEra)
+ -&gt; Const
+      (TransitionConfig AlonzoEra)
+      (TransitionConfig (PreviousEra BabbageEra)))
+-&gt; TransitionConfig BabbageEra
+-&gt; Const (TransitionConfig AlonzoEra) (TransitionConfig BabbageEra)
+Getting
+  (TransitionConfig AlonzoEra)
+  (TransitionConfig BabbageEra)
+  (TransitionConfig AlonzoEra)
+forall era.
+(EraTransition era, EraTransition (PreviousEra era)) =&gt;
+Lens' (TransitionConfig era) (TransitionConfig (PreviousEra era))
+Lens'
+  (TransitionConfig BabbageEra)
+  (TransitionConfig (PreviousEra BabbageEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcPreviousEraConfigL"><span class="hs-identifier hs-var">tcPreviousEraConfigL</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679601902"><span id="local-6989586621679601905"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679601919"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (TransitionConfig ConwayEra)
+</span><a href="#local-6989586621679601919"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser (TransitionConfig ConwayEra))
+-&gt; Value
+-&gt; Parser (TransitionConfig ConwayEra)
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#withObject"><span class="hs-identifier hs-var">withObject</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ConwayTransitionConfig&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (TransitionConfig ConwayEra))
+ -&gt; Value -&gt; Parser (TransitionConfig ConwayEra))
+-&gt; (Object -&gt; Parser (TransitionConfig ConwayEra))
+-&gt; Value
+-&gt; Parser (TransitionConfig ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679601921"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679601921"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679601922"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679601922"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser ConwayGenesis
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#parseJSON"><span class="hs-identifier hs-var">parseJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.Internal.html#Object"><span class="hs-identifier hs-var">Object</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679601921"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679601924"><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+</span><a href="#local-6989586621679601924"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679601921"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (TransitionConfig BabbageEra)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-015a1539b8af22149f394f1ee651495b3ee7c0c79ad25e73fb71377cb6d330ca/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;conway&quot;</span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra -&gt; Parser (TransitionConfig ConwayEra)
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(TransitionConfig ConwayEra -&gt; Parser (TransitionConfig ConwayEra))
+-&gt; TransitionConfig ConwayEra
+-&gt; Parser (TransitionConfig ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext ConwayEra
+-&gt; TransitionConfig (PreviousEra ConwayEra)
+-&gt; TransitionConfig ConwayEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext ConwayEra
+ConwayGenesis
+</span><a href="#local-6989586621679601922"><span class="hs-identifier hs-var">pc</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig (PreviousEra ConwayEra)
+TransitionConfig BabbageEra
+</span><a href="#local-6989586621679601924"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621679601925"><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#registerInitialDReps"><span class="hs-identifier hs-type">registerInitialDReps</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-type">ConwayEraTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601925"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601925"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601925"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601925"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-126"></span><span id="registerInitialDReps"><span class="annot"><span class="annottext">registerInitialDReps :: forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerInitialDReps"><span class="hs-identifier hs-var hs-var">registerInitialDReps</span></a></span></span><span> </span><span id="local-6989586621679601939"><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601939"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><span class="annottext">(EpochState era -&gt; Identity (EpochState era))
+-&gt; NewEpochState era -&gt; Identity (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState era -&gt; Identity (EpochState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; ((Map (Credential 'DRepRole) DRepState
+     -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+    -&gt; EpochState era -&gt; Identity (EpochState era))
+-&gt; (Map (Credential 'DRepRole) DRepState
+    -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+-&gt; NewEpochState era
+-&gt; Identity (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LedgerState era -&gt; Identity (LedgerState era))
+-&gt; EpochState era -&gt; Identity (EpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(LedgerState era -&gt; f (LedgerState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier hs-var">esLStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((LedgerState era -&gt; Identity (LedgerState era))
+ -&gt; EpochState era -&gt; Identity (EpochState era))
+-&gt; ((Map (Credential 'DRepRole) DRepState
+     -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+    -&gt; LedgerState era -&gt; Identity (LedgerState era))
+-&gt; (Map (Credential 'DRepRole) DRepState
+    -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+-&gt; EpochState era
+-&gt; Identity (EpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CertState era -&gt; Identity (CertState era))
+-&gt; LedgerState era -&gt; Identity (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(CertState era -&gt; f (CertState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier hs-var">lsCertStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((CertState era -&gt; Identity (CertState era))
+ -&gt; LedgerState era -&gt; Identity (LedgerState era))
+-&gt; ((Map (Credential 'DRepRole) DRepState
+     -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+    -&gt; CertState era -&gt; Identity (CertState era))
+-&gt; (Map (Credential 'DRepRole) DRepState
+    -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+-&gt; LedgerState era
+-&gt; Identity (LedgerState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(VState era -&gt; Identity (VState era))
+-&gt; CertState era -&gt; Identity (CertState era)
+forall era.
+ConwayEraCertState era =&gt;
+Lens' (CertState era) (VState era)
+Lens' (CertState era) (VState era)
+</span><a href="Cardano.Ledger.Conway.State.CertState.html#certVStateL"><span class="hs-identifier hs-var">certVStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((VState era -&gt; Identity (VState era))
+ -&gt; CertState era -&gt; Identity (CertState era))
+-&gt; ((Map (Credential 'DRepRole) DRepState
+     -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+    -&gt; VState era -&gt; Identity (VState era))
+-&gt; (Map (Credential 'DRepRole) DRepState
+    -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+-&gt; CertState era
+-&gt; Identity (CertState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'DRepRole) DRepState
+ -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+-&gt; VState era -&gt; Identity (VState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'DRepRole) DRepState
+ -&gt; f (Map (Credential 'DRepRole) DRepState))
+-&gt; VState era -&gt; f (VState era)
+</span><a href="Cardano.Ledger.Conway.State.VState.html#vsDRepsL"><span class="hs-identifier hs-var">vsDRepsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (Credential 'DRepRole) DRepState
+  -&gt; Identity (Map (Credential 'DRepRole) DRepState))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; Map (Credential 'DRepRole) DRepState
+-&gt; NewEpochState era
+-&gt; NewEpochState era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) DRepState
+</span><a href="#local-6989586621679601942"><span class="hs-identifier hs-var">drepsMap</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679601942"><span class="annot"><span class="annottext">drepsMap :: Map (Credential 'DRepRole) DRepState
+</span><a href="#local-6989586621679601942"><span class="hs-identifier hs-var hs-var">drepsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListMap (Credential 'DRepRole) DRepState
+-&gt; Map (Credential 'DRepRole) DRepState
+forall k v. Ord k =&gt; ListMap k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#toMap"><span class="hs-identifier hs-var">ListMap.toMap</span></a></span><span> </span><span class="annot"><span class="annottext">(ListMap (Credential 'DRepRole) DRepState
+ -&gt; Map (Credential 'DRepRole) DRepState)
+-&gt; ListMap (Credential 'DRepRole) DRepState
+-&gt; Map (Credential 'DRepRole) DRepState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601939"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era
+-&gt; Getting
+     (ListMap (Credential 'DRepRole) DRepState)
+     (TransitionConfig era)
+     (ListMap (Credential 'DRepRole) DRepState)
+-&gt; ListMap (Credential 'DRepRole) DRepState
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (ListMap (Credential 'DRepRole) DRepState)
+  (TransitionConfig era)
+  (ListMap (Credential 'DRepRole) DRepState)
+forall era.
+ConwayEraTransition era =&gt;
+Lens'
+  (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)
+Lens'
+  (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcInitialDRepsL"><span class="hs-identifier hs-var">tcInitialDRepsL</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#registerDelegs"><span class="hs-identifier hs-type">registerDelegs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679601944"><span class="annot"><a href="#local-6989586621679601944"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-type">ConwayEraTransition</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601944"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601944"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601944"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679601944"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-137"></span><span id="registerDelegs"><span class="annot"><span class="annottext">registerDelegs :: forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="Cardano.Ledger.Conway.Transition.html#registerDelegs"><span class="hs-identifier hs-var hs-var">registerDelegs</span></a></span></span><span> </span><span id="local-6989586621679601953"><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601953"><span class="hs-identifier hs-var">cfg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">(EpochState era -&gt; Identity (EpochState era))
+-&gt; NewEpochState era -&gt; Identity (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState era -&gt; Identity (EpochState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; ((CertState era -&gt; Identity (CertState era))
+    -&gt; EpochState era -&gt; Identity (EpochState era))
+-&gt; (CertState era -&gt; Identity (CertState era))
+-&gt; NewEpochState era
+-&gt; Identity (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LedgerState era -&gt; Identity (LedgerState era))
+-&gt; EpochState era -&gt; Identity (EpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(LedgerState era -&gt; f (LedgerState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier hs-var">esLStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((LedgerState era -&gt; Identity (LedgerState era))
+ -&gt; EpochState era -&gt; Identity (EpochState era))
+-&gt; ((CertState era -&gt; Identity (CertState era))
+    -&gt; LedgerState era -&gt; Identity (LedgerState era))
+-&gt; (CertState era -&gt; Identity (CertState era))
+-&gt; EpochState era
+-&gt; Identity (EpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CertState era -&gt; Identity (CertState era))
+-&gt; LedgerState era -&gt; Identity (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(CertState era -&gt; f (CertState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier hs-var">lsCertStateL</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">((CertState era -&gt; Identity (CertState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; (CertState era -&gt; CertState era)
+-&gt; NewEpochState era
+-&gt; NewEpochState era
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679601955"><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621679601955"><span class="hs-identifier hs-var">certState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">((Credential 'Staking, Delegatee)
+ -&gt; CertState era -&gt; CertState era)
+-&gt; CertState era
+-&gt; ListMap (Credential 'Staking) Delegatee
+-&gt; CertState era
+forall k a b. ((k, a) -&gt; b -&gt; b) -&gt; b -&gt; ListMap k a -&gt; b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#foldrWithKey"><span class="hs-identifier hs-var">ListMap.foldrWithKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Credential 'Staking
+ -&gt; Delegatee -&gt; CertState era -&gt; CertState era)
+-&gt; (Credential 'Staking, Delegatee)
+-&gt; CertState era
+-&gt; CertState era
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Delegatee -&gt; CertState era -&gt; CertState era
+forall era.
+ConwayEraCertState era =&gt;
+Credential 'Staking -&gt; Delegatee -&gt; CertState era -&gt; CertState era
+</span><a href="Cardano.Ledger.Conway.Rules.Deleg.html#processDelegation"><span class="hs-identifier hs-var">processDelegation</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621679601955"><span class="hs-identifier hs-var">certState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TransitionConfig era
+</span><a href="#local-6989586621679601953"><span class="hs-identifier hs-var">cfg</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig era
+-&gt; Getting
+     (ListMap (Credential 'Staking) Delegatee)
+     (TransitionConfig era)
+     (ListMap (Credential 'Staking) Delegatee)
+-&gt; ListMap (Credential 'Staking) Delegatee
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (ListMap (Credential 'Staking) Delegatee)
+  (TransitionConfig era)
+  (ListMap (Credential 'Staking) Delegatee)
+forall era.
+ConwayEraTransition era =&gt;
+Lens'
+  (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
+Lens'
+  (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
+</span><a href="Cardano.Ledger.Conway.Transition.html#tcDelegsL"><span class="hs-identifier hs-var">tcDelegsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span></pre></body></html>

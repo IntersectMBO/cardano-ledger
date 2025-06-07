@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#PoolCert"><span class="hs-identifier">PoolCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-78254a918948c992b35f26ecd684036fea82d6e369e2e87b48db0b27e1fc6bfe/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679838368"><span id="local-6989586621679838376"><span id="local-6989586621679838384"><span id="local-6989586621679838453"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;POOL&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecContext"><span class="hs-identifier hs-var">ExecContext</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;POOL&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679838525"><span class="annot"><span class="annottext">environmentSpec :: HasCallStack =&gt;
+ExecContext &quot;POOL&quot; ConwayEra
+-&gt; Specification (ExecEnvironment &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838525"><span class="hs-identifier hs-var hs-var hs-var hs-var">environmentSpec</span></a></span></span><span> </span><span id="local-6989586621679838527"><span class="annot"><span class="annottext">ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838527"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra -&gt; Specification (PoolEnv ConwayEra)
+forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; Specification (PoolEnv era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolEnvSpec"><span class="hs-identifier hs-var">poolEnvSpec</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838527"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679838531"><span class="annot"><span class="annottext">stateSpec :: HasCallStack =&gt;
+ExecContext &quot;POOL&quot; ConwayEra
+-&gt; ExecEnvironment &quot;POOL&quot; ConwayEra
+-&gt; Specification (ExecState &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838531"><span class="hs-identifier hs-var hs-var hs-var hs-var">stateSpec</span></a></span></span><span> </span><span id="local-6989586621679838533"><span class="annot"><span class="annottext">ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838533"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecEnvironment &quot;POOL&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra -&gt; Specification (PState ConwayEra)
+forall era. Era era =&gt; WitUniv era -&gt; Specification (PState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.Pool.html#pStateSpec"><span class="hs-identifier hs-var">pStateSpec</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838533"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679838537"><span class="annot"><span class="annottext">signalSpec :: HasCallStack =&gt;
+ExecContext &quot;POOL&quot; ConwayEra
+-&gt; ExecEnvironment &quot;POOL&quot; ConwayEra
+-&gt; ExecState &quot;POOL&quot; ConwayEra
+-&gt; Specification (ExecSignal &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838537"><span class="hs-identifier hs-var hs-var hs-var hs-var">signalSpec</span></a></span></span><span> </span><span id="local-6989586621679838539"><span class="annot"><span class="annottext">ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838539"><span class="hs-identifier hs-var">wituniv</span></a></span></span><span> </span><span id="local-6989586621679838540"><span class="annot"><span class="annottext">ExecEnvironment &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838540"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679838541"><span class="annot"><span class="annottext">ExecState &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838541"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; PoolEnv era -&gt; PState era -&gt; Specification PoolCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolCertSpec"><span class="hs-identifier hs-var">poolCertSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+ExecContext &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838539"><span class="hs-identifier hs-var">wituniv</span></a></span><span> </span><span class="annot"><span class="annottext">PoolEnv ConwayEra
+ExecEnvironment &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838540"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">PState ConwayEra
+ExecState &quot;POOL&quot; ConwayEra
+</span><a href="#local-6989586621679838541"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679838544"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecRep (ExecEnvironment &quot;POOL&quot; ConwayEra)
+-&gt; SpecRep (ExecState &quot;POOL&quot; ConwayEra)
+-&gt; SpecRep (ExecSignal &quot;POOL&quot; ConwayEra)
+-&gt; Either OpaqueErrorString (SpecRep (ExecState &quot;POOL&quot; ConwayEra))
+</span><a href="#local-6989586621679838544"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span id="local-6989586621679838546"><span class="annot"><span class="annottext">SpecRep (ExecEnvironment &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838546"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679838547"><span class="annot"><span class="annottext">SpecRep (ExecState &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838547"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679838548"><span class="annot"><span class="annottext">SpecRep (ExecSignal &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838548"><span class="hs-identifier hs-var">sig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComputationResult Text PState -&gt; Either OpaqueErrorString PState
+forall a. ComputationResult Text a -&gt; Either OpaqueErrorString a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#unComputationResult"><span class="hs-identifier hs-var">unComputationResult</span></a></span><span> </span><span class="annot"><span class="annottext">(ComputationResult Text PState -&gt; Either OpaqueErrorString PState)
+-&gt; ComputationResult Text PState -&gt; Either OpaqueErrorString PState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams -&gt; PState -&gt; DCert -&gt; ComputationResult Text PState
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-78254a918948c992b35f26ecd684036fea82d6e369e2e87b48db0b27e1fc6bfe/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Certs.html#poolStep"><span class="hs-identifier hs-var">Agda.poolStep</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+SpecRep (ExecEnvironment &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838546"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">PState
+SpecRep (ExecState &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838547"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">DCert
+SpecRep (ExecSignal &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679838548"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679838551"><span class="annot"><span class="annottext">classOf :: ExecSignal &quot;POOL&quot; ConwayEra -&gt; Maybe String
+</span><a href="#local-6989586621679838551"><span class="hs-identifier hs-var hs-var hs-var hs-var">classOf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe String
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Maybe String)
+-&gt; (PoolCert -&gt; String) -&gt; PoolCert -&gt; Maybe String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PoolCert -&gt; String
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool.html#namePoolCert"><span class="hs-identifier hs-var">namePoolCert</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool.html#namePoolCert"><span class="hs-identifier hs-type">namePoolCert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#PoolCert"><span class="hs-identifier hs-type">PoolCert</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-36"></span><span id="namePoolCert"><span class="annot"><span class="annottext">namePoolCert :: PoolCert -&gt; String
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool.html#namePoolCert"><span class="hs-identifier hs-var hs-var">namePoolCert</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RegPool"><span class="hs-identifier hs-type">RegPool</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RegPool&quot;</span></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool.html#namePoolCert"><span class="hs-identifier hs-var">namePoolCert</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RetirePool"><span class="hs-identifier hs-type">RetirePool</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RetirePool&quot;</span></span><span>
+</span><span id="line-38"></span></pre></body></html>

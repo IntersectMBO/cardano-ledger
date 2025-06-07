@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Main</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Rules.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.Spec.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Spec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ConwaySpec</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.ImpTest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span id="main"><span class="annot"><span class="annottext">IO ()
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><span class="annottext">Spec -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html#ledgerTestMain"><span class="hs-identifier hs-var">ledgerTestMain</span></a></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; IO ()) -&gt; Spec -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.12-84e31b3087dd7c2e91881afaf72dde0e13bbac9535186c0659a13f31ab087b72/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Dijkstra&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-17"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraPlutusTxInfo 'PlutusV2 era, EraPlutusTxInfo 'PlutusV3 era,
+ RuleListEra era, ConwayEraImp era, ApplyTx era,
+ BabbageEraTest (PreviousEra era), DecCBOR (TxWits era),
+ DecCBOR (TxBody era), DecCBOR (Tx era),
+ Arbitrary (PlutusPurpose AsIx era), SafeToHash (TxWits era),
+ StashedAVVMAddresses era ~ (),
+ Inject (BabbageContextError era) (ContextError era),
+ Inject (ConwayContextError era) (ContextError era),
+ Event (EraRule &quot;EPOCH&quot; era) ~ ConwayEpochEvent era,
+ Event (EraRule &quot;NEWEPOCH&quot; era) ~ ConwayNewEpochEvent era,
+ Event (EraRule &quot;HARDFORK&quot; era) ~ ConwayHardForkEvent era,
+ InjectRuleFailure &quot;BBODY&quot; ConwayBbodyPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayGovPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayCertsPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; BabbageUtxoPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; BabbageUtxowPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; AlonzoUtxoPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; AlonzoUtxosPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; AlonzoUtxowPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ShelleyDelegPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ShelleyUtxoPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ShelleyUtxowPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayDelegPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayGovCertPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayLedgerPredFailure era,
+ InjectRuleFailure &quot;LEDGER&quot; ConwayUtxoPredFailure era,
+ InjectRuleEvent &quot;TICK&quot; ConwayEpochEvent era,
+ NFData (Event (EraRule &quot;ENACT&quot; era)),
+ ToExpr (Event (EraRule &quot;ENACT&quot; era)),
+ Eq (Event (EraRule &quot;ENACT&quot; era)),
+ Typeable (Event (EraRule &quot;ENACT&quot; era)),
+ TxCert era ~ ConwayTxCert era) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.Spec.html#spec"><span class="hs-identifier hs-var">ConwaySpec.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-18"></span></pre></body></html>
