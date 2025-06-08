@@ -122,7 +122,6 @@
             tools =
               {
                 cabal = "3.14.1.0";
-                ghcid = "0.8.9";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
