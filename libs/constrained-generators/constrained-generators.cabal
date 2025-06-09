@@ -73,6 +73,32 @@ library
     random,
     template-haskell,
 
+library testlib
+  exposed-modules:
+    Test.Minimal.Base
+    Test.Minimal.Model
+    Test.Minimal.Syntax
+    Test.Minimal.Tuple
+
+  hs-source-dirs: testlib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+  build-depends:
+    QuickCheck >=2.14,
+    base >=4.18 && <5,
+    containers,
+    mtl,
+    prettyprinter,
+    constrained-generators
+
 test-suite constrained
   type: exitcode-stdio-1.0
   main-is: Tests.hs
