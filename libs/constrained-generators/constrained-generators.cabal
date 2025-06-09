@@ -40,12 +40,7 @@ library
     Constrained.Generic
     Constrained.Graph
     Constrained.List
-    Constrained.Min.Base
-    Constrained.Min.Model
-    Constrained.Min.Syntax
-    Constrained.Min.Tuple
     Constrained.NumOrd
-    Constrained.NumSpec
     Constrained.PrettyUtils
     Constrained.Properties
     Constrained.Spec.Map
