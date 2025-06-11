@@ -222,40 +222,6 @@ The latter are being run when the environment variable NIGHTLY is set:
 ```shell
 NIGHTLY=true cabal test cardano-ledger-shelley-test
 ```
-### ghcid
-
-We have support for running
-[ghcid](https://github.com/ndmitchell/ghcid)
-from inside of `nix develop`.
-Enter `nix develop` from the base directory of the repository,
-change directories to the cabal package that you wish to check,
-then run `ghcid`.
-
-For example:
-
-```shell
-nix develop
-cd eras/shelley/impl/
-ghcid
-```
-
-`ghcid` may complain of not being able to load multiple components at once for targets with multiple components.
-In this case, just appending the `ghcid` command with the name of the component usually solves the problem.
-
-For example, under `cardano-ledger-binary`, running `ghcid` errors out with the following output:
-
-```shell
-Error: cabal: Cannot open a repl for multiple components at once. The target '' refers to the package cardano-ledger-binary-0.1.0.0 which includes the libraries testlib and cardano-ledger-binary.
-```
-
-Specifying the component solves this problem:
-
-```shell
-nix develop
-cd libs/cardano-ledger-binary/
-ghcid testlib # or `ghcid cardano-ledger-binary`
-```
-
 ## nix build Infrastructure
 
 The artifacts in this repository can be built and tested using nix. This is
