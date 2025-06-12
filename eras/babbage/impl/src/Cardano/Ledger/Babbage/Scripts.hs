@@ -63,9 +63,9 @@ instance AlonzoEraScript BabbageEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ BabbagePlutusV1 plutus
-      SPlutusV2 -> Just $ BabbagePlutusV2 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ BabbagePlutusV1 plutus
+      SPlutusV2 -> pure $ BabbagePlutusV2 plutus
+      slang -> fail $ show slang <> " isn't supported in BabbageEra"
 
   withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
   withPlutusScript (BabbagePlutusV2 plutus) f = f plutus

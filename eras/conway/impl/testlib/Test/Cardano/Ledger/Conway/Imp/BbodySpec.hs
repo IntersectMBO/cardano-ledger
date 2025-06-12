@@ -49,8 +49,10 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
-    Just (script :: Script era) <- pure largeScript
-    let scriptSize = originalBytesSize script
+    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
+    let script :: Script era
+        script = fromPlutusScript plutusScript
+        scriptSize = originalBytesSize script
 
     -- Determine a number of transactions and a number of times the reference script
     -- needs to be included as an input in each transaction,
@@ -107,11 +109,6 @@ spec = describe "BBODY" $ do
     mkTxIn = do
       addr <- freshKeyAddr_
       sendCoinTo addr (Coin 8_000_000)
-
-    largeScript :: Maybe (Script era)
-    largeScript = do
-      script <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
-      pure $ fromPlutusScript script
 
     mkTxWithNScripts :: TxIn -> Script era -> Int -> ImpTestM era (Tx era)
     mkTxWithNScripts txIn script n = do
