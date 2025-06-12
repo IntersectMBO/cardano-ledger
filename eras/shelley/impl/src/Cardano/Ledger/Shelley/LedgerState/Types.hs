@@ -23,7 +23,9 @@ module Cardano.Ledger.Shelley.LedgerState.Types where
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochNo,
+  KeyValuePairs (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -53,7 +55,7 @@ import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import Data.VMap (VB, VMap, VP)
@@ -172,26 +174,26 @@ instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (E
 instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => FromCBOR (EpochState era) where
   fromCBOR = fromEraCBOR @era
 
-instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (EpochState era) where
-  toJSON = object . toEpochStatePairs
-  toEncoding = pairs . mconcat . toEpochStatePairs
+deriving via
+  KeyValuePairs (EpochState era)
+  instance
+    (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (EpochState era)
 
-toEpochStatePairs ::
+instance
   ( EraTxOut era
   , EraGov era
   , EraStake era
-  , KeyValue e a
   , EraCertState era
   ) =>
-  EpochState era ->
-  [a]
-toEpochStatePairs es@(EpochState _ _ _ _) =
-  let EpochState {..} = es
-   in [ "esChainAccountState" .= esChainAccountState
-      , "esSnapshots" .= esSnapshots
-      , "esLState" .= esLState
-      , "esNonMyopic" .= esNonMyopic
-      ]
+  ToKeyValuePairs (EpochState era)
+  where
+  toKeyValuePairs es@(EpochState _ _ _ _) =
+    let EpochState {..} = es
+     in [ "esChainAccountState" .= esChainAccountState
+        , "esSnapshots" .= esSnapshots
+        , "esLState" .= esLState
+        , "esNonMyopic" .= esNonMyopic
+        ]
 
 -- =============================
 
@@ -295,20 +297,20 @@ instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UTxOState era) wher
 instance (EraTxOut era, EraGov era, EraStake era) => FromCBOR (UTxOState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era, EraStake era) => ToJSON (UTxOState era) where
-  toJSON = object . toUTxOStatePairs
-  toEncoding = pairs . mconcat . toUTxOStatePairs
+deriving via
+  KeyValuePairs (UTxOState era)
+  instance
+    (EraTxOut era, EraGov era, EraStake era) => ToJSON (UTxOState era)
 
-toUTxOStatePairs ::
-  (EraTxOut era, EraGov era, EraStake era, KeyValue e a) => UTxOState era -> [a]
-toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
-  let UTxOState {..} = utxoState
-   in [ "utxo" .= utxosUtxo
-      , "deposited" .= utxosDeposited
-      , "fees" .= utxosFees
-      , "ppups" .= utxosGovState
-      , "stake" .= utxosInstantStake
-      ]
+instance (EraTxOut era, EraGov era, EraStake era) => ToKeyValuePairs (UTxOState era) where
+  toKeyValuePairs utxoState@(UTxOState _ _ _ _ _ _) =
+    let UTxOState {..} = utxoState
+     in [ "utxo" .= utxosUtxo
+        , "deposited" .= utxosDeposited
+        , "fees" .= utxosFees
+        , "ppups" .= utxosGovState
+        , "stake" .= utxosInstantStake
+        ]
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
@@ -541,17 +543,24 @@ instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (L
 instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => FromCBOR (LedgerState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (LedgerState era) where
-  toJSON = object . toLedgerStatePairs
-  toEncoding = pairs . mconcat . toLedgerStatePairs
+deriving via
+  KeyValuePairs (LedgerState era)
+  instance
+    (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (LedgerState era)
 
-toLedgerStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue e a, EraStake era, EraCertState era) => LedgerState era -> [a]
-toLedgerStatePairs ls@(LedgerState _ _) =
-  let LedgerState {..} = ls
-   in [ "utxoState" .= lsUTxOState
-      , "delegationState" .= lsCertState
-      ]
+instance
+  ( EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
+  ) =>
+  ToKeyValuePairs (LedgerState era)
+  where
+  toKeyValuePairs ls@(LedgerState _ _) =
+    let LedgerState {..} = ls
+     in [ "utxoState" .= lsUTxOState
+        , "delegationState" .= lsCertState
+        ]
 
 -- ====================================================
 

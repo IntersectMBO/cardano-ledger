@@ -17,8 +17,9 @@ module Cardano.Ledger.Conway.Transition (
 import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
+import Cardano.Ledger.BaseTypes (toKeyValuePairs)
 import Cardano.Ledger.Conway.Era
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..), toConwayGenesisPairs)
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules.Deleg (processDelegation)
 import Cardano.Ledger.Conway.State (
   ConwayEraCertState (..),
@@ -107,7 +108,7 @@ instance ToJSON (TransitionConfig ConwayEra) where
 toConwayTransitionConfigPairs :: KeyValue e a => TransitionConfig ConwayEra -> [a]
 toConwayTransitionConfigPairs conwayConfig =
   toAlonzoTransitionConfigPairs alonzoConfig
-    ++ ["conway" .= object (toConwayGenesisPairs (conwayConfig ^. tcTranslationContextL))]
+    ++ ["conway" .= object (toKeyValuePairs (conwayConfig ^. tcTranslationContextL))]
   where
     babbageConfig = conwayConfig ^. tcPreviousEraConfigL
     alonzoConfig = babbageConfig ^. tcPreviousEraConfigL

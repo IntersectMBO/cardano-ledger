@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Deprecated `toUpgradeConwayPParamsUpdatePairs` and `toConwayGenesisPairs`
 * Add:
   * `alonzoToConwayUtxosPredFailure`
   * `alonzoToConwayUtxosEvent`

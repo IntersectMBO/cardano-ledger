@@ -24,12 +24,13 @@ module Cardano.Ledger.State.PoolDistr (
   individualTotalPoolStakeL,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -59,6 +60,7 @@ data IndividualPoolStake = IndividualPoolStake
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
+  deriving (ToJSON) via KeyValuePairs IndividualPoolStake
 
 individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
@@ -80,17 +82,13 @@ instance DecCBOR IndividualPoolStake where
         <*> decCBOR
         <*> decCBOR
 
-instance ToJSON IndividualPoolStake where
-  toJSON = object . toIndividualPoolStakePair
-  toEncoding = pairs . mconcat . toIndividualPoolStakePair
-
-toIndividualPoolStakePair :: KeyValue e a => IndividualPoolStake -> [a]
-toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _ _) =
-  let IndividualPoolStake {..} = indivPoolStake
-   in [ "individualPoolStake" .= individualPoolStake
-      , "individualTotalPoolStake" .= individualTotalPoolStake
-      , "individualPoolStakeVrf" .= individualPoolStakeVrf
-      ]
+instance ToKeyValuePairs IndividualPoolStake where
+  toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _) =
+    let IndividualPoolStake {..} = indivPoolStake
+     in [ "individualPoolStake" .= individualPoolStake
+        , "individualTotalPoolStake" .= individualTotalPoolStake
+        , "individualPoolStakeVrf" .= individualPoolStakeVrf
+        ]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values

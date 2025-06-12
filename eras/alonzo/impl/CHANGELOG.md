@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Deprecated `toAlonzoGenesisPairs`
 * Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
 * Renamed fields of `AlonzoTx`
   * `body` to `atBody`

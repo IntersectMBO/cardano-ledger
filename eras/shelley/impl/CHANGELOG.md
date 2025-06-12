@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Deprecated `toShelleyGenesisPairs`
+* Removed `toShelleyGenesisPairs`
 * Remove `ShelleyTxRaw`, `MkShelleyTx`, `segWitTx`, `unsafeConstructTxWithBytes`
 * Added `Generic` instances for:
   * `ShelleyBbodyState`

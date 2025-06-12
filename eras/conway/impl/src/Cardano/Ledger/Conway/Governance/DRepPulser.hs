@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -37,7 +38,12 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   RunConwayRatify (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..), Globals (..))
+import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  Globals (..),
+  KeyValuePairs (..),
+  ToKeyValuePairs (..),
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -71,7 +77,7 @@ import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
@@ -123,18 +129,19 @@ instance EraPParams era => NFData (PulsingSnapshot era)
 
 instance EraPParams era => NoThunks (PulsingSnapshot era)
 
-toPulsingSnapshotsPairs :: (KeyValue e a, EraPParams era) => PulsingSnapshot era -> [a]
-toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _ _) =
-  let (PulsingSnapshot {..}) = gas
-   in [ "psProposals" .= psProposals
-      , "psDRepDistr" .= psDRepDistr
-      , "psDRepState" .= psDRepState
-      , "psPoolDistr" .= psPoolDistr
-      ]
+instance EraPParams era => ToKeyValuePairs (PulsingSnapshot era) where
+  toKeyValuePairs gas@(PulsingSnapshot _ _ _ _) =
+    let (PulsingSnapshot {..}) = gas
+     in [ "psProposals" .= psProposals
+        , "psDRepDistr" .= psDRepDistr
+        , "psDRepState" .= psDRepState
+        , "psPoolDistr" .= psPoolDistr
+        ]
 
-instance EraPParams era => ToJSON (PulsingSnapshot era) where
-  toJSON = object . toPulsingSnapshotsPairs
-  toEncoding = pairs . mconcat . toPulsingSnapshotsPairs
+deriving via
+  KeyValuePairs (PulsingSnapshot era)
+  instance
+    EraPParams era => ToJSON (PulsingSnapshot era)
 
 instance Default (PulsingSnapshot era) where
   def = PulsingSnapshot mempty def def def

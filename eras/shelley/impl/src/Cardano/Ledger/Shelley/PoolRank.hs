@@ -30,8 +30,10 @@ module Cardano.Ledger.Shelley.PoolRank (
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
+  ToKeyValuePairs (..),
   UnitInterval,
   activeSlotVal,
   knownNonZero,
@@ -61,7 +63,7 @@ import Cardano.Ledger.State (maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
-import Data.Aeson (FromJSON, KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (FromJSON, ToJSON (..), (.=))
 import Data.Default (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
@@ -231,6 +233,7 @@ data NonMyopic = NonMyopic
   , rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs NonMyopic
 
 instance Default NonMyopic where
   def = NonMyopic Map.empty (Coin 0)
@@ -240,14 +243,11 @@ instance NoThunks NonMyopic
 instance NFData NonMyopic
 
 instance EncCBOR NonMyopic where
-  encCBOR
-    NonMyopic
-      { likelihoodsNM = aps
-      , rewardPotNM = rp
-      } =
-      encodeListLen 2
-        <> encCBOR aps
-        <> encCBOR rp
+  encCBOR nm@(NonMyopic _ _) =
+    let NonMyopic {likelihoodsNM, rewardPotNM} = nm
+     in encodeListLen 2
+          <> encCBOR likelihoodsNM
+          <> encCBOR rewardPotNM
 
 instance DecShareCBOR NonMyopic where
   type Share NonMyopic = Interns (KeyHash 'StakePool)
@@ -257,16 +257,12 @@ instance DecShareCBOR NonMyopic where
       rewardPotNM <- lift decCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}
 
-instance ToJSON NonMyopic where
-  toJSON = object . toNonMyopicPair
-  toEncoding = pairs . mconcat . toNonMyopicPair
-
-toNonMyopicPair :: KeyValue e a => NonMyopic -> [a]
-toNonMyopicPair nm@(NonMyopic _ _) =
-  let NonMyopic {likelihoodsNM, rewardPotNM} = nm
-   in [ "likelihoodsNM" .= likelihoodsNM
-      , "rewardPotNM" .= rewardPotNM
-      ]
+instance ToKeyValuePairs NonMyopic where
+  toKeyValuePairs nm@(NonMyopic _ _) =
+    let NonMyopic {likelihoodsNM, rewardPotNM} = nm
+     in [ "likelihoodsNM" .= likelihoodsNM
+        , "rewardPotNM" .= rewardPotNM
+        ]
 
 -- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of
