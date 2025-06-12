@@ -4,9 +4,9 @@
 
 module Cardano.Ledger.Dijkstra.Genesis (
   DijkstraGenesis (..),
-  toDijkstraGenesisPairs,
 ) where
 
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Data.Aeson (FromJSON, ToJSON)
@@ -28,5 +28,5 @@ instance EraGenesis DijkstraEra where
   type Genesis DijkstraEra = DijkstraGenesis
 
 -- TODO: Implement this and use for ToJSON instance
-toDijkstraGenesisPairs :: DijkstraGenesis -> [a]
-toDijkstraGenesisPairs _ = []
+instance ToKeyValuePairs DijkstraGenesis where
+  toKeyValuePairs DijkstraGenesis = []
