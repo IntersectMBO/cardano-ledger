@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,6 +13,7 @@ module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
+  registerDRepsThenDelegs,
 ) where
 
 import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
@@ -21,15 +23,11 @@ import Cardano.Ledger.BaseTypes (toKeyValuePairs)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules.Deleg (processDelegation)
-import Cardano.Ledger.Conway.State (
-  ConwayEraCertState (..),
-  vsDRepsL,
- )
+import Cardano.Ledger.Conway.State (ConwayEraCertState (..), DRepState, vsDRepsL)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.TxCert (Delegatee)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRepState)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   esLStateL,
@@ -54,11 +52,11 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 class (EraTransition era, ConwayEraCertState era) => ConwayEraTransition era where
-  tcDelegsL :: Lens' (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
-
-  tcInitialDRepsL :: Lens' (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)
-
   tcConwayGenesisL :: Lens' (TransitionConfig era) ConwayGenesis
+  default tcConwayGenesisL ::
+    ConwayEraTransition (PreviousEra era) =>
+    Lens' (TransitionConfig era) ConwayGenesis
+  tcConwayGenesisL = tcPreviousEraConfigL . tcConwayGenesisL
 
 registerDRepsThenDelegs ::
   ConwayEraTransition era =>
@@ -91,13 +89,17 @@ instance EraTransition ConwayEra where
 instance ConwayEraTransition ConwayEra where
   tcConwayGenesisL = lens ctcConwayGenesis (\g x -> g {ctcConwayGenesis = x})
 
-  tcDelegsL =
-    protectMainnetLens "ConwayDelegs" null $
-      tcConwayGenesisL . lens cgDelegs (\g x -> g {cgDelegs = x})
+tcDelegsL ::
+  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
+tcDelegsL =
+  protectMainnetLens "ConwayDelegs" null $
+    tcConwayGenesisL . lens cgDelegs (\g x -> g {cgDelegs = x})
 
-  tcInitialDRepsL =
-    protectMainnetLens "InitialDReps" null $
-      tcConwayGenesisL . lens cgInitialDReps (\g x -> g {cgInitialDReps = x})
+tcInitialDRepsL ::
+  ConwayEraTransition era => Lens' (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)
+tcInitialDRepsL =
+  protectMainnetLens "InitialDReps" null $
+    tcConwayGenesisL . lens cgInitialDReps (\g x -> g {cgInitialDReps = x})
 
 instance NoThunks (TransitionConfig ConwayEra)
 

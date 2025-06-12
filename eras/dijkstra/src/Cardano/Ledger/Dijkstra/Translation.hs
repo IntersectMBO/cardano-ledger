@@ -46,13 +46,13 @@ import Cardano.Ledger.Core (
  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import Cardano.Ledger.Dijkstra.Governance ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
-import Cardano.Ledger.Genesis (NoGenesis)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
@@ -70,7 +70,7 @@ import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~), (^.))
 
-type instance TranslationContext DijkstraEra = NoGenesis DijkstraEra
+type instance TranslationContext DijkstraEra = DijkstraGenesis
 
 newtype Tx era = Tx (Core.Tx era)
 

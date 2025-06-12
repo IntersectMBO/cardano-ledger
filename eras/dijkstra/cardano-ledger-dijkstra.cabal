@@ -35,6 +35,7 @@ library
     Cardano.Ledger.Dijkstra.State
     Cardano.Ledger.Dijkstra.State.CertState
     Cardano.Ledger.Dijkstra.State.Stake
+    Cardano.Ledger.Dijkstra.Transition
     Cardano.Ledger.Dijkstra.Translation
     Cardano.Ledger.Dijkstra.Tx
     Cardano.Ledger.Dijkstra.TxAuxData
@@ -71,6 +72,7 @@ library
     -Wunused-packages
 
   build-depends:
+    aeson,
     base >=4.14 && <5,
     cardano-data,
     cardano-ledger-allegra,

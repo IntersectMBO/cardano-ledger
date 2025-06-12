@@ -2,8 +2,17 @@
 
 ## 1.12.0.0
 
+* Export `VotingProcedure`, `ProposalProcedure`, `currentTreasuryValueTxBodyL` and
+  `treasuryDonationTxBodyL` from `Cardano.Ledger.Api.Tx.Body`
+* Export `DijkstraEra` from `Cardano.Ledger.Api.Era`
+* Set `LatestKnownEra` to `DijkstraEra`
+* Stop exporting deprecated `Shelley`, `Mary`, `Allegra`, `Alonzo`, `Babbage` and `Conway` type synonyms
 * Moved `Annotator` instances to `testlib` for all respective packages
 * Rename `queryAccountState` to `queryChainAccountState`
+
+### `testlib`
+
+* Re-export all Ledger `Arbitrary` instances from `Test.Cardano.Ledger.Api.Arbitrary`
 
 ## 1.11.0.0
 
