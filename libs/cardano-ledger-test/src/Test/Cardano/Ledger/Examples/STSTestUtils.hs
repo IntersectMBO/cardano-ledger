@@ -41,8 +41,8 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx, ExUnits (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
@@ -83,10 +83,10 @@ import qualified Data.Map.Strict as Map
 import GHC.Stack
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Era
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
@@ -201,9 +201,10 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 mkTxDats :: Era era => Data era -> TxDats era
 mkTxDats d = TxDats $ Map.singleton (hashData d) d
 
-mkSingleRedeemer :: Proof era -> PlutusPurposeTag -> Data era -> Redeemers era
-mkSingleRedeemer proof tag datum =
-  mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
+mkSingleRedeemer ::
+  forall era. AlonzoEraScript era => PlutusPurpose AsIx era -> Data era -> Redeemers era
+mkSingleRedeemer tag datum =
+  Redeemers @era $ Map.singleton tag (datum, ExUnits 5000 5000)
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
 -- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed

@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -301,9 +300,6 @@ updatePParams proof pp' ppf =
             CommitteeTermLimit c -> pp & ppCommitteeMaxTermLengthL .~ c
             GovActionExpiration c -> pp & ppGovActionLifetimeL .~ c
             _ -> pp
-
-newPParams :: EraPParams era => Proof era -> [PParamsField era] -> PParams era
-newPParams era = List.foldl' (updatePParams era) emptyPParams
 
 -- ====================================
 
