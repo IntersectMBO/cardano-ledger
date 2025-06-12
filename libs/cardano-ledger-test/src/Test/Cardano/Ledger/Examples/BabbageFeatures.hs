@@ -6,7 +6,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -35,6 +37,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
@@ -51,8 +54,10 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   TxIx (..),
  )
+import Cardano.Ledger.Binary (DecShareCBOR (..), Interns)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
+import Cardano.Ledger.Conway.State (EraCertState (..), EraStake (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
@@ -64,6 +69,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireSignature)
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -79,15 +85,15 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
+import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
   mkTxDats,
   testUTXOW,
-  trustMeP,
  )
 import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
   TxBodyField (..),
   TxField (..),
   TxOutField (..),
@@ -97,42 +103,50 @@ import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
   PlutusPurposeTag (..),
   mkRedeemers,
-  mkRedeemersFromTags,
  )
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
-import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 
-someKeys :: forall era. Proof era -> KeyPair 'Payment
-someKeys _pf = KeyPair vk sk
+someKeys :: KeyPair 'Payment
+someKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
-someKeysPaymentKeyRole :: forall era. Proof era -> KeyPairRole era
-someKeysPaymentKeyRole pf = KeyPairPayment (someKeys pf)
+someKeysPaymentKeyRole :: forall era. KeyPairRole era
+someKeysPaymentKeyRole = KeyPairPayment someKeys
 
-keysForMultisig :: forall era. Proof era -> KeyPair 'Witness
-keysForMultisig _pf = KeyPair vk sk
+keysForMultisig :: KeyPair 'Witness
+keysForMultisig = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 99)
 
-keysForMultisigWitnessKeyRole :: forall era. Proof era -> KeyPairRole era
-keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
+keysForMultisigWitnessKeyRole :: forall era. KeyPairRole era
+keysForMultisigWitnessKeyRole = KeyPairWitness keysForMultisig
 
-keyHashForMultisig :: forall era. Proof era -> KeyHash 'Witness
-keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
+keyHashForMultisig :: KeyHash 'Witness
+keyHashForMultisig = hashKey $ vKey keysForMultisig
 
-simpleScript :: forall era. Scriptic era => Proof era -> Script era
-simpleScript pf = fromNativeScript $ Scriptic.allOf [require @era (keyHashForMultisig pf)] pf
+simpleScript :: forall era. Era era => Script era
+simpleScript = fromNativeScript $ RequireAllOf [RequireSignature keyHashForMultisig]
 
-evenData3ArgsScript :: HasCallStack => Proof era -> Script era
-evenData3ArgsScript proof =
-  case proof of
+evenData3ArgsScript ::
+  forall era.
+  ( EraGov era
+  , Share (TxOut era) ~ Interns (Credential Staking)
+  , Share (InstantStake era) ~ Interns (Credential Staking)
+  , Share (CertState era)
+      ~ ( Interns (Credential Staking)
+        , Interns (KeyHash StakePool)
+        , Interns (Credential DRepRole)
+        , Interns (Credential HotCommitteeRole)
+        )
+  ) =>
+  Script era
+evenData3ArgsScript =
+  case reify @era of
     Shelley -> error unsupported
     Mary -> error unsupported
     Allegra -> error unsupported
@@ -140,7 +154,7 @@ evenData3ArgsScript proof =
     Babbage -> evenData3ArgsLang @'PlutusV2
     Conway -> evenData3ArgsLang @'PlutusV2
   where
-    unsupported = "Plutus scripts are not supported in:" ++ show proof
+    unsupported = "Plutus scripts are not supported in: " ++ show (eraName @era)
     evenData3ArgsLang :: forall l era'. EraPlutusTxInfo l era' => Script era'
     evenData3ArgsLang =
       fromPlutusScript . mkSupportedPlutusScript . Plutus @l . PlutusBinary . SBS.pack $
@@ -152,14 +166,14 @@ evenData3ArgsScript proof =
           , [128, 8, 72, 128, 4, 128, 5]
           ]
 
-plainAddr :: forall era. Proof era -> Addr
-plainAddr pf = mkAddr (someKeys pf) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
+plainAddr :: Addr
+plainAddr = mkAddr someKeys $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
 
-scriptAddr :: forall era. Reflect era => Proof era -> Script era -> Addr
-scriptAddr _pf s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
+scriptAddr :: forall era. Reflect era => Script era -> Addr
+scriptAddr s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
 
-simpleScriptAddr :: forall era. (Reflect era, Scriptic era) => Proof era -> Addr
-simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
+simpleScriptAddr :: forall era. Reflect era => Addr
+simpleScriptAddr = scriptAddr @era simpleScript
 
 datumExampleEven :: Era era => Data era
 datumExampleEven = Data (PV1.I 2)
@@ -167,11 +181,9 @@ datumExampleEven = Data (PV1.I 2)
 datumExampleOdd :: Era era => Data era
 datumExampleOdd = Data (PV1.I 3)
 
-validatingRedeemers :: Era era => Proof era -> Redeemers era
-validatingRedeemers proof =
-  mkRedeemersFromTags
-    proof
-    [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
+validatingRedeemers :: Era era => Redeemers era
+validatingRedeemers =
+  Redeemers [(SpendingPurpose $ AsIx 0, (Data (PV1.I 42), ExUnits 5000 5000))]
 
 -- We intentionally use a ByteString with length greater than 64 to serve as
 -- as reminder that our protection against contiguous data over 64 Bytes on
@@ -197,175 +209,132 @@ yetAnotherTxIn = mkGenesisTxIn 3
 commonTxIn :: HasCallStack => TxIn
 commonTxIn = mkGenesisTxIn 4
 
-defaultPPs :: Proof era -> [PParamsField era]
-defaultPPs p =
-  [ Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
-  , MaxValSize 1000000000
-  , MaxTxExUnits $ ExUnits 1000000 1000000
-  , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ protocolVersion p
-  , CollateralPercentage 1
-  , CoinPerUTxOByte (CoinPerByte (Coin 5))
-  ]
-
-pp :: EraPParams era => Proof era -> PParams era
-pp pf = newPParams pf (defaultPPs pf)
-
 -- =========================================================================
 -- Spend a EUTxO with an inline datum (without and with a failing script)
 -- =========================================================================
 
-inlineDatum :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-inlineDatum pf =
+inlineDatum :: forall era. Reflect era => TestCaseData era
+inlineDatum =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr . inject $ Coin 4995]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
+                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleEven @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr . inject $ Coin 2115]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript @era)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
-inlineDatumFailingScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-inlineDatumFailingScript pf =
+inlineDatumFailingScript :: forall era. Reflect era => TestCaseData era
+inlineDatumFailingScript =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr . inject $ Coin 4995]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleOdd @era)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
+                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleOdd @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- =========================================================================
 -- Valid: Use a reference script.
 -- =========================================================================
 
-referenceScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-referenceScript pf =
+referenceScript ::
+  forall era.
+  Reflect era =>
+  TestCaseData era
+referenceScript =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr . inject $ Coin 4995]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut (scriptAddr @era (alwaysSucceeds @PlutusV2 3)) (inject $ Coin 5000)
+                  & dataHashTxOutL .~ SJust (hashData (datumExampleSixtyFiveBytes @era))
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ alwaysAlt 3 pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust (alwaysSucceeds @PlutusV2 3)
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes @era)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
-commonReferenceScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-commonReferenceScript pf =
+commonReferenceScript :: forall era. Reflect era => TestCaseData era
+commonReferenceScript =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn, commonTxIn]
-          , RefInputs' [anotherTxIn, commonTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn, commonTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn, commonTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
-                  , Amount (inject $ Coin 2500)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
-              , newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 2500)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era (alwaysSucceeds @PlutusV2 3)) (inject $ Coin 2500)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
+              , mkBasicTxOut plainAddr (inject $ Coin 2500)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ alwaysAlt 3 pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust (alwaysSucceeds @PlutusV2 3)
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- =========================================================================
@@ -375,45 +344,33 @@ commonReferenceScript pf =
 
 inlineDatumAndRefScript ::
   forall era.
-  (Scriptic era, Reflect era) =>
-  Proof era ->
+  Reflect era =>
   TestCaseData era
-inlineDatumAndRefScript pf =
+inlineDatumAndRefScript =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
+                  & datumTxOutL .~ Datum (dataToBinaryData $ datumExampleEven @era)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ evenData3ArgsScript pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust evenData3ArgsScript
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut @era plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- =========================================================================
@@ -423,46 +380,36 @@ inlineDatumAndRefScript pf =
 
 inlineDatumAndRefScriptWithRedundantWitScript ::
   forall era.
-  (Scriptic era, Reflect era) =>
-  Proof era ->
+  Reflect era =>
   TestCaseData era
-inlineDatumAndRefScriptWithRedundantWitScript pf =
+inlineDatumAndRefScriptWithRedundantWitScript =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
+                  & datumTxOutL .~ Datum (dataToBinaryData $ datumExampleEven @era)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ evenData3ArgsScript pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust evenData3ArgsScript
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf] -- This is redundant with the reference script
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV2 3)] -- This is redundant with the reference script
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -472,33 +419,26 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
 
 refInputWithDataHashNoWit ::
   forall era.
-  (Scriptic era, EraTxBody era) =>
-  Proof era ->
+  EraTxBody era =>
   TestCaseData era
-refInputWithDataHashNoWit pf =
+refInputWithDataHashNoWit =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Txfee (Coin 5)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 1135)]
+          & feeTxBodyL .~ Coin 5
     , initOutputs =
         InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]]
+          { ofInputs = [mkBasicTxOut plainAddr (inject $ Coin 1140)]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 10)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 10)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofCollateral = []
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = []
     }
 
@@ -509,51 +449,43 @@ refInputWithDataHashNoWit pf =
 
 refInputWithDataHashWithWit ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  Reflect era =>
   Proof era ->
   TestCaseData era
 refInputWithDataHashWithWit pf =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) txDats)
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Txfee (Coin 5)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & scriptIntegrityHashTxBodyL
+            .~ (newScriptIntegrityHash @era defaultPParams [] (mkRedeemers []) txDats)
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 1135)]
+          & feeTxBodyL .~ (Coin 5)
     , initOutputs =
         InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]]
+          { ofInputs = [mkBasicTxOut plainAddr (inject $ Coin 1140)]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 10)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 10)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofCollateral = []
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = [DataWits' [datumExampleSixtyFiveBytes]]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
     }
 
 -- ====================================================================================
 -- Valid: Use a reference script for authorizing a delegation certificate
 -- ====================================================================================
 
-certRedeemers :: Era era => Proof era -> Redeemers era
-certRedeemers proof =
-  mkRedeemersFromTags
-    proof
-    [((Certifying, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
+certRedeemers :: Era era => Redeemers era
+certRedeemers =
+  mkRedeemers [(CertifyingPurpose @_ @AsIx 0, (Data (PV1.I 42), ExUnits 5000 5000))]
 
 refscriptForDelegCert ::
   forall era.
-  ( Scriptic era
-  , EraTxBody era
+  ( EraTxBody era
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -561,110 +493,95 @@ refscriptForDelegCert ::
 refscriptForDelegCert pf =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Certs'
-              [ UnRegTxCert (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf))
-              ]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (certRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 1135)]
+          & certsTxBodyL
+            .~ [ UnRegTxCert (ScriptHashObj (hashScript @era $ alwaysSucceeds @PlutusV2 2))
+               ]
+          & feeTxBodyL .~ (Coin 5)
+          & scriptIntegrityHashTxBodyL
+            .~ (newScriptIntegrityHash @era defaultPParams [PlutusV2] certRedeemers mempty)
     , initOutputs =
         InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]]
+          { ofInputs = [mkBasicTxOut plainAddr (inject $ Coin 1140)]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ alwaysAlt 2 pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust (alwaysSucceeds @PlutusV2 2)
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = [RdmrWits $ certRedeemers pf]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = witsTxL . rdmrsTxWitsL .~ certRedeemers
     }
 
 -- ====================================================================================
 --  Invalid: Use a collateral output
 -- ====================================================================================
 
-useCollateralReturn :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+useCollateralReturn :: forall era. Reflect era => Proof era -> TestCaseData era
 useCollateralReturn pf =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , CollateralReturn' [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)]]
-          , TotalCol (SJust $ Coin 5)
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & collateralReturnTxBodyL .~ SJust (mkBasicTxOut plainAddr (inject $ Coin 2110))
+          & totalCollateralTxBodyL .~ (SJust $ Coin 5)
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ (Coin 5)
+          & scriptIntegrityHashTxBodyL
+            .~ (newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats)
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (never 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut (scriptAddr @era (alwaysFails @PlutusV1 3)) (inject $ Coin 5000)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [never 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysFails @PlutusV1 3)]
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
 -- Invalid: Invalid collateral total
 -- ====================================================================================
 
-incorrectCollateralTotal :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-incorrectCollateralTotal pf =
+incorrectCollateralTotal :: forall era. Reflect era => TestCaseData era
+incorrectCollateralTotal =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , CollateralReturn' [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)]]
-          , TotalCol (SJust $ Coin 6)
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & collateralReturnTxBodyL .~ SJust (mkBasicTxOut plainAddr (inject $ Coin 2110))
+          & totalCollateralTxBodyL .~ SJust (Coin 6)
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
+              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
+                  & datumTxOutL .~ Datum (dataToBinaryData $ datumExampleEven @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -673,39 +590,36 @@ incorrectCollateralTotal pf =
 
 inlineDatumRedundantDatumWit ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  Reflect era =>
   Proof era ->
   TestCaseData era
 inlineDatumRedundantDatumWit pf =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ (Coin 5)
+          & scriptIntegrityHashTxBodyL
+            .~ (newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers txDats)
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (evenData3ArgsScript pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era evenData3ArgsScript)
+                  (inject $ Coin 5000)
+                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleEven @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -713,36 +627,35 @@ inlineDatumRedundantDatumWit pf =
 -- ====================================================================================
 
 inlineDatumWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-inlineDatumWithPlutusV1Script pf =
+  forall era.
+  Reflect era =>
+  TestCaseData era
+inlineDatumWithPlutusV1Script =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) mempty)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers mempty
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era $ alwaysSucceeds @PlutusV1 3)
+                  (inject $ Coin 5000)
+                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -750,41 +663,37 @@ inlineDatumWithPlutusV1Script pf =
 -- ====================================================================================
 
 referenceScriptWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-referenceScriptWithPlutusV1Script pf =
+  forall era. Reflect era => TestCaseData era
+referenceScriptWithPlutusV1Script =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs'
-              [ newTxOut
-                  pf
-                  [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]
-              ]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & collateralInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL
+            .~ [ mkBasicTxOut plainAddr (inject $ Coin 4995)
+                   & referenceScriptTxOutL .~ SJust simpleScript
+               ]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era $ alwaysSucceeds @PlutusV1 3)
+                  (inject $ Coin 5000)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -792,74 +701,63 @@ referenceScriptWithPlutusV1Script pf =
 -- ====================================================================================
 
 referenceInputWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-referenceInputWithPlutusV1Script pf =
+  forall era. Reflect era => TestCaseData era
+referenceInputWithPlutusV1Script =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ (Coin 5)
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era $ alwaysSucceeds @PlutusV1 3)
+                  (inject $ Coin 5000)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (always 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era $ alwaysSucceeds @PlutusV1 3)
+                  (inject $ Coin 5000)
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
+          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
 --  Valid: Don't run reference scripts in output for validation
 -- ====================================================================================
 
-refScriptInOutput :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
-refScriptInOutput pf =
+refScriptInOutput :: forall era. EraTxBody era => TestCaseData era
+refScriptInOutput =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ simpleScript pf)
-                  ]
+              [ mkBasicTxOut plainAddr (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust simpleScript
               ]
           , ofRefInputs = []
           , ofCollateral = []
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = []
     }
 
@@ -868,37 +766,32 @@ refScriptInOutput pf =
 -- ====================================================================================
 
 simpleScriptOutWithRefScriptUTxOState ::
-  (Scriptic era, Reflect era) => Proof era -> TestCaseData era
-simpleScriptOutWithRefScriptUTxOState pf =
+  forall era.
+  Reflect era => TestCaseData era
+simpleScriptOutWithRefScriptUTxOState =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (simpleScriptAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  ]
+              [ mkBasicTxOut
+                  (simpleScriptAddr @era)
+                  (inject $ Coin 5000)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript (SJust $ simpleScript pf)
-                  ]
+              [ mkBasicTxOut
+                  plainAddr
+                  (inject $ Coin 5000)
+                  & referenceScriptTxOutL .~ SJust simpleScript
               ]
           , ofCollateral = []
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf]
+    , keysForAddrWits = [someKeysPaymentKeyRole, keysForMultisigWitnessKeyRole]
     , otherWitsFields = []
     }
 
@@ -909,32 +802,28 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Era era => Data era
 largeDatum = Data (PV1.B . BS.pack $ replicate 1500 0)
 
-largeOutput' :: forall era. EraTxOut era => Proof era -> TxOut era
-largeOutput' pf =
-  newTxOut
-    pf
-    [ Address (plainAddr pf)
-    , Amount (inject $ Coin 1135)
-    , FDatum . Datum . dataToBinaryData $ largeDatum @era
-    ]
+largeOutput' :: forall era. EraTxOut era => TxOut era
+largeOutput' =
+  mkBasicTxOut
+    plainAddr
+    (inject $ Coin 1135)
+    & datumTxOutL .~ Datum (dataToBinaryData $ largeDatum @era)
 
-largeOutput :: forall era. BabbageEraTxBody era => Proof era -> TestCaseData era
-largeOutput pf =
+largeOutput :: forall era. BabbageEraTxBody era => TestCaseData era
+largeOutput =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Outputs' [largeOutput' pf]
-          , Txfee (Coin 5)
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & outputsTxBodyL .~ [largeOutput']
+          & feeTxBodyL .~ Coin 5
     , initOutputs =
         InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]]
+          { ofInputs = [mkBasicTxOut plainAddr (inject $ Coin 1140)]
           , ofRefInputs = []
           , ofCollateral = []
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = []
     }
 
@@ -945,45 +834,40 @@ largeOutput pf =
 -- =============================================================================
 
 noSuchThingAsReferenceDatum ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+  forall era. Reflect era => Proof era -> TestCaseData era
 noSuchThingAsReferenceDatum pf =
   TestCaseData
     { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , RefInputs' [anotherTxIn] -- Note that this reference input has the required datum
-          , Collateral' [yetAnotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
-          , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) (TxDats mempty))
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ [someTxIn]
+          & referenceInputsTxBodyL .~ [anotherTxIn] -- Note that this reference input has the required datum
+          & collateralInputsTxBodyL .~ [yetAnotherTxIn]
+          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
+          & feeTxBodyL .~ Coin 5
+          & scriptIntegrityHashTxBodyL
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers (TxDats mempty)
     , initOutputs =
         InitOutputs
           { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
-                  , Amount (inject $ Coin 5000)
-                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
-                  ]
+              [ mkBasicTxOut
+                  (scriptAddr @era $ alwaysSucceeds @PlutusV2 3)
+                  (inject $ Coin 5000)
+                  & dataHashTxOutL .~ SJust (hashData $ datumExampleSixtyFiveBytes @era)
               ]
           , ofRefInputs =
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
+              [ mkBasicTxOut
+                  plainAddr
+                  (inject $ Coin 5000)
+                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
                   -- Note that this inline datum does not witness the datum for the plutus script
-                  ]
               ]
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          , ofCollateral = [mkBasicTxOut plainAddr (inject $ Coin 2115)]
           }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , keysForAddrWits = [someKeysPaymentKeyRole]
+    , otherWitsFields = \x ->
+        x
+          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV2 1)]
+          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
 -- ====================================================================================
@@ -994,7 +878,7 @@ data TestCaseData era = TestCaseData
   { txBody :: TxBody era
   , initOutputs :: InitOutputs era
   , keysForAddrWits :: [KeyPairRole era]
-  , otherWitsFields :: [WitnessesField era]
+  , otherWitsFields :: Tx era -> Tx era
   }
 
 data InitOutputs era = InitOutputs
@@ -1057,14 +941,10 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
 
 txFromTestCaseData ::
   forall era.
-  ( Scriptic era
-  , BabbageEraTxBody era
-  ) =>
-  Proof era ->
+  BabbageEraTxBody era =>
   TestCaseData era ->
   Tx era
 txFromTestCaseData
-  pf
   testCaseData =
     let addrWits =
           fmap
@@ -1076,20 +956,13 @@ txFromTestCaseData
                 KeyPairCommittee d -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) d
             )
             (keysForAddrWits testCaseData)
-        tx =
-          newTx
-            pf
-            ( Body (txBody testCaseData)
-                : [ WitnessesI
-                      (AddrWits' addrWits : otherWitsFields testCaseData)
-                  ]
-            )
-     in tx
+     in otherWitsFields testCaseData $
+          mkBasicTx (txBody testCaseData)
+            & witsTxL . addrTxWitsL .~ Set.fromList addrWits
 
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
   , Reflect era
   , BabbageEraTxBody era
   ) =>
@@ -1100,7 +973,7 @@ testExpectSuccessValid
   pf
   tc =
     let txBody' = txBody tc
-        tx' = txFromTestCaseData pf tc
+        tx' = txFromTestCaseData tc
         fees = txBody' ^. feeTxBodyL
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
 
@@ -1109,9 +982,9 @@ testExpectSuccessValid
 
         initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
         expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) fees def mempty
-        assumedValidTx = trustMeP pf True tx'
-     in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedValidTx (Right expectedState)
+        expectedState = smartUTxOState defaultPParams expectedUtxo (Coin 0) fees def mempty
+        assumedValidTx = tx' & isValidTxL .~ IsValid True
+     in testUTXOW (UTXOW pf) initUtxo defaultPParams assumedValidTx (Right expectedState)
 
 newColReturn ::
   forall era.
@@ -1129,7 +1002,6 @@ newColReturn
 testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
   , Reflect era
   , BabbageEraTxBody era
   ) =>
@@ -1145,34 +1017,33 @@ testExpectSuccessInvalid
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
         DeltaCoin colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) (Coin colBallance) def mempty
-        assumedInvalidTx = trustMeP pf False tx'
-     in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
+        expectedState = smartUTxOState defaultPParams expectedUtxo (Coin 0) (Coin colBallance) def mempty
+        assumedInvalidTx = tx' & isValidTxL .~ IsValid False
+     in testUTXOW (UTXOW pf) initUtxo defaultPParams assumedInvalidTx (Right expectedState)
 
 testExpectFailure ::
   forall era.
-  ( PostShelley era
-  , BabbageEraTxBody era
+  ( BabbageEraTxBody era
   , Reflect era
   ) =>
-  Proof era ->
   TestCaseData era ->
   PredicateFailure (EraRule "UTXOW" era) ->
   Assertion
-testExpectFailure
-  pf
-  tc
-  predicateFailure =
-    let tx' = txFromTestCaseData pf tc
-        (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
-        utxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
-     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left $ pure predicateFailure)
+testExpectFailure tc predicateFailure =
+  let tx' = txFromTestCaseData tc
+      (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData tc
+      utxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
+   in testUTXOW
+        UTXOW
+        utxo
+        defaultPParams
+        (tx' & isValidTxL .~ IsValid True)
+        (Left $ pure predicateFailure)
 
 genericBabbageFeatures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
   , BabbageEraTxBody era
-  , PostShelley era
   , Reflect era
   ) =>
   Proof era ->
@@ -1206,8 +1077,7 @@ badTranslation proof x =
 
 plutusV1RefScriptFailures ::
   forall era.
-  ( PostShelley era
-  , BabbageEraTxBody era
+  ( BabbageEraTxBody era
   , Reflect era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
@@ -1246,7 +1116,6 @@ genericBabbageFailures ::
   , InjectRuleFailure "UTXOW" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , BabbageEraTxBody era
-  , PostShelley era
   , Reflect era
   ) =>
   Proof era ->
@@ -1268,7 +1137,7 @@ genericBabbageFailures pf =
               pf
               (inlineDatumAndRefScriptWithRedundantWitScript pf)
               ( injectFailure
-                  (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf)))
+                  (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysSucceeds 1)))
               )
         , testCase "inline datum with redundant datum witness" $
             testExpectFailure
@@ -1327,8 +1196,7 @@ babbageFeatures =
 
 testExpectUTXOFailure ::
   forall era.
-  ( PostShelley era
-  , Reflect era
+  ( Reflect era
   , BabbageEraTxBody era
   ) =>
   Proof era ->

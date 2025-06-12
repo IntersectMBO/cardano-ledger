@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,13 +15,29 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
+module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), datsAlonzoTxWitsL, unTxDatsL)
-import Cardano.Ledger.BaseTypes (ProtVer (..), inject, natVersion)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDatsL)
+import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxWits (..), hashScript)
+import Cardano.Ledger.Conway.Core (
+  AlonzoEraPParams,
+  AlonzoEraTxBody (..),
+  AsIx (..),
+  EraPParams (..),
+  EraTxOut (..),
+  PParams,
+  emptyPParams,
+  eraProtVerLow,
+  ppCollateralPercentageL,
+  ppCostModelsL,
+  ppMaxBlockExUnitsL,
+  ppMaxTxExUnitsL,
+  ppMaxValSizeL,
+  pattern SpendingPurpose,
+ )
+import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -38,25 +56,31 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxOutField (..),
- )
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
-import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-tests :: TestTree
+tests ::
+  forall era.
+  ( Reflect era
+  , AlonzoEraTxWits era
+  , AlonzoEraTxBody era
+  ) =>
+  TestTree
 tests =
-  testGroup "Alonzo API" [testCase "estimateMinFee" testEstimateMinFee]
+  testGroup "Alonzo API" [testCase "estimateMinFee" $ testEstimateMinFee @era]
 
-testEstimateMinFee :: Assertion
+testEstimateMinFee ::
+  forall era.
+  ( Reflect era
+  , AlonzoEraTxWits era
+  , AlonzoEraTxBody era
+  ) =>
+  Assertion
 testEstimateMinFee =
-  estimateMinFeeTx @AlonzoEra
+  estimateMinFeeTx @era
     pparams
     validatingTxNoWits
     1
@@ -64,8 +88,7 @@ testEstimateMinFee =
     0
     @?= alonzoMinFeeTx pparams validatingTx
   where
-    pf = Alonzo
-    pparams = newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
+    pparams = undefined -- newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty
@@ -73,39 +96,35 @@ testEstimateMinFee =
     validatingTxNoWits =
       mkBasicTx validatingBody
         & witsTxL . scriptTxWitsL .~ scriptMap
-        & witsTxL . datsAlonzoTxWitsL . unTxDatsL .~ dataMap
+        & witsTxL . datsTxWitsL . unTxDatsL .~ dataMap
         & witsTxL . rdmrsTxWitsL .~ redeemers
     validatingTx =
       mkBasicTx validatingBody
         & witsTxL . addrTxWitsL
-          .~ Set.singleton (mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf))
+          .~ Set.singleton (mkWitnessVKey (hashAnnotated validatingBody) someKeys)
         & witsTxL . scriptTxWitsL .~ scriptMap
-        & witsTxL . datsAlonzoTxWitsL . unTxDatsL .~ dataMap
+        & witsTxL . datsTxWitsL . unTxDatsL .~ dataMap
         & witsTxL . rdmrsTxWitsL .~ redeemers
     validatingBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 1]
-        , Collateral' [mkGenesisTxIn 11]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-        , Txfee (Coin 316)
-        , WppHash
-            ( newScriptIntegrityHash
-                pf
-                (newPParams pf defaultPPs)
-                [PlutusV1]
-                redeemers
-                (mkTxDats (Data (PV1.I 123)))
-            )
-        ]
-    redeemers = mkSingleRedeemer pf Spending (Data (PV1.I 42))
+      mkBasicTxBody
+        & inputsTxBodyL .~ [mkGenesisTxIn 1]
+        & collateralInputsTxBodyL .~ [mkGenesisTxIn 11]
+        & outputsTxBodyL .~ [mkBasicTxOut @era someAddr (inject $ Coin 4995)]
+        & feeTxBodyL .~ Coin 316
+        & scriptIntegrityHashTxBodyL
+          .~ newScriptIntegrityHash @era
+            defaultPParams
+            [PlutusV1]
+            redeemers
+            (mkTxDats (Data (PV1.I 123)))
+    redeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 0) (Data (PV1.I 42))
 
-defaultPPs :: [PParamsField era]
-defaultPPs =
-  [ Costmdls $ zeroTestingCostModels [PlutusV1]
-  , MaxValSize 1000000000
-  , MaxTxExUnits $ ExUnits 1000000 1000000
-  , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ ProtVer (natVersion @5) 0
-  , CollateralPercentage 100
-  ]
+defaultPParams :: forall era. AlonzoEraPParams era => PParams era
+defaultPParams =
+  emptyPParams @era
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeL .~ 1_000_000_000
+    & ppMaxTxExUnitsL .~ ExUnits 1_000_000 1_000_000
+    & ppMaxBlockExUnitsL .~ ExUnits 1_000_000 1_000_000
+    & ppProtocolVersionL .~ ProtVer (eraProtVerLow @era) 0
+    & ppCollateralPercentageL .~ 100

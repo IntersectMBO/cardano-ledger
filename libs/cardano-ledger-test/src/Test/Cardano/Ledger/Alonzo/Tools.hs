@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -51,13 +52,14 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Proof (Proof (Alonzo, Babbage))
+import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 
 tests :: TestTree
 tests =
@@ -66,13 +68,13 @@ tests =
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
     , testGroup
         "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc Alonzo)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Alonzo)
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)
         ]
     , testGroup
         "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc Babbage)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Babbage)
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @BabbageEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @BabbageEra)
         ]
     ]
 
@@ -141,12 +143,11 @@ exampleExUnitCalc ::
   , EraStake era
   , EraCertState era
   ) =>
-  Proof era ->
   IO ()
-exampleExUnitCalc proof =
-  testExUnitCalculation
-    (exampleTx proof (AlonzoSpending (AsIx 0)))
-    (ustate proof)
+exampleExUnitCalc =
+  testExUnitCalculation @era
+    (exampleTx (AlonzoSpending (AsIx 0)))
+    ustate
     uenv
     exampleEpochInfo
     testSystemStart
@@ -160,13 +161,12 @@ exampleInvalidExUnitCalc ::
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   ) =>
-  Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof =
+exampleInvalidExUnitCalc =
   let report =
         evalTxExUnits @era
           testPParams
-          (exampleTx proof (AlonzoSpending (AsIx 1)))
+          (exampleTx (AlonzoSpending (AsIx 1)))
           initUTxO
           exampleEpochInfo
           testSystemStart
@@ -227,9 +227,10 @@ uenv :: (AlonzoEraPParams era, EraCertState era) => UtxoEnv era
 uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::
-  ( EraTxOut era
-  , EraStake era
+  ( EraStake era
   , EraGov era
+  , AllegraEraScript era
+  , AlonzoEraTxOut era
   ) =>
   UTxOState era
 ustate =

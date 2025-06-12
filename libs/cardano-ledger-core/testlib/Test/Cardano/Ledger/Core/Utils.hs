@@ -7,6 +7,8 @@ module Test.Cardano.Ledger.Core.Utils (
   testGlobals,
   mkDummySafeHash,
   txInAt,
+  standardHashSize,
+  standardAddrHashSize,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -25,6 +27,8 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
+import Data.Data (Proxy(..))
+import Cardano.Crypto.Hash (sizeHash)
 
 testGlobals :: Globals
 testGlobals =
@@ -49,3 +53,9 @@ txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn
 txInAt index tx =
   let txId = txIdTx tx
    in mkTxInPartial txId (toInteger index)
+
+standardHashSize :: Int
+standardHashSize = fromIntegral . sizeHash $ Proxy @HASH
+
+standardAddrHashSize :: Int
+standardAddrHashSize = fromIntegral . sizeHash $ Proxy @ADDRHASH

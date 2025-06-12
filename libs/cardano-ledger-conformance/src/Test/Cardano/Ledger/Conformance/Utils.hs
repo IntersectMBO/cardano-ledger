@@ -11,12 +11,6 @@ import qualified Data.ByteString.Base16 as B16
 import Data.Data (Proxy (..))
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
-standardHashSize :: Int
-standardHashSize = fromIntegral . sizeHash $ Proxy @HASH
-
-standardAddrHashSize :: Int
-standardAddrHashSize = fromIntegral . sizeHash $ Proxy @ADDRHASH
-
 agdaHashToBytes :: Int -> Integer -> ByteString
 agdaHashToBytes hs = B16.encode . naturalToBytes hs . fromInteger
 
