@@ -16,7 +16,6 @@ module Cardano.Ledger.Conway.Transition (
   registerDRepsThenDelegs,
 ) where
 
-import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
 import Cardano.Ledger.BaseTypes (toKeyValuePairs)
@@ -38,10 +37,7 @@ import Cardano.Ledger.Shelley.Transition
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
-  ToJSON (..),
   Value (..),
-  object,
-  pairs,
   withObject,
   (.:),
  )
@@ -103,17 +99,9 @@ tcInitialDRepsL =
 
 instance NoThunks (TransitionConfig ConwayEra)
 
-instance ToJSON (TransitionConfig ConwayEra) where
-  toJSON = object . toConwayTransitionConfigPairs
-  toEncoding = pairs . mconcat . toConwayTransitionConfigPairs
-
 toConwayTransitionConfigPairs :: KeyValue e a => TransitionConfig ConwayEra -> [a]
-toConwayTransitionConfigPairs conwayConfig =
-  toAlonzoTransitionConfigPairs alonzoConfig
-    ++ ["conway" .= object (toKeyValuePairs (conwayConfig ^. tcTranslationContextL))]
-  where
-    babbageConfig = conwayConfig ^. tcPreviousEraConfigL
-    alonzoConfig = babbageConfig ^. tcPreviousEraConfigL
+toConwayTransitionConfigPairs = toKeyValuePairs
+{-# DEPRECATED toConwayTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 instance FromJSON (TransitionConfig ConwayEra) where
   parseJSON = withObject "ConwayTransitionConfig" $ \o -> do

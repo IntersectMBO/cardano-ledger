@@ -19,10 +19,7 @@ import Cardano.Ledger.Shelley.Transition
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
-  ToJSON (..),
   Value (..),
-  object,
-  pairs,
   withObject,
   (.:),
  )
@@ -49,18 +46,9 @@ instance EraTransition AlonzoEra where
 
 instance NoThunks (TransitionConfig AlonzoEra)
 
-instance ToJSON (TransitionConfig AlonzoEra) where
-  toJSON = object . toAlonzoTransitionConfigPairs
-  toEncoding = pairs . mconcat . toAlonzoTransitionConfigPairs
-
 toAlonzoTransitionConfigPairs :: KeyValue e a => TransitionConfig AlonzoEra -> [a]
-toAlonzoTransitionConfigPairs alonzoConfig =
-  toShelleyTransitionConfigPairs shelleyConfig
-    ++ ["alonzo" .= object (toKeyValuePairs (alonzoConfig ^. tcTranslationContextL))]
-  where
-    maryConfig = alonzoConfig ^. tcPreviousEraConfigL
-    allegraConfig = maryConfig ^. tcPreviousEraConfigL
-    shelleyConfig = allegraConfig ^. tcPreviousEraConfigL
+toAlonzoTransitionConfigPairs = toKeyValuePairs
+{-# DEPRECATED toAlonzoTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 instance FromJSON (TransitionConfig AlonzoEra) where
   parseJSON = withObject "AlonzoTransitionConfig" $ \o -> do

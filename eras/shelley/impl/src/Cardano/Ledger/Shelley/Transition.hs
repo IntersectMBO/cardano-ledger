@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -10,8 +11,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Besides capturing all configuration that is necessary to progress to a specific era,
@@ -19,7 +22,15 @@
 -- benchmarking in order to initilize a chain in a particular era without going through
 -- the trouble of generating all the history for preceeding eras.
 module Cardano.Ledger.Shelley.Transition (
-  EraTransition (..),
+  EraTransition (
+    TransitionConfig,
+    mkTransitionConfig,
+    injectIntoTestState,
+    tcPreviousEraConfigL,
+    tcTranslationContextL,
+    tcShelleyGenesisL,
+    tcInitialPParamsG
+  ),
   tcInitialFundsL,
   tcInitialStakingL,
   mkShelleyTransitionConfig,
@@ -35,7 +46,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Genesis (EraGenesis)
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
@@ -48,12 +59,15 @@ import Cardano.Ledger.Shelley.Translation (
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
-import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, withObject, (.:))
+import Data.Aeson.Key (fromString)
+import Data.Char (toLower)
 import Data.Default
 import Data.Kind
 import qualified Data.ListMap as LM
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import Data.Typeable
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -66,7 +80,6 @@ class
   , EraStake era
   , EraGenesis era
   , EraCertState era
-  , ToJSON (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
   ) =>
@@ -135,6 +148,36 @@ class
         (tc ^. tcTranslationContextL)
         (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
 
+  toTransitionConfigKeyValuePairs ::
+    KeyValue e a =>
+    TransitionConfig era -> [a]
+  default toTransitionConfigKeyValuePairs ::
+    ( EraTransition (PreviousEra era)
+    , ToKeyValuePairs (TranslationContext era)
+    , ToKeyValuePairs (TransitionConfig (PreviousEra era))
+    , Typeable (TranslationContext era)
+    , KeyValue e a
+    ) =>
+    TransitionConfig era -> [a]
+  toTransitionConfigKeyValuePairs config =
+    toKeyValuePairs (config ^. tcPreviousEraConfigL) ++ translationContextPairs
+    where
+      translationContextPairs =
+        case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
+          Nothing ->
+            [ fromString (map toLower (eraName @era))
+                .= object (toKeyValuePairs (config ^. tcTranslationContextL))
+            ]
+          Just Refl -> []
+
+instance EraTransition era => ToKeyValuePairs (TransitionConfig era) where
+  toKeyValuePairs = toTransitionConfigKeyValuePairs
+
+deriving via
+  KeyValuePairs (TransitionConfig era)
+  instance
+    ToKeyValuePairs (TransitionConfig era) => ToJSON (TransitionConfig era)
+
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
@@ -174,6 +217,9 @@ instance EraTransition ShelleyEra where
   tcShelleyGenesisL = lens stcShelleyGenesis (\tc sg -> tc {stcShelleyGenesis = sg})
 
   tcInitialPParamsG = to (sgProtocolParams . stcShelleyGenesis)
+
+  toTransitionConfigKeyValuePairs stc@(ShelleyTransitionConfig _) =
+    ["shelley" .= object (toKeyValuePairs (stcShelleyGenesis stc))]
 
 -- | Get the initial funds from the `TransitionConfig`. This value must be non-empty
 -- only during testing and benchmarking, it must never contain anything on a real system.
@@ -228,10 +274,6 @@ protectMainnet name g isMainnetSafe m =
 
 deriving instance NoThunks (TransitionConfig ShelleyEra)
 
-instance ToJSON (TransitionConfig ShelleyEra) where
-  toJSON = object . toShelleyTransitionConfigPairs
-  toEncoding = pairs . mconcat . toShelleyTransitionConfigPairs
-
 instance FromJSON (TransitionConfig ShelleyEra) where
   parseJSON = withObject "ShelleyTransitionConfig" $ \o -> do
     sg <- o .: "shelley"
@@ -241,8 +283,8 @@ toShelleyTransitionConfigPairs ::
   KeyValue e a =>
   TransitionConfig ShelleyEra ->
   [a]
-toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
-  ["shelley" .= object (toKeyValuePairs (stcShelleyGenesis stc))]
+toShelleyTransitionConfigPairs = toKeyValuePairs
+{-# DEPRECATED toShelleyTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
 
 -- | Helper function for constructing the initial state for any era
 --

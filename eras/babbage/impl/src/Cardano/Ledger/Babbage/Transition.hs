@@ -12,7 +12,7 @@ import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -20,7 +20,7 @@ instance EraTransition BabbageEra where
   newtype TransitionConfig BabbageEra = BabbageTransitionConfig
     { btcAlonzoTransitionConfig :: TransitionConfig AlonzoEra
     }
-    deriving (Show, Eq, NoThunks, ToJSON, FromJSON)
+    deriving (Show, Eq, NoThunks, FromJSON)
 
   mkTransitionConfig NoGenesis = BabbageTransitionConfig
 
