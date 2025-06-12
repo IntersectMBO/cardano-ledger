@@ -8,6 +8,7 @@ module Cardano.Ledger.Genesis (
   NoGenesis (..),
 ) where
 
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -33,3 +34,6 @@ instance Era era => FromCBOR (NoGenesis era) where
 instance Era era => EncCBOR (NoGenesis era)
 
 instance Era era => DecCBOR (NoGenesis era)
+
+instance ToKeyValuePairs (NoGenesis era) where
+  toKeyValuePairs _ = []
