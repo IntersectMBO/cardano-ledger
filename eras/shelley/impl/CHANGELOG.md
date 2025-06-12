@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+- Move some hard-fork triggers to the `Era` module:
+  - `HardForks.aggregateRewards` to `Shelley.Era.hardforkAggregateRewards`
+  - `HardForks.allowMIRTransfer` to `Shelley.Era.hardforkAllowMIRTransfer`
+  - `HardForks.validatePoolRewardAccountNetID` to `Shelley.Era.hardforkValidatePoolRewardAccountNetID`
+- Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
+  - This tests if the protocol version is greater than 10.
 * Remove `ShelleyTxRaw`, `MkShelleyTx`, `segWitTx`, `unsafeConstructTxWithBytes`
 * Added `Generic` instances for:
   * `ShelleyBbodyState`
