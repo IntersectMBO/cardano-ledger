@@ -4,14 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
@@ -45,6 +42,7 @@ import Constrained.FunctionSymbol
 import Constrained.GenT (
   oneofT,
  )
+import Constrained.Generation
 import Constrained.List (
   List (..),
  )
@@ -59,8 +57,6 @@ import Constrained.TheKnot (
   FoldSpec (..),
   ListSpec (..),
   PairSpec (..),
-  genFromSpecT,
-  shrinkWithSpec,
  )
 import Data.Kind
 import Data.Tree

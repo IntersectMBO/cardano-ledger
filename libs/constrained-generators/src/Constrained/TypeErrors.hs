@@ -4,8 +4,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Constrained.TypeErrors (
   Computes,
@@ -15,11 +13,7 @@ module Constrained.TypeErrors (
 ) where
 
 import Data.Kind
-#if MIN_VERSION_base(4,17,0)
 import GHC.TypeError as X
-#else
-import GHC.TypeLits as X
-#endif
 
 -- NOTE: this module implementes this very neat little trick for observing when type
 -- families are stuck https://blog.csongor.co.uk/report-stuck-families/ which allows
@@ -62,7 +56,7 @@ type AssertSpineComputes help (xs :: [k]) =
     ( TypeError
         ( Text "Type list computation is stuck on "
             :$$: Text "  "
-            :<>: ShowType xs
+              :<>: ShowType xs
             :$$: help
         )
     )

@@ -1,8 +1,4 @@
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Constrained.API (
   PredD (..),
@@ -178,6 +174,7 @@ import Constrained.Conformance (
  )
 import Constrained.Core (NonEmpty ((:|)))
 import Constrained.FunctionSymbol
+import Constrained.Generation
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.NumOrd (
   MaybeBounded (..),

@@ -12,7 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Test where
+module Constrained.Tests where
 
 import Constrained.API
 import Constrained.Examples.Basic
@@ -34,8 +34,8 @@ import Constrained.Examples.List
 import Constrained.Examples.Map
 import Constrained.Examples.Set
 import Constrained.Examples.Tree
-import Constrained.Properties hiding (main)
 import Constrained.SumList (narrowByFuelAndSize)
+import Constrained.Test
 import Control.Monad
 import Data.Int
 import qualified Data.List.NonEmpty as NE

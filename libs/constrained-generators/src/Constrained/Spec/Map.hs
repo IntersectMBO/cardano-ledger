@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -23,6 +22,7 @@ import Constrained.Conformance
 import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.GenT
+import Constrained.Generation
 import Constrained.Generic (Prod (..))
 import Constrained.List
 import Constrained.NumOrd (cardinality, geqSpec, leqSpec, nubOrd)
@@ -72,32 +72,6 @@ data MapSpec k v = MapSpec
 -- | emptySpec without all the constraints
 defaultMapSpec :: Ord k => MapSpec k v
 defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
-
--- TODO: consider making this more interesting to get fewer discarded tests
--- in `prop_gen_sound`
-instance
-  ( Arbitrary k
-  , Arbitrary v
-  , Arbitrary (TypeSpec k)
-  , Arbitrary (TypeSpec v)
-  , Ord k
-  , HasSpec k
-  , Foldy v
-  ) =>
-  Arbitrary (MapSpec k v)
-  where
-  arbitrary =
-    MapSpec
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> frequency [(1, pure NoFold), (1, arbitrary)]
-  shrink = genericShrink
-
-instance Arbitrary (FoldSpec (Map k v)) where
-  arbitrary = pure NoFold
 
 instance
   ( HasSpec (k, v)

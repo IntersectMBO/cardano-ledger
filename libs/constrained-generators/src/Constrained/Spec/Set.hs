@@ -1,6 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,17 +5,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Spec.Set where
 
@@ -50,6 +43,7 @@ import Constrained.Conformance (
 import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.GenT
+import Constrained.Generation
 import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
@@ -63,7 +57,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Prettyprinter hiding (cat)
-import Test.QuickCheck (Arbitrary (..), shrinkList, shuffle)
+import Test.QuickCheck (shrinkList, shuffle)
 
 -- ===============================================================================
 -- Sets and their Specifications
@@ -99,14 +93,6 @@ prettySetSpec (SetSpec must elemS size) =
 
 instance HasSpec a => Show (SetSpec a) where
   show x = show (prettySetSpec x)
-
-instance (Ord a, Arbitrary (Specification a), Arbitrary a) => Arbitrary (SetSpec a) where
-  arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink (SetSpec a b c) = [SetSpec a' b' c' | (a', b', c') <- shrink (a, b, c)]
-
--- TODO: consider improving this
-instance Arbitrary (FoldSpec (Set a)) where
-  arbitrary = pure NoFold
 
 guardSetSpec :: (HasSpec a, Ord a) => [String] -> SetSpec a -> Specification (Set a)
 guardSetSpec es (SetSpec must elemS ((<> geqSpec 0) -> size))
@@ -170,13 +156,13 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
     pure (Set.union must additions)
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS)
-    count <-
+    chosenSize <-
       explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'
-    let targetSize = count - sizeOf must
+    let targetSize = chosenSize - sizeOf must
     explainNE
       ( NE.fromList
-          [ "Choose size count = " ++ show count
+          [ "Choose size = " ++ show chosenSize
           , "szSpec' = " ++ show szSpec'
           , "Picking items not in must = " ++ show (short (Set.toList must))
           , "that also meet the element test: "
