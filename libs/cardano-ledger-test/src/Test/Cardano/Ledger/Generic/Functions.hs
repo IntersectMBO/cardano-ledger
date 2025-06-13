@@ -22,15 +22,12 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   Globals (epochInfo),
-  ProtVer (..),
-  natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
-import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -59,7 +56,6 @@ import Data.Map (Map, keysSet, restrictKeys)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
@@ -73,36 +69,6 @@ import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 -- ====================================================================
 -- Era agnostic actions on (PParams era) (TxOut era) and
 -- other XX types Mostly by pattern matching against Proof objects
-
-maxCollateralInputs' :: Proof era -> PParams era -> Natural
-maxCollateralInputs' Alonzo pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' Babbage pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' Conway pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' _proof _pp = 0
-{-# NOINLINE maxCollateralInputs' #-}
-
-maxTxExUnits' :: Proof era -> PParams era -> ExUnits
-maxTxExUnits' Alonzo pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' Babbage pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' Conway pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' _proof _x = mempty
-{-# NOINLINE maxTxExUnits' #-}
-
-collateralPercentage' :: Proof era -> PParams era -> Natural
-collateralPercentage' Alonzo pp = pp ^. ppCollateralPercentageL
-collateralPercentage' Babbage pp = pp ^. ppCollateralPercentageL
-collateralPercentage' Conway pp = pp ^. ppCollateralPercentageL
-collateralPercentage' _proof _pp = 0
-{-# NOINLINE collateralPercentage' #-}
-
-protocolVersion :: Proof era -> ProtVer
-protocolVersion Conway = ProtVer (natVersion @9) 0
-protocolVersion Babbage = ProtVer (natVersion @7) 0
-protocolVersion Alonzo = ProtVer (natVersion @6) 0
-protocolVersion Mary = ProtVer (natVersion @4) 0
-protocolVersion Allegra = ProtVer (natVersion @3) 0
-protocolVersion Shelley = ProtVer (natVersion @2) 0
-{-# NOINLINE protocolVersion #-}
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::
@@ -169,16 +135,6 @@ txInBalance ::
   MUtxo era ->
   Coin
 txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
-
--- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> TxOut era -> (Addr, Value era, [TxOutField era])
-txoutFields Conway (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Babbage (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Alonzo (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
-txoutFields Mary (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Allegra (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Shelley (ShelleyTxOut addr val) = (addr, val, [])
-{-# NOINLINE txoutFields #-}
 
 injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
 injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
@@ -278,22 +234,6 @@ getCollateralOutputs Mary _ = []
 getCollateralOutputs Allegra _ = []
 getCollateralOutputs Shelley _ = []
 {-# NOINLINE getCollateralOutputs #-}
-
-getInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
-getInputs _ tx = tx ^. inputsTxBodyL
-
-getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
-getOutputs _ tx = tx ^. outputsTxBodyL
-
-getScriptWits ::
-  EraTxWits era => Proof era -> TxWits era -> Map ScriptHash (Script era)
-getScriptWits _ tx = tx ^. scriptTxWitsL
-
-allInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
-allInputs _ txb = txb ^. allInputsTxBodyF
-
-getWitnesses :: EraTx era => Proof era -> Tx era -> TxWits era
-getWitnesses _ tx = tx ^. witsTxL
 
 alwaysSucceedsLang' :: forall era. EraPlutusContext era => Language -> Natural -> Script era
 alwaysSucceedsLang' l =

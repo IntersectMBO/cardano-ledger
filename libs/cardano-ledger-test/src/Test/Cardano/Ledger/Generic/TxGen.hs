@@ -97,8 +97,6 @@ import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
-import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
@@ -196,24 +194,24 @@ lookupScript scriptHash mTag = do
 -- =====================================
 
 genGenericScriptWitness ::
+  forall era.
   Reflect era =>
-  Proof era ->
   Maybe PlutusPurposeTag ->
   Script era ->
   GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-genGenericScriptWitness proof mTag script =
-  case proof of
-    Shelley -> mkMultiSigWit proof mTag script
-    Allegra -> mkTimelockWit proof mTag script
-    Mary -> mkTimelockWit proof mTag script
+genGenericScriptWitness mTag script =
+  case reify @era of
+    Shelley -> mkMultiSigWit mTag script
+    Allegra -> mkTimelockWit mTag script
+    Mary -> mkTimelockWit mTag script
     Alonzo -> case script of
-      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      TimelockScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const [])
     Babbage -> case script of
-      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      TimelockScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const [])
     Conway -> case script of
-      TimelockScript timelock -> mkTimelockWit proof mTag timelock
+      TimelockScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const [])
 
 -- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts

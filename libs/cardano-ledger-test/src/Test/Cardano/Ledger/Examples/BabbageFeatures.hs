@@ -50,6 +50,7 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.BaseTypes (
+  ShelleyBase,
   SlotNo (..),
   StrictMaybe (..),
   TxIx (..),
@@ -66,7 +67,7 @@ import Cardano.Ledger.Plutus.Language (
   Plutus (..),
   PlutusBinary (..),
  )
-import Cardano.Ledger.Shelley.API (UTxO (..))
+import Cardano.Ledger.Shelley.API (UTxO (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireSignature)
@@ -89,19 +90,11 @@ import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  genericCont,
   mkGenesisTxIn,
   mkTxDats,
-  testUTXOW,
  )
-import Test.Cardano.Ledger.Generic.Fields (
-  TxBodyField (..),
-  TxField (..),
-  TxOutField (..),
-  WitnessesField (..),
- )
-import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
-  PlutusPurposeTag (..),
   mkRedeemers,
  )
 import Test.Cardano.Ledger.Generic.Proof
@@ -450,9 +443,8 @@ refInputWithDataHashNoWit =
 refInputWithDataHashWithWit ::
   forall era.
   Reflect era =>
-  Proof era ->
   TestCaseData era
-refInputWithDataHashWithWit pf =
+refInputWithDataHashWithWit =
   TestCaseData
     { txBody =
         mkBasicTxBody
@@ -488,9 +480,8 @@ refscriptForDelegCert ::
   ( EraTxBody era
   , ShelleyEraTxCert era
   ) =>
-  Proof era ->
   TestCaseData era
-refscriptForDelegCert pf =
+refscriptForDelegCert =
   TestCaseData
     { txBody =
         mkBasicTxBody
@@ -521,8 +512,8 @@ refscriptForDelegCert pf =
 --  Invalid: Use a collateral output
 -- ====================================================================================
 
-useCollateralReturn :: forall era. Reflect era => Proof era -> TestCaseData era
-useCollateralReturn pf =
+useCollateralReturn :: forall era. Reflect era => TestCaseData era
+useCollateralReturn =
   TestCaseData
     { txBody =
         mkBasicTxBody
@@ -591,9 +582,8 @@ incorrectCollateralTotal =
 inlineDatumRedundantDatumWit ::
   forall era.
   Reflect era =>
-  Proof era ->
   TestCaseData era
-inlineDatumRedundantDatumWit pf =
+inlineDatumRedundantDatumWit =
   TestCaseData
     { txBody =
         mkBasicTxBody
@@ -834,8 +824,8 @@ largeOutput =
 -- =============================================================================
 
 noSuchThingAsReferenceDatum ::
-  forall era. Reflect era => Proof era -> TestCaseData era
-noSuchThingAsReferenceDatum pf =
+  forall era. Reflect era => TestCaseData era
+noSuchThingAsReferenceDatum =
   TestCaseData
     { txBody =
         mkBasicTxBody
@@ -902,13 +892,11 @@ data KeyPairRole era
 
 initUtxoFromTestCaseData ::
   BabbageEraTxBody era =>
-  Proof era ->
   TestCaseData era ->
   InitUtxo era
 initUtxoFromTestCaseData
-  pf
   (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs' ofCollateral') _ _) =
-    let inputsIns = getInputs pf txBody'
+    let inputsIns = txBody' ^. inputsTxBodyL
         refInputsIns = txBody' ^. referenceInputsTxBodyL
         collateralIns = txBody' ^. collateralInputsTxBodyL
 
@@ -924,7 +912,7 @@ utxoFromTestCaseData ::
   TestCaseData era ->
   (UTxO era, UTxO era)
 utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs' ofCollateral') _ _) =
-  let inputsIns = getInputs pf txBody'
+  let inputsIns = txBody' ^. inputsTxBodyL
       refInputsIns = txBody' ^. referenceInputsTxBodyL
       collateralIns = txBody' ^. collateralInputsTxBodyL
 
@@ -963,28 +951,33 @@ txFromTestCaseData
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Tx era ~ Signal (EraRule "UTXOW" era)
   , Reflect era
   , BabbageEraTxBody era
+  , Era era
   ) =>
-  Proof era ->
   TestCaseData era ->
   Assertion
-testExpectSuccessValid
-  pf
-  tc =
-    let txBody' = txBody tc
-        tx' = txFromTestCaseData tc
-        fees = txBody' ^. feeTxBodyL
-        (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
+testExpectSuccessValid tc =
+  let txBody' = txBody tc
+      tx' = txFromTestCaseData tc
+      fees = txBody' ^. feeTxBodyL
+      (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData tc
 
-        newTxIn = TxIn (txIdTxBody txBody') minBound
-        newTxInOut = [newTxIn] `zip` (maybeToList . StrictSeq.lookup 0) (getOutputs pf txBody')
+      newTxIn = TxIn (txIdTxBody txBody') minBound
+      newTxInOut = [newTxIn] `zip` (maybeToList . StrictSeq.lookup 0) (txBody' ^. outputsTxBodyL)
 
-        initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
-        expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
-        expectedState = smartUTxOState defaultPParams expectedUtxo (Coin 0) fees def mempty
-        assumedValidTx = tx' & isValidTxL .~ IsValid True
-     in testUTXOW (UTXOW pf) initUtxo defaultPParams assumedValidTx (Right expectedState)
+      initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
+      expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
+      expectedState = smartUTxOState defaultPParams expectedUtxo (Coin 0) fees def mempty
+      assumedValidTx = tx' & isValidTxL .~ IsValid True
+      env = UtxoEnv (SlotNo 0) defaultPParams def
+      state = smartUTxOState defaultPParams initUtxo (Coin 0) (Coin 0) def mempty
+   in runSTS @"UTXOW" @era
+        (TRC (env, state, assumedValidTx))
+        (genericCont (show assumedValidTx) $ Right expectedState)
 
 newColReturn ::
   forall era.
@@ -1019,7 +1012,7 @@ testExpectSuccessInvalid
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
         expectedState = smartUTxOState defaultPParams expectedUtxo (Coin 0) (Coin colBallance) def mempty
         assumedInvalidTx = tx' & isValidTxL .~ IsValid False
-     in testUTXOW (UTXOW pf) initUtxo defaultPParams assumedInvalidTx (Right expectedState)
+     in testUTXOW initUtxo defaultPParams assumedInvalidTx (Right expectedState)
 
 testExpectFailure ::
   forall era.
