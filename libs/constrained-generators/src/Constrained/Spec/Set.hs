@@ -50,6 +50,7 @@ import Constrained.Conformance (
 import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.GenT
+import Constrained.Generation
 import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
@@ -63,7 +64,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Prettyprinter hiding (cat)
-import Test.QuickCheck (Arbitrary (..), shrinkList, shuffle)
+import Test.QuickCheck (shrinkList, shuffle)
 
 -- ===============================================================================
 -- Sets and their Specifications
@@ -99,14 +100,6 @@ prettySetSpec (SetSpec must elemS size) =
 
 instance HasSpec a => Show (SetSpec a) where
   show x = show (prettySetSpec x)
-
-instance (Ord a, Arbitrary (Specification a), Arbitrary a) => Arbitrary (SetSpec a) where
-  arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink (SetSpec a b c) = [SetSpec a' b' c' | (a', b', c') <- shrink (a, b, c)]
-
--- TODO: consider improving this
-instance Arbitrary (FoldSpec (Set a)) where
-  arbitrary = pure NoFold
 
 guardSetSpec :: (HasSpec a, Ord a) => [String] -> SetSpec a -> Specification (Set a)
 guardSetSpec es (SetSpec must elemS ((<> geqSpec 0) -> size))

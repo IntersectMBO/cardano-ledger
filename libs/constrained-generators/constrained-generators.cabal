@@ -36,6 +36,7 @@ library
     Constrained.Examples.Tree
     Constrained.FunctionSymbol
     Constrained.GenT
+    Constrained.Generation
     Constrained.Generic
     Constrained.Graph
     Constrained.List
@@ -48,6 +49,7 @@ library
     Constrained.Spec.Tree
     Constrained.SumList
     Constrained.Syntax
+    Constrained.Test
     Constrained.TheKnot
     Constrained.TypeErrors
 
@@ -76,7 +78,7 @@ test-suite constrained
   type: exitcode-stdio-1.0
   main-is: Tests.hs
   hs-source-dirs: test
-  other-modules: Constrained.Test
+  other-modules: Constrained.Tests
   default-language: Haskell2010
   ghc-options:
     -Wall

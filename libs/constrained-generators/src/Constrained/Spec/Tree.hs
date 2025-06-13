@@ -45,6 +45,7 @@ import Constrained.FunctionSymbol
 import Constrained.GenT (
   oneofT,
  )
+import Constrained.Generation
 import Constrained.List (
   List (..),
  )
@@ -59,8 +60,6 @@ import Constrained.TheKnot (
   FoldSpec (..),
   ListSpec (..),
   PairSpec (..),
-  genFromSpecT,
-  shrinkWithSpec,
  )
 import Data.Kind
 import Data.Tree

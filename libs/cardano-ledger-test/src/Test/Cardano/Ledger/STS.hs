@@ -18,7 +18,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import Constrained.API hiding (forAll)
-import Constrained.TheKnot (shrinkWithSpec)
+import Constrained.Generation (shrinkWithSpec)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE
