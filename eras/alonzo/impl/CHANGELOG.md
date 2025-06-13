@@ -2,8 +2,8 @@
 
 ## 1.14.0.0
 
-* Added `COMPLETE` pragma for `TxCert`
-* Added `COMPLETE` pragma for `NativeScript`
+* Added `COMPLETE` pragma for `TxCert AlonzoEra`
+* Added `COMPLETE` pragma for `NativeScript AlonzoEra`
 * Deprecated `toAlonzoGenesisPairs`
 * Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
 * Renamed fields of `AlonzoTx`
