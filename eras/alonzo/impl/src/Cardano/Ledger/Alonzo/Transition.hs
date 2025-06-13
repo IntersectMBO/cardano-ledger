@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -17,13 +16,7 @@ import Cardano.Ledger.BaseTypes (toKeyValuePairs)
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (
-  FromJSON (..),
-  KeyValue (..),
-  Value (..),
-  withObject,
-  (.:),
- )
+import Data.Aeson (KeyValue (..))
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -50,9 +43,3 @@ instance NoThunks (TransitionConfig AlonzoEra)
 toAlonzoTransitionConfigPairs :: KeyValue e a => TransitionConfig AlonzoEra -> [a]
 toAlonzoTransitionConfigPairs = toKeyValuePairs
 {-# DEPRECATED toAlonzoTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
-
-instance FromJSON (TransitionConfig AlonzoEra) where
-  parseJSON = withObject "AlonzoTransitionConfig" $ \o -> do
-    prevTransitionConfig :: TransitionConfig MaryEra <- parseJSON (Object o)
-    alonzoGenesis :: AlonzoGenesis <- o .: "alonzo"
-    pure $ mkTransitionConfig alonzoGenesis prevTransitionConfig

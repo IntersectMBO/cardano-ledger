@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -48,7 +49,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
@@ -62,7 +63,9 @@ import Cardano.Ledger.Shelley.Translation (
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, withObject, (.:))
-import Data.Aeson.Key (fromString)
+import qualified Data.Aeson as Aeson (Value (..))
+import Data.Aeson.Key (Key, fromString)
+import Data.Aeson.Types (Parser)
 import Data.Char (toLower)
 import Data.Default
 import Data.Kind
@@ -169,10 +172,28 @@ class
       translationContextPairs =
         case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
           Nothing ->
-            [ fromString (map toLower (eraName @era))
-                .= object (toKeyValuePairs (config ^. tcTranslationContextL))
+            [ eraNameKey @era .= object (toKeyValuePairs (config ^. tcTranslationContextL))
             ]
           Just Refl -> []
+
+  parseTransitionConfigJSON :: Aeson.Value -> Parser (TransitionConfig era)
+  default parseTransitionConfigJSON ::
+    ( Typeable (TranslationContext era)
+    , FromJSON (TranslationContext era)
+    , FromJSON (TransitionConfig (PreviousEra era))
+    ) =>
+    Aeson.Value -> Parser (TransitionConfig era)
+  parseTransitionConfigJSON = withObject (eraName @era <> "TransitionConfig") $ \o -> do
+    prevTransitionConfig :: TransitionConfig (PreviousEra era) <- parseJSON (Aeson.Object o)
+    case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
+      Nothing -> do
+        translationContext :: TranslationContext era <- o .: eraNameKey @era
+        pure $ mkTransitionConfig translationContext prevTransitionConfig
+      Just Refl ->
+        pure $ mkTransitionConfig NoGenesis prevTransitionConfig
+
+eraNameKey :: forall era. Era era => Key
+eraNameKey = fromString (map toLower (eraName @era))
 
 instance EraTransition era => ToKeyValuePairs (TransitionConfig era) where
   toKeyValuePairs = toTransitionConfigKeyValuePairs
@@ -181,6 +202,9 @@ deriving via
   KeyValuePairs (TransitionConfig era)
   instance
     ToKeyValuePairs (TransitionConfig era) => ToJSON (TransitionConfig era)
+
+instance EraTransition era => FromJSON (TransitionConfig era) where
+  parseJSON = parseTransitionConfigJSON
 
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
@@ -224,6 +248,10 @@ instance EraTransition ShelleyEra where
 
   toTransitionConfigKeyValuePairs stc@(ShelleyTransitionConfig _) =
     ["shelley" .= object (toKeyValuePairs (stcShelleyGenesis stc))]
+
+  parseTransitionConfigJSON = withObject "ShelleyTransitionConfig" $ \o -> do
+    sg <- o .: "shelley"
+    pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
 
 -- | Get the initial funds from the `TransitionConfig`. This value must be non-empty
 -- only during testing and benchmarking, it must never contain anything on a real system.
@@ -277,11 +305,6 @@ protectMainnet name g isMainnetSafe m =
     else m
 
 deriving instance NoThunks (TransitionConfig ShelleyEra)
-
-instance FromJSON (TransitionConfig ShelleyEra) where
-  parseJSON = withObject "ShelleyTransitionConfig" $ \o -> do
-    sg <- o .: "shelley"
-    pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
 
 toShelleyTransitionConfigPairs ::
   KeyValue e a =>

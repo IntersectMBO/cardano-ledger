@@ -34,13 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (
-  FromJSON (..),
-  KeyValue (..),
-  Value (..),
-  withObject,
-  (.:),
- )
+import Data.Aeson (KeyValue (..))
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
 import GHC.Generics
@@ -102,12 +96,6 @@ instance NoThunks (TransitionConfig ConwayEra)
 toConwayTransitionConfigPairs :: KeyValue e a => TransitionConfig ConwayEra -> [a]
 toConwayTransitionConfigPairs = toKeyValuePairs
 {-# DEPRECATED toConwayTransitionConfigPairs "In favor of `toKeyValuePairs`" #-}
-
-instance FromJSON (TransitionConfig ConwayEra) where
-  parseJSON = withObject "ConwayTransitionConfig" $ \o -> do
-    prevTransitionConfig :: TransitionConfig BabbageEra <- parseJSON (Object o)
-    conwayGenesis :: ConwayGenesis <- o .: "conway"
-    pure $ mkTransitionConfig conwayGenesis prevTransitionConfig
 
 registerInitialDReps ::
   ConwayEraTransition era =>
