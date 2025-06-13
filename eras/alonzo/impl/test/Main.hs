@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
+import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
 main =
@@ -21,6 +22,7 @@ main =
       BinarySpec.spec
       CddlSpec.spec
       roundTripJsonEraSpec @AlonzoEra
+      roundTripJsonShelleyEraSpec @AlonzoEra
       GoldenTranslation.tests
       Golden.spec
       describe "Imp" $ do

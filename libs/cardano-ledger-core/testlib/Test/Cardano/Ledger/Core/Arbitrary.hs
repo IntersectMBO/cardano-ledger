@@ -78,6 +78,7 @@ import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
@@ -958,3 +959,6 @@ genCostModelValues lang = do
     listAtLeast x = do
       NonNegative y <- arbitrary
       replicateM (x + y) arbitrary
+
+instance Arbitrary (NoGenesis era) where
+  arbitrary = pure NoGenesis

@@ -14,6 +14,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` instance for `TransitionConfig AllegraEra`
 * Added `Era` module with `AllegraEraTest` class
 
 ## 1.7.0.0

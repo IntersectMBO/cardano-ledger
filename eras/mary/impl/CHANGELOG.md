@@ -12,6 +12,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` instance for `TransitionConfig MaryEra`
 * Added `Era` module with `MaryEraTest` class
 
 ## 1.8.0.0
