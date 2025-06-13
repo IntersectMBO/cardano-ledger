@@ -66,7 +66,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (
   newPParams,
   newScriptIntegrityHash,

@@ -24,6 +24,7 @@ import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Network (..),
+  ShelleyBase,
   StrictMaybe (..),
   textToUrl,
  )
@@ -61,6 +62,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv (..),
   ShelleyBbodyState (..),
   ShelleyPoolPredFailure (..),
  )
@@ -77,7 +79,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<->))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.State.Transition.Extended (STS (..))
+import Control.State.Transition.Extended (STS (..), TRC (..))
 import qualified Data.ByteString as BS (replicate)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
@@ -85,14 +87,15 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
+  genericCont,
   initUTxO,
   mkGenesisTxIn,
   mkSingleRedeemer,
@@ -100,7 +103,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
   someScriptAddr,
-  testBBODY,
  )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
@@ -128,11 +130,25 @@ tests =
 
 alonzoBBODYexamplesP ::
   forall era.
-  ( Value era ~ MaryValue
-  , Reflect era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , AlonzoEraTest era
+  ( BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , InjectRuleFailure "BBODY" ShelleyPoolPredFailure era
+  , STS (EraRule "BBODY" era)
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
+  , EraSegWits era
+  , ShelleyEraTxCert era
+  , AlonzoEraTx era
+  , Value era ~ MaryValue
+  , ToExpr (PredicateFailure (EraRule "BBODY" era))
+  , ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  , ToExpr (CertState era)
+  , ToExpr (InstantStake era)
   ) =>
   Proof era ->
   TestTree
@@ -140,19 +156,21 @@ alonzoBBODYexamplesP proof =
   testGroup
     (show proof ++ " BBODY examples")
     [ testCase "eight plutus scripts cases" $
-        testBBODY
-          (BBODY proof)
-          (initialBBodyState initUTxO)
-          testAlonzoBlock
-          (Right testBBodyState)
-          defaultPParams
-    , testCase "block with bad pool md hash in tx" $
-        testBBODY
-          (BBODY proof)
-          (initialBBodyState initUTxO)
-          testAlonzoBadPMDHBlock
-          (Left . pure $ makeTooBig @era)
-          defaultPParams
+        runSTS @"BBODY" @era
+          (TRC (BbodyEnv @era defaultPParams def, initialBBodyState @era initUTxO, testAlonzoBlock @era))
+          (genericCont "" $ Right testBBodyState)
+    , -- (initialBBodyState initUTxO)
+      -- testAlonzoBlock
+      -- (Right testBBodyState)
+      -- defaultPParams
+      testCase "block with bad pool md hash in tx" $
+        runSTS @"BBODY" @era
+          (TRC (BbodyEnv @era defaultPParams def, initialBBodyState initUTxO, testAlonzoBadPMDHBlock))
+          (genericCont "" . Left . pure $ makeTooBig @era)
+          -- (initialBBodyState initUTxO)
+          -- testAlonzoBadPMDHBlock
+          -- (Left . pure $ makeTooBig @era)
+          -- defaultPParams
     ]
 
 initialBBodyState ::
@@ -205,10 +223,11 @@ testAlonzoBlock =
     ]
 
 testAlonzoBadPMDHBlock ::
-  forall era.
-  (EraSegWits era, ShelleyEraScript era) =>
+  ( EraSegWits era
+  , AlonzoEraTx era
+  ) =>
   Block BHeaderView era
-testAlonzoBadPMDHBlock = makeNaiveBlock @era [poolMDHTooBigTx]
+testAlonzoBadPMDHBlock = makeNaiveBlock [poolMDHTooBigTx & isValidTxL .~ IsValid True]
 
 -- ============================== DATA ===============================
 

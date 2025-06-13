@@ -49,7 +49,6 @@ library
     Test.Cardano.Ledger.Examples.STSTestUtils
     Test.Cardano.Ledger.Generic.AggPropTests
     Test.Cardano.Ledger.Generic.ApplyTx
-    Test.Cardano.Ledger.Generic.Fields
     Test.Cardano.Ledger.Generic.Functions
     Test.Cardano.Ledger.Generic.GenState
     Test.Cardano.Ledger.Generic.Indexed

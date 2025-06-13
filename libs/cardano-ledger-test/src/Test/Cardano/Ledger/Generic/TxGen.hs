@@ -19,10 +19,6 @@ module Test.Cardano.Ledger.Generic.TxGen (
   genAlonzoTx,
   Box (..),
   applySTSByProof,
-  assembleWits,
-  coreTx,
-  coreTxBody,
-  coreTxOut,
   genUTxO,
 ) where
 
@@ -43,6 +39,7 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
+import Cardano.Ledger.Binary (DecShareCBOR (..), Interns)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
@@ -71,7 +68,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraGov (..), EraStake (..), EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -149,25 +146,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
-
--- ===================================================
--- Assembing lists of Fields in to (XX era)
-
--- | This uses merging semantics, it expects duplicate fields, and merges them together
-assembleWits :: Proof era -> [WitnessesField era] -> TxWits era
-assembleWits era = List.foldl' (updateWitnesses merge era) (initialWitnesses era)
-
-coreTxOut :: Proof era -> [TxOutField era] -> TxOut era
-coreTxOut era = List.foldl' (updateTxOut era) (initialTxOut era)
-
-coreTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
-coreTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
-
-overrideTxBody :: EraTxBody era => Proof era -> TxBody era -> [TxBodyField era] -> TxBody era
-overrideTxBody era = List.foldl' (updateTxBody era)
-
-coreTx :: Proof era -> [TxField era] -> Tx era
-coreTx era = List.foldl' (updateTx era) (initialTx era)
 
 -- ====================================================================
 
@@ -363,11 +341,27 @@ plutusScriptHashFromTag (ScriptHashObj scriptHash) tag =
 -- | Make RdmrWits WitnessesField only if the Credential is for a Plutus Script
 --  And it is in the spending inputs, not the reference inputs
 redeemerWitnessMaker ::
-  Proof era ->
+  forall era k.
+  ( Era era
+  , Share (GovState era)
+      ~ ( Interns (Credential Staking)
+        , Interns (KeyHash StakePool)
+        , Interns (Credential DRepRole)
+        , Interns (Credential HotCommitteeRole)
+        )
+  , Share (TxOut era) ~ Interns (Credential Staking)
+  , Share (InstantStake era) ~ Interns (Credential Staking)
+  , Share (CertState era)
+      ~ ( Interns (Credential Staking)
+        , Interns (KeyHash StakePool)
+        , Interns (Credential DRepRole)
+        , Interns (Credential HotCommitteeRole)
+        )
+  ) =>
   PlutusPurposeTag ->
   [Maybe (GenRS era (Data era), Credential k)] ->
   GenRS era (IsValid, [ExUnits -> [WitnessesField era]])
-redeemerWitnessMaker proof tag listWithCred =
+redeemerWitnessMaker tag listWithCred =
   let creds =
         [ (ix, genDat, cred)
         | (ix, mCred) <- zip [0 ..] listWithCred
@@ -382,7 +376,7 @@ redeemerWitnessMaker proof tag listWithCred =
             Just (isValid, _) -> do
               datum <- genDat
               let mkWit3 exUnits =
-                    [RdmrWits (mkRedeemersFromTags proof [((tag, ix), (datum, exUnits))])]
+                    [RdmrWits (mkRedeemersFromTags @era [((tag, ix), (datum, exUnits))])]
               -- we should not add this if the tx turns out to be in the reference inputs.
               -- we accomplish this by not calling this function on referenceInputs
               pure $ Just (isValid, mkWit3)
@@ -418,28 +412,28 @@ genBabbageDatum =
     , (4, Datum . dataToBinaryData . snd <$> genDatumWithHash)
     ]
 
-genRefScript :: Reflect era => Proof era -> GenRS era (StrictMaybe (Script era))
-genRefScript proof = do
-  scripthash <- genScript proof Spending
+genRefScript :: Reflect era => GenRS era (StrictMaybe (Script era))
+genRefScript = do
+  scripthash <- genScript Spending
   mscript <- lookupScript scripthash (Just Spending)
   case mscript of
     Nothing -> pure SNothing
     Just script -> pure (SJust script)
 
 -- | Gen the Datum and RefScript fields of a TxOut by Analyzing the payment credential's script
-genDataHashField :: Reflect era => Proof era -> Maybe (Script era) -> GenRS era [TxOutField era]
-genDataHashField proof maybeCoreScript =
-  case proof of
+genDataHashField :: forall era. Reflect era => Maybe (Script era) -> GenRS era [TxOutField era]
+genDataHashField maybeCoreScript =
+  case reify @era of
     Conway -> case maybeCoreScript of
       Just (PlutusScript _) -> do
         datum <- genBabbageDatum
-        script <- genRefScript proof
+        script <- genRefScript
         pure [FDatum datum, RefScript script]
       _ -> pure []
     Babbage -> case maybeCoreScript of
       Just (PlutusScript _) -> do
         datum <- genBabbageDatum
-        script <- genRefScript proof
+        script <- genRefScript
         pure [FDatum datum, RefScript script]
       _ -> pure []
     Alonzo -> case maybeCoreScript of
@@ -450,8 +444,8 @@ genDataHashField proof maybeCoreScript =
     _ -> pure [] -- No other Era has any datum in the TxOut
 
 -- | Generate the list of TxOutField that constitute a TxOut
-genTxOut :: Reflect era => Proof era -> Value era -> GenRS era [TxOutField era]
-genTxOut proof val = do
+genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
+genTxOut val = do
   addr <- genRecipient
   cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
   dataHashFields <-
@@ -459,8 +453,9 @@ genTxOut proof val = do
       KeyHashObj _ -> pure []
       ScriptHashObj scriptHash -> do
         maybeCoreScript <- lookupScript scriptHash (Just Spending)
-        genDataHashField proof maybeCoreScript
-  pure $ [Address addr, Amount val] ++ dataHashFields
+        genDataHashField maybeCoreScript
+  --pure $ [Address addr, Amount val] ++ dataHashFields
+  pure $ mkBasicTxOut addr val
 
 -- ================================================================================
 
@@ -509,8 +504,8 @@ genUTxO = do
     maybeCons _ xs = xs
     genOut = do
       val <- lift genPositiveVal
-      fields <- genTxOut reify val
-      pure (coreTxOut reify fields)
+      fields <- genTxOut val
+      pure (coreTxOut fields)
 
 -- | Generate both the spending and reference inputs and a key from the spending
 --   inputs we can use to pay the fee. That key is never from the oldUTxO

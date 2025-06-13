@@ -78,6 +78,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   modifyModelIndex,
   modifyModelUTxO,
   modifyModelMutFee,
+  mkRedeemersFromTags,
 ) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
@@ -101,6 +102,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
  )
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -140,7 +142,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
-import GHC.Word (Word64)
+import GHC.Word (Word32, Word64)
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -322,6 +324,58 @@ mkRedeemers ::
   [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
   Redeemers era
 mkRedeemers redeemerMap = Redeemers $ Map.fromList redeemerMap
+
+mkRedeemersFromTags ::
+  forall era.
+  (AlonzoEraScript era, Reflect era) =>
+  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] ->
+  Redeemers era
+mkRedeemersFromTags redeemerPointers = mkRedeemers redeemerAssocs
+  where
+    redeemerAssocs :: [(PlutusPurpose AsIx era, (Data era, ExUnits))]
+    redeemerAssocs =
+      [ (mkPlutusPurposePointer tag i, redeemer)
+      | ((tag, i), redeemer) <- redeemerPointers
+      ]
+
+mkPlutusPurposePointer ::
+  forall era.
+  Reflect era =>
+  PlutusPurposeTag ->
+  Word32 ->
+  PlutusPurpose AsIx era
+mkPlutusPurposePointer tag i =
+  case reify @era of
+    Shelley {} -> error "No PlutusPurpose"
+    Allegra {} -> error "No PlutusPurpose"
+    Mary {} -> error "No PlutusPurpose"
+    Alonzo {} -> mkAlonzoPlutusPurposePointer tag i
+    Babbage {} -> mkAlonzoPlutusPurposePointer tag i
+    Conway {} -> mkConwayPlutusPurposePointer tag i
+
+mkAlonzoPlutusPurposePointer ::
+  forall era.
+  Era era =>
+  PlutusPurposeTag ->
+  Word32 ->
+  AlonzoPlutusPurpose AsIx era
+mkAlonzoPlutusPurposePointer tag i =
+  case tag of
+    Spending -> AlonzoSpending (AsIx i)
+    Minting -> AlonzoMinting (AsIx i)
+    Certifying -> AlonzoCertifying (AsIx i)
+    Rewarding -> AlonzoRewarding (AsIx i)
+    _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
+
+mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
+mkConwayPlutusPurposePointer tag i =
+  case tag of
+    Spending -> ConwaySpending (AsIx i)
+    Minting -> ConwayMinting (AsIx i)
+    Certifying -> ConwayCertifying (AsIx i)
+    Rewarding -> ConwayRewarding (AsIx i)
+    Voting -> ConwayVoting (AsIx i)
+    Proposing -> ConwayProposing (AsIx i)
 
 -- =====================================================================
 -- Accessing information
