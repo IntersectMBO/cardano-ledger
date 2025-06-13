@@ -1,26 +1,15 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 -- Rename instances
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -78,7 +67,6 @@ import Constrained.Generic (
   SumOver,
  )
 import Constrained.Graph (
-  Graph (..),
   deleteNode,
   dependencies,
   nodes,
@@ -94,7 +82,6 @@ import Constrained.List (
   mapMList,
   uncurryList_,
  )
-import Constrained.PrettyUtils
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
 import Data.List.NonEmpty qualified as NE
@@ -874,48 +861,6 @@ envFromPred env p = case p of
   And (pp : ps) -> do
     env' <- envFromPred env pp
     envFromPred env' (And ps)
-
--- ===============================================================================
--- Syntax for Solving : stages and plans
-
-data SolverStage where
-  SolverStage ::
-    HasSpec a =>
-    { stageVar :: Var a
-    , stagePreds :: [Pred]
-    , stageSpec :: Specification a
-    } ->
-    SolverStage
-
-instance Pretty SolverStage where
-  pretty SolverStage {..} =
-    viaShow stageVar
-      <+> "<-"
-        /> vsep'
-          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
-              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
-              ++ map pretty stagePreds
-          )
-
-data SolverPlan = SolverPlan
-  { solverPlan :: [SolverStage]
-  , solverDependencies :: Graph Name
-  }
-
-instance Pretty SolverPlan where
-  pretty SolverPlan {..} =
-    "\nSolverPlan"
-      /> vsep'
-        [ -- "\nDependencies:" /> pretty solverDependencies, -- Might be usefull someday
-          "\nLinearization:" /> prettyLinear solverPlan
-        ]
-
-isTrueSpec :: Specification a -> Bool
-isTrueSpec TrueSpec = True
-isTrueSpec _ = False
-
-prettyLinear :: [SolverStage] -> Doc ann
-prettyLinear = vsep' . map pretty
 
 -- ==========================================
 -- Regularizing

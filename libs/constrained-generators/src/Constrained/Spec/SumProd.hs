@@ -1,17 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -82,6 +75,7 @@ import Constrained.Conformance (
 import Constrained.Core (
   Evidence (..),
  )
+import Constrained.Generation
 import Constrained.Generic (
   ConstrOf,
   HasSimpleRep (..),
@@ -112,14 +106,10 @@ import Constrained.Syntax (
   reify,
  )
 import Constrained.TheKnot (
-  CountCases,
   FoldSpec (..),
   FunW (..),
   PairSpec (..),
   ProdW (..),
-  SumW (..),
-  injLeft_,
-  injRight_,
   preMapFoldSpec,
   prodFst_,
   prodSnd_,

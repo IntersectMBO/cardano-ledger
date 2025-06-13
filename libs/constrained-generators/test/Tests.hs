@@ -1,6 +1,6 @@
 module Main where
 
-import Constrained.Test
+import Constrained.Tests
 import Data.Maybe
 import System.Environment
 import Test.Hspec
