@@ -147,6 +147,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Imp.UtxoSpec
     Test.Cardano.Ledger.Shelley.Imp.UtxowSpec
     Test.Cardano.Ledger.Shelley.ImpTest
+    Test.Cardano.Ledger.Shelley.JSON
     Test.Cardano.Ledger.Shelley.TreeDiff
     Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest
 

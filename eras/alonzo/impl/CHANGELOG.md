@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Deprecated `toAlonzoTransitionConfigPairs`
+* Fixed `FromJSON` instance for `TransitionConfig AlonzoEra`
 * Added `COMPLETE` pragma for `TxCert AlonzoEra`
 * Added `COMPLETE` pragma for `NativeScript AlonzoEra`
 * Deprecated `toAlonzoGenesisPairs`
@@ -31,6 +33,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:
   * `AsIxItem`
   * `AlonzoScriptsNeeded`

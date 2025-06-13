@@ -152,3 +152,4 @@ test-suite tests
     cardano-ledger-conway:testlib,
     cardano-ledger-core:testlib,
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
+    cardano-ledger-shelley:testlib,

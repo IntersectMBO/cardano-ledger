@@ -8,7 +8,9 @@ module Test.Cardano.Ledger.Era (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity
+import Data.Typeable
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff ()
@@ -59,5 +61,12 @@ class
     ToExpr (CertState era)
   , ToExpr (GovState era)
   , ToExpr (InstantStake era)
+  , -- TranslationContext
+    Eq (TranslationContext era)
+  , Show (TranslationContext era)
+  , Typeable (TranslationContext era)
+  , ToJSON (TranslationContext era)
+  , FromJSON (TranslationContext era)
+  , Arbitrary (TranslationContext era)
   ) =>
   EraTest era

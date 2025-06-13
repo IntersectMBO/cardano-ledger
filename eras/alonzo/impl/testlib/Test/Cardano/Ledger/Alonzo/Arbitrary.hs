@@ -58,6 +58,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
  )
+import Cardano.Ledger.Alonzo.Transition (TransitionConfig (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
@@ -480,3 +481,6 @@ mkPlutusScript' plutus =
         "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
     Just plutusScript -> fromPlutusScript plutusScript
 {-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}
+
+instance Arbitrary (TransitionConfig AlonzoEra) where
+  arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary

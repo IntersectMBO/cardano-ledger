@@ -9,9 +9,11 @@ import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
+import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
 main =
-  ledgerTestMain $
+  ledgerTestMain $ do
     describe "Dijkstra" $ do
       ConwaySpec.spec @DijkstraEra
+    roundTripJsonShelleyEraSpec @DijkstraEra

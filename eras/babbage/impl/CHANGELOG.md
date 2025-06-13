@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Fixed `FromJSON` instance for `TransitionConfig BabbageEra`
 * Added `COMPLETE` pragma for `TxCert BabbageEra`
 * Added `COMPLETE` pragma for `NativeScript BabbageEra`
 * Move to `testlib` the `DecCBOR` instance for `TxBody BabbageEra`
@@ -16,6 +17,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `Era` module with `BabbageEraTest` class
 
 ## 1.11.0.0

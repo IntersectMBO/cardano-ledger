@@ -49,16 +49,19 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.Transition (TransitionConfig (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
+import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (Event))
 import Data.Default (def)
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
+import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -98,13 +101,31 @@ instance
   arbitrary = genericArbitraryU
 
 instance Arbitrary ConwayGenesis where
-  arbitrary =
-    ConwayGenesis
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = do
+    cgUpgradePParams <- arbitrary
+    cgConstitution <- arbitrary
+    cgCommittee <- arbitrary
+    delegatees <- arbitrary
+    delegs <-
+      if null delegatees
+        then pure mempty
+        else listOf ((,) <$> arbitrary <*> elements delegatees)
+    let delegatedDReps =
+          Set.toList $
+            Set.fromList [dRepCred | (_, DelegVote (DRepCredential dRepCred)) <- delegs]
+        arbitraryDRepState = do
+          drepState <- arbitrary
+          -- Genesis file should never supply the delegation set, it is later reconstructed by
+          -- injectIntoTestState when used
+          pure drepState {drepDelegs = Set.empty}
+    -- We need to preserve the invariant that delegations cannot point to non-existent DReps
+    initialDRepsWithDelegs <- forM delegatedDReps $ \dRepCred -> (,) dRepCred <$> arbitraryDRepState
+    initialDRepsNoDelegs <- listOf ((,) <$> arbitrary <*> arbitraryDRepState)
+    -- Intermediate conversion to a Map isn't necessary, since uniform generation of credentials
+    -- pretty much guarantees uniqueness
+    let cgDelegs = ListMap.fromList delegs
+        cgInitialDReps = ListMap.fromList $ initialDRepsNoDelegs ++ initialDRepsWithDelegs
+    pure ConwayGenesis {..}
 
 instance Arbitrary (UpgradeConwayPParams Identity) where
   arbitrary =
@@ -855,3 +876,6 @@ instance Era era => Arbitrary (Constitution era) where
 instance Era era => Arbitrary (ConwayCertState era) where
   arbitrary = ConwayCertState <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
+
+instance Arbitrary (TransitionConfig ConwayEra) where
+  arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary

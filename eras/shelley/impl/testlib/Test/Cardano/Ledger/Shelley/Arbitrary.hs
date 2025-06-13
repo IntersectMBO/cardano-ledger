@@ -33,14 +33,12 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
   MultiSig,
-  NominalDiffTimeMicro (..),
   ShelleyDelegCert,
-  ShelleyGenesis (..),
-  ShelleyGenesisStaking (ShelleyGenesisStaking),
   ShelleyTx (ShelleyTx),
   TxBody (ShelleyTxBody),
  )
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.PoolRank
@@ -71,6 +69,8 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.Transition
+import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext)
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -533,7 +533,7 @@ sizedMetadatum 0 =
   oneof
     [ I <$> arbitrary
     , B <$> arbitrary
-    , S <$> (T.pack <$> arbitrary)
+    , S . T.pack <$> arbitrary
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
@@ -542,7 +542,7 @@ sizedMetadatum n =
         , List <$> resize maxMetadatumListLens xsGen
         , I <$> arbitrary
         , B <$> arbitrary
-        , S <$> (T.pack <$> arbitrary)
+        , S . T.pack <$> arbitrary
         ]
 
 instance Arbitrary VotingPeriod where
@@ -741,3 +741,9 @@ instance Arbitrary RawSeed where
 instance Era era => Arbitrary (ShelleyCertState era) where
   arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
   shrink = genericShrink
+
+instance Arbitrary FromByronTranslationContext where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+deriving newtype instance Arbitrary (TransitionConfig ShelleyEra)

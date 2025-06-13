@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -52,6 +53,6 @@ toAlonzoTransitionConfigPairs = toKeyValuePairs
 
 instance FromJSON (TransitionConfig AlonzoEra) where
   parseJSON = withObject "AlonzoTransitionConfig" $ \o -> do
-    pc <- parseJSON (Object o)
-    ag <- o .: "alonzo"
-    pure $ mkTransitionConfig pc ag
+    prevTransitionConfig :: TransitionConfig MaryEra <- parseJSON (Object o)
+    alonzoGenesis :: AlonzoGenesis <- o .: "alonzo"
+    pure $ mkTransitionConfig alonzoGenesis prevTransitionConfig

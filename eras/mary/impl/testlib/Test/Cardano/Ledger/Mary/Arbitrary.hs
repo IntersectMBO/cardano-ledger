@@ -1,7 +1,10 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -23,6 +26,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra, TxBody (MaryTxBody))
+import Cardano.Ledger.Mary.Transition
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -229,3 +233,5 @@ digitByteStrings = [fromString [x] | x <- ['0' .. '9']]
 
 hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
 hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
+
+deriving newtype instance Arbitrary (TransitionConfig MaryEra)
