@@ -218,7 +218,7 @@ aggregateUtxoCoinByCredential ::
   Map (Credential 'Staking) Coin ->
   Map (Credential 'Staking) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  Map.foldl' accum initial u
+  Map.foldl' accum (Map.filter (/= mempty) initial) u
   where
     accum ans out =
       let c = out ^. coinTxOutL
