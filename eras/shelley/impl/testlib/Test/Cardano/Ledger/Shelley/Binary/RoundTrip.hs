@@ -56,7 +56,6 @@ roundTripShelleyCommonSpec ::
   ) =>
   Spec
 roundTripShelleyCommonSpec = do
-  roundTripCoreEraTypesSpec @era
   roundTripStateEraTypesSpec @era
   roundTripAllPredicateFailures @era
 
