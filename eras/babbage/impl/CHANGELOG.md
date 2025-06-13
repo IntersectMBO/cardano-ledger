@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Added `COMPLETE` pragma for `TxCert BabbageEra`
+* Added `COMPLETE` pragma for `NativeScript BabbageEra`
 * Move to `testlib` the `DecCBOR` instance for `TxBody BabbageEra`
 * Remove `BabbageNonDisjointRefInputs` for protocol versions >10
 * Added `ppCoinsPerUTxOByte` to `PParams`

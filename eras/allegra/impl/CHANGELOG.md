@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Added `COMPLETE` pragma for `TxCert AllegraEra`
+* Added `COMPLETE` pragma for `NativeScript AllegraEra`
 * Move to `testlib` `DecCBOR` instances for: `TxBody AllegraEra`, `AllegraTxAuxDataRaw`, `AllegraTxAuxData`, `TimelockRaw`, `Timelock`
 * Remove `AllegraTxBody`
 * Removed `era` parameter from `AllegraTxBodyRaw`

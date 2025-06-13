@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -19,6 +20,9 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
@@ -97,6 +101,7 @@ import Cardano.Ledger.Credential (
   credKeyHashWitness,
   credScriptHash,
  )
+import Cardano.Ledger.Internal.Era (AllegraEra, AlonzoEra, BabbageEra, MaryEra)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -231,7 +236,52 @@ pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   , UnRegTxCert
   , DelegStakeTxCert
   , MirTxCert
-  , GenesisDelegTxCert
+  , GenesisDelegTxCert ::
+    ShelleyEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    AllegraEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    MaryEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    AlonzoEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    BabbageEra
   #-}
 
 -- | Genesis key delegation certificate
