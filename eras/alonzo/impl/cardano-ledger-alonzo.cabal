@@ -235,4 +235,5 @@ test-suite tests
     cardano-ledger-alonzo,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-shelley:testlib,
     testlib,

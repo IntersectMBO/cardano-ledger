@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -31,6 +32,7 @@ module Cardano.Ledger.Shelley.Transition (
     tcShelleyGenesisL,
     tcInitialPParamsG
   ),
+  pattern ShelleyTransitionConfig,
   tcInitialFundsL,
   tcInitialStakingL,
   mkShelleyTransitionConfig,
@@ -80,6 +82,8 @@ class
   , EraStake era
   , EraGenesis era
   , EraCertState era
+  , Eq (TransitionConfig era)
+  , Show (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
   ) =>

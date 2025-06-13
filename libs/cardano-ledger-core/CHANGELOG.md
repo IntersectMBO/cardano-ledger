@@ -55,6 +55,8 @@
 
 ### `testlib`
 
+* Add `roundTripJsonShelleyEraSpec`
+* Add superclass constraint to `EraTest` for `Eq`, `Show`, `Typeable`, `ToJSON`, `FromJSON` and `Arbitrary` classes for `TranslationContext` type
 * Added `goldenJsonPParamsUpdateSpec`
 * Added `Era` module with `EraTest` class
 

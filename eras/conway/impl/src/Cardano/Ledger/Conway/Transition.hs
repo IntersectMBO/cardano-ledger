@@ -105,9 +105,9 @@ toConwayTransitionConfigPairs = toKeyValuePairs
 
 instance FromJSON (TransitionConfig ConwayEra) where
   parseJSON = withObject "ConwayTransitionConfig" $ \o -> do
-    pc <- parseJSON (Object o)
-    ag <- o .: "conway"
-    pure $ mkTransitionConfig pc ag
+    prevTransitionConfig :: TransitionConfig BabbageEra <- parseJSON (Object o)
+    conwayGenesis :: ConwayGenesis <- o .: "conway"
+    pure $ mkTransitionConfig conwayGenesis prevTransitionConfig
 
 registerInitialDReps ::
   ConwayEraTransition era =>

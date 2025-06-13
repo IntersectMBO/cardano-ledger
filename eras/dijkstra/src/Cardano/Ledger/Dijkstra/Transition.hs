@@ -56,6 +56,6 @@ instance NoThunks (TransitionConfig DijkstraEra)
 
 instance FromJSON (TransitionConfig DijkstraEra) where
   parseJSON = withObject "DijkstraTransitionConfig" $ \o -> do
-    pc <- parseJSON (Object o)
-    ag <- o .: "dijkstra"
-    pure $ mkTransitionConfig pc ag
+    prevTransitionConfig :: TransitionConfig ConwayEra <- parseJSON (Object o)
+    alonzoGenesis :: DijkstraGenesis <- o .: "dijkstra"
+    pure $ mkTransitionConfig alonzoGenesis prevTransitionConfig
