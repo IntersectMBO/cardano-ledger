@@ -12,7 +12,6 @@ import Cardano.Ledger.Mary.Era
 import Cardano.Ledger.Mary.State ()
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (FromJSON (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -20,7 +19,7 @@ instance EraTransition MaryEra where
   newtype TransitionConfig MaryEra = MaryTransitionConfig
     { mtcAllegraTransitionConfig :: TransitionConfig AllegraEra
     }
-    deriving (Show, Eq, NoThunks, FromJSON)
+    deriving (Show, Eq, NoThunks)
 
   mkTransitionConfig NoGenesis = MaryTransitionConfig
 

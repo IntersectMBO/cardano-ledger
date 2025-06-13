@@ -11,7 +11,6 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (FromJSON (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -19,7 +18,7 @@ instance EraTransition AllegraEra where
   newtype TransitionConfig AllegraEra = AllegraTransitionConfig
     { atcShelleyTransitionConfig :: TransitionConfig ShelleyEra
     }
-    deriving (Show, Eq, NoThunks, FromJSON)
+    deriving (Show, Eq, NoThunks)
 
   mkTransitionConfig NoGenesis = AllegraTransitionConfig
 

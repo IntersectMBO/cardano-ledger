@@ -21,12 +21,6 @@ import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Genesis
 import Cardano.Ledger.Dijkstra.Translation ()
 import Cardano.Ledger.Shelley.Transition
-import Data.Aeson (
-  FromJSON (..),
-  Value (..),
-  withObject,
-  (.:),
- )
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -53,9 +47,3 @@ instance EraTransition DijkstraEra where
 instance ConwayEraTransition DijkstraEra
 
 instance NoThunks (TransitionConfig DijkstraEra)
-
-instance FromJSON (TransitionConfig DijkstraEra) where
-  parseJSON = withObject "DijkstraTransitionConfig" $ \o -> do
-    prevTransitionConfig :: TransitionConfig ConwayEra <- parseJSON (Object o)
-    alonzoGenesis :: DijkstraGenesis <- o .: "dijkstra"
-    pure $ mkTransitionConfig alonzoGenesis prevTransitionConfig
