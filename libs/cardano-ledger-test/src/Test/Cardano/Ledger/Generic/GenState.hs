@@ -95,6 +95,8 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), ProtVer (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
+import Test.Cardano.Ledger.Allegra.TreeDiff ()
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Cardano.Ledger.Conway.Core (
   AlonzoEraPParams,
   ppCollateralPercentageL,
@@ -152,7 +154,6 @@ import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
-  txoutFields,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
@@ -650,20 +651,15 @@ genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 --   is valid in the current ValidityInterval. Using the simple rule allowing
 --   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
 validTxOut ::
-  Proof era ->
+  EraTxOut era =>
   Map ScriptHash (Script era) ->
-  TxIn ->
   TxOut era ->
   Bool
-validTxOut proof m _txin txout = case txoutFields proof txout of
-  (Addr _ (KeyHashObj _) _, _, _) -> True
-  (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway, Just (PlutusScript _)) -> True
-    (Babbage, Just (PlutusScript _)) -> True
-    (Alonzo, Just (PlutusScript _)) -> True
-    (Shelley, Just _msig) -> True
-    _ -> False
-  _bootstrap -> False
+validTxOut m txOut = 
+  case txOut ^. addrTxOutL of
+    Addr _ (KeyHashObj _) _ -> True
+    Addr _ (ScriptHashObj h) _ -> Map.member h m
+    AddrBootstrap {} -> False
 
 -- | Pick a UTxO element where we can use it in a new Tx. Most of the time we generate new
 --   elements for each Tx, but once in a while we choose an existing one. We must be carefull
@@ -674,7 +670,7 @@ getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn, TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
-  lift $ genMapElemWhere x 20 (validTxOut reify scriptmap)
+  lift $ genMapElemWhere x 20 (\_ -> validTxOut scriptmap)
 
 getUtxoTest :: GenRS era (TxIn -> Bool)
 getUtxoTest = do
