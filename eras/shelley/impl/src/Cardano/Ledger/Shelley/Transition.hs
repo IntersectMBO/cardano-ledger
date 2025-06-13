@@ -23,7 +23,6 @@
 -- the trouble of generating all the history for preceeding eras.
 module Cardano.Ledger.Shelley.Transition (
   EraTransition (
-    TransitionConfig,
     mkTransitionConfig,
     injectIntoTestState,
     tcPreviousEraConfigL,
@@ -31,6 +30,7 @@ module Cardano.Ledger.Shelley.Transition (
     tcShelleyGenesisL,
     tcInitialPParamsG
   ),
+  TransitionConfig (..),
   tcInitialFundsL,
   tcInitialStakingL,
   mkShelleyTransitionConfig,
@@ -80,6 +80,8 @@ class
   , EraStake era
   , EraGenesis era
   , EraCertState era
+  , Eq (TransitionConfig era)
+  , Show (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
   ) =>

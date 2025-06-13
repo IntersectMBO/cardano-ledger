@@ -30,13 +30,11 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
   MultiSig,
-  NominalDiffTimeMicro (..),
   ShelleyDelegCert,
-  ShelleyGenesis (..),
-  ShelleyGenesisStaking (ShelleyGenesisStaking),
   ShelleyTx (ShelleyTx),
   TxBody (ShelleyTxBody),
  )
@@ -71,6 +69,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -741,3 +740,5 @@ instance Arbitrary RawSeed where
 instance Era era => Arbitrary (ShelleyCertState era) where
   arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
   shrink = genericShrink
+
+deriving newtype instance Arbitrary (TransitionConfig ShelleyEra)
