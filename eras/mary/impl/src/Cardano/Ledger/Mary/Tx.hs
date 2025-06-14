@@ -8,7 +8,7 @@ module Cardano.Ledger.Mary.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Core (EraTx (..), upgradeTxAuxData, upgradeTxBody, upgradeTxWits)
+import Cardano.Ledger.Core (EraTx (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
@@ -47,9 +47,3 @@ instance EraTx MaryEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
-
-  upgradeTx (ShelleyTx txb txwits txAux) =
-    ShelleyTx
-      <$> upgradeTxBody txb
-      <*> pure (upgradeTxWits txwits)
-      <*> pure (fmap upgradeTxAuxData txAux)

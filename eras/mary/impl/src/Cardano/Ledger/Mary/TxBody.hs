@@ -55,7 +55,7 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoizedEra,
  )
-import Cardano.Ledger.Shelley.PParams (Update, upgradeUpdate)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -209,21 +209,6 @@ instance EraTxBody MaryEra where
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
-
-  upgradeTxBody atb = do
-    certs <- traverse upgradeTxCert (atbCerts atb)
-    pure $
-      MaryTxBody
-        { mtbInputs = atbInputs atb
-        , mtbOutputs = upgradeTxOut <$> atbOutputs atb
-        , mtbCerts = certs
-        , mtbWithdrawals = atbWithdrawals atb
-        , mtbTxFee = atbTxFee atb
-        , mtbValidityInterval = atbValidityInterval atb
-        , mtbUpdate = upgradeUpdate () <$> atbUpdate atb
-        , mtbAuxDataHash = atbAuxDataHash atb
-        , mtbMint = mempty
-        }
 
 instance ShelleyEraTxBody MaryEra where
   ttlTxBodyL = notSupportedInThisEraL

@@ -41,7 +41,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
-import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -69,7 +69,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
+import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -327,23 +327,6 @@ instance EraTxBody AllegraEra where
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
-
-  upgradeTxBody txBody = do
-    certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
-    pure $
-      AllegraTxBody
-        { atbInputs = txBody ^. inputsTxBodyL
-        , atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
-        , atbCerts = certs
-        , atbWithdrawals = txBody ^. withdrawalsTxBodyL
-        , atbTxFee = txBody ^. feeTxBodyL
-        , atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
-        , atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
-        , atbAuxDataHash = txBody ^. auxDataHashTxBodyL
-        }
-    where
-      ttlToValidityInterval :: SlotNo -> ValidityInterval
-      ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
 
 instance ShelleyEraTxBody AllegraEra where
   ttlTxBodyL = notSupportedInThisEraL

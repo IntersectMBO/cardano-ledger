@@ -177,10 +177,6 @@ instance EraTxWits ShelleyEra where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-  upgradeTxWits =
-    error
-      "Calling this function will cause a compilation error, since there is no TxWits instance for ByronEra"
-
 instance (TxWits era ~ ShelleyTxWits era, EraTxWits era) => EqRaw (ShelleyTxWits era) where
   eqRaw = shelleyEqTxWitsRaw @era
 
