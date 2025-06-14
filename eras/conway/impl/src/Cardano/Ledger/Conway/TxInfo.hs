@@ -38,6 +38,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transPlutusPurposeV1V2,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
+  scriptPurposeToScriptInfo,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -48,6 +49,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxCert,
   PlutusTxInfo,
   SupportedLanguage (..),
+  lookupTxInfoResultImpossible,
   toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
@@ -147,6 +149,7 @@ instance EraPlutusContext ConwayEra where
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
     PlutusV2 -> Just $ SupportedLanguage SPlutusV2
     PlutusV3 -> Just $ SupportedLanguage SPlutusV3
+    _ -> Nothing
 
   mkTxInfoResult lti =
     ConwayTxInfoResult
@@ -157,6 +160,7 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV1 (ConwayTxInfoResult tirPlutusV1 _ _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
+  lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
   mkPlutusWithContext = \case
     ConwayPlutusV1 p -> toPlutusWithContext $ Left p

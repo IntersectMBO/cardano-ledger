@@ -203,6 +203,7 @@ plutusVXParamNames :: Language -> [Text]
 plutusVXParamNames PlutusV1 = P.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
 plutusVXParamNames PlutusV2 = P.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
 plutusVXParamNames PlutusV3 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
+plutusVXParamNames PlutusV4 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
 
 validateCostModel :: MonadFail m => Language -> [Int64] -> m CostModel
 validateCostModel lang cmps =
@@ -225,6 +226,7 @@ mkCostModel lang cm =
         PlutusV1 -> PV1.mkEvaluationContext
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
+        PlutusV4 -> PV3.mkEvaluationContext
     eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
     eCostModel = runWriterT (mkEvaluationContext cm)
 
@@ -261,6 +263,7 @@ costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
 costModelParamsCount PlutusV3 = 231
+costModelParamsCount PlutusV4 = 231
 
 decodeCostModelLegacy :: Language -> Decoder s CostModel
 decodeCostModelLegacy lang = do
