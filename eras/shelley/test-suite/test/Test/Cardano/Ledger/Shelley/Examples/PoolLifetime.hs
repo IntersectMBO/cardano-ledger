@@ -43,7 +43,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -230,7 +230,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -319,7 +319,7 @@ blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo 90)
     (BlockNo 2)
     nonce0
@@ -460,7 +460,7 @@ blockEx4 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
-    [txEx4]
+    [MkShelleyTx txEx4]
     (SlotNo 190)
     (BlockNo 4)
     epoch1Nonce
@@ -849,7 +849,7 @@ blockEx10 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx9)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 420)
-    [txEx10]
+    [MkShelleyTx txEx10]
     (SlotNo 420)
     (BlockNo 10)
     epoch4Nonce
@@ -919,7 +919,7 @@ blockEx11 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx10)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 490)
-    [txEx11]
+    [MkShelleyTx txEx11]
     (SlotNo 490)
     (BlockNo 11)
     epoch4Nonce

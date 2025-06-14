@@ -308,7 +308,6 @@ testBHB ::
   forall era.
   ( EraTx era
   , PreAlonzo era
-  , Tx era ~ ShelleyTx era
   ) =>
   BHBody MockCrypto
 testBHB =
@@ -350,7 +349,6 @@ testBHBSigTokens ::
   forall era.
   ( EraTx era
   , PreAlonzo era
-  , Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
   Tokens
@@ -1012,7 +1010,7 @@ tests =
           w1 = mkWitnessVKey (hashAnnotated txb1) testKey1
           w2 = mkWitnessVKey (hashAnnotated txb1) testKey2
           ws = Set.fromList [w1, w2]
-          tx1, tx2, tx3, tx4, tx5 :: ShelleyTx C
+          tx1, tx2, tx3, tx4, tx5 :: Tx C
           tx1 =
             mkBasicTx txb1
               & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w1)

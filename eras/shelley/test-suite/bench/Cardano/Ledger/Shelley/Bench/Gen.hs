@@ -16,7 +16,6 @@ import Cardano.Ledger.Shelley.API (
   Block,
   DelplEnv,
   ShelleyLEDGERS,
-  ShelleyTx,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -108,13 +107,12 @@ genTriple ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , Tx era ~ ShelleyTx era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (ShelleyTx era))
+  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (Tx era))
 genTriple proxy n = do
   let ge = genEnv proxy defaultConstants
   cs <- genChainState n ge

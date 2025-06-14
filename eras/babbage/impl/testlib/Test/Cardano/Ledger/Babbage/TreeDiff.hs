@@ -68,3 +68,5 @@ instance
   , ToExpr (TxCert era)
   ) =>
   ToExpr (BabbageUtxowPredFailure era)
+
+instance ToExpr (Tx BabbageEra)

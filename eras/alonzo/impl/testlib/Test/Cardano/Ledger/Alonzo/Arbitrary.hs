@@ -34,7 +34,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
@@ -480,3 +480,5 @@ mkPlutusScript' plutus =
         "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
     Just plutusScript -> fromPlutusScript plutusScript
 {-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}
+
+deriving newtype instance Arbitrary (Tx AlonzoEra)

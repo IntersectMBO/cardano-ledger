@@ -4,6 +4,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
@@ -11,6 +15,7 @@ module Cardano.Ledger.Conway.Tx (
   refScriptCostStride,
   refScriptCostMultiplier,
   getConwayMinFeeTx,
+  Tx (..),
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
@@ -31,6 +36,7 @@ import Cardano.Ledger.Alonzo.TxSeq (
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
+  Tx (..),
  )
 import Cardano.Ledger.BaseTypes (unboundRational)
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -42,24 +48,31 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
 import GHC.Stack
-import Lens.Micro ((^.))
+import Lens.Micro (Lens', lens, (^.))
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
+import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Binary (ToCBOR, EncCBOR, DecCBOR (..), Annotator)
+import Cardano.Ledger.Binary.Coders (decode, Decode (..), (<*!))
 
 instance EraTx ConwayEra where
-  type Tx ConwayEra = AlonzoTx ConwayEra
+  newtype Tx ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx ConwayEra}
+    deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
+    deriving (Generic)
   type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkConwayTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = conwayTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = conwayTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = conwayTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = conwayTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
   validateNativeScript = validateTimelock
@@ -67,12 +80,16 @@ instance EraTx ConwayEra where
 
   getMinFeeTx = getConwayMinFeeTx
 
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+  upgradeTx (MkBabbageTx (AlonzoTx b w valid aux)) =
+    fmap MkConwayTx $
+      AlonzoTx
+        <$> upgradeTxBody b
+        <*> pure (upgradeTxWits w)
+        <*> pure valid
+        <*> pure (fmap upgradeTxAuxData aux)
+
+conwayTxL :: Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
 -- | 25 KiB
 refScriptCostStride :: Int
@@ -126,7 +143,7 @@ tierRefScriptFee multiplier sizeIncrement
     sizeIncrementRational = toRational sizeIncrement
 
 instance AlonzoEraTx ConwayEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = conwayTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
 instance EraSegWits ConwayEra where
@@ -135,3 +152,6 @@ instance EraSegWits ConwayEra where
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
   numSegComponents = 4
+
+instance DecCBOR (Annotator (Tx ConwayEra)) where
+  decCBOR = decode $ Ann (RecD MkConwayTx) <*! From

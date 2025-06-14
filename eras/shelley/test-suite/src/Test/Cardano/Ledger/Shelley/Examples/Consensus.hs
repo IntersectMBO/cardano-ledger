@@ -117,17 +117,16 @@ defaultShelleyLedgerExamples ::
   , ProtVerAtMost era 4
   ) =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
-  (ShelleyTx era -> Tx era) ->
   Value era ->
   TxBody era ->
   TxAuxData era ->
   TranslationContext era ->
   ShelleyLedgerExamples era
-defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData translationContext =
+defaultShelleyLedgerExamples mkWitnesses value txBody auxData translationContext =
   ShelleyLedgerExamples
-    { sleBlock = exampleShelleyLedgerBlock (mkAlonzoTx tx)
+    { sleBlock = exampleShelleyLedgerBlock tx
     , sleHashHeader = exampleHashHeader
-    , sleTx = mkAlonzoTx tx
+    , sleTx = tx
     , sleApplyTxError =
         ApplyTxError . pure . DelegsFailure $
           DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
@@ -212,12 +211,15 @@ mkScriptHash = ScriptHash . mkDummyHash @ADDRHASH
 -- serialisation, not validation.
 exampleTx ::
   forall era.
+  EraTx era =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   TxBody era ->
   TxAuxData era ->
-  ShelleyTx era
+  Tx era
 exampleTx mkWitnesses txBody auxData =
-  ShelleyTx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
+  mkBasicTx @era txBody
+    & witsTxL .~ mkWitnesses txBody keyPairWits
+    & auxDataTxL .~ SJust auxData
   where
     keyPairWits =
       [ asWitness examplePayKey
@@ -398,7 +400,6 @@ ledgerExamplesShelley :: ShelleyLedgerExamples ShelleyEra
 ledgerExamplesShelley =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
-    id
     exampleCoin
     exampleTxBodyShelley
     exampleAuxiliaryDataShelley
