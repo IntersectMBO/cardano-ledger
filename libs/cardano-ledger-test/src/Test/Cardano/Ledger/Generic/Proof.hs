@@ -18,8 +18,6 @@ module Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
   Some (..),
-  WitRule (..),
-  ruleProof,
   runSTS,
   goSTS,
   preShelley,
@@ -111,11 +109,9 @@ import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.State
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Functor.Identity (Identity)
-import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.TreeDiff
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
-import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 
 -- ===================================================
@@ -191,96 +187,24 @@ instance Show (Some Proof) where
 -- ===============================================================
 -- Proofs or witnesses to EraRule Tags
 
-data WitRule (s :: Symbol) (e :: Type) where
-  UTXO :: Proof era -> WitRule "UTXO" era
-  UTXOW :: Proof era -> WitRule "UTXOW" era
-  LEDGER :: Proof era -> WitRule "LEDGER" era
-  BBODY :: Proof era -> WitRule "BBODY" era
-  LEDGERS :: Proof era -> WitRule "LEDGERS" era
-  MOCKCHAIN :: Proof era -> WitRule "MOCKCHAIN" era
-  RATIFY :: Proof era -> WitRule "RATIFY" era
-  ENACT :: Proof era -> WitRule "ENACT" era
-  TALLY :: Proof era -> WitRule "TALLY" era
-  EPOCH :: Proof era -> WitRule "EPOCH" era
-  NEWEPOCH :: Proof era -> WitRule "NEWEPOCH" era
-  CERT :: Proof era -> WitRule "CERT" era
-  CERTS :: Proof era -> WitRule "CERTS" era
-  DELEG :: Proof era -> WitRule "DELEG" era
-  POOL :: Proof era -> WitRule "POOL" era
-  GOVCERT :: Proof era -> WitRule "GOVCERT" era
-  GOV :: Proof era -> WitRule "GOV" era
-
-ruleProof :: WitRule s e -> Proof e
-ruleProof (UTXO p) = p
-ruleProof (UTXOW p) = p
-ruleProof (LEDGER p) = p
-ruleProof (BBODY p) = p
-ruleProof (LEDGERS p) = p
-ruleProof (MOCKCHAIN p) = p
-ruleProof (RATIFY p) = p
-ruleProof (ENACT p) = p
-ruleProof (TALLY p) = p
-ruleProof (EPOCH p) = p
-ruleProof (NEWEPOCH p) = p
-ruleProof (CERT p) = p
-ruleProof (CERTS p) = p
-ruleProof (DELEG p) = p
-ruleProof (POOL p) = p
-ruleProof (GOVCERT p) = p
-ruleProof (GOV p) = p
-
 runSTS ::
   forall s e ans.
   ( BaseM (EraRule s e) ~ ShelleyBase
   , STS (EraRule s e)
   ) =>
-  WitRule s e ->
   TRC (EraRule s e) ->
   (Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e)) -> ans) ->
   ans
-runSTS (UTXO _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (LEDGERS _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (RATIFY _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (ENACT _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (TALLY _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (EPOCH _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (NEWEPOCH _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (CERT _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (CERTS _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (DELEG _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (POOL _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (GOVCERT _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (GOV _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS x cont = cont (runShelleyBase (applySTSTest x))
 
 runSTS' ::
   forall s e.
   ( BaseM (EraRule s e) ~ ShelleyBase
   , STS (EraRule s e)
   ) =>
-  WitRule s e ->
   TRC (EraRule s e) ->
   Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e))
-runSTS' (UTXO _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (UTXOW _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (LEDGER _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (BBODY _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (LEDGERS _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (MOCKCHAIN _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (RATIFY _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (ENACT _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (TALLY _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (EPOCH _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (NEWEPOCH _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (CERT _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (CERTS _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (DELEG _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (POOL _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (GOVCERT _proof) x = runShelleyBase (applySTSTest x)
-runSTS' (GOV _proof) x = runShelleyBase (applySTSTest x)
+runSTS' x = runShelleyBase (applySTSTest x)
 
 -- | Like runSTS, but makes the components of the TRC triple explicit.
 --   in case you can't remember, in ghci type
@@ -305,45 +229,12 @@ goSTS ::
   , state ~ State (EraRule s e)
   , sig ~ Signal (EraRule s e)
   ) =>
-  WitRule s e ->
   env ->
   state ->
   sig ->
   (Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e)) -> ans) ->
   ans
-goSTS (UTXO _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (UTXOW _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (LEDGER _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (BBODY _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (LEDGERS _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (MOCKCHAIN _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (RATIFY _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (ENACT _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (TALLY _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (EPOCH _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (NEWEPOCH _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (CERT _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (CERTS _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (DELEG _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (POOL _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (GOVCERT _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
-goSTS (GOV _proof) env state sig cont =
+goSTS env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 
 -- ================================================================

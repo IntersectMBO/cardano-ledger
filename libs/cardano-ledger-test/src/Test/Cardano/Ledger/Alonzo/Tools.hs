@@ -1,5 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,6 +27,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -49,14 +52,14 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Proof (Proof (Alonzo, Babbage))
-import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
+import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 
 tests :: TestTree
 tests =
@@ -65,13 +68,13 @@ tests =
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
     , testGroup
         "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc Alonzo)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Alonzo)
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)
         ]
     , testGroup
         "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc Babbage)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Babbage)
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @BabbageEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @BabbageEra)
         ]
     ]
 
@@ -132,7 +135,6 @@ exampleExUnitCalc ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
   , AlonzoEraTx era
-  , PostShelley era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
@@ -141,12 +143,11 @@ exampleExUnitCalc ::
   , EraStake era
   , EraCertState era
   ) =>
-  Proof era ->
   IO ()
-exampleExUnitCalc proof =
-  testExUnitCalculation
-    (exampleTx proof (AlonzoSpending (AsIx 0)))
-    (ustate proof)
+exampleExUnitCalc =
+  testExUnitCalculation @era
+    (exampleTx (AlonzoSpending (AsIx 0)))
+    ustate
     uenv
     exampleEpochInfo
     testSystemStart
@@ -154,21 +155,19 @@ exampleExUnitCalc proof =
 
 exampleInvalidExUnitCalc ::
   forall era.
-  ( PostShelley era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   ) =>
-  Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof =
+exampleInvalidExUnitCalc =
   let report =
         evalTxExUnits @era
           testPParams
-          (exampleTx proof (AlonzoSpending (AsIx 1)))
-          (initUTxO proof)
+          (exampleTx (AlonzoSpending (AsIx 1)))
+          initUTxO
           exampleEpochInfo
           testSystemStart
    in case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
@@ -183,44 +182,39 @@ exampleInvalidExUnitCalc proof =
               ++ show failures
 
 exampleTx ::
-  ( Scriptic era
-  , AlonzoEraTx era
+  forall era.
+  ( AlonzoEraTx era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   ) =>
-  Proof era ->
   PlutusPurpose AsIx era ->
   Tx era
-exampleTx pf ptr =
-  mkBasicTx (validatingBody pf)
-    & witsTxL .~ wits
+exampleTx ptr = mkBasicTx validatingBody & witsTxL .~ wits
   where
     wits =
       mkBasicTxWits
         & addrTxWitsL
-          .~ Set.fromList [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
-        & hashScriptTxWitsL .~ [always 3 pf]
+          .~ Set.fromList [mkWitnessVKey (hashAnnotated $ validatingBody @era) someKeys]
+        & hashScriptTxWitsL .~ [fromNativeScript $ RequireAllOf mempty]
         & hashDataTxWitsL .~ [Data (PV1.I 123)]
         & rdmrsTxWitsL . unRedeemersL
           %~ Map.insert ptr (Data (PV1.I 42), ExUnits 5000 5000)
 
 validatingBody ::
   forall era.
-  ( Scriptic era
-  , AlonzoEraTxBody era
+  ( AlonzoEraTxBody era
   , AlonzoEraScript era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   ) =>
-  Proof era ->
   TxBody era
-validatingBody pf =
+validatingBody =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.fromList [mkGenesisTxIn 1]
     & collateralInputsTxBodyL .~ Set.fromList [mkGenesisTxIn 11]
     & outputsTxBodyL
-      .~ SSeq.fromList [mkBasicTxOut (someAddr pf) (inject $ Coin 4995)]
+      .~ SSeq.fromList [mkBasicTxOut someAddr (inject $ Coin 4995)]
     & feeTxBodyL .~ Coin 5
     & scriptIntegrityHashTxBodyL
-      .~ newScriptIntegrityHash pf testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
+      .~ newScriptIntegrityHash testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
   where
     redeemers =
       Redeemers $
@@ -233,16 +227,15 @@ uenv :: (AlonzoEraPParams era, EraCertState era) => UtxoEnv era
 uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::
-  ( EraTxOut era
-  , PostShelley era
-  , EraStake era
+  ( EraStake era
   , EraGov era
+  , AllegraEraScript era
+  , AlonzoEraTxOut era
   ) =>
-  Proof era ->
   UTxOState era
-ustate pf =
+ustate =
   UTxOState
-    { utxosUtxo = initUTxO pf
+    { utxosUtxo = initUTxO
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
     , utxosGovState = def
