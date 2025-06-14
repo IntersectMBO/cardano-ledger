@@ -1,0 +1,343 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.ImpTest</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#addEpochInterval"><span class="hs-identifier">addEpochInterval</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#ConwayEraGov"><span class="hs-identifier">ConwayEraGov</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#committeeMembersL"><span class="hs-identifier">committeeMembersL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ConwayCertPredFailure"><span class="hs-identifier">ConwayCertPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#ConwayCertsPredFailure"><span class="hs-identifier">ConwayCertsPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#ConwayDelegPredFailure"><span class="hs-identifier">ConwayDelegPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ledger.html#ConwayLedgerPredFailure"><span class="hs-identifier">ConwayLedgerPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Core.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Core</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.html"><span class="hs-identifier">Cardano.Ledger.Plutus</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SLanguage"><span class="hs-identifier">SLanguage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#epochStateGovStateL"><span class="hs-identifier">epochStateGovStateL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier">nesEsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier">ShelleyDelegPredFailure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Shelley</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator">(%~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.ImpTest</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679254228"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#ShelleyEraImp"><span class="hs-identifier hs-type">ShelleyEraImp</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679255698"><span class="annot"><span class="annottext">initGenesis :: forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =&gt;
+m (Genesis DijkstraEra)
+</span><a href="#local-6989586621679255698"><span class="hs-identifier hs-var hs-var hs-var hs-var">initGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis -&gt; m DijkstraGenesis
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.1.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-var">DijkstraGenesis</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679255727"><span class="annot"><span class="annottext">initNewEpochState :: forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =&gt;
+m (NewEpochState DijkstraEra)
+</span><a href="#local-6989586621679255727"><span class="hs-identifier hs-var hs-var hs-var hs-var">initNewEpochState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NewEpochState (PreviousEra DijkstraEra)
+ -&gt; NewEpochState (PreviousEra DijkstraEra))
+-&gt; m (NewEpochState DijkstraEra)
+forall era g s (m :: * -&gt; *).
+(MonadState s m, HasKeyPairs s, HasStatefulGen g m, MonadFail m,
+ ShelleyEraImp era, ShelleyEraImp (PreviousEra era),
+ TranslateEra era NewEpochState,
+ TranslationError era NewEpochState ~ Void,
+ TranslationContext era ~ Genesis era) =&gt;
+(NewEpochState (PreviousEra era)
+ -&gt; NewEpochState (PreviousEra era))
+-&gt; m (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#defaultInitNewEpochState"><span class="hs-identifier hs-var">defaultInitNewEpochState</span></a></span><span> </span><span class="annot"><span class="annottext">((NewEpochState (PreviousEra DijkstraEra)
+  -&gt; NewEpochState (PreviousEra DijkstraEra))
+ -&gt; m (NewEpochState DijkstraEra))
+-&gt; (NewEpochState (PreviousEra DijkstraEra)
+    -&gt; NewEpochState (PreviousEra DijkstraEra))
+-&gt; m (NewEpochState DijkstraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679255730"><span class="annot"><span class="annottext">NewEpochState (PreviousEra DijkstraEra)
+</span><a href="#local-6989586621679255730"><span class="hs-identifier hs-var">nes</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">NewEpochState (PreviousEra DijkstraEra)
+NewEpochState ConwayEra
+</span><a href="#local-6989586621679255730"><span class="hs-identifier hs-var">nes</span></a></span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">NewEpochState ConwayEra
+-&gt; (NewEpochState ConwayEra -&gt; NewEpochState ConwayEra)
+-&gt; NewEpochState ConwayEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(EpochState ConwayEra -&gt; Identity (EpochState ConwayEra))
+-&gt; NewEpochState ConwayEra -&gt; Identity (NewEpochState ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState ConwayEra -&gt; Identity (EpochState ConwayEra))
+ -&gt; NewEpochState ConwayEra -&gt; Identity (NewEpochState ConwayEra))
+-&gt; ((StrictMaybe (Committee ConwayEra)
+     -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+    -&gt; EpochState ConwayEra -&gt; Identity (EpochState ConwayEra))
+-&gt; (StrictMaybe (Committee ConwayEra)
+    -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+-&gt; NewEpochState ConwayEra
+-&gt; Identity (NewEpochState ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(GovState ConwayEra -&gt; Identity (GovState ConwayEra))
+-&gt; EpochState ConwayEra -&gt; Identity (EpochState ConwayEra)
+(ConwayGovState ConwayEra -&gt; Identity (ConwayGovState ConwayEra))
+-&gt; EpochState ConwayEra -&gt; Identity (EpochState ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#epochStateGovStateL"><span class="hs-identifier hs-var">epochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayGovState ConwayEra -&gt; Identity (ConwayGovState ConwayEra))
+ -&gt; EpochState ConwayEra -&gt; Identity (EpochState ConwayEra))
+-&gt; ((StrictMaybe (Committee ConwayEra)
+     -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+    -&gt; ConwayGovState ConwayEra -&gt; Identity (ConwayGovState ConwayEra))
+-&gt; (StrictMaybe (Committee ConwayEra)
+    -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+-&gt; EpochState ConwayEra
+-&gt; Identity (EpochState ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (Committee ConwayEra)
+ -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+-&gt; GovState ConwayEra -&gt; Identity (GovState ConwayEra)
+(StrictMaybe (Committee ConwayEra)
+ -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+-&gt; ConwayGovState ConwayEra -&gt; Identity (ConwayGovState ConwayEra)
+forall era.
+ConwayEraGov era =&gt;
+Lens' (GovState era) (StrictMaybe (Committee era))
+Lens' (GovState ConwayEra) (StrictMaybe (Committee ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#committeeGovStateL"><span class="hs-identifier hs-var">committeeGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe (Committee ConwayEra)
+  -&gt; Identity (StrictMaybe (Committee ConwayEra)))
+ -&gt; NewEpochState ConwayEra -&gt; Identity (NewEpochState ConwayEra))
+-&gt; (StrictMaybe (Committee ConwayEra)
+    -&gt; StrictMaybe (Committee ConwayEra))
+-&gt; NewEpochState ConwayEra
+-&gt; NewEpochState ConwayEra
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="annot"><span class="annottext">(Committee ConwayEra -&gt; Committee ConwayEra)
+-&gt; StrictMaybe (Committee ConwayEra)
+-&gt; StrictMaybe (Committee ConwayEra)
+forall a b. (a -&gt; b) -&gt; StrictMaybe a -&gt; StrictMaybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">Committee ConwayEra -&gt; Committee ConwayEra
+forall {era}. Committee era -&gt; Committee era
+</span><a href="#local-6989586621679255733"><span class="hs-identifier hs-var">updateCommitteeExpiry</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>      </span><span id="local-6989586621679255733"><span class="annot"><span class="annottext">updateCommitteeExpiry :: Committee era -&gt; Committee era
+</span><a href="#local-6989586621679255733"><span class="hs-identifier hs-var hs-var">updateCommitteeExpiry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><span class="annottext">(Map (Credential 'ColdCommitteeRole) EpochNo
+ -&gt; Identity (Map (Credential 'ColdCommitteeRole) EpochNo))
+-&gt; Committee era -&gt; Identity (Committee era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'ColdCommitteeRole) EpochNo
+ -&gt; f (Map (Credential 'ColdCommitteeRole) EpochNo))
+-&gt; Committee era -&gt; f (Committee era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#committeeMembersL"><span class="hs-identifier hs-var">committeeMembersL</span></a></span><span>
+</span><span id="line-37"></span><span>          </span><span class="annot"><span class="annottext">((Map (Credential 'ColdCommitteeRole) EpochNo
+  -&gt; Identity (Map (Credential 'ColdCommitteeRole) EpochNo))
+ -&gt; Committee era -&gt; Identity (Committee era))
+-&gt; (Map (Credential 'ColdCommitteeRole) EpochNo
+    -&gt; Map (Credential 'ColdCommitteeRole) EpochNo)
+-&gt; Committee era
+-&gt; Committee era
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; EpochNo)
+-&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall a b.
+(a -&gt; b)
+-&gt; Map (Credential 'ColdCommitteeRole) a
+-&gt; Map (Credential 'ColdCommitteeRole) b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; EpochNo
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; EpochNo -&gt; EpochNo) -&gt; EpochNo -&gt; EpochNo -&gt; EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochInterval -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#addEpochInterval"><span class="hs-identifier hs-var">addEpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#impEraStartEpochNo"><span class="hs-identifier hs-var">impEraStartEpochNo</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679255749"><span class="annot"><span class="annottext">impSatisfyNativeScript :: Set (KeyHash 'Witness)
+-&gt; TxBody DijkstraEra
+-&gt; NativeScript DijkstraEra
+-&gt; ImpTestM
+     DijkstraEra (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+</span><a href="#local-6989586621679255749"><span class="hs-identifier hs-var hs-var hs-var hs-var">impSatisfyNativeScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (KeyHash 'Witness)
+-&gt; TxBody DijkstraEra
+-&gt; NativeScript DijkstraEra
+-&gt; ImpTestM
+     DijkstraEra (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+forall era.
+(AllegraEraScript era, AllegraEraTxBody era,
+ NativeScript era ~ Timelock era) =&gt;
+Set (KeyHash 'Witness)
+-&gt; TxBody era
+-&gt; NativeScript era
+-&gt; ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.8.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.ImpTest.html#impAllegraSatisfyNativeScript"><span class="hs-identifier hs-var">impAllegraSatisfyNativeScript</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679255753"><span class="annot"><span class="annottext">modifyPParams :: (PParams DijkstraEra -&gt; PParams DijkstraEra)
+-&gt; ImpTestM DijkstraEra ()
+</span><a href="#local-6989586621679255753"><span class="hs-identifier hs-var hs-var hs-var hs-var">modifyPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParams DijkstraEra -&gt; PParams DijkstraEra)
+-&gt; ImpTestM DijkstraEra ()
+forall era.
+ConwayEraGov era =&gt;
+(PParams era -&gt; PParams era) -&gt; ImpTestM era ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html#conwayModifyPParams"><span class="hs-identifier hs-var">conwayModifyPParams</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679255762"><span class="annot"><span class="annottext">fixupTx :: HasCallStack =&gt;
+Tx DijkstraEra -&gt; ImpTestM DijkstraEra (Tx DijkstraEra)
+</span><a href="#local-6989586621679255762"><span class="hs-identifier hs-var hs-var hs-var hs-var">fixupTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx DijkstraEra -&gt; ImpTestM DijkstraEra (Tx DijkstraEra)
+forall era.
+(HasCallStack, AlonzoEraImp era, BabbageEraTxBody era) =&gt;
+Tx era -&gt; ImpTestM era (Tx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.ImpTest.html#babbageFixupTx"><span class="hs-identifier hs-var">babbageFixupTx</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679255770"><span class="annot"><span class="annottext">expectTxSuccess :: HasCallStack =&gt; Tx DijkstraEra -&gt; ImpTestM DijkstraEra ()
+</span><a href="#local-6989586621679255770"><span class="hs-identifier hs-var hs-var hs-var hs-var">expectTxSuccess</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx DijkstraEra -&gt; ImpTestM DijkstraEra ()
+forall era.
+(HasCallStack, AlonzoEraImp era, BabbageEraTxBody era) =&gt;
+Tx era -&gt; ImpTestM era ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.ImpTest.html#impBabbageExpectTxSuccess"><span class="hs-identifier hs-var">impBabbageExpectTxSuccess</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.0/l/testlib/doc/html/cardano-ledger-mary/src/Test.Cardano.Ledger.Mary.ImpTest.html#MaryEraImp"><span class="hs-identifier hs-type">MaryEraImp</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.ImpTest.html#AlonzoEraImp"><span class="hs-identifier hs-type">AlonzoEraImp</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679255810"><span class="annot"><span class="annottext">scriptTestContexts :: Map ScriptHash ScriptTestContext
+</span><a href="#local-6989586621679255810"><span class="hs-identifier hs-var hs-var hs-var hs-var">scriptTestContexts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1 -&gt; Map ScriptHash ScriptTestContext
+forall (l :: Language).
+PlutusLanguage l =&gt;
+SLanguage l -&gt; Map ScriptHash ScriptTestContext
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.ImpTest.html#plutusTestScripts"><span class="hs-identifier hs-var">plutusTestScripts</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV1"><span class="hs-identifier hs-var">SPlutusV1</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Map ScriptHash ScriptTestContext
+-&gt; Map ScriptHash ScriptTestContext
+-&gt; Map ScriptHash ScriptTestContext
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV2 -&gt; Map ScriptHash ScriptTestContext
+forall (l :: Language).
+PlutusLanguage l =&gt;
+SLanguage l -&gt; Map ScriptHash ScriptTestContext
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.ImpTest.html#plutusTestScripts"><span class="hs-identifier hs-var">plutusTestScripts</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV2
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV2"><span class="hs-identifier hs-var">SPlutusV2</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Map ScriptHash ScriptTestContext
+-&gt; Map ScriptHash ScriptTestContext
+-&gt; Map ScriptHash ScriptTestContext
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV3 -&gt; Map ScriptHash ScriptTestContext
+forall (l :: Language).
+PlutusLanguage l =&gt;
+SLanguage l -&gt; Map ScriptHash ScriptTestContext
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.ImpTest.html#plutusTestScripts"><span class="hs-identifier hs-var">plutusTestScripts</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV3
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV3"><span class="hs-identifier hs-var">SPlutusV3</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- Partial implementation used for checking predicate failures</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGER&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier hs-type">ShelleyDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679255856"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+</span><a href="#local-6989586621679255856"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;CERTS&quot; DijkstraEra)
+-&gt; ConwayLedgerPredFailure DijkstraEra
+ConwayCertsPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;CERTS&quot; era)
+-&gt; ConwayLedgerPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ledger.html#ConwayCertsFailure"><span class="hs-identifier hs-var">ConwayCertsFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayCertsPredFailure DijkstraEra
+ -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; (ShelleyDelegPredFailure DijkstraEra
+    -&gt; ConwayCertsPredFailure DijkstraEra)
+-&gt; ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;CERTS&quot; DijkstraEra
+ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayCertsPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;CERTS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier hs-type">ShelleyDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679255865"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;CERTS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;CERT&quot; DijkstraEra)
+-&gt; ConwayCertsPredFailure DijkstraEra
+ConwayCertPredFailure DijkstraEra
+-&gt; ConwayCertsPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;CERT&quot; era) -&gt; ConwayCertsPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertFailure"><span class="hs-identifier hs-var">CertFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayCertPredFailure DijkstraEra
+ -&gt; ConwayCertsPredFailure DijkstraEra)
+-&gt; (ShelleyDelegPredFailure DijkstraEra
+    -&gt; ConwayCertPredFailure DijkstraEra)
+-&gt; ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayCertsPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;CERT&quot; DijkstraEra
+ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayCertPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;CERT&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier hs-type">ShelleyDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679255873"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;CERT&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;DELEG&quot; DijkstraEra)
+-&gt; ConwayCertPredFailure DijkstraEra
+ConwayDelegPredFailure DijkstraEra
+-&gt; ConwayCertPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;DELEG&quot; era) -&gt; ConwayCertPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#DelegFailure"><span class="hs-identifier hs-var">DelegFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegPredFailure DijkstraEra
+ -&gt; ConwayCertPredFailure DijkstraEra)
+-&gt; (ShelleyDelegPredFailure DijkstraEra
+    -&gt; ConwayDelegPredFailure DijkstraEra)
+-&gt; ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayCertPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;DELEG&quot; DijkstraEra
+ShelleyDelegPredFailure DijkstraEra
+-&gt; ConwayDelegPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;DELEG&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier hs-type">ShelleyDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679255881"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;DELEG&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#StakeKeyAlreadyRegisteredDELEG"><span class="hs-identifier hs-type">Shelley.StakeKeyAlreadyRegisteredDELEG</span></a></span><span> </span><span id="local-6989586621679255883"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679255883"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; ConwayDelegPredFailure DijkstraEra
+forall era. Credential 'Staking -&gt; ConwayDelegPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#StakeKeyRegisteredDELEG"><span class="hs-identifier hs-var">StakeKeyRegisteredDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679255883"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#StakeKeyNotRegisteredDELEG"><span class="hs-identifier hs-type">Shelley.StakeKeyNotRegisteredDELEG</span></a></span><span> </span><span id="local-6989586621679255886"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679255886"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; ConwayDelegPredFailure DijkstraEra
+forall era. Credential 'Staking -&gt; ConwayDelegPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#StakeKeyNotRegisteredDELEG"><span class="hs-identifier hs-var">StakeKeyNotRegisteredDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679255886"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.0.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#StakeKeyNonZeroAccountBalanceDELEG"><span class="hs-identifier hs-type">Shelley.StakeKeyNonZeroAccountBalanceDELEG</span></a></span><span> </span><span id="local-6989586621679255889"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679255889"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; ConwayDelegPredFailure DijkstraEra
+forall era. Coin -&gt; ConwayDelegPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#StakeKeyHasNonZeroRewardAccountBalanceDELEG"><span class="hs-identifier hs-var">StakeKeyHasNonZeroRewardAccountBalanceDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679255889"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegPredFailure DijkstraEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ConwayDelegPredFailure DijkstraEra
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Cannot inject ShelleyDelegPredFailure into DijkstraEra&quot;</span></span><span>
+</span><span id="line-71"></span></pre></body></html>

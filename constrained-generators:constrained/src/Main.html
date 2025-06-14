@@ -1,0 +1,25 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Main</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Test.html"><span class="hs-identifier">Constrained.Test</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Environment</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.12-c04d876f787047693256f0e51f15795d35cbbc05c44079c957ad39dfbb88ae3c/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span id="main"><span class="annot"><span class="annottext">IO ()
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-10"></span><span>  </span><span id="local-6989586621679057407"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679057407"><span class="hs-identifier hs-var">nightly</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe String -&gt; Bool
+forall a. Maybe a -&gt; Bool
+</span><span class="hs-identifier hs-var">isJust</span></span><span> </span><span class="annot"><span class="annottext">(Maybe String -&gt; Bool) -&gt; IO (Maybe String) -&gt; IO Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Maybe String)
+</span><span class="hs-identifier hs-var">lookupEnv</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;NIGHTLY&quot;</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><span class="annottext">Spec -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.12-eeeeaba6151f93948f8ea13b8d970cb5e69ee3f7bef98ad73e984c5de58a39fa/share/doc/html/src/Test.Hspec.Core.Runner.html#hspec"><span class="hs-identifier hs-var">hspec</span></a></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; IO ()) -&gt; Spec -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Spec
+</span><a href="Constrained.Test.html#tests"><span class="hs-identifier hs-var">tests</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679057407"><span class="hs-identifier hs-var">nightly</span></a></span><span>
+</span><span id="line-12"></span></pre></body></html>
