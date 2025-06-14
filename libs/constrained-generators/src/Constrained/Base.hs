@@ -781,7 +781,7 @@ class Forallable t e | t -> e where
 -- IsPred
 
 class Show p => IsPred p where
-  toPred :: p -> Pred
+  toPred :: p -> PredD Deps
 
 instance IsPred Pred where
   toPred (Assert (Lit False)) = FalsePred (pure "toPred(Lit False)")
