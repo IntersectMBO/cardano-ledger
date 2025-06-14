@@ -26,6 +26,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   GovSignal (..),
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
+  unelectedCommitteeVoters,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
@@ -61,6 +62,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
+  Committee,
+  ConwayEraGov,
+  EraGov,
   GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),
@@ -72,6 +76,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  authorizedElectedHotCommitteeCredentials,
   foldrVotingProcedures,
   gasAction,
   gasDRepVotesL,
@@ -99,7 +104,10 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import qualified Cardano.Ledger.Shelley.HardForks as HF (
+  bootstrapPhase,
+  disallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.State (
@@ -111,7 +119,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
@@ -148,11 +156,12 @@ data GovEnv era = GovEnv
   , gePParams :: PParams era
   , gePPolicy :: StrictMaybe ScriptHash
   , geCertState :: CertState era
+  , geCommittee :: StrictMaybe (Committee era)
   }
   deriving (Generic)
 
-instance (EraPParams era, EraCertState era) => EncCBOR (GovEnv era) where
-  encCBOR x@(GovEnv _ _ _ _ _) =
+instance (EraGov era, EraPParams era, EraCertState era) => EncCBOR (GovEnv era) where
+  encCBOR x@(GovEnv _ _ _ _ _ _) =
     let GovEnv {..} = x
      in encode $
           Rec GovEnv
@@ -161,6 +170,7 @@ instance (EraPParams era, EraCertState era) => EncCBOR (GovEnv era) where
             !> To gePParams
             !> To gePPolicy
             !> To geCertState
+            !> To geCommittee
 
 instance (NFData (PParams era), Era era, EraCertState era) => NFData (GovEnv era)
 
@@ -207,6 +217,8 @@ data ConwayGovPredFailure era
     ProposalReturnAccountDoesNotExist RewardAccount
   | -- | Treasury withdrawal proposals to an invalid reward account
     TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty RewardAccount)
+  | -- | Disallow votes by unelected committee members
+    UnelectedCommitteeVoters (NonEmpty (Credential 'HotCommitteeRole))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" ConwayEra = ConwayGovPredFailure ConwayEra
@@ -239,6 +251,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     15 -> SumD ZeroTreasuryWithdrawals <! From
     16 -> SumD ProposalReturnAccountDoesNotExist <! From
     17 -> SumD TreasuryWithdrawalReturnAccountsDoNotExist <! From
+    18 -> SumD UnelectedCommitteeVoters <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -280,6 +293,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalReturnAccountDoesNotExist 16 !> To returnAccount
       TreasuryWithdrawalReturnAccountsDoNotExist accounts ->
         Sum TreasuryWithdrawalReturnAccountsDoNotExist 17 !> To accounts
+      UnelectedCommitteeVoters committee ->
+        Sum UnelectedCommitteeVoters 18 !> To committee
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -324,6 +339,7 @@ instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
 instance
   ( ConwayEraTxCert era
   , ConwayEraPParams era
+  , ConwayEraGov era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , EraCertState era
@@ -428,6 +444,7 @@ govTransition ::
   forall era.
   ( ConwayEraTxCert era
   , ConwayEraPParams era
+  , ConwayEraGov era
   , STS (EraRule "GOV" era)
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   , Signal (EraRule "GOV" era) ~ GovSignal era
@@ -441,7 +458,7 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp constitutionPolicy certState
+    ( GovEnv txid currentEpoch pp constitutionPolicy certState committee
       , st
       , GovSignal {gsVotingProcedures, gsProposalProcedures, gsCertificates}
       ) <-
@@ -456,6 +473,11 @@ govTransition = do
       knownCommitteeMembers = authorizedHotCommitteeCredentials committeeState
 
   expectedNetworkId <- liftSTS $ asks networkId
+
+  when (HF.disallowUnelectedCommitteeFromVoting $ pp ^. ppProtocolVersionL) $
+    failOnNonEmpty
+      (unelectedCommitteeVoters committee committeeState gsVotingProcedures)
+      UnelectedCommitteeVoters
 
   let processProposal ps (idx, proposal@ProposalProcedure {..}) = do
         runTest $ checkBootstrapProposal pp proposal
@@ -622,6 +644,21 @@ checkDisallowedVotes votes failure canBeVotedOnBy =
   where
     disallowedVotes =
       [(voter, gasId gas) | (voter, gas) <- votes, not (gas `canBeVotedOnBy` voter)]
+
+unelectedCommitteeVoters ::
+  StrictMaybe (Committee era) ->
+  CommitteeState era ->
+  VotingProcedures era ->
+  Set (Credential 'HotCommitteeRole)
+unelectedCommitteeVoters committee committeeState =
+  let authorizedElectedCommittee = authorizedElectedHotCommitteeCredentials committee committeeState
+      collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =
+        case voter of
+          CommitteeVoter hotCred
+            | hotCred `Set.notMember` authorizedElectedCommittee ->
+                Set.insert hotCred unelectedHotCreds
+          _ -> unelectedHotCreds
+   in Map.foldlWithKey' collectUnelectedCommitteeVotes Set.empty . unVotingProcedures
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal

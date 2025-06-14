@@ -10,6 +10,7 @@ module Cardano.Ledger.Shelley.HardForks (
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
   forgoPointerAddressResolution,
+  disallowUnelectedCommitteeFromVoting,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
@@ -70,3 +71,10 @@ bootstrapPhase ::
   ProtVer ->
   Bool
 bootstrapPhase pv = pvMajor pv == natVersion @9
+
+-- | Starting with protocol version 11, we do not allow unelected committee
+-- members to submit votes.
+disallowUnelectedCommitteeFromVoting ::
+  ProtVer ->
+  Bool
+disallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion @10

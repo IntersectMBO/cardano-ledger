@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+- Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
+  - This tests if the protocol version is greater than 10.
 * Deprecated `toShelleyGenesisPairs`
 * Removed `toShelleyGenesisPairs`
 * Remove `ShelleyTxRaw`, `MkShelleyTx`, `segWitTx`, `unsafeConstructTxWithBytes`
