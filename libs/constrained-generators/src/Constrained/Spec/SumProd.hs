@@ -82,6 +82,7 @@ import Constrained.Conformance (
 import Constrained.Core (
   Evidence (..),
  )
+import Constrained.Generation
 import Constrained.Generic (
   ConstrOf,
   HasSimpleRep (..),
@@ -112,14 +113,10 @@ import Constrained.Syntax (
   reify,
  )
 import Constrained.TheKnot (
-  CountCases,
   FoldSpec (..),
   FunW (..),
   PairSpec (..),
   ProdW (..),
-  SumW (..),
-  injLeft_,
-  injRight_,
   preMapFoldSpec,
   prodFst_,
   prodSnd_,

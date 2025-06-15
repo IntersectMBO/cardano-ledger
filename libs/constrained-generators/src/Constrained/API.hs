@@ -178,6 +178,7 @@ import Constrained.Conformance (
  )
 import Constrained.Core (NonEmpty ((:|)))
 import Constrained.FunctionSymbol
+import Constrained.Generation
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.NumOrd (
   MaybeBounded (..),
