@@ -17,9 +17,6 @@ source-repository head
 library
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
-    Test.Cardano.Ledger.Constrained.Ast
-    Test.Cardano.Ledger.Constrained.Classes
-    Test.Cardano.Ledger.Constrained.Combinators
     Test.Cardano.Ledger.Constrained.Conway
     Test.Cardano.Ledger.Constrained.Conway.Cert
     Test.Cardano.Ledger.Constrained.Conway.Certs
@@ -45,40 +42,6 @@ library
     Test.Cardano.Ledger.Constrained.Conway.TxBodySpec
     Test.Cardano.Ledger.Constrained.Conway.Utxo
     Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-    Test.Cardano.Ledger.Constrained.Env
-    Test.Cardano.Ledger.Constrained.Examples
-    Test.Cardano.Ledger.Constrained.Lenses
-    Test.Cardano.Ledger.Constrained.Monad
-    Test.Cardano.Ledger.Constrained.Pairing
-    Test.Cardano.Ledger.Constrained.Preds.CertState
-    Test.Cardano.Ledger.Constrained.Preds.Certs
-    Test.Cardano.Ledger.Constrained.Preds.LedgerState
-    Test.Cardano.Ledger.Constrained.Preds.NewEpochState
-    Test.Cardano.Ledger.Constrained.Preds.PParams
-    Test.Cardano.Ledger.Constrained.Preds.Repl
-    Test.Cardano.Ledger.Constrained.Preds.Tx
-    Test.Cardano.Ledger.Constrained.Preds.TxOut
-    Test.Cardano.Ledger.Constrained.Preds.UTxO
-    Test.Cardano.Ledger.Constrained.Preds.Universes
-    Test.Cardano.Ledger.Constrained.Rewrite
-    Test.Cardano.Ledger.Constrained.Scripts
-    Test.Cardano.Ledger.Constrained.Shrink
-    Test.Cardano.Ledger.Constrained.Size
-    Test.Cardano.Ledger.Constrained.Solver
-    Test.Cardano.Ledger.Constrained.Spec
-    Test.Cardano.Ledger.Constrained.SpecClass
-    Test.Cardano.Ledger.Constrained.Stage
-    Test.Cardano.Ledger.Constrained.Tests
-    Test.Cardano.Ledger.Constrained.Trace.Actions
-    Test.Cardano.Ledger.Constrained.Trace.DrepCertTx
-    Test.Cardano.Ledger.Constrained.Trace.Pipeline
-    Test.Cardano.Ledger.Constrained.Trace.SimpleTx
-    Test.Cardano.Ledger.Constrained.Trace.Tests
-    Test.Cardano.Ledger.Constrained.Trace.TraceMonad
-    Test.Cardano.Ledger.Constrained.TypeRep
-    Test.Cardano.Ledger.Constrained.Utils
-    Test.Cardano.Ledger.Constrained.Vars
-    Test.Cardano.Ledger.EraClass
     Test.Cardano.Ledger.Examples.AlonzoAPI
     Test.Cardano.Ledger.Examples.AlonzoBBODY
     Test.Cardano.Ledger.Examples.AlonzoCollectInputs
@@ -100,9 +63,7 @@ library
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.NoThunks
     Test.Cardano.Ledger.STS
-    Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.Tickf
-    Test.Cardano.Ledger.ValueFromList
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -118,7 +79,6 @@ library
   build-depends:
     FailT,
     QuickCheck,
-    array,
     base >=4.18 && <5,
     bytestring,
     cardano-crypto,
@@ -137,7 +97,6 @@ library
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-    cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
     cardano-slotting:{cardano-slotting, testlib},
@@ -147,10 +106,6 @@ library
     crypton,
     data-default,
     deepseq,
-    formatting,
-    groups,
-    hashable,
-    haskeline,
     hspec,
     microlens,
     mtl,
@@ -168,7 +123,6 @@ library
     time,
     transformers,
     tree-diff,
-    unordered-containers,
     vector,
     vector-map,
 

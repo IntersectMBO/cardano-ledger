@@ -101,7 +101,7 @@ class
   -- Designed to be used with @TypeApplications@:
   --
   -- >>> eraName @ByronEra
-  -- Byron
+  -- "Byron"
   eraName :: String
 
 -- | This is the era that preceded Shelley era. It cannot have any other class instances,
@@ -253,12 +253,12 @@ eraProtVersions = [eraProtVerLow @era .. eraProtVerHigh @era]
 --
 -- For example these will type check
 --
--- >>> atLeastEra @BabbageEra @ConwayEra
--- >>> atLeastEra @BabbageEra @BabbageEra
+-- > atLeastEra @BabbageEra @ConwayEra
+-- > atLeastEra @BabbageEra @BabbageEra
 --
 -- However this will result in a type error
 --
--- >>> atLeastEra @BabbageEra @AlonzoEra
+-- > atLeastEra @BabbageEra @AlonzoEra
 atLeastEra :: AtLeastEra eraName era => ()
 atLeastEra = ()
 
@@ -268,12 +268,12 @@ atLeastEra = ()
 --
 -- For example these will type check
 --
--- >>> atMostEra @BabbageEra @ShelleyEra
--- >>> atMostEra @AlonzoEra @MaryEra
+-- > atMostEra @BabbageEra @ShelleyEra
+-- > atMostEra @AlonzoEra @MaryEra
 --
 -- However this will result in a type error
 --
--- >>> atMostEra @BabbageEra @ConwayEra
+-- > atMostEra @BabbageEra @ConwayEra
 atMostEra :: AtMostEra eraName era => ()
 atMostEra = ()
 

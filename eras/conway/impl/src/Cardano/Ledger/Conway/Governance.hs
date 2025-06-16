@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -164,6 +165,7 @@ module Cardano.Ledger.Conway.Governance (
   reCommitteeStateL,
   DefaultVote (..),
   defaultStakePoolVote,
+  translateProposals,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -177,7 +179,9 @@ import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
+  KeyValuePairs (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   knownNonZero,
   mulNonZero,
   toIntegerNonZero,
@@ -232,7 +236,7 @@ import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F (foldl')
@@ -287,7 +291,7 @@ cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
 cgsFuturePParamsL =
   lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
 
-govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
+govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
@@ -382,23 +386,24 @@ instance (EraPParams era, NFData (InstantStake era)) => NFData (ConwayGovState e
 
 instance (EraPParams era, NoThunks (InstantStake era)) => NoThunks (ConwayGovState era)
 
-instance (EraPParams era, EraStake era) => ToJSON (ConwayGovState era) where
-  toJSON = object . toConwayGovPairs
-  toEncoding = pairs . mconcat . toConwayGovPairs
+deriving via
+  KeyValuePairs (ConwayGovState era)
+  instance
+    (EraPParams era, EraStake era) => ToJSON (ConwayGovState era)
 
-toConwayGovPairs :: EraStake era => (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
-  let ConwayGovState {..} = cg
-   in [ "proposals" .= cgsProposals
-      , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
-      , "committee" .= cgsCommittee
-      , "constitution" .= cgsConstitution
-      , "currentPParams" .= cgsCurPParams
-      , "previousPParams" .= cgsPrevPParams
-      , "futurePParams" .= cgsFuturePParams
-      ]
+instance (EraPParams era, EraStake era) => ToKeyValuePairs (ConwayGovState era) where
+  toKeyValuePairs cg@(ConwayGovState _ _ _ _ _ _ _) =
+    let ConwayGovState {..} = cg
+     in [ "proposals" .= cgsProposals
+        , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
+        , "committee" .= cgsCommittee
+        , "constitution" .= cgsConstitution
+        , "currentPParams" .= cgsCurPParams
+        , "previousPParams" .= cgsPrevPParams
+        , "futurePParams" .= cgsFuturePParams
+        ]
 
-instance EraPParams ConwayEra => EraGov ConwayEra where
+instance EraGov ConwayEra where
   type GovState ConwayEra = ConwayGovState ConwayEra
 
   curPParamsGovStateL = cgsCurPParamsL

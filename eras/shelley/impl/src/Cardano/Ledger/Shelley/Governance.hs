@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,7 +8,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -28,6 +26,7 @@ module Cardano.Ledger.Shelley.Governance (
   futurePParamsShelleyGovStateL,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -44,13 +43,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (
-  KeyValue,
-  ToJSON (..),
-  object,
-  pairs,
-  (.=),
- )
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
@@ -76,6 +69,7 @@ data ShelleyGovState era = ShelleyGovState
   -- ^ Prediction of parameter changes that might happen on the epoch boundary.
   }
   deriving (Generic)
+  deriving (ToJSON) via KeyValuePairs (ShelleyGovState era)
 
 curPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
 curPParamsShelleyGovStateL = lens sgsCurPParams (\sps x -> sps {sgsCurPParams = x})
@@ -177,17 +171,13 @@ instance
   where
   fromCBOR = fromEraCBOR @era
 
-instance EraPParams era => ToJSON (ShelleyGovState era) where
-  toJSON = object . toPPUPStatePairs
-  toEncoding = pairs . mconcat . toPPUPStatePairs
-
-toPPUPStatePairs :: (KeyValue e a, EraPParams era) => ShelleyGovState era -> [a]
-toPPUPStatePairs ShelleyGovState {..} =
-  [ "proposals" .= sgsCurProposals
-  , "futureProposals" .= sgsFutureProposals
-  , "curPParams" .= sgsCurPParams
-  , "prevPParams" .= sgsPrevPParams
-  ]
+instance EraPParams era => ToKeyValuePairs (ShelleyGovState era) where
+  toKeyValuePairs ShelleyGovState {..} =
+    [ "proposals" .= sgsCurProposals
+    , "futureProposals" .= sgsFutureProposals
+    , "curPParams" .= sgsCurPParams
+    , "prevPParams" .= sgsPrevPParams
+    ]
 
 instance EraPParams era => Default (ShelleyGovState era) where
   def = emptyShelleyGovState

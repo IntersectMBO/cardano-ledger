@@ -225,6 +225,7 @@ instance
             pure . Agda.RequireMOf (toInteger m) $ toList tls
           RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep slot
           RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep slot
+          _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 instance
   ( AlonzoEraScript era
@@ -664,6 +665,7 @@ instance
   , Tx era ~ AlonzoTx era
   , EraTx era
   , BabbageEraTxBody era
+  , AlonzoEraTx era
   ) =>
   SpecTranslate ctx (AlonzoTx era)
   where
@@ -673,10 +675,10 @@ instance
     Agda.MkTx
       <$> withCtx
         (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
-        (toSpecRep (body tx))
-      <*> toSpecRep (wits tx)
-      <*> toSpecRep (isValid tx)
-      <*> toSpecRep (auxiliaryData tx)
+        (toSpecRep (tx ^. bodyTxL))
+      <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. isValidTxL)
+      <*> toSpecRep (tx ^. auxDataTxL)
 
 instance
   ( EraPParams era
@@ -688,8 +690,8 @@ instance
 
   toSpecRep = pure . showOpaqueErrorString
 
-instance SpecTranslate ctx (GovPurposeId r c) where
-  type SpecRep (GovPurposeId r c) = (Agda.TxId, Integer)
+instance SpecTranslate ctx (GovPurposeId r) where
+  type SpecRep (GovPurposeId r) = (Agda.TxId, Integer)
 
   toSpecRep (GovPurposeId gaId) = toSpecRep gaId
 

@@ -115,9 +115,6 @@ data AlonzoUtxowPredFailure era
       (Set DataHash)
   | PPViewHashesDontMatch
       (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
-  | -- | Set of witnesses which were needed and not supplied
-    MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
-      (Set (KeyHash 'Witness))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
@@ -192,7 +189,6 @@ instance
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
       NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 3 !> To x !> To y
       PPViewHashesDontMatch m -> Sum PPViewHashesDontMatch 4 !> To m
-      MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
       ExtraRedeemers x -> Sum ExtraRedeemers 7 !> To x
 
@@ -219,7 +215,6 @@ instance
       2 -> SumD MissingRequiredDatums <! From <! From
       3 -> SumD NotAllowedSupplementalDatums <! From <! From
       4 -> SumD PPViewHashesDontMatch <! From
-      5 -> SumD MissingRequiredSigners <! From
       6 -> SumD UnspendableUTxONoDatumHash <! From
       7 -> SumD ExtraRedeemers <! From
       n -> Invalid n

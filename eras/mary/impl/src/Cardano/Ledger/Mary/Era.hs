@@ -1,20 +1,24 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
+import Cardano.Ledger.Internal.Era (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
-
-data MaryEra
 
 instance Era MaryEra where
   type PreviousEra MaryEra = AllegraEra

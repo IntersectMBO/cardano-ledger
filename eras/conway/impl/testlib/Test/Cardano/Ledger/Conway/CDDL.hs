@@ -2,17 +2,18 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use camelCase" #-}
-{-# HLINT ignore "Evaluate" #-}
+{- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Evaluate" -}
 
 module Test.Cardano.Ledger.Conway.CDDL (
   module Test.Cardano.Ledger.Babbage.CDDL,
   module Test.Cardano.Ledger.Conway.CDDL,
 ) where
 
+import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
@@ -32,12 +33,10 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   invalid_before,
   invalid_hereafter,
   language,
-  major_protocol_version,
   metadata,
   mint,
   multi_host_name,
   native_script,
-  next_major_protocol_version,
   nonempty_set,
   plutus_v1_script,
   plutus_v2_script,
@@ -157,18 +156,7 @@ header_body =
       ]
 
 protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]
-
--- TODO Replace with the following once
--- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
---
--- next_major_protocol_version :: Rule
--- next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
-next_major_protocol_version :: Integer
-next_major_protocol_version = 10
-
-major_protocol_version :: Rule
-major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... next_major_protocol_version
+protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @ConwayEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -572,7 +560,7 @@ url :: Rule
 url = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
 
 pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a metadata_hash]
+pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
 
 withdrawals :: Rule
 withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]

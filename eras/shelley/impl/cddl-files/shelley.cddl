@@ -46,7 +46,7 @@ signature = bytes .size 64
 
 protocol_version = (major_protocol_version, uint)
 
-major_protocol_version = 1 .. 3
+major_protocol_version = 0 .. 3
 
 kes_signature = bytes .size 448
 
@@ -259,6 +259,7 @@ protocol_param_update =
   , ? 13 : nonce                  ; extra entropy
   , ? 14 : [protocol_version] ; protocol version
   , ? 15 : coin                   ; min utxo value
+  , ? 16 : coin                   ; min pool cost
   }
 
 

@@ -97,7 +97,7 @@ data ConwayGovCertEnv era = ConwayGovCertEnv
   , cgceCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , cgceCurrentCommittee :: StrictMaybe (Committee era)
-  , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
+  , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
   -- ^ All of the `UpdateCommittee` proposals
   }
   deriving (Generic)

@@ -29,7 +29,14 @@ module Cardano.Ledger.Credential (
 ) where
 
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), integralToBounded)
+import Cardano.Ledger.BaseTypes (
+  CertIx (..),
+  KeyValuePairs (..),
+  SlotNo (..),
+  ToKeyValuePairs (..),
+  TxIx (..),
+  integralToBounded,
+ )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
@@ -55,11 +62,8 @@ import Data.Aeson (
   FromJSON (..),
   FromJSONKey (..),
   FromJSONKeyFunction (..),
-  KeyValue,
   ToJSON,
   ToJSONKey (..),
-  object,
-  pairs,
   (.:),
   (.=),
  )
@@ -113,14 +117,11 @@ instance HasKeyRole Credential where
 instance NoThunks (Credential kr)
 
 instance ToJSON (Credential kr) where
-  toJSON (ScriptHashObj hash) =
-    Aeson.object
-      [ "scriptHash" .= hash
-      ]
-  toJSON (KeyHashObj hash) =
-    Aeson.object
-      [ "keyHash" .= hash
-      ]
+  toJSON = \case
+    ScriptHashObj hash ->
+      Aeson.object ["scriptHash" .= hash]
+    KeyHashObj hash ->
+      Aeson.object ["keyHash" .= hash]
 
 instance FromJSON (Credential kr) where
   parseJSON =
@@ -202,6 +203,7 @@ newtype SlotNo32 = SlotNo32 Word32
 data Ptr = Ptr {-# UNPACK #-} !SlotNo32 {-# UNPACK #-} !TxIx {-# UNPACK #-} !CertIx
   deriving (Eq, Ord, Generic)
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
+  deriving (ToJSON) via KeyValuePairs Ptr
 
 instance NFData Ptr
 
@@ -246,18 +248,14 @@ instance FromCBOR Ptr where
     (slotNo, txIx, certIx) <- fromCBOR
     pure $ Ptr slotNo txIx certIx
 
-instance ToJSON Ptr where
-  toJSON = object . toPtrPair
-  toEncoding = pairs . mconcat . toPtrPair
-
 instance ToJSONKey Ptr
 
-toPtrPair :: KeyValue e a => Ptr -> [a]
-toPtrPair (Ptr slotNo txIndex certIndex) =
-  [ "slot" .= slotNo
-  , "txIndex" .= txIndex
-  , "certIndex" .= certIndex
-  ]
+instance ToKeyValuePairs Ptr where
+  toKeyValuePairs (Ptr slotNo txIndex certIndex) =
+    [ "slot" .= slotNo
+    , "txIndex" .= txIndex
+    , "certIndex" .= certIndex
+    ]
 
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)

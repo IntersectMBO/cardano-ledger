@@ -68,7 +68,9 @@ import Cardano.Ledger.Babbage.PParams (
  )
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
@@ -109,7 +111,7 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
@@ -317,27 +319,18 @@ deriving stock instance
 instance NFData (BabbageTxOut era) where
   rnf = rwhnf
 
-instance
-  (Era era, ToJSON (Datum era), ToJSON (Script era), Val (Value era)) =>
-  ToJSON (BabbageTxOut era)
-  where
-  toJSON = object . toBabbageTxOutPairs
-  toEncoding = pairs . mconcat . toBabbageTxOutPairs
+deriving via
+  KeyValuePairs (BabbageTxOut era)
+  instance
+    (Era era, Val (Value era), ToJSON (Script era)) => ToJSON (BabbageTxOut era)
 
-toBabbageTxOutPairs ::
-  ( Era era
-  , KeyValue e a
-  , Val (Value era)
-  , ToJSON (Script era)
-  ) =>
-  BabbageTxOut era ->
-  [a]
-toBabbageTxOutPairs (BabbageTxOut !addr !val !dat !mRefScript) =
-  [ "address" .= addr
-  , "value" .= val
-  , "datum" .= dat
-  , "referenceScript" .= mRefScript
-  ]
+instance (Era era, Val (Value era), ToJSON (Script era)) => ToKeyValuePairs (BabbageTxOut era) where
+  toKeyValuePairs (BabbageTxOut !addr !val !dat !mRefScript) =
+    [ "address" .= addr
+    , "value" .= val
+    , "datum" .= dat
+    , "referenceScript" .= mRefScript
+    ]
 
 viewCompactTxOut ::
   forall era.

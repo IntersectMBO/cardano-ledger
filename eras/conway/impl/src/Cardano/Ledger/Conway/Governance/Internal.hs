@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -63,8 +64,10 @@ module Cardano.Ledger.Conway.Governance.Internal (
 
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
+  KeyValuePairs (..),
   ProtVer (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   UnitInterval,
   isSJust,
  )
@@ -116,7 +119,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.UMap
 import Control.DeepSeq (NFData (rnf), deepseq)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
@@ -141,7 +144,7 @@ data EnactState era = EnactState
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking) Coin)
-  , ensPrevGovActionIds :: !(GovRelation StrictMaybe era)
+  , ensPrevGovActionIds :: !(GovRelation StrictMaybe)
   -- ^ Last enacted GovAction Ids
   }
   deriving (Generic)
@@ -167,38 +170,39 @@ ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
-ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe era)
+ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
 
 ensPrevPParamUpdateL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
 ensPrevPParamUpdateL = ensPrevGovActionIdsL . grPParamUpdateL
 
 ensPrevHardForkL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose))
 ensPrevHardForkL = ensPrevGovActionIdsL . grHardForkL
 
 ensPrevCommitteeL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose))
 ensPrevCommitteeL = ensPrevGovActionIdsL . grCommitteeL
 
 ensPrevConstitutionL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose))
 ensPrevConstitutionL = ensPrevGovActionIdsL . grConstitutionL
 
-instance EraPParams era => ToJSON (EnactState era) where
-  toJSON = object . toEnactStatePairs
-  toEncoding = pairs . mconcat . toEnactStatePairs
+deriving via
+  KeyValuePairs (EnactState era)
+  instance
+    EraPParams era => ToJSON (EnactState era)
 
-toEnactStatePairs :: (KeyValue e a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
-  let EnactState {..} = cg
-   in [ "committee" .= ensCommittee
-      , "constitution" .= ensConstitution
-      , "curPParams" .= ensCurPParams
-      , "prevPParams" .= ensPrevPParams
-      , "prevGovActionIds" .= ensPrevGovActionIds
-      ]
+instance EraPParams era => ToKeyValuePairs (EnactState era) where
+  toKeyValuePairs cg@(EnactState _ _ _ _ _ _ _) =
+    let EnactState {..} = cg
+     in [ "committee" .= ensCommittee
+        , "constitution" .= ensConstitution
+        , "curPParams" .= ensCurPParams
+        , "prevPParams" .= ensPrevPParams
+        , "prevGovActionIds" .= ensPrevGovActionIds
+        ]
 
 deriving instance (Era era, Eq (PParams era)) => Eq (EnactState era)
 
@@ -305,18 +309,19 @@ instance EraPParams era => NFData (RatifyState era)
 
 instance EraPParams era => NoThunks (RatifyState era)
 
-instance EraPParams era => ToJSON (RatifyState era) where
-  toJSON = object . toRatifyStatePairs
-  toEncoding = pairs . mconcat . toRatifyStatePairs
+deriving via
+  KeyValuePairs (RatifyState era)
+  instance
+    EraPParams era => ToJSON (RatifyState era)
 
-toRatifyStatePairs :: (KeyValue e a, EraPParams era) => RatifyState era -> [a]
-toRatifyStatePairs cg@(RatifyState _ _ _ _) =
-  let RatifyState {..} = cg
-   in [ "nextEnactState" .= rsEnactState
-      , "enactedGovActions" .= rsEnacted
-      , "expiredGovActions" .= rsExpired
-      , "ratificationDelayed" .= rsDelayed
-      ]
+instance EraPParams era => ToKeyValuePairs (RatifyState era) where
+  toKeyValuePairs cg@(RatifyState _ _ _ _) =
+    let RatifyState {..} = cg
+     in [ "nextEnactState" .= rsEnactState
+        , "enactedGovActions" .= rsEnacted
+        , "expiredGovActions" .= rsExpired
+        , "ratificationDelayed" .= rsDelayed
+        ]
 
 pparamsUpdateThreshold ::
   forall era.

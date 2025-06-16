@@ -3,7 +3,15 @@
 
   inputs = {
 
-    haskellNix.url = "github:input-output-hk/haskell.nix";
+    hackageNix = {
+      url = "github:input-output-hk/hackage.nix";
+      flake = false;
+    };
+
+    haskellNix = {
+      url = "github:input-output-hk/haskell.nix";
+      inputs.hackage.follows = "hackageNix";
+    };
 
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
@@ -114,7 +122,6 @@
             tools =
               {
                 cabal = "3.14.1.0";
-                ghcid = "0.8.9";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
@@ -130,7 +137,19 @@
                 (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
                 shellcheck
-              ];
+              ] ++
+              (let
+                doctest = haskell-nix.hackage-package {
+                  name = "doctest";
+                  version = "0.24.0";
+                  configureArgs = "-f cabal-doctest";
+                  inherit (config) compiler-nix-name;
+                };
+              in
+                [
+                  (doctest.getComponent "exe:cabal-doctest")
+                  (doctest.getComponent "exe:doctest")
+                ]);
             # disable Hoogle until someone request it
             withHoogle = false;
             # Skip cross compilers for the shell

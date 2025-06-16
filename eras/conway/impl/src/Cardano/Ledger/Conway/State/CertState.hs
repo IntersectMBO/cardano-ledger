@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -22,6 +23,7 @@ module Cardano.Ledger.Conway.State.CertState (
   conwayCertsTotalRefundsTxBody,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
@@ -38,7 +40,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (EpochState (..), esLStateL, lsCertStateL)
 import Cardano.Ledger.Shelley.State
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
@@ -53,6 +55,7 @@ data ConwayCertState era = ConwayCertState
   , conwayCertDState :: !(DState era)
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs (ConwayCertState era)
 
 -- ===================================
 -- VState
@@ -85,13 +88,13 @@ conwayCertVStateL :: Lens' (ConwayCertState era) (VState era)
 conwayCertVStateL = lens conwayCertVState (\ds u -> ds {conwayCertVState = u})
 {-# INLINE conwayCertVStateL #-}
 
-toCertStatePairs :: KeyValue e a => ConwayCertState era -> [a]
-toCertStatePairs certState@(ConwayCertState _ _ _) =
-  let ConwayCertState {..} = certState
-   in [ "dstate" .= conwayCertDState
-      , "pstate" .= conwayCertPState
-      , "vstate" .= conwayCertVState
-      ]
+instance ToKeyValuePairs (ConwayCertState era) where
+  toKeyValuePairs certState@(ConwayCertState _ _ _) =
+    let ConwayCertState {..} = certState
+     in [ "dstate" .= conwayCertDState
+        , "pstate" .= conwayCertPState
+        , "vstate" .= conwayCertVState
+        ]
 
 conwayObligationCertState :: ConwayEraCertState era => CertState era -> Obligations
 conwayObligationCertState certState =
@@ -131,10 +134,6 @@ instance EraCertState ConwayEra where
 instance ConwayEraCertState ConwayEra where
   certVStateL = conwayCertVStateL
   {-# INLINE certVStateL #-}
-
-instance ToJSON (ConwayCertState era) where
-  toJSON = object . toCertStatePairs
-  toEncoding = pairs . mconcat . toCertStatePairs
 
 instance Era era => EncCBOR (ConwayCertState era) where
   encCBOR ConwayCertState {conwayCertPState, conwayCertDState, conwayCertVState} =

@@ -320,7 +320,7 @@ instance HasSpec a => Monoid (Specification a) where
 
 -- | Collect the 'monitor' calls from a specification instantiated to the given value. Typically,
 --
---   >>> quickCheck $ forAll (genFromSpec spec) $ \ x -> monitorSpec spec x $ ...
+--   > quickCheck $ forAll (genFromSpec spec) $ \ x -> monitorSpec spec x $ ...
 monitorSpec :: Testable p => Specification a -> a -> p -> Property
 monitorSpec (SuspendedSpec x p) a =
   errorGE (monitorPred (singletonEnv x a) p) . property

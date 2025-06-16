@@ -1,5 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Babbage.Era (
   BabbageEra,
@@ -13,6 +18,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
+import Cardano.Ledger.Internal.Era (BabbageEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
@@ -27,9 +33,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 -- =====================================================
-
--- | The Babbage era
-data BabbageEra
 
 instance Era BabbageEra where
   type PreviousEra BabbageEra = AlonzoEra

@@ -8,23 +8,23 @@ and onwards, the $\ValMonoid$ is $\Value$, rather than $\Coin$ (as in Allegra). 
 can potentially be arbitrarily large, so the ledger requires each $\UTxO$ entry to
 contain a minimum amount of Ada, proportional to its size.
 
-There is also another $\Value_C$ size consideration with respect to spendability
+There is also another $\Value$ size consideration with respect to spendability
 of an output. The restriction on the total serialized size of the transaction (set
 by the parameter $\var{maxTxSize}$) serves as an implicit upper bound on the
-size of a $\Value_C$ contained in an output of a transaction. Without tighter
-limits on the output $\Value_C$ size, one of the following situations could arise,
-causing the output to be come unspendable (these are just a two examples) :
+size of a $\Value$ contained in an output of a transaction. Without tighter
+limits on the output $\Value$ size, one of the following situations could arise,
+causing the output to become unspendable (these are just a two examples):
 
 \begin{itemize}
-  \item The script locking the very large $\Value_C$-containing UTxO is too large
-  to fit inside the transaction alongside the $\Value_C$ itself while still respecting
+  \item The script locking the very large $\Value$-containing UTxO is too large
+  to fit inside the transaction alongside the $\Value$ itself while still respecting
   the max transaction size
-  \item The large $\Value_C$ cannot be split into several outputs, because the
+  \item The large $\Value$ cannot be split into several outputs, because the
   outputs are impossible to fit inside a single transaction
 \end{itemize}
 
 The same considerations apply for any underlying $\ValMonoid$ we choose to fix.
-In the ShelleyMA eras, the two types that are used to define concrete ledgers are $\Coin$ and $\Value_C$.
+In the ShelleyMA eras, the two types that are used to define concrete ledgers are $\Coin$ and $\Value$.
 The size calculations for $\Coin$, in practice,
 result in either trivial restrictions in the ledger rules,
 or ones that align with Shelley (as discussed in Section \ref{sec:utxo}).
@@ -33,7 +33,7 @@ or ones that align with Shelley (as discussed in Section \ref{sec:utxo}).
 
 Figure \ref{fig:size-helper} contains abstract and helper functions
 used in calculating the in-memory and serialized representation
-sizes of $\Value_C$ elements.
+sizes of $\Value$ elements.
 
 \begin{figure*}[h]
   \emph{Abstract Functions}
@@ -52,17 +52,17 @@ sizes of $\Value_C$ elements.
     & \fun{serSize}~v=\lvert \fun{serialize}~{v} \rvert \\
     & \text{Gives the size of the serialized representation of a $\ValMonoid$}
     & \nextdef
-    & \fun{numAssets} \in \Value_C \to \N \\
+    & \fun{numAssets} \in \Value \to \N \\
     & \fun{numAssets}~{vl}=\lvert \{~(pid, an)~\vert~ pid \mapsto (an \mapsto \wcard) \in vl~\} \rvert \\
-    & \text{Returns the number of distinct asset IDs in a $\Value_C$}
+    & \text{Returns the number of distinct asset IDs in a $\Value$}
     & \nextdef
-    & \fun{sumALs} \in \Value_C \to \N \\
+    & \fun{sumALs} \in \Value \to \N \\
     & \fun{sumALs}~{vl}= \sum_{\{~an~\vert~\wcard~\mapsto~(an~\mapsto~\wcard)~\in~vl~\}} \fun{anameLen}~an \\
-    & \text{Returns the sum of the lengths (in bytes) of distinct asset names in a $\Value_C$}
+    & \text{Returns the sum of the lengths (in bytes) of distinct asset names in a $\Value$}
     & \nextdef
-    & \fun{numPids} \in \Value_C \to \N \\
+    & \fun{numPids} \in \Value \to \N \\
     & \fun{numPids}~{vl} = \lvert \fun{pids}~{vl} \rvert \\
-    & \text{The number of policy IDs in a $\Value_C$}
+    & \text{The number of policy IDs in a $\Value$}
   \end{align*}
   \caption{Value Size Helper Functions}
   \label{fig:size-helper}
@@ -78,12 +78,12 @@ The function $\fun{serSize}$ returns the actual number of bytes in the bytestrin
     serialized representation of a $\ValMonoid$ element. The specific underlying $\ValMonoid$
     is required to be serializable in every era.
 
-    The $\fun{serSize}$ function is used constrain
+    The $\fun{serSize}$ function is used to constrain
     the serialized representation of the transaction (in particular, the size
-    of $\Value_C$ elements in outputs), whereas the min-Ada requirement is a calculation based on
+    of $\Value$ elements in outputs), whereas the min-Ada requirement is a calculation based on
     the in-memory representation size. A transparently-calculated size estimate
     is not necessary for limiting the size of values in outputs, since this size-bound
-    check does not place any additional accounting/monetary constranits on transaction construction,
+    check does not place any additional accounting/monetary constraints on transaction construction,
     unlike the min-Ada requirement.
 
 \subsection{Min UTxO Value}
@@ -105,14 +105,14 @@ of the size of a UTxO entry, and the associated min-Ada-value.
   %
   \emph{Size and Min-Ada Functions}
   \begin{align*}
-    & \fun{size} \in \Value_C \to \MemoryEstimate \\
+    & \fun{size} \in \Value \to \MemoryEstimate \\
     & \fun{size}~\var{vl} =
     \begin{cases}
       k_0 & \fun{isAdaOnly}~vl\\
       k_1 + \lfloor~ \fun{numAssets}~vl * k_2 + \fun{sumALs}~vl & \\
       ~~~~~~ + \fun{numPids}~vl * k_3 + k_4 - 1 /~ k_4~\rfloor & \text{otherwise} \\
     \end{cases} \\
-    & \text{Calculate the size of a $\Value_C$}
+    & \text{Calculate the size of a $\Value$}
     \nextdef
     & \fun{coinsPerUTxOWord}\in \Coin \to \Coin \\
     & \fun{coinsPerUTxOWord}~\var{mv} = \lfloor~ \var{mv}~/~ \mathsf{adaOnlyUTxOSize}~ \rfloor \\
@@ -126,12 +126,12 @@ of the size of a UTxO entry, and the associated min-Ada-value.
 \label{fig:min-val-calc}
 \end{figure*}
 
-The $\fun{size}$ function returns the estimated size of a $\Value_C$ element. The size
+The $\fun{size}$ function returns the estimated size of a $\Value$ element. The size
 function on $\Value$ is defined via the isomorphism in Section \ref{sec:coin-value},
 
 \[ \fun{size}_{\Value}~v=\fun{size}~(\fun{iso}_{v}~v) \]
 
-The size of a $\Value_C$ element is constant in the case when it contains only Ada.
+The size of a $\Value$ element is constant in the case when it contains only Ada.
 If there are other types of assets contained in it, the size depends on
 
 \begin{itemize}

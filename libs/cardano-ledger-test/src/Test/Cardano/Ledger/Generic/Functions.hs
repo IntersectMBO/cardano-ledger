@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Generic.Functions where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, mkSupportedLanguageM)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
@@ -203,9 +203,9 @@ maxRefInputs Babbage = 3
 maxRefInputs _ = 0
 
 isValid' :: Proof era -> Tx era -> IsValid
-isValid' Conway x = isValid x
-isValid' Babbage x = isValid x
-isValid' Alonzo x = isValid x
+isValid' Conway x = x ^. isValidTxL
+isValid' Babbage x = x ^. isValidTxL
+isValid' Alonzo x = x ^. isValidTxL
 isValid' _ _ = IsValid True
 {-# NOINLINE isValid' #-}
 

@@ -2,6 +2,15 @@
 
 ## 1.14.0.0
 
+* Added `COMPLETE` pragma for `TxCert AlonzoEra`
+* Added `COMPLETE` pragma for `NativeScript AlonzoEra`
+* Deprecated `toAlonzoGenesisPairs`
+* Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
+* Renamed fields of `AlonzoTx`
+  * `body` to `atBody`
+  * `wits` to `atWits`
+  * `auxiliaryData` to `atAuxData`
+  * `isValid` to `atIsValid`
 * Added `Generic` instance for `AlonzoScriptsNeeded`
 * Move to `testlib` `DecCBOR` instances for: `AlonzoTxSeq`, `AlonzoTx`, `TxBody AlonzoEra`, `AlonzoTxAuxDataRaw`, `AlonzoTxAuxData`, `AlonzoScript`, `AlonzoTxWitsRaw`, `AlonzoTxWits`, `RedeemersRaw`, `Redeemers`, `TxDatsRaw`, `TxDats`
 * Added to `PParams`: `ppCollateralPercentage`,`ppCostModels`,`ppMaxBlockExUnits`,`ppMaxCollateralInputs`,`ppMaxTxExUnits`,`ppMaxValSize`,`ppPrices`

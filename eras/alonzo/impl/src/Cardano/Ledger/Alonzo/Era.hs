@@ -1,5 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Era (
   AlonzoEra,
@@ -10,14 +15,12 @@ module Cardano.Ledger.Alonzo.Era (
   AlonzoLEDGER,
 ) where
 
+import Cardano.Ledger.Internal.Era (AlonzoEra)
 import Cardano.Ledger.Mary (MaryEra, MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
-
--- | The Alonzo era
-data AlonzoEra
 
 instance Era AlonzoEra where
   type PreviousEra AlonzoEra = MaryEra

@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -85,7 +86,9 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   AnchorData (..),
+  KeyValuePairs (..),
   ProtVer,
+  ToKeyValuePairs (..),
   UnitInterval,
   maybeToStrictMaybe,
  )
@@ -132,8 +135,6 @@ import Data.Aeson (
   KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
-  object,
-  pairs,
   withObject,
   (.:),
   (.:?),
@@ -173,6 +174,7 @@ data GovActionId = GovActionId
   , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Show, Eq, Ord)
+  deriving (ToJSON) via KeyValuePairs GovActionId
 
 instance DecCBOR GovActionId where
   decCBOR =
@@ -192,16 +194,12 @@ instance NoThunks GovActionId
 
 instance NFData GovActionId
 
-instance ToJSON GovActionId where
-  toJSON = object . toGovActionIdPairs
-  toEncoding = pairs . mconcat . toGovActionIdPairs
-
-toGovActionIdPairs :: KeyValue e a => GovActionId -> [a]
-toGovActionIdPairs gaid@(GovActionId _ _) =
-  let GovActionId {..} = gaid
-   in [ "txId" .= gaidTxId
-      , "govActionIx" .= gaidGovActionIx
-      ]
+instance ToKeyValuePairs GovActionId where
+  toKeyValuePairs gaid@(GovActionId _ _) =
+    let GovActionId {..} = gaid
+     in [ "txId" .= gaidTxId
+        , "govActionIx" .= gaidGovActionIx
+        ]
 
 instance ToJSONKey GovActionId where
   toJSONKey = toJSONKeyText govActionIdToText
@@ -263,21 +261,22 @@ gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
 gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
 gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 
-instance EraPParams era => ToJSON (GovActionState era) where
-  toJSON = object . toGovActionStatePairs
-  toEncoding = pairs . mconcat . toGovActionStatePairs
+deriving via
+  KeyValuePairs (GovActionState era)
+  instance
+    EraPParams era => ToJSON (GovActionState era)
 
-toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _) =
-  let GovActionState {..} = gas
-   in [ "actionId" .= gasId
-      , "committeeVotes" .= gasCommitteeVotes
-      , "dRepVotes" .= gasDRepVotes
-      , "stakePoolVotes" .= gasStakePoolVotes
-      , "proposalProcedure" .= gasProposalProcedure
-      , "proposedIn" .= gasProposedIn
-      , "expiresAfter" .= gasExpiresAfter
-      ]
+instance EraPParams era => ToKeyValuePairs (GovActionState era) where
+  toKeyValuePairs gas@(GovActionState _ _ _ _ _ _ _) =
+    let GovActionState {..} = gas
+     in [ "actionId" .= gasId
+        , "committeeVotes" .= gasCommitteeVotes
+        , "dRepVotes" .= gasDRepVotes
+        , "stakePoolVotes" .= gasStakePoolVotes
+        , "proposalProcedure" .= gasProposalProcedure
+        , "proposedIn" .= gasProposedIn
+        , "expiresAfter" .= gasExpiresAfter
+        ]
 
 deriving instance EraPParams era => Eq (GovActionState era)
 
@@ -463,16 +462,17 @@ instance Era era => EncCBOR (VotingProcedure era) where
         !> To vProcVote
         !> E (encodeNullStrictMaybe encCBOR) vProcAnchor
 
-instance EraPParams era => ToJSON (VotingProcedure era) where
-  toJSON = object . toVotingProcedurePairs
-  toEncoding = pairs . mconcat . toVotingProcedurePairs
+deriving via
+  KeyValuePairs (VotingProcedure era)
+  instance
+    EraPParams era => ToJSON (VotingProcedure era)
 
-toVotingProcedurePairs :: KeyValue e a => VotingProcedure era -> [a]
-toVotingProcedurePairs vProc@(VotingProcedure _ _) =
-  let VotingProcedure {..} = vProc
-   in [ "anchor" .= vProcAnchor
-      , "decision" .= vProcVote
-      ]
+instance EraPParams era => ToKeyValuePairs (VotingProcedure era) where
+  toKeyValuePairs vProc@(VotingProcedure _ _) =
+    let VotingProcedure {..} = vProc
+     in [ "anchor" .= vProcAnchor
+        , "decision" .= vProcVote
+        ]
 
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
@@ -527,18 +527,19 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcGovAction
         !> To pProcAnchor
 
-instance EraPParams era => ToJSON (ProposalProcedure era) where
-  toJSON = object . toProposalProcedurePairs
-  toEncoding = pairs . mconcat . toProposalProcedurePairs
+deriving via
+  KeyValuePairs (ProposalProcedure era)
+  instance
+    EraPParams era => ToJSON (ProposalProcedure era)
 
-toProposalProcedurePairs :: (KeyValue e a, EraPParams era) => ProposalProcedure era -> [a]
-toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
-  let ProposalProcedure {..} = proposalProcedure
-   in [ "deposit" .= pProcDeposit
-      , "returnAddr" .= pProcReturnAddr
-      , "govAction" .= pProcGovAction
-      , "anchor" .= pProcAnchor
-      ]
+instance EraPParams era => ToKeyValuePairs (ProposalProcedure era) where
+  toKeyValuePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
+    let ProposalProcedure {..} = proposalProcedure
+     in [ "deposit" .= pProcDeposit
+        , "returnAddr" .= pProcReturnAddr
+        , "govAction" .= pProcGovAction
+        , "anchor" .= pProcAnchor
+        ]
 
 data Committee era = Committee
   { committeeMembers :: !(Map (Credential 'ColdCommitteeRole) EpochNo)
@@ -547,6 +548,7 @@ data Committee era = Committee
   -- ^ Threshold of the committee that is necessary for a successful vote
   }
   deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs (Committee era)
 
 instance Era era => NoThunks (Committee era)
 
@@ -577,10 +579,6 @@ instance Era era => EncCBOR (Committee era) where
         !> To committeeMembers
         !> To committeeThreshold
 
-instance EraPParams era => ToJSON (Committee era) where
-  toJSON = object . toCommitteePairs
-  toEncoding = pairs . mconcat . toCommitteePairs
-
 instance Era era => FromJSON (Committee era) where
   parseJSON = withObject "Committee" parseCommittee
     where
@@ -589,12 +587,12 @@ instance Era era => FromJSON (Committee era) where
           <$> (forceElemsToWHNF <$> o .: "members")
           <*> o .: "threshold"
 
-toCommitteePairs :: KeyValue e a => Committee era -> [a]
-toCommitteePairs committee@(Committee _ _) =
-  let Committee {..} = committee
-   in [ "members" .= committeeMembers
-      , "threshold" .= committeeThreshold
-      ]
+instance ToKeyValuePairs (Committee era) where
+  toKeyValuePairs committee@(Committee _ _) =
+    let Committee {..} = committee
+     in [ "members" .= committeeMembers
+        , "threshold" .= committeeThreshold
+        ]
 
 data GovActionPurpose
   = PParamUpdatePurpose
@@ -629,63 +627,63 @@ isGovActionWithPurpose govAction =
     NewConstitution {} -> toGovActionPurpose @p == ConstitutionPurpose
     InfoAction -> False
 
-newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
+newtype GovPurposeId (p :: GovActionPurpose) = GovPurposeId
   { unGovPurposeId :: GovActionId
   }
   deriving (Eq, Ord, Generic)
 
-type role GovPurposeId nominal nominal
+type role GovPurposeId nominal
 
 deriving newtype instance
-  (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
+  Typeable p => EncCBOR (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance
-  (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
+  Typeable p => DecCBOR (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => NoThunks (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance NoThunks (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => NFData (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance NFData (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => ToJSONKey (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance ToJSONKey (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => ToJSON (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance ToJSON (GovPurposeId (p :: GovActionPurpose))
 
-deriving newtype instance Era era => Show (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Show (GovPurposeId (p :: GovActionPurpose))
 
 -- | Abstract data type for representing relationship of governance action with the same purpose
-data GovRelation (f :: Type -> Type) era = GovRelation
-  { grPParamUpdate :: !(f (GovPurposeId 'PParamUpdatePurpose era))
-  , grHardFork :: !(f (GovPurposeId 'HardForkPurpose era))
-  , grCommittee :: !(f (GovPurposeId 'CommitteePurpose era))
-  , grConstitution :: !(f (GovPurposeId 'ConstitutionPurpose era))
+data GovRelation (f :: Type -> Type) = GovRelation
+  { grPParamUpdate :: !(f (GovPurposeId 'PParamUpdatePurpose))
+  , grHardFork :: !(f (GovPurposeId 'HardForkPurpose))
+  , grCommittee :: !(f (GovPurposeId 'CommitteePurpose))
+  , grConstitution :: !(f (GovPurposeId 'ConstitutionPurpose))
   }
   deriving (Generic)
 
 deriving instance
-  (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Eq (GovRelation f era)
+  (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Eq (GovRelation f)
 
 deriving instance
-  (forall p. Show (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Show (GovRelation f era)
+  (forall p. Show (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Show (GovRelation f)
 
 instance
-  (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NoThunks (GovRelation f era)
+  (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  NoThunks (GovRelation f)
 
 instance
-  (forall p. Default (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Default (GovRelation f era)
+  (forall p. Default (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Default (GovRelation f)
 
 instance
-  (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NFData (GovRelation f era)
+  (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  NFData (GovRelation f)
   where
   rnf (GovRelation a b c d) = a `deepseq` b `deepseq` c `deepseq` rnf d
 
 instance
-  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Semigroup (GovRelation f era)
+  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Semigroup (GovRelation f)
   where
   (<>) p1 p2 =
     GovRelation
@@ -696,8 +694,8 @@ instance
       }
 
 instance
-  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Monoid (GovRelation f era)
+  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Monoid (GovRelation f)
   where
   mempty =
     GovRelation
@@ -708,11 +706,10 @@ instance
       }
 
 instance
-  ( Era era
-  , Typeable f
-  , (forall p. Typeable p => DecCBOR (f (GovPurposeId (p :: GovActionPurpose) era)))
+  ( Typeable f
+  , (forall p. Typeable p => DecCBOR (f (GovPurposeId (p :: GovActionPurpose))))
   ) =>
-  DecCBOR (GovRelation f era)
+  DecCBOR (GovRelation f)
   where
   decCBOR =
     decodeRecordNamed
@@ -721,11 +718,10 @@ instance
       (GovRelation <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR)
 
 instance
-  ( Era era
-  , Typeable f
-  , (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose) era)))
+  ( Typeable f
+  , (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose))))
   ) =>
-  EncCBOR (GovRelation f era)
+  EncCBOR (GovRelation f)
   where
   encCBOR govPurpose@(GovRelation _ _ _ _) =
     let GovRelation {..} = govPurpose
@@ -735,40 +731,36 @@ instance
           <> encCBOR grCommittee
           <> encCBOR grConstitution
 
-toPrevGovActionIdsPairs ::
-  ( KeyValue e a
-  , (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose) era)))
-  ) =>
-  GovRelation f era ->
-  [a]
-toPrevGovActionIdsPairs govPurpose@(GovRelation _ _ _ _) =
-  let GovRelation {..} = govPurpose
-   in [ "PParamUpdate" .= grPParamUpdate
-      , "HardFork" .= grHardFork
-      , "Committee" .= grCommittee
-      , "Constitution" .= grConstitution
-      ]
-
 instance
-  (Era era, (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose) era)))) =>
-  ToJSON (GovRelation f era)
+  (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  ToKeyValuePairs (GovRelation f)
   where
-  toJSON = object . toPrevGovActionIdsPairs
-  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
+  toKeyValuePairs govPurpose@(GovRelation _ _ _ _) =
+    let GovRelation {..} = govPurpose
+     in [ "PParamUpdate" .= grPParamUpdate
+        , "HardFork" .= grHardFork
+        , "Committee" .= grCommittee
+        , "Constitution" .= grConstitution
+        ]
 
-grPParamUpdateL :: Lens' (GovRelation f era) (f (GovPurposeId 'PParamUpdatePurpose era))
+deriving via
+  KeyValuePairs (GovRelation f)
+  instance
+    (forall p. ToJSON (f (GovPurposeId (p :: GovActionPurpose)))) => ToJSON (GovRelation f)
+
+grPParamUpdateL :: Lens' (GovRelation f) (f (GovPurposeId 'PParamUpdatePurpose))
 grPParamUpdateL = lens grPParamUpdate $ \x y -> x {grPParamUpdate = y}
 
-grHardForkL :: Lens' (GovRelation f era) (f (GovPurposeId 'HardForkPurpose era))
+grHardForkL :: Lens' (GovRelation f) (f (GovPurposeId 'HardForkPurpose))
 grHardForkL = lens grHardFork $ \x y -> x {grHardFork = y}
 
-grCommitteeL :: Lens' (GovRelation f era) (f (GovPurposeId 'CommitteePurpose era))
+grCommitteeL :: Lens' (GovRelation f) (f (GovPurposeId 'CommitteePurpose))
 grCommitteeL = lens grCommittee $ \x y -> x {grCommittee = y}
 
-grConstitutionL :: Lens' (GovRelation f era) (f (GovPurposeId 'ConstitutionPurpose era))
+grConstitutionL :: Lens' (GovRelation f) (f (GovPurposeId 'ConstitutionPurpose))
 grConstitutionL = lens grConstitution $ \x y -> x {grConstitution = y}
 
-hoistGovRelation :: (forall a. f a -> g a) -> GovRelation f era -> GovRelation g era
+hoistGovRelation :: (forall a. f a -> g a) -> GovRelation f -> GovRelation g
 hoistGovRelation f gr =
   GovRelation
     { grPParamUpdate = f (grPParamUpdate gr)
@@ -784,9 +776,9 @@ withGovActionParent ::
   a ->
   -- | Function that will be applied to a lens and a parent
   ( forall p.
-    (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
-    StrictMaybe (GovPurposeId p era) -> -- GovAction Parent
-    GovPurposeId p era ->
+    (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
+    StrictMaybe (GovPurposeId p) -> -- GovAction Parent
+    GovPurposeId p ->
     a
   ) ->
   a
@@ -806,7 +798,7 @@ data GovAction era
   = ParameterChange
       -- | Previous governance action id of `ParameterChange` type, which corresponds to
       -- `PParamUpdatePurpose`.
-      !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+      !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
       -- | Proposed changes to PParams
       !(PParamsUpdate era)
       -- | Policy hash protection
@@ -814,7 +806,7 @@ data GovAction era
   | HardForkInitiation
       -- | Previous governance action id of `HardForkInitiation` type, which corresponds
       -- to `HardForkPurpose`
-      !(StrictMaybe (GovPurposeId 'HardForkPurpose era))
+      !(StrictMaybe (GovPurposeId 'HardForkPurpose))
       -- | Proposed new protocol version
       !ProtVer
   | TreasuryWithdrawals
@@ -825,11 +817,11 @@ data GovAction era
   | NoConfidence
       -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose))
   | UpdateCommittee
       -- | Previous governance action id of `UpdateCommittee` or `NoConfidence` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose))
       -- | Constitutional Committe members to be removed
       !(Set (Credential 'ColdCommitteeRole))
       -- | Constitutional committee members to be added
@@ -839,7 +831,7 @@ data GovAction era
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to
       -- `ConstitutionPurpose`
-      !(StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+      !(StrictMaybe (GovPurposeId 'ConstitutionPurpose))
       !(Constitution era)
   | InfoAction
   deriving (Generic, Ord)
@@ -906,6 +898,7 @@ data Constitution era = Constitution
   , constitutionScript :: !(StrictMaybe ScriptHash)
   }
   deriving (Generic, Ord)
+  deriving (ToJSON) via KeyValuePairs (Constitution era)
 
 constitutionAnchorL :: Lens' (Constitution era) Anchor
 constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})
@@ -913,21 +906,17 @@ constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y
 constitutionScriptL :: Lens' (Constitution era) (StrictMaybe ScriptHash)
 constitutionScriptL = lens constitutionScript (\x y -> x {constitutionScript = y})
 
-instance Era era => ToJSON (Constitution era) where
-  toJSON = object . toConstitutionPairs
-  toEncoding = pairs . mconcat . toConstitutionPairs
-
 instance Era era => FromJSON (Constitution era) where
   parseJSON = withObject "Constitution" $ \o ->
     Constitution
       <$> o .: "anchor"
       <*> (maybeToStrictMaybe <$> (o .:? "script"))
 
-toConstitutionPairs :: KeyValue e a => Constitution era -> [a]
-toConstitutionPairs c@(Constitution _ _) =
-  let Constitution {..} = c
-   in ["anchor" .= constitutionAnchor]
-        <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
+instance ToKeyValuePairs (Constitution era) where
+  toKeyValuePairs c@(Constitution _ _) =
+    let Constitution {..} = c
+     in ["anchor" .= constitutionAnchor]
+          <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
 
 deriving instance Eq (Constitution era)
 

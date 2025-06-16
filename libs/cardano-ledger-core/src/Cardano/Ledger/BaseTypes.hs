@@ -84,6 +84,10 @@ module Cardano.Ledger.BaseTypes (
   -- * Injection
   Inject (..),
   positiveUnitIntervalNonZeroRational,
+
+  -- * Aeson helpers
+  KeyValuePairs (..),
+  ToKeyValuePairs (..),
 ) where
 
 import Cardano.Crypto.Hash
@@ -890,6 +894,7 @@ data Anchor = Anchor
   , anchorDataHash :: !(SafeHash AnchorData)
   }
   deriving (Eq, Ord, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs Anchor
 
 instance NoThunks Anchor
 
@@ -910,25 +915,21 @@ instance EncCBOR Anchor where
         !> To anchorUrl
         !> To anchorDataHash
 
-instance ToJSON Anchor where
-  toJSON = object . toAnchorPairs
-  toEncoding = pairs . mconcat . toAnchorPairs
-
 instance FromJSON Anchor where
   parseJSON = withObject "Anchor" $ \o -> do
     anchorUrl <- o .: "url"
     anchorDataHash <- o .: "dataHash"
     pure $ Anchor {..}
 
+instance ToKeyValuePairs Anchor where
+  toKeyValuePairs vote@(Anchor _ _) =
+    let Anchor {..} = vote
+     in [ "url" .= anchorUrl
+        , "dataHash" .= anchorDataHash
+        ]
+
 instance Default Anchor where
   def = Anchor (Url "") def
-
-toAnchorPairs :: KeyValue e a => Anchor -> [a]
-toAnchorPairs vote@(Anchor _ _) =
-  let Anchor {..} = vote
-   in [ "url" .= anchorUrl
-      , "dataHash" .= anchorDataHash
-      ]
 
 instance Default Network where
   def = Mainnet
@@ -945,3 +946,12 @@ kindObject name obj = object $ ("kind" .= name) : obj
 
 positiveUnitIntervalNonZeroRational :: PositiveUnitInterval -> NonZero Rational
 positiveUnitIntervalNonZeroRational = unsafeNonZero . unboundRational
+
+class ToKeyValuePairs a where
+  toKeyValuePairs :: KeyValue e kv => a -> [kv]
+
+newtype KeyValuePairs a = KeyValuePairs {unKeyValuePairs :: a}
+
+instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
+  toJSON = object . toKeyValuePairs . unKeyValuePairs
+  toEncoding = pairs . mconcat . toKeyValuePairs . unKeyValuePairs

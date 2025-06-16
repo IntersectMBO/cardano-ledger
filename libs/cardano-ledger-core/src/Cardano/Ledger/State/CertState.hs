@@ -49,7 +49,13 @@ module Cardano.Ledger.State.CertState (
   psDepositsL,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
+import Cardano.Ledger.BaseTypes (
+  Anchor (..),
+  AnchorData,
+  KeyValuePairs (..),
+  StrictMaybe,
+  ToKeyValuePairs (..),
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -78,7 +84,7 @@ import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolU
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Kind (Type)
@@ -132,22 +138,19 @@ data InstantaneousRewards = InstantaneousRewards
   , deltaTreasury :: !DeltaCoin
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs InstantaneousRewards
 
 instance NoThunks InstantaneousRewards
 
 instance NFData InstantaneousRewards
 
-instance ToJSON InstantaneousRewards where
-  toJSON = object . toInstantaneousRewardsPair
-  toEncoding = pairs . mconcat . toInstantaneousRewardsPair
-
-toInstantaneousRewardsPair :: KeyValue e a => InstantaneousRewards -> [a]
-toInstantaneousRewardsPair InstantaneousRewards {..} =
-  [ "iRReserves" .= iRReserves
-  , "iRTreasury" .= iRTreasury
-  , "deltaReserves" .= deltaReserves
-  , "deltaTreasury" .= deltaTreasury
-  ]
+instance ToKeyValuePairs InstantaneousRewards where
+  toKeyValuePairs InstantaneousRewards {..} =
+    [ "iRReserves" .= iRReserves
+    , "iRTreasury" .= iRTreasury
+    , "deltaReserves" .= deltaReserves
+    , "deltaTreasury" .= deltaTreasury
+    ]
 
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
@@ -164,6 +167,7 @@ data DState era = DState
   -- ^ Instantaneous Rewards
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs (DState era)
 
 instance NoThunks (DState era)
 
@@ -189,17 +193,13 @@ instance DecShareCBOR (DState era) where
       ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
-instance ToJSON (DState era) where
-  toJSON = object . toDStatePair
-  toEncoding = pairs . mconcat . toDStatePair
-
-toDStatePair :: KeyValue e a => DState era -> [a]
-toDStatePair DState {..} =
-  [ "unified" .= dsUnified
-  , "fGenDelegs" .= Map.toList dsFutureGenDelegs
-  , "genDelegs" .= dsGenDelegs
-  , "irwd" .= dsIRewards
-  ]
+instance ToKeyValuePairs (DState era) where
+  toKeyValuePairs DState {..} =
+    [ "unified" .= dsUnified
+    , "fGenDelegs" .= Map.toList dsFutureGenDelegs
+    , "genDelegs" .= dsGenDelegs
+    , "irwd" .= dsIRewards
+    ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
 lookupDepositDState :: DState era -> (StakeCredential -> Maybe Coin)
@@ -233,6 +233,7 @@ data PState era = PState
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs (PState era)
 
 instance NoThunks (PState era)
 
@@ -254,17 +255,13 @@ instance DecShareCBOR (PState era) where
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
-instance ToJSON (PState era) where
-  toJSON = object . toPStatePair
-  toEncoding = pairs . mconcat . toPStatePair
-
-toPStatePair :: KeyValue e a => PState era -> [a]
-toPStatePair PState {..} =
-  [ "stakePoolParams" .= psStakePoolParams
-  , "futureStakePoolParams" .= psFutureStakePoolParams
-  , "retiring" .= psRetiring
-  , "deposits" .= psDeposits
-  ]
+instance ToKeyValuePairs (PState era) where
+  toKeyValuePairs PState {..} =
+    [ "stakePoolParams" .= psStakePoolParams
+    , "futureStakePoolParams" .= psFutureStakePoolParams
+    , "retiring" .= psRetiring
+    , "deposits" .= psDeposits
+    ]
 
 data CommitteeAuthorization
   = -- | Member authorized with a Hot credential acting on behalf of their Cold credential

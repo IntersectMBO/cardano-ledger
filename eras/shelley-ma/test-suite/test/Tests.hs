@@ -10,6 +10,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
+import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
@@ -25,6 +26,7 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTra
   onlyValidChainSignalsAreGenerated,
   relevantCasesAreCovered,
  )
+import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
@@ -85,8 +87,12 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        (Shelley.commonTests @AllegraEra @(ShelleyLEDGER AllegraEra))
+        ( Shelley.commonTests @AllegraEra @(ShelleyLEDGER AllegraEra)
+            ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AllegraEra)]
+        )
     , testGroup
         "Mary Ledger - nightly"
-        (Shelley.commonTests @MaryEra @(ShelleyLEDGER MaryEra))
+        ( Shelley.commonTests @MaryEra @(ShelleyLEDGER MaryEra)
+            ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy MaryEra)]
+        )
     ]

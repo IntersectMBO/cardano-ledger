@@ -1,5 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Shelley.Era (
   ShelleyEra,
@@ -27,8 +32,7 @@ module Cardano.Ledger.Shelley.Era (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
-
-data ShelleyEra
+import Cardano.Ledger.Internal.Era (ShelleyEra)
 
 instance Era ShelleyEra where
   type PreviousEra ShelleyEra = ByronEra

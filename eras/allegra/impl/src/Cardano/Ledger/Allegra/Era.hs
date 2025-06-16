@@ -1,9 +1,14 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Allegra.Era (
   AllegraEra,
@@ -13,12 +18,10 @@ module Cardano.Ledger.Allegra.Era (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
+import Cardano.Ledger.Internal.Era (AllegraEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
-
--- | The Allegra era
-data AllegraEra
 
 instance Era AllegraEra where
   type PreviousEra AllegraEra = ShelleyEra

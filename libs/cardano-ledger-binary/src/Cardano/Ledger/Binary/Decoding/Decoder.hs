@@ -358,9 +358,10 @@ originalBytesExpectedFailureMessage =
 
 -- | Extract current version of the decoder
 --
--- >>> import Cardano.Ledger.Decoding
--- >>> decodeFullDecoder 3 "Version" getDecoderVersion ""
--- Right 3
+-- >>> :set -XOverloadedStrings -XTypeApplications -XDataKinds
+-- >>> import Cardano.Ledger.Binary.Decoding
+-- >>> decodeFullDecoder (natVersion @3) "Version" getDecoderVersion ""
+-- Right (Version 3)
 getDecoderVersion :: Decoder s Version
 getDecoderVersion = Decoder $ \_ -> pure
 {-# INLINE getDecoderVersion #-}
@@ -376,8 +377,9 @@ getDecoderVersion = Decoder $ \_ -> pure
 -- we change the type, but we also use this condition to keep backwards compatibility of
 -- the decoder:
 --
+-- >>> :set -XTypeApplications -XDataKinds
 -- >>> newtype Foo = Foo Word32
--- >>> decFoo = Foo <$> ifDecoderVersionAtLeast 2 decodeWord32 (fromIntegral <$> decodeWord16)
+-- >>> decFoo = Foo <$> ifDecoderVersionAtLeast (natVersion @2) decodeWord32 (fromIntegral <$> decodeWord16)
 ifDecoderVersionAtLeast ::
   Version ->
   -- | Use this decoder if current decoder version is larger or equal to the supplied
@@ -750,13 +752,13 @@ decodeCollectionWithLen lenOrIndef decodeElement =
 --
 -- An example of how to use versioning
 --
--- >>> :set -XOverloadedStrings
+-- >>> :set -XOverloadedStrings -XTypeApplications -XDataKinds
 -- >>> import Codec.CBOR.FlatTerm
--- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @1) (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
--- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @1) (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Left "decodeMapLen: unexpected token TkMapBegin"
--- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @2) (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
 decodeMap ::
   Ord k =>

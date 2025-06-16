@@ -2,9 +2,31 @@
 
 ## 1.20.0.0
 
+* Added `COMPLETE` pragma for `NativeScript ConwayEra`
+* Add default implementation for `tcConwayGenesisL`
+* Remove `tcDelegsL` and `tcInitialDRepsL`
+* Export `registerDRepsThenDelegs`
+* Deprecated `toUpgradeConwayPParamsUpdatePairs` and `toConwayGenesisPairs`
+* Add:
+  * `alonzoToConwayUtxosPredFailure`
+  * `alonzoToConwayUtxosEvent`
+  * `getConwayScriptsNeeded`
+  * `getConwayMinFeeTxUtxo`
+  * `getConwayMinFeeTx`
+  * `conwayRedeemerPointer`
+  * `conwayRedeemerPointerInverse`
+  * `transMintValue`
+  * `transTxBodyId`
+  * `transVotingProcedures`
+  * `transProposal`
+  * `transTxCertV1V2`
+  * `transPlutusPurposeV1V2`
+  * `guardConwayFeaturesForPlutusV1V2`
+  * `transTxInInfoV3`
+* Remove era parametrization from `GovPurposeId`, `GovRelation`
 * Move to `testlib` the `DecCBOR` instance for `TxBody ConwayEra`
 * Add `ReferenceInputsNotDisjointFromInputs`
-- Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
+* Remove `ConwayNewEpochPredFailure` and replace it with `Void`. #5007
 * Added to `PParams`: `ppCommitteeMaxTermLength`,`ppCommitteeMinSize`,`ppDRepActivity`,`ppDRepDeposit`,`ppDRepVotingThresholds`,`ppGovActionDeposit`,`ppGovActionLifetime`,`ppGovProtocolVersion`,`ppMinFeeRefScriptCostPerByte`,`ppPoolVotingThresholds`
 * Moved `ConwayEraPlutusTxInfo` class from `Context` module to `TxInfo`
 * Removed `Cardano.Ledger.Conway.Plutus.Context` module

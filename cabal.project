@@ -33,8 +33,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-04-09T21:04:18Z
-  , cardano-haskell-packages 2025-05-15T11:03:46Z
+  , hackage.haskell.org 2025-06-11T21:55:55Z
+  , cardano-haskell-packages 2025-06-11T08:32:56Z
 
 packages:
   -- == Byron era ==
@@ -50,6 +50,7 @@ packages:
   eras/babbage/test-suite
   eras/conway/impl
   eras/conway/test-suite
+  eras/dijkstra
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
@@ -102,11 +103,5 @@ test-show-details: streaming
 
 if impl(ghc >=9.12)
   allow-newer:
-    -- bin, fin, ral: https://github.com/phadej/vec/issues/118
-    -- tree-diff: https://github.com/haskellari/tree-diff/issues/97
     -- Unique: https://github.com/kapralVV/Unique/issues/11
-    , bin:base
-    , fin:base
-    , ral:base
-    , tree-diff:base
     , Unique:hashable

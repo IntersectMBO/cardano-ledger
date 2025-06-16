@@ -125,7 +125,7 @@ signature = bytes .size 64
 
 protocol_version = [major_protocol_version, uint]
 
-major_protocol_version = 1 .. 10
+major_protocol_version = 0 .. 12
 
 transaction_body = 
   {   0  : set<transaction_input>         
@@ -402,11 +402,9 @@ dns_name = text .size (0 .. 128)
 ; dns_name: An SRV DNS record
 multi_host_name = (2, dns_name)
 
-pool_metadata = [url, metadata_hash]
+pool_metadata = [url, bytes]
 
 url = text .size (0 .. 128)
-
-metadata_hash = hash32
 
 epoch_no = uint .size 8
 

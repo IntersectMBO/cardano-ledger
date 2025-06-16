@@ -1,7 +1,9 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
+import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
@@ -13,6 +15,7 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTra
   relevantCasesAreCovered,
  )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Deposits as Deposits (tests)
+import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import qualified Test.Cardano.Ledger.Shelley.RulesTests as RulesTests (
   chainExamples,
   multisigExamples,
@@ -59,4 +62,6 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Shelley tests - nightly"
-    $ Serialisation.tests : commonTests @C @(ShelleyLEDGER C)
+    $ Serialisation.tests
+      : IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy ShelleyEra)
+      : commonTests @C @(ShelleyLEDGER C)

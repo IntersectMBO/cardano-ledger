@@ -145,6 +145,25 @@ library
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
+library internal
+  exposed-modules:
+    Cardano.Ledger.Internal.Era
+
+  other-modules:
+    Cardano.Ledger.Internal.Definition.Era
+
+  visibility: public
+  hs-source-dirs: internal
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Common

@@ -562,7 +562,7 @@ decCBORABlockOrBoundaryHdr epochSlots = do
 --
 -- TODO: add a round trip test, e.g.
 --
--- prop> decCBORABlockOrBoundaryHdr . encCBORABlockOrBoundaryHdr = id
+-- > decCBORABlockOrBoundaryHdr . encCBORABlockOrBoundaryHdr = id
 --
 -- which does not type check, but convey the meaning.
 encCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding

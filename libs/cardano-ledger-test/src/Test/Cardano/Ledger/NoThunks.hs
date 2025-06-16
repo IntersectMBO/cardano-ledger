@@ -22,11 +22,12 @@ test :: TestTree
 test =
   testGroup
     "There are no unexpected thunks in MockChainState"
-    [ f $ Babbage
-    , f $ Alonzo
-    , f $ Allegra
-    , f $ Mary
-    , f $ Shelley
+    [ f Shelley
+    , f Allegra
+    , f Mary
+    , f Alonzo
+    , f Babbage
+    , f Conway
     ]
   where
     f proof = testThunks proof 100 def
@@ -52,6 +53,3 @@ testThunks proof numTx gensize =
             Just x -> error $ "Thunks present: " <> show x
             Nothing -> return ()
       )
-
--- main :: IO ()
--- main = defaultMain test

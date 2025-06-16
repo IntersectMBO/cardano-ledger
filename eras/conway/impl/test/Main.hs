@@ -2,50 +2,32 @@
 
 module Main where
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
-import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
+import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
-import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
-import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
-import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
-import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
-import Test.Cardano.Ledger.Conway.GoldenSpec as Golden
 import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
-import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
-import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
-import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
-import qualified Test.Cardano.Ledger.Conway.Spec as Spec
-import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
-import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
+import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 
 main :: IO ()
-main =
-  ledgerTestMain $
-    describe "Conway" $ do
-      GoldenTranslation.spec
-      Golden.spec
-      Spec.spec
-      Proposals.spec
-      Binary.spec
-      Cddl.spec
-      DRepRatify.spec
-      CommitteeRatify.spec
-      SPORatifySpec.spec
-      Genesis.spec
-      GovActionReorder.spec
-      roundTripJsonEraSpec @ConwayEra
-      describe "Imp" $
-        Imp.spec @ConwayEra
-      describe "CostModels" $ do
-        CostModelsSpec.spec @ConwayEra
-      describe "TxWits" $ do
-        TxWitsSpec.spec @ConwayEra
-      describe "Plutus" $ do
-        PlutusSpec.spec
-      Regression.spec @ConwayEra
-      TxInfo.spec
+main = ledgerTestMain $ do
+  describe "Conway era-generic" $ ConwaySpec.spec @ConwayEra
+  describe "Conway era-specific" $ do
+    GoldenTranslation.spec
+    Genesis.spec
+    GovActionReorder.spec
+    describe "Plutus" $ do
+      PlutusSpec.spec
+    Cddl.spec
+  describe "Various tests for functions defined in Conway" $ do
+    prop "tierRefScriptFee is a linear function when growth is 1" $ \(Positive sizeIncrement) baseFee (NonNegative size) ->
+      tierRefScriptFee 1 sizeIncrement baseFee size
+        === Coin (floor (fromIntegral size * baseFee))
+    it "tierRefScriptFee" $ do
+      let step = 25600
+      map (tierRefScriptFee 1.5 step 15) [0, step .. 204800]
+        `shouldBe` map Coin [0, 384000, 960000, 1824000, 3120000, 5064000, 7980000, 12354000, 18915000]

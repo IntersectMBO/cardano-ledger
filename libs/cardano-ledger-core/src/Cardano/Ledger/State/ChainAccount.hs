@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,10 +18,11 @@ module Cardano.Ledger.State.ChainAccount (
   reservesL,
 ) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -50,6 +52,7 @@ data ChainAccountState = ChainAccountState
   , casReserves :: !Coin
   }
   deriving (Show, Eq, Generic)
+  deriving (ToJSON) via KeyValuePairs ChainAccountState
 
 instance EncCBOR ChainAccountState where
   encCBOR (ChainAccountState t r) =
@@ -59,16 +62,12 @@ instance DecCBOR ChainAccountState where
   decCBOR =
     decodeRecordNamed "ChainAccountState" (const 2) $ ChainAccountState <$> decCBOR <*> decCBOR
 
-instance ToJSON ChainAccountState where
-  toJSON = object . toChainAccountStatePairs
-  toEncoding = pairs . mconcat . toChainAccountStatePairs
-
-toChainAccountStatePairs :: KeyValue e a => ChainAccountState -> [a]
-toChainAccountStatePairs as@(ChainAccountState _ _) =
-  let ChainAccountState {casTreasury, casReserves} = as
-   in [ "treasury" .= casTreasury
-      , "reserves" .= casReserves
-      ]
+instance ToKeyValuePairs ChainAccountState where
+  toKeyValuePairs as@(ChainAccountState _ _) =
+    let ChainAccountState {casTreasury, casReserves} = as
+     in [ "treasury" .= casTreasury
+        , "reserves" .= casReserves
+        ]
 
 instance NoThunks ChainAccountState
 

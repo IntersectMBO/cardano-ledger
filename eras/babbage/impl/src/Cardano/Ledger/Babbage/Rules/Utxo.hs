@@ -377,7 +377,7 @@ utxoTransition = do
   let utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
       allInputs = txBody ^. allInputsTxBodyF
       refInputs :: Set TxIn
       refInputs = txBody ^. referenceInputsTxBodyL
