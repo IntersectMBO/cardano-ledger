@@ -113,7 +113,8 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Generate a Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
-genRsTxAndModel :: forall era. Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
+genRsTxAndModel ::
+  forall era. Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
 genRsTxAndModel proof n slot = do
   (_, tx) <- genAlonzoTx proof slot
   modifyModel (\model -> applyTx proof n slot model tx)
