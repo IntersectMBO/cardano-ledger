@@ -62,24 +62,20 @@ instance
     auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap
     Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
     let validFlags = alignedValidFlags bodiesLength isValidIdxs
-    unless
-      (bodiesLength == witsLength)
-      ( fail $
-          "different number of transaction bodies ("
-            <> show bodiesLength
-            <> ") and witness sets ("
-            <> show witsLength
-            <> ")"
-      )
-    unless
-      (all inRange isValidIdxs)
-      ( fail
-          ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (bodiesLength - 1)
-              ++ ", "
-              ++ show isValidIdxs
-          )
-      )
+    unless (bodiesLength == witsLength) $
+      fail $
+        "different number of transaction bodies ("
+          <> show bodiesLength
+          <> ") and witness sets ("
+          <> show witsLength
+          <> ")"
+    unless (all inRange isValidIdxs) $
+      fail $
+        "Some IsValid index is not in the range: 0 .. "
+          ++ show (bodiesLength - 1)
+          ++ ", "
+          ++ show isValidIdxs
+
     let mkTx body wit isValid aData =
           mkBasicTx body
             & witsTxL .~ wit
@@ -91,6 +87,7 @@ instance
     pure $
       AlonzoTxSeqRaw
         txs
+        (hashAlonzoSegWits bodiesBytes witsBytes auxDataBytes isValidBytes)
         bodiesBytes
         witsBytes
         auxDataBytes

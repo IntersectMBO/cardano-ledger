@@ -25,6 +25,7 @@
 module Cardano.Ledger.Alonzo.TxSeq.Internal (
   AlonzoTxSeq (.., AlonzoTxSeq),
   hashAlonzoTxSeq,
+  hashAlonzoSegWits,
   alignedValidFlags,
 ) where
 
@@ -47,7 +48,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
-import Data.ByteString.Builder (shortByteString, toLazyByteString)
+import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
@@ -72,12 +73,14 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 data AlonzoTxSeq era = AlonzoTxSeqRaw
   { txSeqTxns :: !(StrictSeq (Tx era))
+  , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
+  -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , txSeqBodyBytes :: BSL.ByteString
-  -- ^ Bytes encoding @Seq ('AlonzoTxBody' era)@
+  -- ^ Bytes encoding @Seq ('TxBody' era)@
   , txSeqWitsBytes :: BSL.ByteString
-  -- ^ Bytes encoding @Seq ('TxWitness' era)@
+  -- ^ Bytes encoding @Seq ('TxWits' era)@
   , txSeqMetadataBytes :: BSL.ByteString
-  -- ^ Bytes encoding a @Map Int ('AuxiliaryData')@. Missing indices have
+  -- ^ Bytes encoding a @'TxAuxData')@. Missing indices have
   -- 'SNothing' for metadata
   , txSeqIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
@@ -100,7 +103,7 @@ pattern AlonzoTxSeq ::
   StrictSeq (Tx era) ->
   AlonzoTxSeq era
 pattern AlonzoTxSeq xs <-
-  AlonzoTxSeqRaw xs _ _ _ _
+  AlonzoTxSeqRaw xs _ _ _ _ _
   where
     AlonzoTxSeq txns =
       let version = eraProtVerLow @era
@@ -110,24 +113,30 @@ pattern AlonzoTxSeq xs <-
           metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
               encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
+          txSeqBodies =
+            serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
+          txSeqWits =
+            serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
+          txSeqAuxDatas =
+            serialize version . encodeFoldableMapEncoder metaChunk $
+              fmap originalBytes . view auxDataTxL <$> txns
+          txSeqIsValids =
+            serialize version $ encCBOR $ nonValidatingIndices txns
        in AlonzoTxSeqRaw
             { txSeqTxns = txns
-            , txSeqBodyBytes =
-                serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
-            , txSeqWitsBytes =
-                serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
-            , txSeqMetadataBytes =
-                serialize version . encodeFoldableMapEncoder metaChunk $
-                  fmap originalBytes . view auxDataTxL <$> txns
-            , txSeqIsValidBytes =
-                serialize version $ encCBOR $ nonValidatingIndices txns
+            , txSeqHash = hashAlonzoSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
+            , txSeqBodyBytes = txSeqBodies
+            , txSeqWitsBytes = txSeqWits
+            , txSeqMetadataBytes = txSeqAuxDatas
+            , txSeqIsValidBytes = txSeqIsValids
             }
 
 {-# COMPLETE AlonzoTxSeq #-}
 
 deriving via
   AllowThunksIn
-    '[ "txSeqBodyBytes"
+    '[ "txSeqHash"
+     , "txSeqBodyBytes"
      , "txSeqWitsBytes"
      , "txSeqMetadataBytes"
      , "txSeqIsValidBytes"
@@ -145,7 +154,7 @@ deriving stock instance Eq (Tx era) => Eq (AlonzoTxSeq era)
 --------------------------------------------------------------------------------
 
 instance Era era => EncCBORGroup (AlonzoTxSeq era) where
-  encCBORGroup (AlonzoTxSeqRaw _ bodyBytes witsBytes metadataBytes invalidBytes) =
+  encCBORGroup (AlonzoTxSeqRaw _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -162,21 +171,32 @@ hashAlonzoTxSeq ::
   forall era.
   AlonzoTxSeq era ->
   Hash HASH EraIndependentBlockBody
-hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
-  coerce $
-    hashStrict $
-      BSL.toStrict $
-        toLazyByteString $
-          mconcat
-            [ hashPart bodies
-            , hashPart ws
-            , hashPart md
-            , hashPart vs
-            ]
+hashAlonzoTxSeq = txSeqHash
+
+hashAlonzoSegWits ::
+  BSL.ByteString ->
+  -- | Bytes for transaction bodies
+  BSL.ByteString ->
+  -- | Bytes for transaction witnesses
+  BSL.ByteString ->
+  -- | Bytes for transaction auxiliary datas
+  BSL.ByteString ->
+  -- | Bytes for transaction isValid flags
+  Hash HASH EraIndependentBlockBody
+hashAlonzoSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids =
+  coerce . hashLazy . toLazyByteString $
+    hashPart txSeqBodies
+      <> hashPart txSeqWits
+      <> hashPart txAuxData
+      <> hashPart txSeqIsValids
   where
-    hashStrict :: ByteString -> Hash HASH ByteString
-    hashStrict = Hash.hashWith id
-    hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
+    hashLazy :: BSL.ByteString -> Hash HASH ByteString
+    hashLazy = Hash.hashWith id . BSL.toStrict
+    {-# INLINE hashLazy #-}
+    hashPart :: BSL.ByteString -> Builder
+    hashPart = shortByteString . Hash.hashToBytesShort . hashLazy
+    {-# INLINE hashPart #-}
+{-# INLINE hashAlonzoSegWits #-}
 
 instance
   ( AlonzoEraTx era
@@ -198,24 +218,19 @@ instance
 
     (isValIdxs, isValAnn) <- withSlice decCBOR
     let validFlags = alignedValidFlags bodiesLength isValIdxs
-    unless
-      (bodiesLength == witsLength)
-      ( fail $
-          "different number of transaction bodies ("
-            <> show bodiesLength
-            <> ") and witness sets ("
-            <> show witsLength
-            <> ")"
-      )
-    unless
-      (all inRange isValIdxs)
-      ( fail
-          ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (bodiesLength - 1)
-              ++ ", "
-              ++ show isValIdxs
-          )
-      )
+    unless (bodiesLength == witsLength) $
+      fail $
+        "different number of transaction bodies ("
+          <> show bodiesLength
+          <> ") and witness sets ("
+          <> show witsLength
+          <> ")"
+    unless (all inRange isValIdxs) $
+      fail $
+        "Some IsValid index is not in the range: 0 .. "
+          ++ show (bodiesLength - 1)
+          ++ ", "
+          ++ show isValIdxs
 
     let txns =
           sequenceA $
@@ -224,6 +239,7 @@ instance
     pure $
       AlonzoTxSeqRaw
         <$> txns
+        <*> (hashAlonzoSegWits <$> bodiesAnn <*> witsAnn <*> auxDataAnn <*> isValAnn)
         <*> bodiesAnn
         <*> witsAnn
         <*> auxDataAnn
