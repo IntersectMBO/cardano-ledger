@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,7 +19,7 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -69,6 +70,7 @@ import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as BS (replicate)
+import Data.Data (Proxy (..))
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -93,9 +95,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
   TxBodyField (..),
-  TxField (..),
   TxOutField (..),
-  WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Proof
@@ -195,6 +195,7 @@ testAlonzoBlock ::
   , EraSegWits era
   , Value era ~ MaryValue
   , ShelleyEraTxCert era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Block BHeaderView era
@@ -229,20 +230,19 @@ validatingTx ::
   forall era.
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 validatingTx pf =
-  newTx
-    pf
-    [ Body (validatingBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [someDatum]
-        , RdmrWits $ validatingRedeemers pf
-        ]
-    ]
+  let
+    script = always 3 pf
+   in
+    mkBasicTx (validatingBody pf)
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . datsTxWitsL .~ [someDatum]
+      & witsTxL . rdmrsTxWitsL .~ validatingRedeemers pf
 
 validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 validatingBody pf =
@@ -271,20 +271,19 @@ validatingTxOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4
 notValidatingTx ::
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 notValidatingTx pf =
-  newTx
-    pf
-    [ Body notValidatingBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
-        , ScriptWits' [never 0 pf]
-        , DataWits' [anotherDatum]
-        , RdmrWits notValidatingRedeemers
-        ]
-    ]
+  let
+    script = never 0 pf
+   in
+    mkBasicTx notValidatingBody
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . datsTxWitsL .~ [anotherDatum]
+      & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
     notValidatingBody =
       newTxBody
@@ -308,19 +307,19 @@ validatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 validatingTxWithWithdrawal pf =
-  newTx
-    pf
-    [ Body (validatingBodyWithWithdrawal pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)]
-        , ScriptWits' [always 2 pf]
-        , RdmrWits $ validatingWithWithdrawalRedeemers pf
-        ]
-    ]
+  let
+    script = always 2 pf
+   in
+    mkBasicTx (validatingBodyWithWithdrawal pf)
+      & witsTxL . addrTxWitsL
+        .~ [mkWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ validatingWithWithdrawalRedeemers pf
 
 validatingBodyWithWithdrawal :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
 validatingBodyWithWithdrawal pf =
@@ -356,19 +355,19 @@ notValidatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 notValidatingTxWithWithdrawal pf =
-  newTx
-    pf
-    [ Body notValidatingBodyWithWithdrawal
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) (someKeys pf)]
-        , ScriptWits' [never 1 pf]
-        , RdmrWits notValidatingRedeemers
-        ]
-    ]
+  let
+    script = never 1 pf
+   in
+    mkBasicTx notValidatingBodyWithWithdrawal
+      & witsTxL . addrTxWitsL
+        .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
     notValidatingBodyWithWithdrawal =
       newTxBody
@@ -392,19 +391,18 @@ validatingTxWithCert ::
   ( Scriptic era
   , EraTx era
   , ShelleyEraTxCert era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 validatingTxWithCert pf =
-  newTx
-    pf
-    [ Body (validatingBodyWithCert pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)]
-        , ScriptWits' [always 2 pf]
-        , RdmrWits $ validatingRedeemrsWithCert pf
-        ]
-    ]
+  let
+    script = always 2 pf
+   in
+    mkBasicTx (validatingBodyWithCert pf)
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ validatingRedeemrsWithCert pf
 
 validatingBodyWithCert ::
   (Scriptic era, EraTxBody era, ShelleyEraTxCert era) => Proof era -> TxBody era
@@ -435,19 +433,18 @@ notValidatingTxWithCert ::
   ( Scriptic era
   , EraTx era
   , ShelleyEraTxCert era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 notValidatingTxWithCert pf =
-  newTx
-    pf
-    [ Body notValidatingBodyWithCert
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) (someKeys pf)]
-        , ScriptWits' [never 1 pf]
-        , RdmrWits notValidatingRedeemersWithCert
-        ]
-    ]
+  let
+    script = never 1 pf
+   in
+    mkBasicTx notValidatingBodyWithCert
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithCert
   where
     notValidatingBodyWithCert =
       newTxBody
@@ -467,19 +464,18 @@ validatingTxWithMint ::
   , HasTokens era
   , EraTx era
   , Value era ~ MaryValue
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 validatingTxWithMint pf =
-  newTx
-    pf
-    [ Body (validatingBodyWithMint pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)]
-        , ScriptWits' [always 2 pf]
-        , RdmrWits $ validatingRedeemersWithMint pf
-        ]
-    ]
+  let
+    script = always 2 pf
+   in
+    mkBasicTx (validatingBodyWithMint pf)
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithMint pf
 
 validatingBodyWithMint ::
   (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue) =>
@@ -519,19 +515,18 @@ notValidatingTxWithMint ::
   , HasTokens era
   , EraTx era
   , Value era ~ MaryValue
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 notValidatingTxWithMint pf =
-  newTx
-    pf
-    [ Body notValidatingBodyWithMint
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) (someKeys pf)]
-        , ScriptWits' [never 1 pf]
-        , RdmrWits notValidatingRedeemersWithMint
-        ]
-    ]
+  let
+    script = never 1 pf
+   in
+    mkBasicTx notValidatingBodyWithMint
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithMint
   where
     notValidatingBodyWithMint =
       newTxBody
@@ -549,20 +544,15 @@ notValidatingTxWithMint pf =
 poolMDHTooBigTx ::
   forall era.
   ( Scriptic era
-  , EraTxBody era
+  , EraTx era
   ) =>
   Proof era ->
   Tx era
 poolMDHTooBigTx pf =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
   -- since it is checked in the POOL rule. BBODY will trigger it, however.
-  newTx
-    pf
-    [ Body poolMDHTooBigTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated poolMDHTooBigTxBody) (someKeys pf)]
-        ]
-    ]
+  mkBasicTx poolMDHTooBigTxBody
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated poolMDHTooBigTxBody) (someKeys pf)]
   where
     poolMDHTooBigTxBody =
       newTxBody
@@ -727,7 +717,7 @@ successDeposit :: UM.CompactForm Coin
 successDeposit = UM.CompactCoin 7
 
 hashsize :: Int
-hashsize = fromIntegral $ sizeHash ([] @HASH)
+hashsize = fromIntegral $ sizeHash (Proxy @HASH)
 
 -- ============================== PParams ===============================
 

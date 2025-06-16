@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Scripts (emptyCostModels)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
@@ -34,9 +34,6 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.Tx as Shelley (
-  ShelleyTx (..),
- )
 import Cardano.Ledger.Shelley.TxOut as Shelley (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as Shelley (
   addrWits,
@@ -102,62 +99,6 @@ instance Merge (Map ScriptHash v) where
 -- ====================================================================
 -- Building Era parametric Records
 -- ====================================================================
-
--- Updaters for Tx
-
-updateTx :: Proof era -> Tx era -> TxField era -> Tx era
-updateTx wit@Shelley tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Allegra tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Mary tx@(ShelleyTx b w d) dt =
-  case dt of
-    Body fbody -> ShelleyTx fbody w d
-    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
-    TxWits fwit -> ShelleyTx b fwit d
-    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
-    AuxData faux -> ShelleyTx b w faux
-    Valid _ -> tx
-updateTx wit@Alonzo (Alonzo.AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> Alonzo.AlonzoTx fbody w iv d
-    BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> Alonzo.AlonzoTx b fwit iv d
-    WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> Alonzo.AlonzoTx b w iv faux
-    Valid iv' -> Alonzo.AlonzoTx b w iv' d
-updateTx wit@Babbage (AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> AlonzoTx fbody w iv d
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> AlonzoTx b fwit iv d
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> AlonzoTx b w iv faux
-    Valid iv' -> AlonzoTx b w iv' d
-updateTx wit@Conway (AlonzoTx b w iv d) dt =
-  case dt of
-    Body fbody -> AlonzoTx fbody w iv d
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
-    TxWits fwit -> AlonzoTx b fwit iv d
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> AlonzoTx b w iv faux
-    Valid iv' -> AlonzoTx b w iv' d
-{-# NOINLINE updateTx #-}
-
-newTx :: Proof era -> [TxField era] -> Tx era
-newTx era = List.foldl' (updateTx era) (initialTx era)
 
 --------------------------------------------------------------------
 -- Updaters for TxBody

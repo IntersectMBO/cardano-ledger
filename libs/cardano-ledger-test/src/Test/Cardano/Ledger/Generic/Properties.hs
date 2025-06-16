@@ -34,7 +34,6 @@ import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Fields (
-  abstractTx,
   abstractTxBody,
   abstractTxOut,
   abstractWitnesses,
@@ -64,7 +63,6 @@ import Test.Cardano.Ledger.Generic.TxGen (
   Box (..),
   applySTSByProof,
   assembleWits,
-  coreTx,
   coreTxBody,
   coreTxOut,
   genAlonzoTx,
@@ -183,10 +181,6 @@ txOutRoundTrip ::
   EraTxOut era => Proof era -> TxOut era -> Property
 txOutRoundTrip proof x = coreTxOut proof (abstractTxOut proof x) === x
 
-txRoundTrip ::
-  EraTx era => Proof era -> Tx era -> Property
-txRoundTrip proof x = coreTx proof (abstractTx proof x) === x
-
 txBodyRoundTrip ::
   EraTxBody era => Proof era -> TxBody era -> Property
 txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) === x
@@ -222,14 +216,6 @@ coreTypesRoundTrip =
         , testPropMax 30 "Mary era" $ txOutRoundTrip Mary
         , testPropMax 30 "Allegra era" $ txOutRoundTrip Allegra
         , testPropMax 30 "Shelley era" $ txOutRoundTrip Shelley
-        ]
-    , testGroup
-        "Tx roundtrips"
-        [ testPropMax 30 "Babbage era" $ txRoundTrip Babbage
-        , testPropMax 30 "Alonzo era" $ txRoundTrip Alonzo
-        , testPropMax 30 "Mary era" $ txRoundTrip Mary
-        , testPropMax 30 "Allegra era" $ txRoundTrip Allegra
-        , testPropMax 30 "Shelley era" $ txRoundTrip Shelley
         ]
     ]
 
