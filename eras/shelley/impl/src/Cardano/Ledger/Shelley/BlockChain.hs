@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.BlockChain (
   auxDataSeqDecoder,
   txSeqTxns,
   bbHash,
+  hashShelleySegWits,
   bBodySize,
   slotToNonce,
   --
@@ -55,6 +56,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.IntMap (IntMap)
@@ -72,10 +74,15 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyTxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (ShelleyTx era))
+  , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
+  -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , txSeqBodyBytes :: BSL.ByteString
+  -- ^ Bytes encoding @Seq ('TxBody' era)@
   , txSeqWitsBytes :: BSL.ByteString
+  -- ^ Bytes encoding @Seq ('TxWits' era)@
   , txSeqMetadataBytes :: BSL.ByteString
-  -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
+  -- ^ Bytes encoding a @Seq ('TxAuxData' era)@. Missing indices have
+  -- 'SNothing' for metadata
   }
   deriving (Generic)
 
@@ -83,12 +90,13 @@ instance EraSegWits ShelleyEra where
   type TxSeq ShelleyEra = ShelleyTxSeq ShelleyEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
-  hashTxSeq = bbHash
+  hashTxSeq = txSeqHash
   numSegComponents = 3
 
 deriving via
   AllowThunksIn
-    '[ "txSeqBodyBytes"
+    '[ "txSeqHash"
+     , "txSeqBodyBytes"
      , "txSeqWitsBytes"
      , "txSeqMetadataBytes"
      ]
@@ -131,7 +139,7 @@ pattern ShelleyTxSeq ::
   StrictSeq (Tx era) ->
   ShelleyTxSeq era
 pattern ShelleyTxSeq xs <-
-  TxSeq' xs _ _ _
+  TxSeq' xs _ _ _ _
   where
     ShelleyTxSeq txns =
       let version = eraProtVerLow @era
@@ -141,29 +149,32 @@ pattern ShelleyTxSeq xs <-
           metaChunk index m = encodePair <$> strictMaybeToMaybe m
             where
               encodePair metadata = encCBOR index <> encodePreEncoded metadata
+          txSeqBodies = serializeFoldable $ coreBodyBytes @era <$> txns
+          txSeqWits = serializeFoldable $ coreWitnessBytes @era <$> txns
+          txSeqAuxDatas =
+            serialize version . encodeFoldableMapEncoder metaChunk $ coreAuxDataBytes @era <$> txns
        in TxSeq'
             { txSeqTxns' = txns
+            , txSeqHash = hashShelleySegWits txSeqBodies txSeqWits txSeqAuxDatas
             , -- bytes encoding "Seq (TxBody era)"
-              txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns
+              txSeqBodyBytes = txSeqBodies
             , -- bytes encoding "Seq (TxWits era)"
-              txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns
+              txSeqWitsBytes = txSeqWits
             , -- bytes encoding a "Map Int TxAuxData"
-              txSeqMetadataBytes =
-                serialize version . encodeFoldableMapEncoder metaChunk $
-                  coreAuxDataBytes @era <$> txns
+              txSeqMetadataBytes = txSeqAuxDatas
             }
 
 {-# COMPLETE ShelleyTxSeq #-}
 
 txSeqTxns :: ShelleyTxSeq era -> StrictSeq (ShelleyTx era)
-txSeqTxns (TxSeq' ts _ _ _) = ts
+txSeqTxns (TxSeq' ts _ _ _ _) = ts
 
 instance
   forall era.
   Era era =>
   EncCBORGroup (ShelleyTxSeq era)
   where
-  encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
+  encCBORGroup (TxSeq' _ _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
@@ -176,17 +187,27 @@ instance
 
 -- | Hash a given block body
 bbHash :: ShelleyTxSeq era -> Hash HASH EraIndependentBlockBody
-bbHash (TxSeq' _ bodies wits md) =
-  coerce $
-    hashStrict
-      ( hashPart bodies
-          <> hashPart wits
-          <> hashPart md
-      )
+bbHash = txSeqHash
+
+hashShelleySegWits ::
+  BSL.ByteString ->
+  -- | Bytes for transaction bodies
+  BSL.ByteString ->
+  -- | Bytes for transaction witnesses
+  BSL.ByteString ->
+  -- | Bytes for transaction auxiliary datas
+  Hash HASH EraIndependentBlockBody
+hashShelleySegWits bodies wits md =
+  coerce . hashLazy . toLazyByteString $
+    hashPart bodies <> hashPart wits <> hashPart md
   where
-    hashStrict :: ByteString -> Hash HASH ByteString
-    hashStrict = Hash.hashWith id
-    hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
+    hashLazy :: BSL.ByteString -> Hash HASH ByteString
+    hashLazy = Hash.hashWith id . BSL.toStrict
+    {-# INLINE hashLazy #-}
+    hashPart :: BSL.ByteString -> Builder
+    hashPart = shortByteString . Hash.hashToBytesShort . hashLazy
+    {-# INLINE hashPart #-}
+{-# INLINE hashShelleySegWits #-}
 
 auxDataSeqDecoder ::
   Int -> IntMap a -> Decoder s (Seq (Maybe a))
@@ -246,7 +267,8 @@ instance
         sequenceA $
           StrictSeq.forceToStrict $
             Seq.zipWith3 segWitAnnTx bodies wits metadata
-    pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
+      hashAnn = hashShelleySegWits <$> bodiesAnn <*> witsAnn <*> metadataAnn
+    pure $ TxSeq' <$> txns <*> hashAnn <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
