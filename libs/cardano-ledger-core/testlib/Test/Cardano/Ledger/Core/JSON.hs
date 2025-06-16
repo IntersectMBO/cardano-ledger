@@ -61,6 +61,7 @@ roundTripJsonEraSpec =
   describe (eraName @era) $ do
     describe "RoundTrip JSON" $ do
       roundTripJsonSpec @(PParams era)
+      roundTripJsonSpec @(TranslationContext era)
 
 goldenJsonPParamsSpec ::
   forall era.

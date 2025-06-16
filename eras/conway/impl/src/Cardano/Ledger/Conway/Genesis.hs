@@ -91,13 +91,12 @@ instance EncCBOR ConwayGenesis
 instance FromJSON ConwayGenesis where
   parseJSON =
     withObject "ConwayGenesis" $ \obj -> do
-      upgradeProtocolPParams <- parseJSON (Object obj)
-      ConwayGenesis
-        <$> pure upgradeProtocolPParams
-        <*> obj .: "constitution"
-        <*> obj .: "committee"
-        <*> obj .:? "delegs" .!= mempty
-        <*> obj .:? "initialDReps" .!= mempty
+      cgUpgradePParams <- parseJSON (Object obj)
+      cgConstitution <- obj .: "constitution"
+      cgCommittee <- obj .: "committee"
+      cgDelegs <- obj .:? "delegs" .!= mempty
+      cgInitialDReps <- obj .:? "initialDReps" .!= mempty
+      pure ConwayGenesis {..}
 
 instance ToKeyValuePairs ConwayGenesis where
   toKeyValuePairs cg@(ConwayGenesis _ _ _ _ _) =
@@ -105,9 +104,9 @@ instance ToKeyValuePairs ConwayGenesis where
      in [ "constitution" .= cgConstitution
         , "committee" .= cgCommittee
         ]
+          ++ toKeyValuePairs cgUpgradePParams
           ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
           ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
-          ++ toKeyValuePairs cgUpgradePParams
 
 toConwayGenesisPairs :: KeyValue e a => ConwayGenesis -> [a]
 toConwayGenesisPairs = toKeyValuePairs

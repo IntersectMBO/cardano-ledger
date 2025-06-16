@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Deprecated `toConwayTransitionConfigPairs`
+* Fixed `FromJSON` instance for `TransitionConfig ConwayEra`
 * Added `COMPLETE` pragma for `NativeScript ConwayEra`
 * Add default implementation for `tcConwayGenesisL`
 * Remove `tcDelegsL` and `tcInitialDRepsL`
@@ -50,6 +52,8 @@
 
 ### `testlib`
 
+* Fixed `Arbitrary` instance for `ConwayGenesis`
+* Added `Arbitrary` instance for `TransitionConfig ConwayEra`
 * Added `ToExpr` instances for:
   * `ConwayPlutusPurpose AsIxItem`
   * `DRepPulser`
