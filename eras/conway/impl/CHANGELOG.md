@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Added `conwayGovCertVKeyWitness`
+* Added `conwayTxCertDelegDecoder`
 * Make `transValidityInterval` implicit to eras instead of protocol versions.
   * Implement `transValidityInterval` for Conway.
 * Add `NFData` for `ConwayGenesis`
