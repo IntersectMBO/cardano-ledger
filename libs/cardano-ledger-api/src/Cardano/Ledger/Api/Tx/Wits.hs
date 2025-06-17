@@ -37,6 +37,10 @@ module Cardano.Ledger.Api.Tx.Wits (
 
   -- ** Conway
   ConwayPlutusPurpose (..),
+
+  -- * Upgrade
+  binaryUpgradeTxWits,
+  upgradeTxWits,
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (
@@ -57,9 +61,9 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDats,
   unTxDatsL,
  )
-import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Era (EraApi (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Core (EraTxWits (..), hashScriptTxWitsL)
+import Cardano.Ledger.Core (EraTxWits (..), binaryUpgradeTxWits, hashScriptTxWitsL)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey), witVKeyHash)

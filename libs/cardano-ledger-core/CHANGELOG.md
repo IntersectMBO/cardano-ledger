@@ -2,6 +2,11 @@
 
 ## 1.18.0.0
 
+* Added `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`
+* Remove `upgradeTx` and `TxUpgradeError` from `EraTx`
+* Remove `upgradeTxBody` and `TxBodyUpgradeError` from `EraTxBody`
+* Remove `upgradeTxAuxData` from `EraTxAuxData`
+* Move `upgradeTxWits` from `EraTxWits`
 * Moved `wireSizeTxF` out of `EraTx`
 * Move to `DecCBOR` instance for `Block` to `testlib`
 * Removed constraints from `EraPParams` for both `PParamsHKD Identity era` and `PParamsHKD StrictMaybe era`: `EncCBOR`, `DecCBOR`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`

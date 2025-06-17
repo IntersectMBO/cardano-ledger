@@ -219,5 +219,4 @@ test-suite tests
     cardano-ledger-core,
     cardano-ledger-core:testlib,
     cardano-ledger-shelley:testlib,
-    data-default,
     testlib,

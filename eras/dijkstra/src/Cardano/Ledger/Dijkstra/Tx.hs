@@ -20,9 +20,6 @@ import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core (
   EraSegWits (..),
   EraTx (..),
-  EraTxAuxData (..),
-  EraTxBody (..),
-  EraTxWits (..),
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
@@ -31,7 +28,6 @@ import Cardano.Ledger.Dijkstra.TxWits ()
 
 instance EraTx DijkstraEra where
   type Tx DijkstraEra = AlonzoTx DijkstraEra
-  type TxUpgradeError DijkstraEra = TxBodyUpgradeError DijkstraEra
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -51,13 +47,6 @@ instance EraTx DijkstraEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
-
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
 
 instance AlonzoEraTx DijkstraEra where
   isValidTxL = isValidAlonzoTxL

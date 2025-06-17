@@ -59,6 +59,7 @@ library
     aeson >=2.2,
     base >=4.18 && <5,
     bytestring,
+    cardano-data,
     cardano-ledger-allegra ^>=1.8,
     cardano-ledger-alonzo >=1.12,
     cardano-ledger-babbage >=1.11,
@@ -70,6 +71,7 @@ library
     cardano-ledger-shelley ^>=1.17,
     cardano-strict-containers,
     containers,
+    data-default,
     microlens,
     transformers,
 
@@ -78,6 +80,7 @@ library testlib
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
     Test.Cardano.Ledger.Api.State.Query
+    Test.Cardano.Ledger.Api.Upgrade
 
   visibility: public
   hs-source-dirs: testlib
@@ -95,10 +98,12 @@ library testlib
     base,
     bytestring,
     cardano-ledger-api,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
     containers,
+    data-default,
+    prettyprinter,
 
 test-suite cardano-ledger-api-test
   type: exitcode-stdio-1.0
@@ -126,11 +131,16 @@ test-suite cardano-ledger-api-test
   build-depends:
     base,
     bytestring,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-api,
+    cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
     cardano-ledger-byron,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-slotting:testlib,
     cardano-strict-containers,
