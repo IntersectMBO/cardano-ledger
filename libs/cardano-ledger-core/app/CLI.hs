@@ -53,6 +53,15 @@ overridesParser =
           <> value Nothing
           <> help ""
       )
+    <*> option
+      (Just <$> auto)
+      ( long "timeout"
+          <> value Nothing
+          <> help
+            ( "Timeout in number of milliseconds. Default is 5000000 ms (or 5 seconds). "
+                <> "Specifying a negative number will effectively remove the timeout and unbound execution."
+            )
+      )
 
 optsParser :: Parser Opts
 optsParser =

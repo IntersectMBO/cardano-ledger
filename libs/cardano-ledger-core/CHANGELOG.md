@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Add `NFData` instance for `PlutusDebugInfo`
+* Add `DebugTimedOut` constructor to `PlutusDebugInfo`
+* Add `debugPlutusUnbounded`
 * Added `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`
 * Remove `upgradeTx` and `TxUpgradeError` from `EraTx`
 * Remove `upgradeTxBody` and `TxBodyUpgradeError` from `EraTxBody`

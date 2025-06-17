@@ -26,6 +26,7 @@ module Cardano.Ledger.Plutus.Evaluate (
   scriptFail,
   PlutusDebugInfo (..),
   debugPlutus,
+  debugPlutusUnbounded,
   runPlutusScript,
   runPlutusScriptWithLogs,
   evaluatePlutusWithContext,
@@ -66,9 +67,9 @@ import Cardano.Ledger.Plutus.Language (
   withSamePlutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Control.DeepSeq (NFData (..), force)
-import Control.Exception (evaluate)
-import Control.Monad (join, unless)
+import Codec.Extras.SerialiseViaFlat (DeserialiseFailureInfo (..), DeserialiseFailureReason (..))
+import Control.DeepSeq (NFData (..), deepseq, ($!!))
+import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
@@ -76,6 +77,7 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
 import Data.Either (fromRight)
+import Data.Functor ((<&>))
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
@@ -83,8 +85,9 @@ import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (
-  EvaluationError (CodecError),
+  EvaluationError (..),
   ExBudget,
+  ScriptDecodeError (..),
   VerboseMode (..),
  )
 import Prettyprinter (Pretty (..))
@@ -231,7 +234,45 @@ data PlutusDebugInfo
       -- be executed within 5 second limit or there is a problem with decoding plutus script
       -- itself.
       (Maybe P.ExBudget)
+  | -- | Script did not terminate within the imposed limit
+    DebugTimedOut
+      -- | Wall clock limit in microseconds that was imposed on the script execution.
+      Int
   deriving (Show)
+
+instance NFData PlutusDebugInfo where
+  rnf = \case
+    DebugBadHex str -> rnf str
+    DebugCannotDecode str -> rnf str
+    DebugSuccess logs exBudget -> logs `deepseq` rnf exBudget
+    DebugFailure logs evalError pwc mExBudget ->
+      let
+        -- TODO: Upstream `NFData` instance for `EvaluationError`
+        seqEvalError = \case
+          P.CekError exc -> deepseq exc
+          P.DeBruijnError err -> deepseq err
+          P.CodecError err -> deepseqCodecError err
+          P.CostModelParameterMismatch -> id
+          P.InvalidReturnValue -> id
+        -- TODO: Upstream `NFData` instance for `CodecError` and `MajorProtocolVersion`
+        deepseqCodecError = \case
+          P.CBORDeserialiseError failureInfo -> deepseqDeserialiseFailureInfo failureInfo
+          P.RemainderError bsl -> deepseq bsl
+          P.LedgerLanguageNotAvailableError pll ipv tpv -> pll `deepseq` ipv `seq` (tpv `seq`)
+          P.PlutusCoreLanguageNotAvailableError pll ipv tpv -> pll `deepseq` ipv `seq` (tpv `seq`)
+        -- TODO: Upstream `NFData` instance for `DeserialiseFailureInfo`
+        deepseqDeserialiseFailureInfo = \case
+          DeserialiseFailureInfo bo reason ->
+            bo `deepseq`
+              ( -- TODO: Upstream `NFData` instance for `DeserialiseFailureReason`
+                case reason of
+                  EndOfInput -> id
+                  ExpectedBytes -> id
+                  OtherReason str -> deepseq str
+              )
+       in
+        logs `deepseq` evalError `seqEvalError` pwc `deepseq` rnf mExBudget
+    DebugTimedOut t -> rnf t
 
 data PlutusDebugOverrides = PlutusDebugOverrides
   { pdoScript :: !(Maybe ByteString)
@@ -240,6 +281,7 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   , pdoCostModelValues :: !(Maybe [Int64])
   , pdoExUnitsMem :: !(Maybe Natural)
   , pdoExUnitsSteps :: !(Maybe Natural)
+  , pdoTimeout :: !(Maybe Int)
   }
   deriving (Show)
 
@@ -272,31 +314,44 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
         Just script ->
           either error (Left . Plutus . PlutusBinary . SBS.toShort) . B16.decode $ BSC.filter (/= '\n') script
 
+-- | Execute a hex encoded script with the context that was produced within the ledger predicate
+-- failure. Using `PlutusDebugOverrides` it is possible to override any part of the execution.
 debugPlutus :: String -> PlutusDebugOverrides -> IO PlutusDebugInfo
 debugPlutus scriptsWithContext opts =
+  timeout limit (pure $!! debugPlutusUnbounded scriptsWithContext opts)
+    <&> \case
+      Nothing -> DebugTimedOut limit
+      Just res -> res
+  where
+    limit = fromMaybe 5_000_000 $ pdoTimeout opts
+
+-- | This is just like `debugPlutus`, except it is pure and if a supplied script contains an
+-- infinite loop or a very expensive computation, it might not terminate within a reasonable
+-- timeframe.
+debugPlutusUnbounded :: String -> PlutusDebugOverrides -> PlutusDebugInfo
+debugPlutusUnbounded scriptsWithContext opts =
   case B64.decode (BSU.fromString scriptsWithContext) of
-    Left e -> pure $ DebugBadHex (show e)
+    Left e -> DebugBadHex (show e)
     Right bs ->
       case Plain.decodeFull' bs of
-        Left e -> pure $ DebugCannotDecode $ show e
+        Left e -> DebugCannotDecode $ show e
         Right pwcOriginal ->
           let pwc = overrideContext pwcOriginal opts
               cm = getEvaluationContext $ pwcCostModel pwc
               eu = transExUnits $ pwcExUnits pwc
-              onDecoderError err = pure $ DebugFailure [] err pwc Nothing
+              onDecoderError err = DebugFailure [] err pwc Nothing
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
                 let toDebugInfo = \case
-                      (logs, Left err@(P.CodecError {})) -> pure $ DebugFailure logs err pwc Nothing
-                      (logs, Left err) -> do
-                        mExpectedExUnits <-
-                          timeout 5_000_000 $ do
-                            let res =
-                                  evaluatePlutusRunnableBudget (pwcProtocolVersion pwc) P.Verbose cm plutusRunnable args
-                            case snd res of
-                              Left {} -> pure Nothing
-                              Right exUnits -> Just <$> evaluate (force exUnits)
-                        pure $ DebugFailure logs err pwc (join mExpectedExUnits)
-                      (logs, Right ex) -> pure $ DebugSuccess logs ex
+                      (logs, Left err@(P.CodecError {})) -> DebugFailure logs err pwc Nothing
+                      (logs, Left err) ->
+                        let res =
+                              evaluatePlutusRunnableBudget (pwcProtocolVersion pwc) P.Verbose cm plutusRunnable args
+                            mExpectedExUnits =
+                              case snd res of
+                                Left {} -> Nothing
+                                Right exUnits -> Just exUnits
+                         in DebugFailure logs err pwc mExpectedExUnits
+                      (logs, Right ex) -> DebugSuccess logs ex
                  in toDebugInfo $
                       evaluatePlutusRunnable (pwcProtocolVersion pwc) P.Verbose cm eu plutusRunnable args
 
