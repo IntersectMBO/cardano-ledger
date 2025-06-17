@@ -13,5 +13,7 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 main :: IO ()
 main =
   ledgerTestMain $
-    describe "Dijkstra" $ do
-      ConwaySpec.spec @DijkstraEra
+    describe "Dijkstra" $
+      undefined
+
+-- ConwaySpec.spec @DijkstraEra

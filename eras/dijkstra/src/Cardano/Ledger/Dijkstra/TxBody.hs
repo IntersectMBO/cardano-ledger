@@ -89,6 +89,7 @@ import Cardano.Ledger.Conway.TxBody (
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.Scripts ()
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
 import Cardano.Ledger.MemoBytes (
@@ -104,6 +105,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Data.Coerce (Coercible, coerce)
 import qualified Data.OSet.Strict as OSet
@@ -424,9 +426,13 @@ instance DecCBOR (Annotator DijkstraTxBodyRaw) where
 
 deriving via Mem DijkstraTxBodyRaw instance DecCBOR (Annotator (TxBody DijkstraEra))
 
+newtype DijkstraTxBodyUpgradeError = DTBUETxCert DijkstraTxCertUpgradeError
+  deriving (Eq, Show)
+
 instance EraTxBody DijkstraEra where
   newtype TxBody DijkstraEra = MkDijkstraTxBody (MemoBytes DijkstraTxBodyRaw)
     deriving (Generic, SafeToHash, ToCBOR)
+  type TxBodyUpgradeError DijkstraEra = DijkstraTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw
 
@@ -467,11 +473,12 @@ instance EraTxBody DijkstraEra where
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
   upgradeTxBody ConwayTxBody {..} = do
+    certs <- traverse (left DTBUETxCert . upgradeTxCert) $ OSet.toStrictSeq ctbCerts
     pure $
       DijkstraTxBody
         { dtbSpendInputs = ctbSpendInputs
         , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbOutputs
-        , dtbCerts = OSet.mapL coerce ctbCerts
+        , dtbCerts = OSet.fromStrictSeq certs
         , dtbWithdrawals = ctbWithdrawals
         , dtbTxfee = ctbTxfee
         , dtbVldt = ctbVldt

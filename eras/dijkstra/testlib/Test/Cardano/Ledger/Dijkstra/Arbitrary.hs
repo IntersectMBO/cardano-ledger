@@ -4,9 +4,10 @@
 module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Core (EraTxBody (..))
+import Cardano.Ledger.Dijkstra.Core (Era, EraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
-import Test.Cardano.Ledger.Common (Arbitrary (..), scale)
+import Cardano.Ledger.Dijkstra.TxCert
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance Arbitrary (TxBody DijkstraEra) where
@@ -31,3 +32,14 @@ instance Arbitrary (TxBody DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance Era era => Arbitrary (DijkstraTxCert era) where
+  arbitrary =
+    oneof
+      [ DijkstraTxCertDeleg <$> arbitrary
+      , DijkstraTxCertPool <$> arbitrary
+      , DijkstraTxCertGov <$> arbitrary
+      ]
+
+instance Arbitrary DijkstraDelegCert where
+  arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
