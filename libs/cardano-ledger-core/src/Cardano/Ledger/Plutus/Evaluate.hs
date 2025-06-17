@@ -19,6 +19,7 @@
 
 module Cardano.Ledger.Plutus.Evaluate (
   PlutusDebugOverrides (..),
+  defaultPlutusDebugOverrides,
   PlutusWithContext (..),
   ScriptFailure (..),
   ScriptResult (..),
@@ -286,6 +287,19 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   , pdoTimeout :: !(Maybe Int)
   }
   deriving (Show)
+
+defaultPlutusDebugOverrides :: PlutusDebugOverrides
+defaultPlutusDebugOverrides =
+  PlutusDebugOverrides
+    { pdoScript = Nothing
+    , pdoProtocolVersion = Nothing
+    , pdoLanguage = Nothing
+    , pdoCostModelValues = Nothing
+    , pdoExUnitsMem = Nothing
+    , pdoExUnitsSteps = Nothing
+    , pdoExUnitsEnforced = False
+    , pdoTimeout = Nothing
+    }
 
 -- TODO: Add support for overriding arguments.
 overrideContext :: HasCallStack => PlutusWithContext -> PlutusDebugOverrides -> PlutusWithContext
