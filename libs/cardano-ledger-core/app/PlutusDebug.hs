@@ -20,10 +20,10 @@ main = do
                   <> "and the script itself with the available command line options."
               )
             <> footer
-              ( "EXAMPLE: plutus-debug \"hgmCAVksj...\" --script \"5906ab010...\" "
+              ( "EXAMPLE: plutus-debug \"hgmCAVksj...\" --script \"WQrOAQEAMjI...\" "
                   <> "Note when rewriting the script with the `--script` option "
                   <> "you will have to provide the hex of the Plutus script as seen in "
                   <> "`Test.Cardano.Ledger.Plutus.Examples`."
               )
         )
-  debugPlutus optsScriptWithContext optsOverrides >>= print
+  debugPlutus optsScriptWithContext optsTimeout optsOverrides >>= print
