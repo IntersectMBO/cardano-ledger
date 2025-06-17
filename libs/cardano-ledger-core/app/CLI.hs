@@ -6,6 +6,7 @@ module CLI (
 import Cardano.Ledger.Binary (mkVersion64)
 import Cardano.Ledger.Plutus.Evaluate
 import Options.Applicative
+import Text.Read (readMaybe)
 
 data Opts = Opts
   { optsScriptWithContext :: !String
@@ -36,7 +37,7 @@ overridesParser =
           <> help "Plutus language version"
       )
     <*> option
-      (str >>= pure . Just . map read . words)
+      (mapM readMaybe . words <$> str)
       ( long "cost-model-values"
           <> value Nothing
           <> help ""
