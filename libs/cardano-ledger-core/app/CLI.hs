@@ -20,6 +20,7 @@ overridesParser =
     <$> option
       (Just <$> str)
       ( long "script"
+          <> short 's'
           <> value Nothing
           <> help "Plutus script hex without context"
       )
@@ -33,12 +34,14 @@ overridesParser =
     <*> option
       (Just <$> auto)
       ( long "language"
+          <> short 'l'
           <> value Nothing
           <> help "Plutus language version"
       )
     <*> option
       (mapM readMaybe . words <$> str)
       ( long "cost-model-values"
+          <> short 'c'
           <> value Nothing
           <> help ""
       )
@@ -57,6 +60,7 @@ overridesParser =
     <*> option
       (Just <$> auto)
       ( long "timeout"
+          <> short 't'
           <> value Nothing
           <> help
             ( "Timeout in number of milliseconds. Default is 5000000 ms (or 5 seconds). "
@@ -67,6 +71,5 @@ overridesParser =
 optsParser :: Parser Opts
 optsParser =
   Opts
-    <$> strArgument
-      (metavar "SCRIPT_WITH_CONTEXT(BASE64)")
+    <$> strArgument (metavar "SCRIPT_WITH_CONTEXT(BASE64)")
     <*> overridesParser
