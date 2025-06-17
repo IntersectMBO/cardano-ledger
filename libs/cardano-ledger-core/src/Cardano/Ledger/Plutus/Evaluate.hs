@@ -83,6 +83,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (
   EvaluationError (..),
@@ -287,7 +288,7 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   deriving (Show)
 
 -- TODO: Add support for overriding arguments.
-overrideContext :: PlutusWithContext -> PlutusDebugOverrides -> PlutusWithContext
+overrideContext :: HasCallStack => PlutusWithContext -> PlutusDebugOverrides -> PlutusWithContext
 overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
   -- NOTE: due to GADTs, we can't do a record update here and need to
   -- copy all the fields. Otherwise GHC will greet us with
@@ -297,6 +298,7 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
     , pwcScript = overrideScript
     , pwcExUnits = overrideExUnits
     , pwcCostModel = overrideCostModel
+    , pwcScriptHash = overrideSriptHash
     , ..
     }
   where
@@ -309,15 +311,17 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
         mkCostModel
           (fromMaybe (getCostModelLanguage pwcCostModel) pdoLanguage)
           (fromMaybe (getCostModelParams pwcCostModel) pdoCostModelValues)
-    overrideScript =
+    (overrideSriptHash, overrideScript) =
       case pdoScript of
-        Nothing -> pwcScript
-        Just script ->
-          either error (Left . Plutus . PlutusBinary . SBS.toShort) . B16.decode $ BSC.filter (/= '\n') script
+        Nothing -> (pwcScriptHash, pwcScript)
+        Just hexScript ->
+          case Plutus . PlutusBinary . SBS.toShort <$> B16.decode (BSC.filter (/= '\n') hexScript) of
+            Left err -> error $ "Failed hex decoding of the custom script: " <> err
+            Right script -> (hashPlutusScript script, Left script)
 
 -- | Execute a hex encoded script with the context that was produced within the ledger predicate
 -- failure. Using `PlutusDebugOverrides` it is possible to override any part of the execution.
-debugPlutus :: String -> PlutusDebugOverrides -> IO PlutusDebugInfo
+debugPlutus :: HasCallStack => String -> PlutusDebugOverrides -> IO PlutusDebugInfo
 debugPlutus scriptsWithContext opts =
   timeout limit (pure $!! debugPlutusUnbounded scriptsWithContext opts)
     <&> \case
@@ -329,7 +333,7 @@ debugPlutus scriptsWithContext opts =
 -- | This is just like `debugPlutus`, except it is pure and if a supplied script contains an
 -- infinite loop or a very expensive computation, it might not terminate within a reasonable
 -- timeframe.
-debugPlutusUnbounded :: String -> PlutusDebugOverrides -> PlutusDebugInfo
+debugPlutusUnbounded :: HasCallStack => String -> PlutusDebugOverrides -> PlutusDebugInfo
 debugPlutusUnbounded scriptsWithContext opts =
   case B64.decode (BSU.fromString scriptsWithContext) of
     Left e -> DebugBadHex (show e)
