@@ -57,6 +57,15 @@ overridesParser =
           <> value Nothing
           <> help ""
       )
+    <*> switch
+      ( long "enforce-execution-units"
+          <> help
+            ( "By default plutus-debug upon a failure will re-evaluate supplied script one more time "
+                <> "without bounding execution in order to report expected execution units. "
+                <> "In case when this unbounded computation is a problem, this flag allows for "
+                <> "disabling this reporting of expected execution units."
+            )
+      )
     <*> option
       (Just <$> auto)
       ( long "timeout"

@@ -281,6 +281,7 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   , pdoCostModelValues :: !(Maybe [Int64])
   , pdoExUnitsMem :: !(Maybe Natural)
   , pdoExUnitsSteps :: !(Maybe Natural)
+  , pdoExUnitsEnforced :: !Bool
   , pdoTimeout :: !(Maybe Int)
   }
   deriving (Show)
@@ -341,9 +342,10 @@ debugPlutusUnbounded scriptsWithContext opts =
               eu = transExUnits $ pwcExUnits pwc
               onDecoderError err = DebugFailure [] err pwc Nothing
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
-                let toDebugInfo = \case
-                      (logs, Left err@(P.CodecError {})) -> DebugFailure logs err pwc Nothing
-                      (logs, Left err) ->
+                let toDebugInfo logs = \case
+                      Left err@(P.CodecError {}) -> DebugFailure logs err pwc Nothing
+                      Left err | pdoExUnitsEnforced opts -> DebugFailure logs err pwc Nothing
+                      Left err ->
                         let res =
                               evaluatePlutusRunnableBudget (pwcProtocolVersion pwc) P.Verbose cm plutusRunnable args
                             mExpectedExUnits =
@@ -351,8 +353,8 @@ debugPlutusUnbounded scriptsWithContext opts =
                                 Left {} -> Nothing
                                 Right exUnits -> Just exUnits
                          in DebugFailure logs err pwc mExpectedExUnits
-                      (logs, Right ex) -> DebugSuccess logs ex
-                 in toDebugInfo $
+                      Right ex -> DebugSuccess logs ex
+                 in uncurry toDebugInfo $
                       evaluatePlutusRunnable (pwcProtocolVersion pwc) P.Verbose cm eu plutusRunnable args
 
 runPlutusScript :: PlutusWithContext -> ScriptResult
