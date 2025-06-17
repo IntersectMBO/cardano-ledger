@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add a timeout argument to `plutusDebug`
 * Add `pdoExUnitsEnforced` to `PlutusDebugOverrides` and add `defaultPlutusDebugOverrides`
 * Add `NFData` instance for `PlutusDebugInfo`
 * Add `DebugTimedOut` constructor to `PlutusDebugInfo`

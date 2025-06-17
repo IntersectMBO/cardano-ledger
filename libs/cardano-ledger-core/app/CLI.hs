@@ -1,3 +1,5 @@
+{-# LANGUAGE NumericUnderscores #-}
+
 module CLI (
   Opts (..),
   optsParser,
@@ -10,6 +12,7 @@ import Text.Read (readMaybe)
 
 data Opts = Opts
   { optsScriptWithContext :: !String
+  , optsTimeout :: !Int
   , optsOverrides :: !PlutusDebugOverrides
   }
   deriving (Show)
@@ -66,19 +69,19 @@ overridesParser =
                 <> "disabling this reporting of expected execution units."
             )
       )
-    <*> option
-      (Just <$> auto)
-      ( long "timeout"
-          <> short 't'
-          <> value Nothing
-          <> help
-            ( "Timeout in number of milliseconds. Default is 5000000 ms (or 5 seconds). "
-                <> "Specifying a negative number will effectively remove the timeout and unbound execution."
-            )
-      )
 
 optsParser :: Parser Opts
 optsParser =
   Opts
     <$> strArgument (metavar "SCRIPT_WITH_CONTEXT(BASE64)")
+    <*> option
+      auto
+      ( long "timeout"
+          <> short 't'
+          <> value 5_000_000
+          <> help
+            ( "Timeout in number of milliseconds. Default is 5000000 ms (or 5 seconds). "
+                <> "Specifying a negative number will effectively remove the timeout and unbound execution."
+            )
+      )
     <*> overridesParser

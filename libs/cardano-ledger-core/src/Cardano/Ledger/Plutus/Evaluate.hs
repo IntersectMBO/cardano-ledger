@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -284,7 +283,6 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   , pdoExUnitsMem :: !(Maybe Natural)
   , pdoExUnitsSteps :: !(Maybe Natural)
   , pdoExUnitsEnforced :: !Bool
-  , pdoTimeout :: !(Maybe Int)
   }
   deriving (Show)
 
@@ -298,7 +296,6 @@ defaultPlutusDebugOverrides =
     , pdoExUnitsMem = Nothing
     , pdoExUnitsSteps = Nothing
     , pdoExUnitsEnforced = False
-    , pdoTimeout = Nothing
     }
 
 -- TODO: Add support for overriding arguments.
@@ -335,14 +332,12 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
 
 -- | Execute a hex encoded script with the context that was produced within the ledger predicate
 -- failure. Using `PlutusDebugOverrides` it is possible to override any part of the execution.
-debugPlutus :: HasCallStack => String -> PlutusDebugOverrides -> IO PlutusDebugInfo
-debugPlutus scriptsWithContext opts =
+debugPlutus :: HasCallStack => String -> Int -> PlutusDebugOverrides -> IO PlutusDebugInfo
+debugPlutus scriptsWithContext limit opts =
   timeout limit (pure $!! debugPlutusUnbounded scriptsWithContext opts)
     <&> \case
       Nothing -> DebugTimedOut limit
       Just res -> res
-  where
-    limit = fromMaybe 5_000_000 $ pdoTimeout opts
 
 -- | This is just like `debugPlutus`, except it is pure and if a supplied script contains an
 -- infinite loop or a very expensive computation, it might not terminate within a reasonable

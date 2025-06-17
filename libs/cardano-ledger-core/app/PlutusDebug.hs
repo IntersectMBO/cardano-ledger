@@ -26,4 +26,4 @@ main = do
                   <> "`Test.Cardano.Ledger.Plutus.Examples`."
               )
         )
-  debugPlutus optsScriptWithContext optsOverrides >>= print
+  debugPlutus optsScriptWithContext optsTimeout optsOverrides >>= print
