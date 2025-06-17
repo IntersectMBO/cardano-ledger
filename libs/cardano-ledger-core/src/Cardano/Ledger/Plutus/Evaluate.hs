@@ -354,7 +354,7 @@ debugPlutus scriptsWithContext limit opts =
 debugPlutusUnbounded :: HasCallStack => String -> PlutusDebugOverrides -> PlutusDebugInfo
 debugPlutusUnbounded scriptsWithContext opts =
   case B64.decode (BSU.fromString scriptsWithContext) of
-    Left e -> DebugBadHex (show e)
+    Left e -> DebugBadHex e
     Right bs ->
       case Plain.decodeFull' bs of
         Left e -> DebugCannotDecode $ show e
