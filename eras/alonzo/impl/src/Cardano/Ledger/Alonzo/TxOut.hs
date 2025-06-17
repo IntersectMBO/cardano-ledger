@@ -340,7 +340,7 @@ instance EraTxOut AlonzoEra where
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
 
-  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
+  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact' addr value
 
   addrEitherTxOutL =
     lens

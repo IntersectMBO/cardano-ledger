@@ -17,10 +17,11 @@ import Cardano.Ledger.Babbage.TxOut (
   referenceScriptBabbageTxOutL,
   valueEitherBabbageTxOutL,
  )
-import Cardano.Ledger.Core (EraScript (..), EraTxOut (..))
+import Cardano.Ledger.Conway.TxBody (upgradeBabbageTxOut)
+import Cardano.Ledger.Core (EraTxOut (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts ()
-import Cardano.Ledger.Plutus (Datum (..), translateDatum)
+import Cardano.Ledger.Plutus (Datum (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro (to)
 
@@ -29,8 +30,7 @@ instance EraTxOut DijkstraEra where
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
-  upgradeTxOut (BabbageTxOut addr value d s) =
-    BabbageTxOut addr value (translateDatum d) (upgradeScript <$> s)
+  upgradeTxOut = upgradeBabbageTxOut
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}
