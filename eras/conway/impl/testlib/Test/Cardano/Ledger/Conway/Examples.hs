@@ -7,7 +7,6 @@
 
 module Test.Cardano.Ledger.Conway.Examples (
   ledgerExamples,
-  exampleConwayCerts,
 ) where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))

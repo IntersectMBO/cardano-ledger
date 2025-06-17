@@ -80,6 +80,7 @@ library
   build-depends:
     aeson,
     base >=4.14 && <5,
+    cardano-crypto-class,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
@@ -97,6 +98,7 @@ library
     microlens,
     nothunks,
     plutus-ledger-api,
+    small-steps >=1.1.2,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
@@ -129,6 +131,7 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-alonzo:testlib,
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
