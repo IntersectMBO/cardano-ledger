@@ -11,16 +11,17 @@ module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Core (EraTx (..), EraTxBody (..))
+import Cardano.Ledger.Dijkstra.Core (Era, EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose)
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
+import Cardano.Ledger.Dijkstra.TxCert
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Ledger.Common (Arbitrary (..), scale)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
@@ -68,3 +69,14 @@ instance
   arbitrary = genericArbitraryU
 
 deriving newtype instance Arbitrary (Tx DijkstraEra)
+
+instance Era era => Arbitrary (DijkstraTxCert era) where
+  arbitrary =
+    oneof
+      [ DijkstraTxCertDeleg <$> arbitrary
+      , DijkstraTxCertPool <$> arbitrary
+      , DijkstraTxCertGov <$> arbitrary
+      ]
+
+instance Arbitrary DijkstraDelegCert where
+  arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary

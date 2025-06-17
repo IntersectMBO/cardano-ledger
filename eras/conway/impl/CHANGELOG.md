@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Added `conwayGovCertVKeyWitness`
+* Added `conwayTxCertDelegDecoder`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Rename `transScriptPurpose` to `transPlutusPurposeV3`
 * Make `transValidityInterval` implicit to eras instead of protocol versions.
