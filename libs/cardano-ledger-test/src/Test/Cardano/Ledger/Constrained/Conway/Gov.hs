@@ -36,7 +36,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 govEnvSpec ::
   Specification (GovEnv ConwayEra)
 govEnvSpec = constrained $ \ge ->
-  match ge $ \_ _ pp _ _ ->
+  match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
 
 -- NOTE: it is probably OK not to check uniqueness of ids here, because a clash
