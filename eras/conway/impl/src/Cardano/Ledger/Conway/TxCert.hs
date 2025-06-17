@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,6 +15,9 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
@@ -23,6 +27,7 @@ module Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   mkDelegatee,
   ConwayEraTxCert (..),
+  conwayTxCertDelegDecoder,
   fromShelleyDelegCert,
   toShelleyDelegCert,
   getScriptWitnessConwayTxCert,
@@ -72,6 +77,7 @@ import Cardano.Ledger.Credential (
   credScriptHash,
  )
 import Cardano.Ledger.DRep (DRep)
+import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   encodePoolCert,
@@ -346,6 +352,20 @@ pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAn
   , UnRegDRepTxCert
   , UpdateDRepTxCert ::
     ConwayEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegDepositTxCert
+  , UnRegDepositTxCert
+  , RegDepositDelegTxCert
+  , AuthCommitteeHotKeyTxCert
+  , ResignCommitteeColdTxCert
+  , RegDRepTxCert
+  , UnRegDRepTxCert
+  , UpdateDRepTxCert ::
+    DijkstraEra
   #-}
 
 getDelegateeTxCert :: ConwayEraTxCert era => TxCert era -> Maybe Delegatee
