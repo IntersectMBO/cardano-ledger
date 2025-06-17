@@ -17,14 +17,14 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Plutus.Evaluate (
-  PlutusDebugOverrides (..),
-  defaultPlutusDebugOverrides,
   PlutusWithContext (..),
   ScriptFailure (..),
   ScriptResult (..),
   scriptPass,
   scriptFail,
   PlutusDebugInfo (..),
+  PlutusDebugOverrides (..),
+  defaultPlutusDebugOverrides,
   debugPlutus,
   debugPlutusUnbounded,
   runPlutusScript,
@@ -275,14 +275,23 @@ instance NFData PlutusDebugInfo where
         logs `deepseq` evalError `seqEvalError` pwc `deepseq` rnf mExBudget
     DebugTimedOut t -> rnf t
 
+-- | Various overrides that can be supplied to `plutusDebug` and `plutusDebugUnbouded`
 data PlutusDebugOverrides = PlutusDebugOverrides
   { pdoScript :: !(Maybe ByteString)
+  -- ^ Hex encoded version of the script
   , pdoProtocolVersion :: !(Maybe Version)
+  -- ^ Protocol version to be used for decoding and exection
   , pdoLanguage :: !(Maybe Language)
+  -- ^ Plutus ledger language version
   , pdoCostModelValues :: !(Maybe [Int64])
+  -- ^ Cost model to be used for deciding execution units
   , pdoExUnitsMem :: !(Maybe Natural)
+  -- ^ Memory execution units to be used for execution
   , pdoExUnitsSteps :: !(Maybe Natural)
+  -- ^ CPU execution units to be used for execution
   , pdoExUnitsEnforced :: !Bool
+  -- ^ Setting this flag to True will disable reporting expected execution units upon a failure,
+  -- which would protect against a potentially unbounded script execution.
   }
   deriving (Show)
 
