@@ -4,8 +4,9 @@
 --
 -- The goal of this module is _not_ to provide a full overview and explanation
 -- of every module, function, type class, constraint, and concept in the
--- codebase. If you are confused, go look at the documentation and definition
--- pointed to in the import list below, hopefully it will help!
+-- codebase. The import lists we give below are _not_ even complete! If you are
+-- confused, go look at the documentation and definition pointed to in the
+-- import list below, hopefully it will help!
 module Everything where
 
 -- First some utility modules that are used throughout the source code but
@@ -44,3 +45,16 @@ import Constrained.Graph (
   topsort, findCycle, dependencies, -- etc. etc.
   )
 
+import Constrained.GenT (
+  -- This module provides a special-case monad transformer wrapper for `Gen`:
+  GenT,
+  -- Unlike a "normal" monad transformer wrapper it contains features that let you
+  -- distinguish between different types of generation failure via:
+  genError, fatalError,
+  -- With backtracking of "explanations" to get sensible error messages:
+  explain,
+  -- Fifferent levels of tolerance for failure via:
+  GenMode,
+  -- And a bunch of useful functions for doing generation:
+  oneofT, frequencyT, chooseT, sizeT, -- etc
+  )
