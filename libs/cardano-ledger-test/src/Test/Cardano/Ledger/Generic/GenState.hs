@@ -967,10 +967,16 @@ genCredential tag =
     , (20, pickExistingScript)
     ]
   where
+    genNewAccountState = do
+      ptr <- lift arbitrary
+      deposit <- lift arbitrary
+      pure $ mkTestAccountState (Just ptr) deposit Nothing Nothing
     genKeyHash' = do
       kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
-        -- Rewarding -> modifyGenStateInitialRewards (Map.insert (KeyHashObj kh) (Coin 0))
+        Rewarding -> do
+          accountState <- genNewAccountState
+          modifyGenStateInitialAccounts (Map.insert (KeyHashObj kh) accountState)
         _ -> pure ()
       return $ coerceKeyRole kh
     genScript' = f (100 :: Int)
@@ -985,7 +991,9 @@ genCredential tag =
               if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
                 then do
                   case tag of
-                    -- Rewarding -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
+                    Rewarding -> do
+                      accountState <- genNewAccountState
+                      modifyGenStateInitialAccounts (Map.insert newcred accountState)
                     _ -> pure ()
                   return sh
                 else f $ n - 1
@@ -1123,7 +1131,8 @@ initStableFields = do
   zipWithM_ registerNewAccount' credentials hashes
   modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
 
-registerNewAccount :: EraTest era => Credential 'Staking -> Maybe (KeyHash 'StakePool) -> GenRS era ()
+registerNewAccount ::
+  EraTest era => Credential 'Staking -> Maybe (KeyHash 'StakePool) -> GenRS era ()
 registerNewAccount cred mPoolId = do
   pp <- asks gePParams
   let deposit = pp ^. ppKeyDepositL
@@ -1152,7 +1161,11 @@ genRewards = do
     registerNewAccount cred Nothing
     (,) cred <$> lift genRewardVal
   let balanceMap = Map.fromList balances
-  modifyModelAccounts (addToBalanceAccounts $ Map.map compactCoinOrError balanceMap)
+      compactBalanceMap = Map.map compactCoinOrError balanceMap
+      replaceBalances acc =
+        Map.foldrWithKey' (\cred b -> Map.adjust (balanceAccountStateL .~ b) cred) acc compactBalanceMap
+  modifyModelAccounts (addToBalanceAccounts compactBalanceMap)
+  modifyGenStateInitialAccounts replaceBalances
   modifyGenStateAvoidCred (Set.union (Map.keysSet balanceMap))
   pure balanceMap
 
