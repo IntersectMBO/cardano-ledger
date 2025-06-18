@@ -9,11 +9,7 @@
 
 module Cardano.Ledger.Dijkstra.Translation () where
 
-import Cardano.Ledger.Alonzo.Core (
-  AlonzoEraTx (..),
-  EraTx (mkBasicTx),
-  FuturePParams (..),
- )
+import Cardano.Ledger.Alonzo.Core (AlonzoEraTx (..), EraTx (mkBasicTx))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -33,7 +29,6 @@ import Cardano.Ledger.Conway.Governance (
   translateProposals,
  )
 import Cardano.Ledger.Conway.Governance.DRepPulser (PulsingSnapshot (..))
-import Cardano.Ledger.Conway.State (ConwayInstantStake (..), EraCertState (..))
 import Cardano.Ledger.Core (
   EraTx (auxDataTxL, bodyTxL, witsTxL),
   EraTxOut (..),
@@ -48,23 +43,20 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
 import Cardano.Ledger.Dijkstra.Governance ()
-import Cardano.Ledger.Dijkstra.State.CertState ()
+import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
   epochStateGovStateL,
   lsCertStateL,
   lsUTxOStateL,
  )
-import qualified Cardano.Ledger.UMap as UM
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
@@ -135,14 +127,8 @@ instance TranslateEra DijkstraEra EpochState where
         }
 
 instance TranslateEra DijkstraEra DState where
-  translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
-    where
-      umap' =
-        umap
-          { UM.umElems =
-              Map.map (\(UM.UMElem rd _ poolId drep) -> UM.UMElem rd mempty poolId drep) (UM.umElems umap)
-          , UM.umPtrs = mempty
-          }
+  translateEra _ DState {dsAccounts = ConwayAccounts accounts, ..} =
+    pure DState {dsAccounts = ConwayAccounts (Map.map coerce accounts), ..}
 
 instance TranslateEra DijkstraEra PState where
   translateEra _ PState {..} = pure PState {..}

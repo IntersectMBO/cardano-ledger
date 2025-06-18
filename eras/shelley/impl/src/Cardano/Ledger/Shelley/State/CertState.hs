@@ -54,12 +54,10 @@ deriving instance Eq (Accounts era) => Eq (ShelleyCertState era)
 
 deriving instance Show (Accounts era) => Show (ShelleyCertState era)
 
-deriving instance
-  (ToJSON (ShelleyCertState era))
-    via
-    ToJSON
-    (Accounts era) =>
+deriving via
   KeyValuePairs (ShelleyCertState era)
+  instance
+    ToJSON (Accounts era) => ToJSON (ShelleyCertState era)
 
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
@@ -112,7 +110,7 @@ instance EraCertState ShelleyEra where
 
   certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
-instance ToKeyValuePairs (ShelleyCertState era) where
+instance ToJSON (Accounts era) => ToKeyValuePairs (ShelleyCertState era) where
   toKeyValuePairs certState@(ShelleyCertState _ _) =
     let ShelleyCertState {..} = certState
      in [ "dstate" .= shelleyCertDState

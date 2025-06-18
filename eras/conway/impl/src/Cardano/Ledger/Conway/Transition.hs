@@ -16,6 +16,7 @@ module Cardano.Ledger.Conway.Transition (
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
   registerDRepsThenDelegs,
+  conwayRegisterInitialFundsThenStaking,
 ) where
 
 import Cardano.Ledger.Babbage
