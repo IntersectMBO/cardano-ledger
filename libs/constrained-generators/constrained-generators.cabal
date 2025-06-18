@@ -74,6 +74,16 @@ library
     random,
     template-haskell,
 
+library docs
+  exposed-modules:
+    Everything
+  hs-source-dirs:
+    docs
+  default-language: Haskell2010
+  build-depends:
+    base,
+    constrained-generators
+
 test-suite constrained
   type: exitcode-stdio-1.0
   main-is: Tests.hs
