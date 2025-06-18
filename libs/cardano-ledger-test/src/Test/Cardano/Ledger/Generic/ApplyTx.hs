@@ -192,7 +192,7 @@ applyShelleyCert model dcert = case dcert of
     case unregisterAccount cred (mAccounts model) of
       (Nothing, _) -> error ("DeRegKey not in rewards: " <> show (toExpr cred))
       (Just accountState, accounts)
-        | accountState ^. balanceAccountStateL > mempty ->
+        | accountState ^. balanceAccountStateL == mempty ->
             model
               { mAccounts = accounts
               , mDeposited = mDeposited model <-> fromCompact (accountState ^. depositAccountStateL)
