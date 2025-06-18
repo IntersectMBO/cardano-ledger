@@ -49,6 +49,7 @@ module Cardano.Ledger.Conway.TxBody (
   conwayProposalsDeposits,
   conwayRedeemerPointer,
   conwayRedeemerPointerInverse,
+  upgradeBabbageTxOut,
 ) where
 
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
@@ -90,7 +91,7 @@ import Cardano.Ledger.Conway.Scripts (ConwayEraScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
  )
-import Cardano.Ledger.Conway.TxOut ()
+import Cardano.Ledger.Conway.TxOut (upgradeBabbageTxOut)
 import Cardano.Ledger.Mary.Value (MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,

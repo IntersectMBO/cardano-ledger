@@ -20,9 +20,13 @@ module Cardano.Ledger.Babbage.TxOut (
   BabbageTxOut (
     BabbageTxOut,
     TxOutCompact,
+    TxOutCompact',
     TxOutCompactDH,
+    TxOutCompactDH',
     TxOutCompactDatum,
-    TxOutCompactRefScript
+    TxOutCompactRefScript,
+    TxOut_AddrHash28_AdaOnly,
+    TxOut_AddrHash28_AdaOnly_DataHash32
   ),
   BabbageEraTxOut (..),
   TxOut,
@@ -48,10 +52,10 @@ import Cardano.Ledger.Address (
   decompactAddr,
   fromCborBothAddr,
  )
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
-  AlonzoTxOut (AlonzoTxOut),
   DataHash32,
   decodeAddress28,
   decodeDataHash32,
@@ -218,11 +222,7 @@ instance EraTxOut BabbageEra where
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
-  upgradeTxOut (AlonzoTxOut addr value mDatumHash) = BabbageTxOut addr value datum SNothing
-    where
-      datum = case mDatumHash of
-        SNothing -> NoDatum
-        SJust datumHash -> DatumHash datumHash
+  upgradeTxOut = upgradeAlonzoTxOut
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}
@@ -231,6 +231,13 @@ instance EraTxOut BabbageEra where
   {-# INLINE valueEitherTxOutL #-}
 
   getMinCoinSizedTxOut = babbageMinUTxOValue
+
+upgradeAlonzoTxOut :: Alonzo.AlonzoTxOut AlonzoEra -> BabbageTxOut BabbageEra
+upgradeAlonzoTxOut = \case
+  Alonzo.TxOutCompact' ca cv -> TxOutCompact' ca cv
+  Alonzo.TxOutCompactDH' ca cv dh -> TxOutCompactDH' ca cv dh
+  Alonzo.TxOut_AddrHash28_AdaOnly c a28e cc -> TxOut_AddrHash28_AdaOnly c a28e cc
+  Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 c a28e cc dh32 -> TxOut_AddrHash28_AdaOnly_DataHash32 c a28e cc dh32
 
 dataHashBabbageTxOutL ::
   EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe DataHash)
