@@ -21,8 +21,8 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
-  getStakePoolDelegatee,
   getDRepDelegatee,
+  getStakePoolDelegatee,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)

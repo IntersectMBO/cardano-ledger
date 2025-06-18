@@ -57,9 +57,9 @@ library
     Cardano.Ledger.Dijkstra.Rules.Utxo
     Cardano.Ledger.Dijkstra.Rules.Utxos
     Cardano.Ledger.Dijkstra.Rules.Utxow
+    Cardano.Ledger.Dijkstra.State.Account
     Cardano.Ledger.Dijkstra.State.CertState
     Cardano.Ledger.Dijkstra.State.Stake
-    Cardano.Ledger.Dijkstra.State.Account
 
   hs-source-dirs: src
   default-language: Haskell2010

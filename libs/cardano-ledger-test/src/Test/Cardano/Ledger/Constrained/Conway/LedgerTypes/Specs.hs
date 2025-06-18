@@ -267,8 +267,7 @@ shelleyDStateSpec ::
   Term ChainAccountState ->
   Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Specification (DState era)
-shelleyDStateSpec  = undefined
-
+shelleyDStateSpec = undefined
 
 conwayDStateSpec ::
   forall era.
