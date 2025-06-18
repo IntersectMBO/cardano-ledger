@@ -69,7 +69,6 @@ import Cardano.Ledger.Conway.Era (
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov,
-  EraGov,
   GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),

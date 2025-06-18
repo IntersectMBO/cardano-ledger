@@ -5,6 +5,8 @@
 module Test.Cardano.Ledger.Conway.Era (
   module Test.Cardano.Ledger.Babbage.Era,
   ConwayEraTest,
+  mkConwayTestAccountState,
+  conwayAccountsToUMap,
 ) where
 
 import Cardano.Ledger.BaseTypes

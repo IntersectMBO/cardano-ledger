@@ -64,12 +64,10 @@ deriving instance Eq (Accounts era) => Eq (ConwayCertState era)
 
 deriving instance Show (Accounts era) => Show (ConwayCertState era)
 
-deriving instance
-  (ToJSON (ConwayCertState era))
-    via
-    ToJSON
-    (Accounts era) =>
+deriving via
   KeyValuePairs (ConwayCertState era)
+  instance
+    ToJSON (Accounts era) => ToJSON (ConwayCertState era)
 
 -- ===================================
 -- VState

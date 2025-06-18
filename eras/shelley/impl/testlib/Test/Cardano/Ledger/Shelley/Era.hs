@@ -21,6 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
+import Cardano.Ledger.UMap
 import Data.Default
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
