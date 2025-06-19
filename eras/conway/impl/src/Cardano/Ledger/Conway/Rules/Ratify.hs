@@ -38,7 +38,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
+import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   DefaultVote (..),
@@ -67,7 +67,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
@@ -213,7 +212,7 @@ spoAcceptedRatio
          in case vote of
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
-                | bootstrapPhase pv -> (yes, abstain + stake)
+                | hardforkConwayBootstrapPhase pv -> (yes, abstain + stake)
                 | otherwise -> case defaultStakePoolVote poolId rePoolParams reDelegatees of
                     DefaultNoConfidence
                       | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)

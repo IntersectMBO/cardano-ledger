@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 #if __GLASGOW_HASKELL__ >= 908
@@ -25,9 +26,12 @@ module Cardano.Ledger.Conway.Era (
   ConwayTICKF,
   ConwayLEDGER,
   ConwayRATIFY,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -170,4 +174,11 @@ type instance EraRule "TICK" ConwayEra = ShelleyTICK ConwayEra
 
 type instance EraRule "POOL" ConwayEra = ShelleyPOOL ConwayEra
 
--- =================================================
+-- | Bootstrap phase
+hardforkConwayBootstrapPhase :: ProtVer -> Bool
+hardforkConwayBootstrapPhase pv = pvMajor pv == natVersion @9
+
+-- | Starting with protocol version 11, we do not allow unelected committee
+-- members to submit votes.
+hardforkConwayDisallowUnelectedCommitteeFromVoting :: ProtVer -> Bool
+hardforkConwayDisallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion @10

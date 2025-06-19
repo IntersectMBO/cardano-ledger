@@ -6,9 +6,19 @@ module Cardano.Ledger.Shelley (
   TxBody (..),
   ShelleyTxAuxData,
   nativeMultiSigTag,
+  hardforkAllegraAggregatedRewards,
+  hardforkAlonzoAllowMIRTransfer,
+  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkBabbageForgoRewardPrefilter,
 ) where
 
-import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.Era (
+  ShelleyEra,
+  hardforkAllegraAggregatedRewards,
+  hardforkAlonzoAllowMIRTransfer,
+  hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkBabbageForgoRewardPrefilter,
+ )
 import Cardano.Ledger.Shelley.Genesis ()
 import Cardano.Ledger.Shelley.Governance ()
 import Cardano.Ledger.Shelley.PParams ()

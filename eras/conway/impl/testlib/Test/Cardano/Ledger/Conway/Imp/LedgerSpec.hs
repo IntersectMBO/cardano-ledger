@@ -11,6 +11,10 @@ module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDisallowUnelectedCommitteeFromVoting,
+ )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
@@ -23,10 +27,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), ApplyTxError (..), applyTx, mkMempoolEnv)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (
-  bootstrapPhase,
-  disallowUnelectedCommitteeFromVoting,
- )
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
@@ -85,7 +85,7 @@ spec = do
     let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, reward)]
 
     pv <- getProtVer
-    if HF.bootstrapPhase pv
+    if hardforkConwayBootstrapPhase pv
       then submitTx_ tx
       else
         submitFailingTx
@@ -97,7 +97,7 @@ spec = do
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [(ra, if HF.bootstrapPhase pv then mempty else reward)]
+              [(ra, if hardforkConwayBootstrapPhase pv then mempty else reward)]
 
   it "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -296,7 +296,7 @@ spec = do
                       (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
                   )
       pv <- getProtVer
-      if HF.disallowUnelectedCommitteeFromVoting pv
+      if hardforkConwayDisallowUnelectedCommitteeFromVoting pv
         then
           submitFailingTx tx [injectFailure $ UnelectedCommitteeVoters [ccHot]]
         else do

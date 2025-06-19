@@ -46,7 +46,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoEra)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, hardforkConwayTranslateUpperBoundForPlutusScripts)
 import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
@@ -77,7 +77,6 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.Val (zero)
@@ -231,7 +230,7 @@ transValidityInterval _ protVer epochInfo systemStart = \case
   ValidityInterval SNothing (SJust i) -> do
     t <- transSlotToPOSIXTime i
     pure $
-      if HardForks.translateUpperBoundForPlutusScripts protVer
+      if hardforkConwayTranslateUpperBoundForPlutusScripts protVer
         then
           PV1.Interval
             (PV1.LowerBound PV1.NegInf True)

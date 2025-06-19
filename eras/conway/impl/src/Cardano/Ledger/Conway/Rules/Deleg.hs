@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,7 +34,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.State (
   ConwayEraCertState (..),
   vsDRepsL,
@@ -47,7 +46,6 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.State (
   EraCertState (..),
   dsUnifiedL,
@@ -196,7 +194,7 @@ conwayDelegTransition = do
             DRepAlwaysNoConfidence -> pure ()
             DRepCredential targetDRep -> do
               let dReps = certState ^. certVStateL . vsDRepsL
-              unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+              unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $
                 targetDRep `Map.member` dReps ?! DelegateeDRepNotRegisteredDELEG targetDRep
        in \case
             DelegStake targetPool -> checkPoolRegistered targetPool

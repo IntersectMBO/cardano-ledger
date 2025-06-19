@@ -48,7 +48,10 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.Era (
+  hardforkAllegraAggregatedRewards,
+  hardforkBabbageForgoRewardPrefilter,
+ )
 import Cardano.Ledger.State (Stake (..), maxPool')
 import Cardano.Ledger.UMap (compactCoinOrError)
 import Cardano.Ledger.Val ((<->))
@@ -141,7 +144,7 @@ filterRewards ::
   , Map (Credential 'Staking) (Set Reward) -- ignored in Shelley Era
   )
 filterRewards pv rewards =
-  if HardForks.aggregatedRewards pv
+  if hardforkAllegraAggregatedRewards pv
     then (rewards, Map.empty)
     else
       let mp = Map.map Set.deleteFindMin rewards
@@ -285,7 +288,7 @@ rewardOnePoolMember
       then Just r
       else Nothing
     where
-      prefilter = HardForks.forgoRewardPrefilter pp || hk `Set.member` addrsRew
+      prefilter = hardforkBabbageForgoRewardPrefilter pp || hk `Set.member` addrsRew
       pool = poolPs rewardInfo
       sigma = poolRelativeStake rewardInfo
       poolR = poolPot rewardInfo

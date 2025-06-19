@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.API (
   ChainAccountState (..),
   Coin (..),
@@ -32,7 +33,6 @@ import Cardano.Ledger.Shelley.API (
   VKey,
  )
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   availableAfterMIR,
   dsFutureGenDelegsL,
@@ -552,7 +552,7 @@ genInstantaneousRewards ::
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =
-  if HardForks.allowMIRTransfer (pparams ^. ppProtocolVersionL)
+  if hardforkAlonzoAllowMIRTransfer (pparams ^. ppProtocolVersionL)
     then
       QC.oneof
         [ genInstantaneousRewardsAccounts

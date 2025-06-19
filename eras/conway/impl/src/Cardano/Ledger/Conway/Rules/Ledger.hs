@@ -56,6 +56,7 @@ import Cardano.Ledger.Conway.Era (
   ConwayGOV,
   ConwayLEDGER,
   ConwayUTXOW,
+  hardforkConwayBootstrapPhase,
  )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -86,7 +87,6 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -405,7 +405,7 @@ ledgerTransition = do
         -- We also need to make sure we are using the certState before certificates are applied,
         -- because otherwise it would not be possible to unregister a reward account and withdraw
         -- all funds from it in the same transaction.
-        unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $ do
+        unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $ do
           let dUnified = certState ^. certDStateL . dsUnifiedL
               wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
               delegatedAddrs = DRepUView dUnified

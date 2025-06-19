@@ -46,8 +46,11 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOL)
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.Era (
+  ShelleyEra,
+  ShelleyPOOL,
+  hardforkAlonzoValidatePoolRewardAccountNetID,
+ )
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Control.DeepSeq
@@ -203,7 +206,7 @@ poolDelegationTransition = do
   case poolCert of
     RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
       let pv = pp ^. ppProtocolVersionL
-      when (HardForks.validatePoolRewardAccountNetID pv) $ do
+      when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
         let suppliedNetID = raNetwork ppRewardAccount
         actualNetID
