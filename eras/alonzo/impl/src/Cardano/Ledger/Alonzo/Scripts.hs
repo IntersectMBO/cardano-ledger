@@ -344,15 +344,21 @@ instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIx era) where
       3 -> AlonzoRewarding . AsIx <$> decCBOR
       n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
 instance Era era => EncCBOR (AlonzoPlutusPurpose AsIx era) where
-  encCBOR = encCBORGroup
+  encCBOR = \case
+    AlonzoSpending (AsIx x) -> encode (Sum (AlonzoSpending @_ @era . AsIx) 0 !> To x)
+    AlonzoMinting (AsIx x) -> encode (Sum (AlonzoMinting @_ @era . AsIx) 1 !> To x)
+    AlonzoCertifying (AsIx x) -> encode (Sum (AlonzoCertifying . AsIx) 2 !> To x)
+    AlonzoRewarding (AsIx x) -> encode (Sum (AlonzoRewarding @_ @era . AsIx) 3 !> To x)
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
 instance Era era => DecCBOR (AlonzoPlutusPurpose AsIx era) where
-  decCBOR = decCBORGroup
+  decCBOR = decode (Summands "AlonzoPlutusPurpose" dec)
+    where
+      dec 0 = SumD (AlonzoSpending . AsIx) <! From
+      dec 1 = SumD (AlonzoMinting . AsIx) <! From
+      dec 2 = SumD (AlonzoCertifying . AsIx) <! From
+      dec 3 = SumD (AlonzoRewarding . AsIx) <! From
+      dec n = Invalid n
 
 instance
   ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
