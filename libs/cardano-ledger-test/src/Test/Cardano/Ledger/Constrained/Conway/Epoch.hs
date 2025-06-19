@@ -90,7 +90,7 @@ proposalExists ::
   Pred
 proposalExists gasId proposals =
   reify proposals proposalsActionsMap $ \ [var|actionMap|] ->
-    gasId `member_` dom_ actionMap
+    gasId `mapMember_` actionMap
 
 epochSignalSpec :: EpochNo -> Specification EpochNo
 epochSignalSpec curEpoch = constrained $ \e ->

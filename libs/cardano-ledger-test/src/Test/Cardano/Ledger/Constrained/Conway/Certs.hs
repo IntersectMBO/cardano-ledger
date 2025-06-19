@@ -95,7 +95,7 @@ bootstrapDStateSpec univ delegatees withdrawals =
           , reify rdMap id $ \ [var|rdmp|] ->
               assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
           , -- ptrMap
-            assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
+            assertExplain (pure "ptrMap is empty") $ ptrMap ==. lit mempty
           ]
       ]
 
