@@ -349,18 +349,7 @@ instance
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
-  -- Switch to this implementation once #4110 is taken care of
-  -- arbitrary = genericArbitraryU
-  arbitrary =
-    oneof
-      [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary
-      , -- MissingRedeemers <$> arbitrary -- see #4110
-        MissingRequiredDatums <$> arbitrary <*> arbitrary
-      , NotAllowedSupplementalDatums <$> arbitrary <*> arbitrary
-      , PPViewHashesDontMatch <$> arbitrary
-      , UnspendableUTxONoDatumHash <$> arbitrary
-      -- , ExtraRedeemers <$> arbitrary -- see #4110
-      ]
+  arbitrary = genericArbitraryU
 
 deriving instance Arbitrary ix => Arbitrary (AsIx ix it)
 

@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
-import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
@@ -67,11 +67,6 @@ spec = describe "Invalid transactions" $ do
 
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
       fixupResetAddrWits = fixupPPHash >=> resetAddrWits
-      -- PlutusPurpose serialization wasn't fixed until Conway
-      withPlutusPurposeRoundTripFailures =
-        if eraProtVerLow @era < natVersion @9
-          then withCborRoundTripFailures
-          else id
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -205,16 +200,15 @@ spec = describe "Invalid transactions" $ do
               removeSpenders = Map.filterWithKey (const . not . isSpender)
               dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . unRedeemersL %~ removeSpenders)
           withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> resetAddrWits) $
-            withPlutusPurposeRoundTripFailures $
-              submitFailingTx
-                tx
-                [ injectFailure $
-                    ExtraRedeemers [mkMintingPurpose $ AsIx 0]
-                , injectFailure $
-                    MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
-                , injectFailure $
-                    CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
-                ]
+            submitFailingTx
+              tx
+              [ injectFailure $
+                  ExtraRedeemers [mkMintingPurpose $ AsIx 0]
+              , injectFailure $
+                  MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
+              , injectFailure $
+                  CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
+              ]
 
         it "Missing witness for collateral input" $ do
           let scriptHash = alwaysSucceedsWithDatumHash
@@ -249,10 +243,9 @@ spec = describe "Invalid transactions" $ do
                 let fixedRedeemers = txFixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL
                     extraRedeemers = Map.keys $ Map.filter (== redeemer) fixedRedeemers
                 withNoFixup $
-                  withPlutusPurposeRoundTripFailures $
-                    submitFailingTx
-                      txFixed
-                      [injectFailure $ ExtraRedeemers extraRedeemers]
+                  submitFailingTx
+                    txFixed
+                    [injectFailure $ ExtraRedeemers extraRedeemers]
 
             it "Minting" $
               testPurpose (mkMintingPurpose $ AsIx 2)
@@ -277,7 +270,6 @@ spec = describe "Invalid transactions" $ do
                     mkBasicTx mkBasicTxBody
                       & bodyTxL . certsTxBodyL <>~ certs
                       & witsTxL . rdmrsTxWitsL . unRedeemersL <>~ redeemers
-              withPlutusPurposeRoundTripFailures $
-                submitFailingTx
-                  tx
-                  [injectFailure $ ExtraRedeemers [mkCertifyingPurpose (AsIx 2)]]
+              submitFailingTx
+                tx
+                [injectFailure $ ExtraRedeemers [mkCertifyingPurpose (AsIx 2)]]
