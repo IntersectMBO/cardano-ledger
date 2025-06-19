@@ -63,7 +63,7 @@ rewDepMapSpec univ wdrl =
    in constrained $ \ [var|rdmap|] ->
         [ -- can't be bigger than the witness set (n keys + n scripts)
           -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ (dom_ rdmap) <=. lit maxRewDepSize -- If this is too large
+          assert $ sizeOf_ rdmap <=. lit maxRewDepSize -- If this is too large
         , assert $ subset_ (lit (wdrlCredentials wdrl)) (dom_ rdmap) -- it is hard to satisfy this
         , forAll' rdmap $ \ [var|cred|] [var| rdpair|] ->
             [ witness univ cred
@@ -88,7 +88,7 @@ rewDepMapSpec2 univ wdrl =
    in constrained $ \ [var|rdmap|] ->
         [ -- size of rdmap, can't be bigger than the witness set (n keys + n scripts)
           -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ (dom_ rdmap) <=. lit maxRewDepSize
+          assert $ sizeOf_ (rdmap) <=. lit maxRewDepSize
         , assertExplain (pure "some rewards (not in withdrawals) are zero") $
             forAll rdmap $
               \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
@@ -99,7 +99,7 @@ rewDepMapSpec2 univ wdrl =
                 ]
         , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
             match pair $ \ [var| wcred |] [var| coin |] ->
-              [ assertExplain (pure "withdrawalKeys are a subset of the rdMap") $ member_ wcred (dom_ rdmap)
+              [ assertExplain (pure "withdrawalKeys are a subset of the rdMap") $ mapMember_ wcred rdmap
               , -- Force the reward in the RDPair to the withdrawal amount.
                 onJust (lookup_ wcred rdmap) $ \ [var|rdpair|] ->
                   match rdpair $ \rew _deposit -> assert $ rew ==. coin
@@ -151,7 +151,7 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
           reify rdMap id $ \ [var|rdmp|] ->
             assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
         , -- ptrMapo
-          assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
+          assertExplain (pure "ptrMap is empty") $ ptrMap ==. lit mempty
         ]
     ]
 

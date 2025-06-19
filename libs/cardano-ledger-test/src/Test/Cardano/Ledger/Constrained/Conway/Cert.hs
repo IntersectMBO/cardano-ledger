@@ -129,7 +129,7 @@ genesisDelegCertSpec ds =
       GenDelegs genDelegs = dsGenDelegs ds
    in constrained $ \ [var|gdc|] ->
         match gdc $ \ [var|gkh|] [var|vkh|] [var|hashVrf|] ->
-          [ assert $ member_ gkh (dom_ (lit genDelegs))
+          [ assert $ mapMember_ gkh (lit genDelegs)
           , reify gkh coldKeyHashes (\ [var|coldkeys|] -> member_ vkh coldkeys)
           , reify gkh vrfKeyHashes (\ [var|vrfkeys|] -> member_ hashVrf vrfkeys)
           ]

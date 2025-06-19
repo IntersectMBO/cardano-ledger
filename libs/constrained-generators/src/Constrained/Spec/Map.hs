@@ -391,3 +391,10 @@ lookup_ ::
   Term (Map k v) ->
   Term (Maybe v)
 lookup_ = appTerm LookupW
+
+mapMember_ ::
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term k ->
+  Term (Map k v) ->
+  Term Bool
+mapMember_ k m = not_ $ lookup_ k m ==. lit Nothing

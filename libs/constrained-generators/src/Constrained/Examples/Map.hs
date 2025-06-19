@@ -38,7 +38,7 @@ knownDomainMap = constrained $ \m ->
   ]
 
 mapSizeConstrained :: Specification (Map Three Int)
-mapSizeConstrained = constrained $ \m -> sizeOf_ (dom_ m) <=. 3
+mapSizeConstrained = constrained $ \m -> sizeOf_ m <=. 3
 
 sumRange :: Specification (Map Word64 Word64)
 sumRange = constrained $ \m -> sum_ (rng_ m) ==. lit 10
@@ -80,7 +80,7 @@ lookupSpecific = constrained' $ \ [var|k|] [var|v|] [var|m|] ->
 
 mapRestrictedValues :: Specification (Map (Either Int ()) Int)
 mapRestrictedValues = constrained $ \m ->
-  [ assert $ sizeOf_ (dom_ m) ==. 6
+  [ assert $ sizeOf_ m ==. 6
   , forAll' m $ \k v ->
       [ caseOn
           k
@@ -97,7 +97,7 @@ mapRestrictedValues = constrained $ \m ->
 -- before we ever go to generate the keys.
 mapRestrictedValuesThree :: Specification (Map Three Int)
 mapRestrictedValuesThree = constrained $ \m ->
-  [ assert $ sizeOf_ (dom_ m) ==. 3
+  [ assert $ sizeOf_ m ==. 3
   , forAll' m $ \k v ->
       [ caseOn
           k
@@ -112,7 +112,7 @@ mapRestrictedValuesThree = constrained $ \m ->
 
 mapRestrictedValuesBool :: Specification (Map Bool Int)
 mapRestrictedValuesBool = constrained $ \m ->
-  [ assert $ sizeOf_ (dom_ m) ==. 2
+  [ assert $ sizeOf_ m ==. 2
   , forAll' m $ \k v -> [v `dependsOn` k, whenTrue k (100 <=. v)]
   ]
 

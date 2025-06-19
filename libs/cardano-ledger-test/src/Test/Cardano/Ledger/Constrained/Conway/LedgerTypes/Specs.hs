@@ -199,7 +199,7 @@ goodDrep univ =
         , satisfies (snd_ pair) (hasSize (rangeSize 1 5))
         , forAll (snd_ pair) (`satisfies` (witCredSpec @era univ))
         ]
-    , satisfies (dom_ dRepMap) (hasSize (rangeSize 6 10))
+    , satisfies dRepMap (hasSize (rangeSize 6 10))
     ]
 
 -- ========================================================================
@@ -301,7 +301,7 @@ dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
           [ genHint 5 sPoolMap
           , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` rdcreds
           , assertExplain (pure "The delegations delegate to actual pools") $
-              forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))
+              forAll (rng_ sPoolMap) (\ [var|keyhash|] -> mapMember_ keyhash poolreg)
           ]
       , -- futureGenDelegs and genDelegs and irewards can be solved in any order
         satisfies irewards (irewardSpec @era univ acct)
@@ -344,9 +344,9 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assertExplain (pure "retiring after current epoch") $
         forAll (rng_ retiring) (\ [var|epoch|] -> currepoch <=. epoch)
-    , assert $ sizeOf_ (dom_ futureStakePoolParams) <=. 4
-    , assert $ 3 <=. sizeOf_ (dom_ stakePoolParams)
-    , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
+    , assert $ sizeOf_ (futureStakePoolParams) <=. 4
+    , assert $ 3 <=. sizeOf_ stakePoolParams
+    , assert $ sizeOf_ stakePoolParams <=. 8
     ]
 
 accountStateSpec :: Specification ChainAccountState

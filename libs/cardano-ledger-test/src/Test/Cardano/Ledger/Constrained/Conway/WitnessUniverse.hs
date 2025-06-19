@@ -856,11 +856,11 @@ govActionStateWitness univ = ExplainSpec ["Witnessing GovActionState"] $
     match govactstate $
       \_gaid [var|comVotemap|] [var|drepVotemap|] [var|poolVotemap|] [var|proposalProc|] _proposed _expires ->
         [ witness univ (dom_ comVotemap)
-        , assert $ sizeOf_ (dom_ comVotemap) ==. lit 3
+        , assert $ sizeOf_ comVotemap ==. lit 3
         , witness univ (dom_ drepVotemap)
-        , assert $ sizeOf_ (dom_ drepVotemap) ==. lit 2
+        , assert $ sizeOf_ drepVotemap ==. lit 2
         , witness univ (dom_ poolVotemap)
-        , assert $ sizeOf_ (dom_ poolVotemap) ==. lit 2
+        , assert $ sizeOf_ poolVotemap ==. lit 2
         , satisfies proposalProc (proposalProcedureWitness univ)
         ]
 
@@ -904,7 +904,7 @@ committeeWitness ::
 committeeWitness univ =
   constrained $ \ [var|committee|] ->
     match committee $ \ [var|epochMap|] _threshold ->
-      [witness univ (dom_ epochMap), assert $ sizeOf_ (dom_ epochMap) ==. lit 3]
+      [witness univ (dom_ epochMap), assert $ sizeOf_ epochMap ==. lit 3]
 
 go9 :: IO ()
 go9 = do

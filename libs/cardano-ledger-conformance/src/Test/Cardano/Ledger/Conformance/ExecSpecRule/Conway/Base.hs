@@ -162,7 +162,7 @@ conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
   match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
     [ assert $
         [ witness univ (dom_ withdrawals)
-        , assert $ sizeOf_ (dom_ withdrawals) <=. (lit wdrlsize)
+        , assert $ sizeOf_ withdrawals <=. (lit wdrlsize)
         ]
     , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
     , satisfies delegatees (delegateeSpec @era univ)

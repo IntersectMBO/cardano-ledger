@@ -41,7 +41,7 @@ vStateSpec ::
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
     [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
-    , assert $ dom_ dreps ==. (lit delegatees) -- TODO, there are missing constraints about the (rng_ dreps)
+    , assert $ dom_ dreps ==. lit delegatees -- TODO, there are missing constraints about the (rng_ dreps)
     , forAll dreps $ \ [var|pair|] ->
         match pair $ \ [var|drep|] [var|drepstate|] ->
           [ dependsOn drepstate drep
@@ -77,7 +77,7 @@ govCertSpec univ ConwayGovCertEnv {..} certState =
           -- that each branch is choosen with similar frequency
           -- ConwayRegDRep
           ( branchW 1 $ \ [var|keyreg|] [var|coinreg|] _ ->
-              [ assert $ not_ $ member_ keyreg (dom_ (lit deposits))
+              [ assert $ not_ $ mapMember_ keyreg (lit deposits)
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
               , witness univ keyreg
               ]
@@ -139,7 +139,7 @@ govCertEnvSpec univ =
     match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->
       [ satisfies pp pparamsSpec
       , unsafeExists (\x -> [satisfies x (committeeWitness univ), assert $ committee ==. cSJust_ x])
-      , assert $ sizeOf_ (dom_ proposalmap) <=. lit 5
-      , assert $ sizeOf_ (dom_ proposalmap) >=. lit 1
+      , assert $ sizeOf_ (proposalmap) <=. lit 5
+      , assert $ sizeOf_ (proposalmap) >=. lit 1
       , forAll (rng_ proposalmap) $ \x -> satisfies x (govActionStateWitness univ)
       ]

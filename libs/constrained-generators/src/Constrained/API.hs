@@ -136,6 +136,7 @@ module Constrained.API (
   dom_,
   rng_,
   lookup_,
+  mapMember_,
   fstSpec,
   sndSpec,
   var,
@@ -198,6 +199,7 @@ import Constrained.Spec.Map (
   dom_,
   fstSpec,
   lookup_,
+  mapMember_,
   rng_,
   sndSpec,
  )

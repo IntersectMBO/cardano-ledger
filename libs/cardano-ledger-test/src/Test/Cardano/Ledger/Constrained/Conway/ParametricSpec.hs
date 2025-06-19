@@ -184,7 +184,7 @@ delegatedStakeReference delegs =
   constrained $ \ [var|ref|] ->
     caseOn
       ref
-      (branchW 9 $ \ [var|base|] -> member_ base (dom_ delegs))
+      (branchW 9 $ \ [var|base|] -> mapMember_ base delegs)
       (branchW 1 $ \_ptr -> True)
       (branchW 1 $ \_null -> True) -- just an occaisional NullRef
 
