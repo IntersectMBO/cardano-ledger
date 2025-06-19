@@ -306,6 +306,9 @@ cradle:
     - path: "libs/constrained-generators/src"
       component: "lib:constrained-generators"
 
+    - path: "libs/constrained-generators/testlib"
+      component: "constrained-generators:lib:testlib"
+
     - path: "libs/constrained-generators/test"
       component: "constrained-generators:test:constrained"
 
