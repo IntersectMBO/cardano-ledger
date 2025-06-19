@@ -13,22 +13,23 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg () where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules (
   ConwayDelegEnv (..),
   ConwayDelegPredFailure,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
+  getDRepDelegatee,
   getStakePoolDelegatee,
-  getVoteDelegatee,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
-import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
@@ -66,13 +67,13 @@ instance SpecTranslate ctx ConwayDelegCert where
   toSpecRep (ConwayDelegCert c d) =
     Agda.Delegate
       <$> toSpecRep c
-      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (getDRepDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> pure 0
   toSpecRep (ConwayRegDelegCert s d c) =
     Agda.Delegate
       <$> toSpecRep s
-      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (getDRepDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
@@ -81,15 +82,16 @@ instance SpecTranslate ctx (ConwayDelegPredFailure era) where
 
   toSpecRep = pure . showOpaqueErrorString
 
-instance SpecTranslate ctx (DState era) where
+instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
   type SpecRep (DState era) = Agda.DState
 
-  toSpecRep DState {..} =
+  toSpecRep dState =
     Agda.MkDState
-      <$> toSpecRep (UMap.dRepMap dsUnified)
-      <*> toSpecRep (UMap.sPoolMap dsUnified)
-      <*> toSpecRep (UMap.rewardMap dsUnified)
+      <$> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
+      <*> toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
+      <*> toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
       <*> toSpecRep deposits
     where
+      accountsMap = dState ^. accountsL . accountsMapL
       deposits =
-        Map.mapKeys CredentialDeposit (UMap.depositMap dsUnified)
+        Map.mapKeys CredentialDeposit (Map.map (fromCompact . (^. depositAccountStateL)) accountsMap)

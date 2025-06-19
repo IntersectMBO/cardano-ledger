@@ -20,9 +20,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   ChainAccountState (AccountState, asReserves, asTreasury),
   EraCertState (..),
   DState (..),
-  rewards,
-  delegations,
-  ptrsMap,
   EpochState (..),
   PulsingRewUpdate (..),
   FutureGenDeleg (..),
@@ -81,7 +78,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   -- * Lenses from Types
   nesPdL,
   nesEsL,
-  unifiedL,
   nesELL,
   nesBprevL,
   nesBcurL,
@@ -106,14 +102,12 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosDonationL,
   epochStateGovStateL,
   epochStateStakeDistrL,
-  epochStateUMapL,
   epochStatePoolParamsL,
   epochStateDonationL,
   newEpochStateGovStateL,
   epochStateTreasuryL,
 
   -- * Lenses from CertState
-  dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,
   dsFutureGenDelegsL,

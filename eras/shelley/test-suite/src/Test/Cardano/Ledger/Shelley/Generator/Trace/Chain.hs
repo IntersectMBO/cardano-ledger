@@ -18,18 +18,21 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,
  )
 import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.Transition (
+  registerInitialStakePools,
+  resetStakeDistribution,
+  shelleyRegisterInitialAccounts,
+ )
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
   SlotNo (..),
  )
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
@@ -45,12 +48,9 @@ import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import Data.Functor.Identity (runIdentity)
-import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import Lens.Micro ((&), (.~), (^.))
-import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -183,74 +183,14 @@ mkOCertIssueNos (GenDelegs delegs0) =
 --
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
-  (EraGov era, EraStake era, EraCertState era) =>
+  (EraGov era, EraStake era, EraCertState era, ShelleyEraAccounts era) =>
   ShelleyGenesisStaking ->
   ChainState era ->
   ChainState era
-registerGenesisStaking
-  ShelleyGenesisStaking {sgsPools, sgsStake}
-  cs@STS.ChainState {chainNes = oldChainNes} =
-    cs
-      { chainNes = newChainNes
-      }
-    where
-      keyDeposit :: UM.CompactForm Coin
-      keyDeposit = (UM.compactCoinOrError . view ppKeyDepositL . view curPParamsEpochStateL . nesEs) oldChainNes
-      oldEpochState = nesEs oldChainNes
-      oldLedgerState = esLState oldEpochState
-      oldCertState = lsCertState oldLedgerState
-
-      -- Note that this is only applicable in the initial configuration where
-      -- there is no existing stake distribution, since it would completely
-      -- overwrite any such thing.
-      newPoolDistr = calculatePoolDistr initSnapShot
-
-      newChainNes =
-        oldChainNes
-          { nesEs = newEpochState
-          , nesPd = newPoolDistr
-          }
-      newEpochState =
-        oldEpochState
-          { esLState = newLedgerState
-          , esSnapshots =
-              (esSnapshots oldEpochState)
-                { ssStakeMark = initSnapShot
-                , ssStakeMarkPoolDistr = newPoolDistr
-                }
-          }
-      newLedgerState =
-        oldLedgerState
-          { lsCertState = newCertState
-          }
-      newCertState =
-        oldCertState
-          & certDStateL .~ newDState
-          & certPStateL .~ newPState
-      -- New delegation state. Since we're using base addresses, we only care
-      -- about updating the 'ssDelegations' field.
-      --
-      -- See STS DELEG for details
-      pairWithDepositsButNoRewards _ = UM.RDPair (UM.CompactCoin 0) keyDeposit
-      newDState =
-        (oldCertState ^. certDStateL)
-          { dsUnified =
-              UM.unify
-                (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
-                (UM.ptrMap (oldCertState ^. certDStateL . dsUnifiedL))
-                (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
-                Map.empty
-          }
-
-      -- We consider pools as having been registered in slot 0
-      -- See STS POOL for details
-      newPState =
-        (oldCertState ^. certPStateL)
-          { psStakePoolParams = LM.toMap sgsPools
-          }
-
-      -- The new stake distribution is made on the basis of a snapshot taken
-      -- during the previous epoch. We create a "fake" snapshot in order to
-      -- establish an initial stake distribution.
-      initSnapShot =
-        snapShotFromInstantStake (oldEpochState ^. instantStakeG) newDState newPState
+registerGenesisStaking sgs cs@STS.ChainState {chainNes = oldChainNes} =
+  cs
+    { chainNes =
+        resetStakeDistribution $
+          shelleyRegisterInitialAccounts sgs $
+            registerInitialStakePools sgs oldChainNes
+    }

@@ -6,7 +6,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -70,7 +69,7 @@ shelleyCertStateSpec ::
   (EraSpecDeleg era, EraCertState era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Map (RewardAccount) Coin ->
+  Map RewardAccount Coin ->
   Specification (ShelleyCertState era)
 shelleyCertStateSpec univ _delegatees wdrls =
   constrained $ \cs ->
@@ -84,7 +83,7 @@ conwayCertStateSpec ::
   (EraSpecDeleg era, EraCertState era, ConwayEraCertState era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Map (RewardAccount) Coin ->
+  Map RewardAccount Coin ->
   Specification (ConwayCertState era)
 conwayCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
@@ -160,7 +159,7 @@ computeSets ds =
 
 shelleyTxCertSpec ::
   forall era.
-  (AtMostEra BabbageEra era, EraSpecPParams era) =>
+  (AtMostEra BabbageEra era, EraSpecPParams era, EraAccounts era) =>
   WitUniv era ->
   CertEnv era ->
   ShelleyCertState era ->
@@ -198,7 +197,7 @@ class
   certStateSpec ::
     WitUniv era ->
     Set (Credential 'DRepRole) ->
-    Map (RewardAccount) Coin ->
+    Map RewardAccount Coin ->
     Specification (CertState era)
 
 instance EraSpecCert ShelleyEra where
