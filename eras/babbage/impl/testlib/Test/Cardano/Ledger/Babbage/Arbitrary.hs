@@ -90,17 +90,7 @@ instance
   ) =>
   Arbitrary (BabbageContextError era)
   where
-  -- Switch to this implementation once #4110 is taken care of
-  -- arbitrary = genericArbitraryU
-  arbitrary =
-    oneof
-      [ AlonzoContextError <$> arbitrary
-      , ByronTxOutInContext <$> arbitrary
-      , -- , RedeemerPointerPointsToNothing <$> arbitrary -- see #4110
-        InlineDatumsNotSupported <$> arbitrary
-      , ReferenceScriptsNotSupported <$> arbitrary
-      , ReferenceInputsNotSupported <$> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 instance
   ( EraTxOut era
