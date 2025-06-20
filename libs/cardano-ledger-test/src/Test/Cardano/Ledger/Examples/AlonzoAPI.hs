@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,14 +15,18 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
 
-import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
+import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (AlonzoEraTxWits (..))
+import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), hashScript)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Tools (estimateMinFeeTx)
+import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -34,9 +39,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
   TxBodyField (..),
-  TxField (..),
   TxOutField (..),
-  WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Proof
@@ -62,27 +65,19 @@ testEstimateMinFee =
   where
     pf = Alonzo
     pparams = newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
+    script = always 3 pf
+    dat = Data (PV1.I 123)
     validatingTxNoWits =
-      newTx
-        pf
-        [ Body validatingBody
-        , WitnessesI
-            [ ScriptWits' [always 3 pf]
-            , DataWits' [Data (PV1.I 123)]
-            , RdmrWits redeemers
-            ]
-        ]
+      mkBasicTx validatingBody
+        & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+        & witsTxL . datsTxWitsL .~ TxDats [(hashData dat, dat)]
+        & witsTxL . rdmrsTxWitsL .~ redeemers
     validatingTx =
-      newTx
-        pf
-        [ Body validatingBody
-        , WitnessesI
-            [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
-            , ScriptWits' [always 3 pf]
-            , DataWits' [Data (PV1.I 123)]
-            , RdmrWits redeemers
-            ]
-        ]
+      validatingTxNoWits
+        & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
+        & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+        & witsTxL . datsTxWitsL .~ [dat]
+        & witsTxL . rdmrsTxWitsL .~ redeemers
     validatingBody =
       newTxBody
         pf

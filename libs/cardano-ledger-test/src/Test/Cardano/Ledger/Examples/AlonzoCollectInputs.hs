@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,6 +25,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -52,9 +54,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
   TxBodyField (..),
-  TxField (..),
   TxOutField (..),
-  WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.Proof
@@ -132,20 +132,19 @@ validatingTx ::
   forall era.
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 validatingTx pf =
-  newTx
-    pf
-    [ Body validatingBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [datum]
-        , RdmrWits redeemers
-        ]
-    ]
+  let
+    script = always 3 pf
+   in
+    mkBasicTx validatingBody
+      & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
+      & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+      & witsTxL . datsTxWitsL .~ [datum]
+      & witsTxL . rdmrsTxWitsL .~ redeemers
   where
     validatingBody =
       newTxBody

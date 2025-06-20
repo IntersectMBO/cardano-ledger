@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -79,6 +80,7 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Common (showExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
@@ -89,9 +91,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.Fields (
   PParamsField (..),
   TxBodyField (..),
-  TxField (..),
   TxOutField (..),
-  WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
@@ -144,7 +144,7 @@ evenData3ArgsScript proof =
     evenData3ArgsLang :: forall l era'. EraPlutusTxInfo l era' => Script era'
     evenData3ArgsLang =
       fromPlutusScript . mkSupportedPlutusScript . Plutus @l . PlutusBinary . SBS.pack $
-        concat
+        mconcat
           [ [88, 65, 1, 0, 0, 51, 50, 34, 51, 34, 34, 37, 51, 83, 0]
           , [99, 50, 35, 51, 87, 52, 102, 225, 192, 8, 0, 64, 40, 2, 76]
           , [200, 140, 220, 48, 1, 0, 9, 186, 208, 3, 72, 1, 18, 0, 1]
@@ -215,7 +215,8 @@ pp pf = newPParams pf (defaultPPs pf)
 -- Spend a EUTxO with an inline datum (without and with a failing script)
 -- =========================================================================
 
-inlineDatum :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+inlineDatum ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 inlineDatum pf =
   TestCaseData
     { txBody =
@@ -241,13 +242,15 @@ inlineDatum pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        let script = evenData3ArgsScript pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
-inlineDatumFailingScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+inlineDatumFailingScript ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 inlineDatumFailingScript pf =
   TestCaseData
     { txBody =
@@ -273,17 +276,19 @@ inlineDatumFailingScript pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        let script = evenData3ArgsScript pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- =========================================================================
 -- Valid: Use a reference script.
 -- =========================================================================
 
-referenceScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+referenceScript ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 referenceScript pf =
   TestCaseData
     { txBody =
@@ -317,13 +322,14 @@ referenceScript pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        wits
+          & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+          & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
-commonReferenceScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+commonReferenceScript ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 commonReferenceScript pf =
   TestCaseData
     { txBody =
@@ -362,10 +368,10 @@ commonReferenceScript pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        wits
+          & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+          & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- =========================================================================
@@ -375,7 +381,7 @@ commonReferenceScript pf =
 
 inlineDatumAndRefScript ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  (Scriptic era, Reflect era, AlonzoEraTxWits era) =>
   Proof era ->
   TestCaseData era
 inlineDatumAndRefScript pf =
@@ -411,9 +417,7 @@ inlineDatumAndRefScript pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- =========================================================================
@@ -423,7 +427,7 @@ inlineDatumAndRefScript pf =
 
 inlineDatumAndRefScriptWithRedundantWitScript ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  (Scriptic era, Reflect era, AlonzoEraTxWits era) =>
   Proof era ->
   TestCaseData era
 inlineDatumAndRefScriptWithRedundantWitScript pf =
@@ -459,10 +463,11 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf] -- This is redundant with the reference script
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        let script = alwaysAlt 3 pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)] -- This is redundant with the reference script
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
@@ -499,7 +504,7 @@ refInputWithDataHashNoWit pf =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = []
+    , otherWitsFields = id
     }
 
 -- =======================================================================================
@@ -509,7 +514,7 @@ refInputWithDataHashNoWit pf =
 
 refInputWithDataHashWithWit ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  (Scriptic era, Reflect era, AlonzoEraTxWits era) =>
   Proof era ->
   TestCaseData era
 refInputWithDataHashWithWit pf =
@@ -537,7 +542,7 @@ refInputWithDataHashWithWit pf =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = [DataWits' [datumExampleSixtyFiveBytes]]
+    , otherWitsFields = datsTxWitsL .~ [datumExampleSixtyFiveBytes]
     }
 
 -- ====================================================================================
@@ -555,6 +560,7 @@ refscriptForDelegCert ::
   ( Scriptic era
   , EraTxBody era
   , ShelleyEraTxCert era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   TestCaseData era
@@ -587,14 +593,15 @@ refscriptForDelegCert pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = [RdmrWits $ certRedeemers pf]
+    , otherWitsFields = rdmrsTxWitsL .~ certRedeemers pf
     }
 
 -- ====================================================================================
 --  Invalid: Use a collateral output
 -- ====================================================================================
 
-useCollateralReturn :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+useCollateralReturn ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 useCollateralReturn pf =
   TestCaseData
     { txBody =
@@ -622,18 +629,20 @@ useCollateralReturn pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [never 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        let script = never 3 pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
 -- Invalid: Invalid collateral total
 -- ====================================================================================
 
-incorrectCollateralTotal :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+incorrectCollateralTotal ::
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 incorrectCollateralTotal pf =
   TestCaseData
     { txBody =
@@ -661,10 +670,11 @@ incorrectCollateralTotal pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits $ validatingRedeemers pf
-        ]
+    , otherWitsFields = \wits ->
+        let script = evenData3ArgsScript pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
@@ -673,7 +683,7 @@ incorrectCollateralTotal pf =
 
 inlineDatumRedundantDatumWit ::
   forall era.
-  (Scriptic era, Reflect era) =>
+  (Scriptic era, Reflect era, AlonzoEraTxWits era) =>
   Proof era ->
   TestCaseData era
 inlineDatumRedundantDatumWit pf =
@@ -701,11 +711,12 @@ inlineDatumRedundantDatumWit pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [evenData3ArgsScript pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , otherWitsFields = \wits ->
+        let script = evenData3ArgsScript pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+              & rdmrsTxWitsL .~ (validatingRedeemers pf)
     }
 
 -- ====================================================================================
@@ -713,7 +724,7 @@ inlineDatumRedundantDatumWit pf =
 -- ====================================================================================
 
 inlineDatumWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 inlineDatumWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -739,10 +750,11 @@ inlineDatumWithPlutusV1Script pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , otherWitsFields = \wits ->
+        let script = always 3 pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & rdmrsTxWitsL .~ (validatingRedeemers pf)
     }
 
 -- ====================================================================================
@@ -750,7 +762,12 @@ inlineDatumWithPlutusV1Script pf =
 -- ====================================================================================
 
 referenceScriptWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+  forall era.
+  ( Scriptic era
+  , Reflect era
+  , AlonzoEraTxWits era
+  ) =>
+  Proof era -> TestCaseData era
 referenceScriptWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -780,11 +797,12 @@ referenceScriptWithPlutusV1Script pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , otherWitsFields = \wits ->
+        let script = always 3 pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
@@ -792,7 +810,7 @@ referenceScriptWithPlutusV1Script pf =
 -- ====================================================================================
 
 referenceInputWithPlutusV1Script ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 referenceInputWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -825,11 +843,12 @@ referenceInputWithPlutusV1Script pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [always 3 pf]
-        , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , otherWitsFields = \wits ->
+        let script = always 3 pf
+         in wits
+              & scriptTxWitsL .~ [(hashScript script, script)]
+              & datsTxWitsL .~ [datumExampleSixtyFiveBytes]
+              & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
@@ -860,7 +879,7 @@ refScriptInOutput pf =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = []
+    , otherWitsFields = id
     }
 
 -- ====================================================================================
@@ -899,7 +918,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf]
-    , otherWitsFields = []
+    , otherWitsFields = id
     }
 
 -- ========================================================================================
@@ -935,7 +954,7 @@ largeOutput pf =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = []
+    , otherWitsFields = id
     }
 
 -- =============================================================================
@@ -945,7 +964,7 @@ largeOutput pf =
 -- =============================================================================
 
 noSuchThingAsReferenceDatum ::
-  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+  forall era. (Scriptic era, Reflect era, AlonzoEraTxWits era) => Proof era -> TestCaseData era
 noSuchThingAsReferenceDatum pf =
   TestCaseData
     { txBody =
@@ -980,10 +999,13 @@ noSuchThingAsReferenceDatum pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [alwaysAlt 3 pf]
-        , RdmrWits (validatingRedeemers pf)
-        ]
+    , otherWitsFields = \wits ->
+        let
+          script = alwaysAlt 3 pf
+         in
+          wits
+            & scriptTxWitsL .~ [(hashScript script, script)]
+            & rdmrsTxWitsL .~ validatingRedeemers pf
     }
 
 -- ====================================================================================
@@ -994,7 +1016,7 @@ data TestCaseData era = TestCaseData
   { txBody :: TxBody era
   , initOutputs :: InitOutputs era
   , keysForAddrWits :: [KeyPairRole era]
-  , otherWitsFields :: [WitnessesField era]
+  , otherWitsFields :: TxWits era -> TxWits era
   }
 
 data InitOutputs era = InitOutputs
@@ -1057,14 +1079,10 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
 
 txFromTestCaseData ::
   forall era.
-  ( Scriptic era
-  , BabbageEraTxBody era
-  ) =>
-  Proof era ->
+  EraTx era =>
   TestCaseData era ->
   Tx era
 txFromTestCaseData
-  pf
   testCaseData =
     let addrWits =
           fmap
@@ -1076,20 +1094,13 @@ txFromTestCaseData
                 KeyPairCommittee d -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) d
             )
             (keysForAddrWits testCaseData)
-        tx =
-          newTx
-            pf
-            ( Body (txBody testCaseData)
-                : [ WitnessesI
-                      (AddrWits' addrWits : otherWitsFields testCaseData)
-                  ]
-            )
-     in tx
+     in mkBasicTx (txBody testCaseData)
+          & witsTxL %~ otherWitsFields testCaseData
+          & witsTxL . addrTxWitsL <>~ Set.fromList addrWits
 
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
   , Reflect era
   , BabbageEraTxBody era
   ) =>
@@ -1100,7 +1111,7 @@ testExpectSuccessValid
   pf
   tc =
     let txBody' = txBody tc
-        tx' = txFromTestCaseData pf tc
+        tx' = txFromTestCaseData tc
         fees = txBody' ^. feeTxBodyL
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
 
@@ -1129,7 +1140,6 @@ newColReturn
 testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
   , Reflect era
   , BabbageEraTxBody era
   ) =>
@@ -1140,7 +1150,7 @@ testExpectSuccessInvalid
   pf
   tc =
     let txBody' = txBody tc
-        tx' = txFromTestCaseData pf tc
+        tx' = txFromTestCaseData tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
         DeltaCoin colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
@@ -1151,8 +1161,7 @@ testExpectSuccessInvalid
 
 testExpectFailure ::
   forall era.
-  ( PostShelley era
-  , BabbageEraTxBody era
+  ( BabbageEraTxBody era
   , Reflect era
   ) =>
   Proof era ->
@@ -1163,7 +1172,7 @@ testExpectFailure
   pf
   tc
   predicateFailure =
-    let tx' = txFromTestCaseData pf tc
+    let tx' = txFromTestCaseData tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
         utxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
      in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left $ pure predicateFailure)
@@ -1174,6 +1183,7 @@ genericBabbageFeatures ::
   , BabbageEraTxBody era
   , PostShelley era
   , Reflect era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   TestTree
@@ -1211,6 +1221,7 @@ plutusV1RefScriptFailures ::
   , Reflect era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   TestTree
@@ -1248,6 +1259,7 @@ genericBabbageFailures ::
   , BabbageEraTxBody era
   , PostShelley era
   , Reflect era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   TestTree
@@ -1336,7 +1348,7 @@ testExpectUTXOFailure ::
   PredicateFailure (EraRule "UTXO" era) ->
   Assertion
 testExpectUTXOFailure pf@Conway tc failure =
-  let tx' = txFromTestCaseData pf tc
+  let tx' = txFromTestCaseData tc
       InitUtxo inputs' refInputs' collateral' = initUtxoFromTestCaseData pf tc
       initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
       pparams = newPParams pf (defaultPPs pf)
@@ -1349,7 +1361,7 @@ testExpectUTXOFailure pf@Conway tc failure =
         tx'
         ( \case
             Left (predfail :| []) -> assertEqual "unexpected failure" predfail failure
-            Left _ -> assertFailure "not exactly one failure"
+            Left xs -> assertFailure $ "not exactly one failure" <> showExpr xs
             Right _ -> assertFailure "testExpectUTXOFailure succeeds"
         )
 testExpectUTXOFailure _ _ _ = error "testExpectUTXOFailure is only good in Conway Era"

@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Generic.TxGen (
   Box (..),
   applySTSByProof,
   assembleWits,
-  coreTx,
   coreTxBody,
   coreTxOut,
   genUTxO,
@@ -34,7 +33,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
@@ -95,7 +94,7 @@ import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr (toExpr))
 import Data.Word (Word16)
 import GHC.Stack
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -165,9 +164,6 @@ coreTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
 
 overrideTxBody :: EraTxBody era => Proof era -> TxBody era -> [TxBodyField era] -> TxBody era
 overrideTxBody era = List.foldl' (updateTxBody era)
-
-coreTx :: Proof era -> [TxField era] -> Tx era
-coreTx era = List.foldl' (updateTx era) (initialTx era)
 
 -- ====================================================================
 
@@ -864,10 +860,20 @@ minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m
 minus m (Just (txin, _)) = Map.delete txin m
 
-genAlonzoTx :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
+genAlonzoTx ::
+  forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
 genAlonzoTx proof slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo proof slot
   pure (utxo, tx)
+
+applyIsValid :: forall era. Reflect era => IsValid -> Tx era -> Tx era
+applyIsValid isValid = case reify @era of
+  Shelley -> id
+  Mary -> id
+  Allegra -> id
+  Alonzo -> isValidTxL .~ isValid
+  Babbage -> isValidTxL .~ isValid
+  Conway -> isValidTxL .~ isValid
 
 genAlonzoTxAndInfo ::
   forall era.
@@ -1021,13 +1027,9 @@ genAlonzoTxAndInfo proof slot = do
           redeemerDatumWits
             <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
       bogusTxForFeeCalc =
-        coreTx
-          proof
-          [ Body txBodyNoFee
-          , TxWits (assembleWits proof noFeeWits)
-          , Valid isValid
-          , AuxData' []
-          ]
+        applyIsValid isValid $
+          mkBasicTx txBodyNoFee
+            & witsTxL .~ assembleWits proof noFeeWits
       fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
@@ -1080,13 +1082,9 @@ genAlonzoTxAndInfo proof slot = do
           redeemerDatumWits
             <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
       validTx =
-        coreTx
-          proof
-          [ Body txBody
-          , TxWits (assembleWits proof wits)
-          , Valid isValid
-          , AuxData' []
-          ]
+        applyIsValid isValid $
+          mkBasicTx txBody
+            & witsTxL .~ assembleWits proof wits
   count <- gets (mCount . gsModel)
   modifyGenStateInitialRewards (`Map.union` newRewards)
   modifyGenStateInitialUtxo (`Map.union` minus utxo maybeoldpair)

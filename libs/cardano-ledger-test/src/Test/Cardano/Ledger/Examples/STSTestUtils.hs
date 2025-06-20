@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
@@ -72,9 +73,11 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (Default (..))
-import Data.Foldable (toList)
+import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
+import GHC.IsList (IsList (..))
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -371,8 +374,8 @@ genericCont cause expected computed =
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
     expectedToPass y = "Expected to pass with:\n" ++ show (toExpr y) ++ "\n"
-    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ toList x) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (toExpr $ toList x)
+    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ F.toList x) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (toExpr $ F.toList x)
     passedWith y = "But passed with:\n" ++ show (toExpr y)
 
 subsetCont ::
@@ -399,11 +402,11 @@ subsetCont expected computed =
         "expected to pass with "
           ++ show (toExpr y)
           ++ "\n\nBut failed with\n\n"
-          ++ show (toExpr $ toList x)
+          ++ show (toExpr $ F.toList x)
     (Right y, Left x) ->
       error $
         "expected to fail with "
-          ++ show (toExpr $ toList x)
+          ++ show (toExpr $ F.toList x)
           ++ "\n\nBut passed with\n\n"
           ++ show (toExpr y)
 
@@ -449,3 +452,8 @@ findMismatch _ _ = Nothing
 
 isSubset :: (Foldable t, Eq a) => t a -> t a -> Bool
 isSubset small big = all (`elem` big) small
+
+instance Era era => IsList (TxDats era) where
+  type Item (TxDats era) = Data era
+  fromList = TxDats . fromElems hashData
+  toList (TxDats m) = Map.elems m
