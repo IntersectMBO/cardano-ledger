@@ -33,6 +33,7 @@
 
 ### `testlib`
 
+* Added `TxInfoPV4` to `VersionedTxInfo`
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:
   * `AsIxItem`

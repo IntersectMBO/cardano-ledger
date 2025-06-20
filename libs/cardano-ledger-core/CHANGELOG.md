@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Added support for `PlutusV4`
 * Add a timeout argument to `plutusDebug`
 * Add `pdoExUnitsEnforced` to `PlutusDebugOverrides` and add `defaultPlutusDebugOverrides`
 * Add `NFData` instance for `PlutusDebugInfo`

@@ -155,6 +155,7 @@ hasReferenceInput slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoReferenceInputs txInfo /= mempty
     SPlutusV3 -> PV3.txInfoReferenceInputs txInfo /= mempty
+    SPlutusV4 -> PV3.txInfoReferenceInputs txInfo /= mempty
 
 expectOneInput :: PV2.TxInInfo -> SLanguage l -> PlutusTxInfo l -> Bool
 expectOneInput i slang txInfo =
@@ -162,6 +163,7 @@ expectOneInput i slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoInputs txInfo == [i]
     SPlutusV3 -> False
+    SPlutusV4 -> False
 
 expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Bool
 expectOneOutput o slang txInfo =
@@ -169,6 +171,7 @@ expectOneOutput o slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoOutputs txInfo == [o]
     SPlutusV3 -> PV3.txInfoOutputs txInfo == [o]
+    SPlutusV4 -> PV3.txInfoOutputs txInfo == [o]
 
 successfulTranslation ::
   forall era l.
