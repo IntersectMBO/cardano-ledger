@@ -179,3 +179,5 @@ instance
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyPredFailure era)
+
+deriving newtype instance ToExpr (Tx AlonzoEra)

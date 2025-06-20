@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
@@ -41,8 +42,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTx (..),
-  IsValid (..),
+  IsValid (..), AlonzoEraTx (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -72,9 +72,11 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (Default (..))
-import Data.Foldable (toList)
+import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
+import GHC.IsList (IsList (..))
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -89,6 +91,7 @@ import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
+import Lens.Micro ((.~))
 
 -- =================================================================
 -- =========================  Shared data  =========================
@@ -167,7 +170,7 @@ initUTxO pf =
         ]
     someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
     collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
-    timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
+    timelockOut = newTxOut pf [Address timelockAddr, Amount (inject $ Coin 1)]
     timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
       where
         tlh = hashScript @era $ tls 0
@@ -215,10 +218,10 @@ mkSingleRedeemer proof tag datum =
   mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
-trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Babbage iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Conway iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP _ _ tx = tx
+trustMeP Alonzo iv = isValidTxL .~ IsValid iv
+trustMeP Babbage iv = isValidTxL .~ IsValid iv
+trustMeP Conway iv = isValidTxL .~ IsValid iv
+trustMeP _ _ = id
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
 -- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed
@@ -371,8 +374,8 @@ genericCont cause expected computed =
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
     expectedToPass y = "Expected to pass with:\n" ++ show (toExpr y) ++ "\n"
-    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ toList x) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (toExpr $ toList x)
+    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ F.toList x) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (toExpr $ F.toList x)
     passedWith y = "But passed with:\n" ++ show (toExpr y)
 
 subsetCont ::
@@ -399,11 +402,11 @@ subsetCont expected computed =
         "expected to pass with "
           ++ show (toExpr y)
           ++ "\n\nBut failed with\n\n"
-          ++ show (toExpr $ toList x)
+          ++ show (toExpr $ F.toList x)
     (Right y, Left x) ->
       error $
         "expected to fail with "
-          ++ show (toExpr $ toList x)
+          ++ show (toExpr $ F.toList x)
           ++ "\n\nBut passed with\n\n"
           ++ show (toExpr y)
 
@@ -449,3 +452,8 @@ findMismatch _ _ = Nothing
 
 isSubset :: (Foldable t, Eq a) => t a -> t a -> Bool
 isSubset small big = all (`elem` big) small
+
+instance Era era => IsList (TxDats era) where
+  type Item (TxDats era) = Data era
+  fromList = TxDats . fromElems hashData
+  toList (TxDats m) = Map.elems m

@@ -9,6 +9,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Test.Cardano.Ledger.Mary.Arbitrary (
   genEmptyMultiAsset,
@@ -25,8 +28,8 @@ import Cardano.Crypto.Hash.Class (castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary (MaryEra, TxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Transition
+import Cardano.Ledger.Mary (MaryEra, TxBody (MaryTxBody), Tx (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -235,3 +238,5 @@ hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
 hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
 
 deriving newtype instance Arbitrary (TransitionConfig MaryEra)
+
+deriving newtype instance Arbitrary (Tx MaryEra)

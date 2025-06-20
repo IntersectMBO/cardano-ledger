@@ -10,6 +10,7 @@ module Cardano.Ledger.Babbage (
   BabbageEra,
   BabbageTxOut,
   TxBody (BabbageTxBody),
+  Tx (..),
   AlonzoScript,
   AlonzoTxAuxData,
 ) where
@@ -25,6 +26,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Babbage.Tx (Tx (..))
 
 type Babbage = BabbageEra
 

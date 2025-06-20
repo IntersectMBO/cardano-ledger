@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Allegra.Arbitrary (
   maxTimelockDepth,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -130,3 +130,5 @@ instance Arbitrary ValidityInterval where
   shrink = genericShrink
 
 deriving newtype instance Arbitrary (TransitionConfig AllegraEra)
+
+deriving newtype instance Arbitrary (Tx AllegraEra)

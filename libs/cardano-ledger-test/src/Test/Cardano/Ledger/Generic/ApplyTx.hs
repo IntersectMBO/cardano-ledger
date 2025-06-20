@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,6 +16,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
+import Cardano.Ledger.Conway.Core (AlonzoEraTxWits (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..))
@@ -50,7 +52,6 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxBodyField (..),
   TxField (..),
   TxOutField (..),
-  WitnessesField (..),
   abstractTx,
   abstractTxBody,
  )
@@ -70,7 +71,6 @@ import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (
   newPParams,
   newScriptIntegrityHash,
-  newTx,
   newTxBody,
   newTxOut,
  )
@@ -339,20 +339,17 @@ applyRUpd ru m =
 notValidatingTx ::
   ( Scriptic era
   , EraTx era
+  , AlonzoEraTxWits era
   ) =>
   Proof era ->
   Tx era
 notValidatingTx pf =
-  newTx
-    pf
-    [ Body notValidatingBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
-        , ScriptWits' [never 0 pf]
-        , DataWits' [Data (PV1.I 0)]
-        , RdmrWits redeemers
-        ]
-    ]
+  let s = never 0 pf
+   in mkBasicTx notValidatingBody
+        & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
+        & witsTxL . scriptTxWitsL .~ [(hashScript s, s)]
+        & witsTxL . datsTxWitsL .~ [Data (PV1.I 0)]
+        & witsTxL . rdmrsTxWitsL .~ redeemers
   where
     notValidatingBody =
       newTxBody

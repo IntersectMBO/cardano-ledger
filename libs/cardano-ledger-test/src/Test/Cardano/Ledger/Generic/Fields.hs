@@ -99,6 +99,7 @@ import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
+import Cardano.Ledger.Conway.Tx (Tx(..))
 
 -- =======================================================
 -- Fields are used to hold a single field of record. So the Field
@@ -456,17 +457,17 @@ initialTxOut wit@Conway = mkBasicTxOut (initialAddr wit) mempty
 -- ============================================================
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
-abstractTx Conway (AlonzoTx txBody wit v auxdata) =
+abstractTx Conway (MkConwayTx (AlonzoTx txBody wit v auxdata)) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Babbage (AlonzoTx txBody wit v auxdata) =
+abstractTx Babbage (MkBabbageTx (AlonzoTx txBody wit v auxdata)) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Alonzo (AlonzoTx txBody wit v auxdata) =
+abstractTx Alonzo (MkAlonzoTx (AlonzoTx txBody wit v auxdata)) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Shelley (ShelleyTx txBody wit auxdata) =
+abstractTx Shelley (MkShelleyTx (ShelleyTx txBody wit auxdata)) =
   [Body txBody, TxWits wit, AuxData auxdata]
-abstractTx Mary (ShelleyTx txBody wit auxdata) =
+abstractTx Mary (MkMaryTx (ShelleyTx txBody wit auxdata)) =
   [Body txBody, TxWits wit, AuxData auxdata]
-abstractTx Allegra (ShelleyTx txBody wit auxdata) =
+abstractTx Allegra (MkAllegraTx (ShelleyTx txBody wit auxdata)) =
   [Body txBody, TxWits wit, AuxData auxdata]
 
 abstractTxBody :: Proof era -> TxBody era -> [TxBodyField era]
