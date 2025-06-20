@@ -59,6 +59,7 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordName
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -213,6 +214,30 @@ instance GetLedgerView ConwayEra where
       res =
         flip runReader globals
           . applySTS @(EraRule "TICKF" ConwayEra)
+          $ TRC ((), ss, slot)
+
+-- Note that although we do not use TPraos in the Dijkstra era, we include this
+-- because it makes it simpler to get the ledger view for Praos.
+instance GetLedgerView DijkstraEra where
+  currentLedgerView
+    NewEpochState {nesPd = pd, nesEs = es} =
+      LedgerView
+        { lvD = es ^. curPParamsEpochStateL . ppDG
+        , lvExtraEntropy = error "Extra entropy is not set in the Dijkstra era"
+        , lvPoolDistr = pd
+        , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
+        , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
+        }
+
+  futureLedgerView globals ss slot =
+    liftEither
+      . right currentLedgerView
+      . left FutureLedgerViewError
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(EraRule "TICKF" DijkstraEra)
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
