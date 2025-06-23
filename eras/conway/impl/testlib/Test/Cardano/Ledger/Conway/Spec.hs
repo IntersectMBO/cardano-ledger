@@ -18,13 +18,13 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Binary (DecCBOR)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraScript (..),
   AsIx,
   EraRule,
   EraTx (..),
   EraTxBody (..),
-  EraTxCert (..),
   EraTxWits (..),
   InjectRuleEvent,
   InjectRuleFailure,
@@ -42,7 +42,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochEvent,
   ConwayUtxoPredFailure,
  )
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.API (ApplyTx)
@@ -73,7 +72,6 @@ import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 spec ::
   forall era.
   ( EraPlutusTxInfo PlutusV2 era
-  , EraPlutusTxInfo PlutusV3 era
   , RuleListEra era
   , ConwayEraImp era
   , ApplyTx era
@@ -108,7 +106,6 @@ spec ::
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
-  , TxCert era ~ ConwayTxCert era
   ) =>
   Spec
 spec =
@@ -127,4 +124,4 @@ spec =
     describe "TxWits" $ do
       TxWitsSpec.spec @era
     Regression.spec @era
-    TxInfo.spec @era
+    TxInfo.spec @ConwayEra
