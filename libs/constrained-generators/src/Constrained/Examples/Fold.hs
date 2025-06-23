@@ -19,7 +19,7 @@ import Test.QuickCheck hiding (forAll, total)
 -- Specifications we use in the examples and in the tests
 
 oddSpec :: Specification Int
-oddSpec = ExplainSpec ["odd via (y+y+1)"] $
+oddSpec = explainSpec ["odd via (y+y+1)"] $
   constrained $ \ [var|oddx|] ->
     exists
       (\eval -> pure (div (eval oddx - 1) 2))
@@ -27,9 +27,9 @@ oddSpec = ExplainSpec ["odd via (y+y+1)"] $
 
 evenSpec ::
   forall n.
-  (TypeSpec n ~ NumSpec n, Integral n, HasSpec n, MaybeBounded n) =>
+  (NumLike n, Integral n) =>
   Specification n
-evenSpec = ExplainSpec ["even via (x+x)"] $
+evenSpec = explainSpec ["even via (x+x)"] $
   constrained $ \ [var|evenx|] ->
     exists
       (\eval -> pure (div (eval evenx) 2))
@@ -126,14 +126,14 @@ pickProp = do
 -- | Build properties about calls to 'genListWithSize'
 testFoldSpec ::
   forall a.
-  (Foldy a, Random a, Integral a, TypeSpec a ~ NumSpec a, Arbitrary a, MaybeBounded a) =>
+  Foldy a =>
   Specification Integer ->
   Specification a ->
   Specification a ->
   Outcome ->
   Gen Property
 testFoldSpec size elemSpec total outcome = do
-  ans <- genFromGenT $ inspect $ genListWithSize size elemSpec total
+  ans <- genFromGenT $ inspect $ genSizedList size elemSpec total
   let callString = parensList ["GenListWithSize", show size, fst (predSpecPair elemSpec), show total]
       fails xs = unlines [callString, "Should fail, but it succeeds with", show xs]
       succeeds xs =

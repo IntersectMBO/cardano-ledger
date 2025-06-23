@@ -1,236 +1,183 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Constrained.API (
-  PredD (..),
-  TermD (..),
-  SpecificationD (..),
-  GenericallyInstantiated,
-  Logic (..),
-  Semantics (..),
-  Syntax (..),
-  Foldy (..),
-  NumSpec (..),
-  MaybeBounded (..),
-  NonEmpty ((:|)),
+  -- * Types
   Specification,
-  pattern TypeSpec,
-  Term,
-  Fun (..),
-  name,
-  named,
   Pred,
+  Term,
+  NonEmpty ((:|)),
+
+  -- * Type classes and constraints
   HasSpec (..),
   HasSimpleRep (..),
+  Foldy (..),
   OrdLike (..),
-  conformsToSpecE,
-  conformsToSpec,
-  satisfies,
-  genFromSpecT,
-  genFromSpec,
-  debugSpec,
-  genFromSpecWithSeed,
-  simplifySpec,
-  cardinality,
-  ifElse,
-  whenTrue,
-  simplifyTerm,
+  Forallable (..),
+  HasGenHint (..),
+  Sized (..),
+  NumLike (..),
+  GenericallyInstantiated,
+  IsPred,
+  Logic,
+  Semantics,
+  Syntax,
+  Numeric,
+  IsNormalType,
+
+  -- * Core syntax
   constrained,
-  assertExplain,
+  constrained',
+  match,
+  letBind,
   assert,
+  assertExplain,
+  assertReified,
   forAll,
+  forAll',
   exists,
   unsafeExists,
-  letBind,
+  whenTrue,
+  ifElse,
+  dependsOn,
   reify,
-  assertReified,
+  reify',
+  reifies,
   explanation,
   monitor,
-  reifies,
-  dependsOn,
-  lit,
   genHint,
-  giveHint,
+  caseOn,
+  branch,
+  branchW,
+  onCon,
+  isCon,
+  onJust,
+  isJust,
+  lit,
+  con,
+  sel,
+  var,
+  name,
+
+  -- * Function symbols
+
+  -- ** Numbers
   (<.),
   (<=.),
   (>=.),
   (>.),
   (==.),
   (/=.),
-  not_,
-  or_,
-  (||.),
-  toGeneric_,
-  fromGeneric_,
   (+.),
   (-.),
   negate_,
-  addFn,
-  negateFn,
-  Numeric,
+
+  -- ** Booleans
+  not_,
+  (||.),
+
+  -- ** Pairs
   pair_,
   fst_,
   snd_,
-  prodSnd_,
-  prodFst_,
-  prod_,
-  IsNormalType,
-  injLeft_,
-  injRight_,
+
+  -- ** Either
   left_,
   right_,
-  cJust_,
-  cNothing_,
-  caseOn,
-  branch,
-  branchW,
-  forAll',
-  constrained',
-  reify',
-  con,
-  onCon,
-  isCon,
-  sel,
-  match,
-  onJust,
-  isJust,
-  chooseSpec,
-  equalSpec,
-  notEqualSpec,
-  notMemberSpec,
+
+  -- ** Maybe
+  just_,
+  nothing_,
+
+  -- ** Higher-order functions
   id_,
   flip_,
   compose_,
+
+  -- ** List
   foldMap_,
   sum_,
   elem_,
   singletonList_,
   append_,
   (++.),
-  sizeOf,
   sizeOf_,
   null_,
-  hasSize,
-  rangeSize,
   length_,
-  genFromSizeSpec,
-  between,
-  maxSpec,
-  SetW (..),
-  SetSpec (..),
+
+  -- ** Set
   singleton_,
   member_,
   union_,
   subset_,
   disjoint_,
   fromList_,
-  pattern Elem,
-  pattern ToGeneric,
-  pattern FromGeneric,
-  pattern Unary,
-  pattern (:<:),
-  pattern (:>:),
-  printPlan,
-  NumLike,
-  PairSpec (..),
-  MapSpec (..),
+
+  -- ** Map
   dom_,
   rng_,
   lookup_,
   mapMember_,
-  fstSpec,
-  sndSpec,
-  var,
-  Prod (..),
+  rootLabel_,
+
+  -- ** Generics
+  fromGeneric_,
+  toGeneric_,
+
+  -- * Composing specifications
+  satisfies,
+  chooseSpec,
+  trueSpec,
+  equalSpec,
+  notEqualSpec,
+  notMemberSpec,
+  hasSize,
+  explainSpec,
+  rangeSize,
+  between,
+  typeSpec,
+  defaultMapSpec,
+
+  -- * Generation, Shrinking, and Testing
+
+  -- ** Generating
+  genFromSpec,
+  genFromSpecT,
+  genFromSpecWithSeed,
+  genFromSizeSpec,
+
+  -- ** Shrinking
+  shrinkWithSpec,
+
+  -- ** Debugging
+  debugSpec,
+  printPlan,
+
+  -- ** Testing
+  conformsToSpec,
+  conformsToSpecE,
+  conformsToSpecProp,
+
+  -- ** Building properties
+  monitorSpec,
+  forAllSpec,
+  forAllSpecShow,
+  forAllSpecDiscard,
 ) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  Fun (..),
-  GenericallyInstantiated,
-  HasSpec (..),
-  Logic (..),
-  Pred,
-  Specification,
-  Term,
-  constrained,
-  equalSpec,
-  fromGeneric_,
-  giveHint,
-  name,
-  named,
-  notEqualSpec,
-  notMemberSpec,
-  toGeneric_,
-  pattern FromGeneric,
-  pattern ToGeneric,
-  pattern TypeSpec,
-  pattern Unary,
-  pattern (:<:),
-  pattern (:>:),
- )
-import Constrained.Conformance (
-  conformsToSpec,
-  conformsToSpecE,
-  satisfies,
- )
-import Constrained.Core (NonEmpty ((:|)))
+import Constrained.Base
+import Constrained.Conformance
+import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.Generation
-import Constrained.Generic (HasSimpleRep (..), Prod (..))
-import Constrained.NumOrd (
-  MaybeBounded (..),
-  NumLike,
-  NumSpec (..),
-  Numeric,
-  OrdLike (..),
-  addFn,
-  cardinality,
-  negateFn,
-  negate_,
-  (+.),
-  (-.),
-  (<.),
-  (<=.),
-  (>.),
-  (>=.),
- )
-import Constrained.Spec.Map (
-  MapSpec (..),
-  dom_,
-  fstSpec,
-  lookup_,
-  mapMember_,
-  rng_,
-  sndSpec,
- )
-import Constrained.Spec.Set (
-  SetSpec (..),
-  SetW (..),
-  disjoint_,
-  fromList_,
-  member_,
-  singleton_,
-  subset_,
-  union_,
- )
+import Constrained.Generic
+import Constrained.NumOrd
+import Constrained.Properties
+import Constrained.Spec.Map
+import Constrained.Spec.Set
 import Constrained.Spec.SumProd
-import Constrained.Syntax (
-  assert,
-  assertExplain,
-  assertReified,
-  dependsOn,
-  exists,
-  explanation,
-  forAll,
-  genHint,
-  letBind,
-  lit,
-  monitor,
-  reifies,
-  reify,
-  unsafeExists,
-  var,
- )
+import Constrained.Spec.Tree
+import Constrained.Syntax
 import Constrained.TheKnot
 
 infix 4 /=.
@@ -256,3 +203,6 @@ infixr 5 ++.
 
 null_ :: (HasSpec a, Sized a) => Term a -> Term Bool
 null_ xs = sizeOf_ xs ==. 0
+
+trueSpec :: Specification a
+trueSpec = TrueSpec

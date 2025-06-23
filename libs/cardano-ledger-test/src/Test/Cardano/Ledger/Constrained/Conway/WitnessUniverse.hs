@@ -69,9 +69,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
-import Constrained.Base (toPred)
 import Constrained.GenT (pureGen)
-import Constrained.TheKnot (hasSize, rangeSize)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)
 import Data.ByteString (ByteString)
@@ -145,12 +143,12 @@ instance
   where
   type TypeSpec (MultiSig era) = ()
   emptySpec = ()
-  combineSpec _ _ = TrueSpec
+  combineSpec _ _ = trueSpec
   genFromTypeSpec _ = pureGen $ genNestedMultiSig 2
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 -- ========================================================================
 -- We need witnesses when the Tx has values of type 'hashtype' inside, because
@@ -321,10 +319,9 @@ instance Era era => EncCBOR (WitUniv era) where
 -- the (Set hashtype) allows efficient constraints like :: (member_ t) (lit (wbHash witblock))
 
 explainWit :: String -> WitUniv era -> Specification t -> Specification t
-explainWit str (WitUniv n _ _ _ _) spec =
-  ExplainSpec
+explainWit str (WitUniv n _ _ _ _) =
+  explainSpec
     ["While witnessing " ++ str ++ " with WitUniv of size " ++ show n]
-    spec
 
 witKeyHashSpec ::
   forall era krole.
@@ -334,8 +331,8 @@ witKeyHashSpec univ =
   explainWit "keyhash :: (KeyHash r c)" univ $
     constrained $
       \ [var|keyhash|] ->
-        Explain (pure ("witnessing " ++ show keyhash)) $
-          Assert $
+        explanation (pure ("witnessing " ++ show keyhash)) $
+          assert $
             member_ (coerce_ keyhash) (lit (wbHash (wvVKey univ)))
 
 witScriptHashSpec ::
@@ -380,9 +377,9 @@ witDRepSpec univ =
           -- ScriptHash c -> DRep
           (branchW 3 $ \ [var|scripthash|] -> satisfies scripthash (witScriptHashSpec univ))
           -- DRepAlwaysObstain
-          (branchW 1 $ \_ -> assert True)
+          (branchW 1 $ \_ -> True)
           -- DRepAlwaysNoConfidence
-          (branchW 1 $ \_ -> assert True)
+          (branchW 1 $ \_ -> True)
       ]
 
 -- | Used only in Withdrawals, other RewardAccounts, not being withdrawn do not need witnessing
@@ -430,7 +427,7 @@ witShelleyTxCert univ =
       (caseOn txcert)
         ( branchW 5 $ \delegcert ->
             (caseOn delegcert)
-              (branch $ \_register -> TruePred :: Pred)
+              (branch $ \_register -> True)
               (branch $ \unregisterAuthor -> satisfies unregisterAuthor (witCredSpec univ))
               (branch $ \delegateAuthor _ -> satisfies delegateAuthor (witCredSpec univ))
         )
@@ -441,7 +438,7 @@ witShelleyTxCert univ =
         )
         ( branchW 1 $ \genesiscert -> match genesiscert $ \authorkey _ _ -> satisfies authorkey (witKeyHashSpec univ)
         )
-        (branchW 1 $ \_mircert -> FalsePred (pure "NO MIR") :: Pred)
+        (branchW 1 $ \_mircert -> assertExplain (pure "NO MIR") False)
 
 -- | Constrains all the Certificate Authors. Sometimes thay are keyHashes, and sometimes Credentials
 witConwayTxCert ::
@@ -456,7 +453,7 @@ witConwayTxCert univ =
             (caseOn delegcert)
               ( branch $ \registerAuthor deposit ->
                   (caseOn deposit)
-                    (branch $ \_ -> TruePred :: Pred)
+                    (branch $ \_ -> True)
                     (branch $ \_ -> satisfies registerAuthor (witCredSpec univ))
               )
               (branch $ \unregisterAuthor _ -> satisfies unregisterAuthor (witCredSpec univ))
@@ -715,7 +712,7 @@ instance (Era era, HasSpec t, Witnessed era t, IsNormalType t) => Witnessed era 
       (branch $ \_ -> False)
       -- Just
       ( branch $ \x ->
-          Explain
+          explanation
             (pure ("In the " ++ show (typeRep (Proxy @(Maybe t))) ++ " instance of Witnesssed"))
             (witness univ x)
       )
@@ -851,7 +848,7 @@ govActionStateWitness ::
   forall era.
   EraSpecPParams era =>
   WitUniv era -> Specification (GovActionState era)
-govActionStateWitness univ = ExplainSpec ["Witnessing GovActionState"] $
+govActionStateWitness univ = explainSpec ["Witnessing GovActionState"] $
   constrained $ \ [var|govactstate|] ->
     match govactstate $
       \_gaid [var|comVotemap|] [var|drepVotemap|] [var|poolVotemap|] [var|proposalProc|] _proposed _expires ->
@@ -869,7 +866,7 @@ govActionWitness ::
   forall era.
   EraSpecPParams era =>
   WitUniv era -> Specification (GovAction era)
-govActionWitness univ = ExplainSpec ["Witnessing GovAction"] $
+govActionWitness univ = explainSpec ["Witnessing GovAction"] $
   constrained $ \ [var|govaction|] ->
     (caseOn govaction)
       -- ParameterChange

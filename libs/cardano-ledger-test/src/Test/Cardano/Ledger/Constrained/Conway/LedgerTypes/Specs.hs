@@ -42,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Constrained.API
+import Data.Foldable
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -145,7 +146,7 @@ domEqualRng ::
   Term (Map cred ume) ->
   Pred
 domEqualRng [var|mapXCred|] [var|mapCredY|] =
-  And
+  fold
     [ assert $ sizeOf_ mapCredY <=. sizeOf_ mapXCred
     , assert $ sizeOf_ mapXCred >=. lit 0
     , assert $ sizeOf_ mapCredY >=. lit 0
@@ -511,12 +512,11 @@ snapShotsSpec ::
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|go|] _fee ->
-      And
-        [ assert $ mark ==. marksnap
-        , satisfies set snapShotSpec
-        , satisfies go snapShotSpec
-        , reify marksnap calculatePoolDistr $ \ [var|pd|] -> pooldistr ==. pd
-        ]
+      [ assert $ mark ==. marksnap
+      , satisfies set snapShotSpec
+      , satisfies go snapShotSpec
+      , reify marksnap calculatePoolDistr $ \ [var|pd|] -> pooldistr ==. pd
+      ]
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
@@ -544,12 +544,11 @@ epochStateSpec ::
 epochStateSpec pp univ epoch =
   constrained $ \ [var|epochState|] ->
     match epochState $ \ [var|acctst|] [var|eLedgerState|] [var|snaps|] [var|nonmyopic|] ->
-      And
-        [ dependsOn eLedgerState acctst
-        , satisfies eLedgerState (ledgerStateSpec pp univ acctst epoch)
-        , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
-        , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
-        ]
+      [ dependsOn eLedgerState acctst
+      , satisfies eLedgerState (ledgerStateSpec pp univ acctst epoch)
+      , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
+      , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
+      ]
 
 getPoolDistr :: forall era. EpochState era -> PoolDistr
 getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
@@ -571,15 +570,14 @@ newEpochStateSpecUTxO pp univ =
         match
           (newEpochStateUTxO :: Term (NewEpochState era))
           ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
-              And
-                [ -- reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era pp epoch))
-                  -- dependsOn eno epochstate
-                  satisfies epochstate (epochStateSpec @era pp univ eno)
-                , satisfies stashAvvm (constrained (\ [var|u|] -> u ==. lit (UTxO @era Map.empty)))
-                , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
-                , match blocksPrev (genHint 3)
-                , match blocksCurr (genHint 3)
-                ]
+              [ -- reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era pp epoch))
+                -- dependsOn eno epochstate
+                satisfies epochstate (epochStateSpec @era pp univ eno)
+              , satisfies stashAvvm (constrained (\ [var|u|] -> u ==. lit (UTxO @era Map.empty)))
+              , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
+              , match blocksPrev (genHint 3)
+              , match blocksCurr (genHint 3)
+              ]
           )
     )
 
@@ -600,12 +598,11 @@ newEpochStateSpecUnit pp univ =
         match
           (newEpochStateUnit :: Term (NewEpochState era))
           ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
-              And
-                [ satisfies epochstate (epochStateSpec @era pp univ eno)
-                , satisfies stashAvvm (constrained (\ [var|x|] -> x ==. lit ()))
-                , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
-                , match blocksPrev (genHint 3)
-                , match blocksCurr (genHint 3)
-                ]
+              [ satisfies epochstate (epochStateSpec @era pp univ eno)
+              , satisfies stashAvvm (constrained (\ [var|x|] -> x ==. lit ()))
+              , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
+              , match blocksPrev (genHint 3)
+              , match blocksCurr (genHint 3)
+              ]
           )
     )

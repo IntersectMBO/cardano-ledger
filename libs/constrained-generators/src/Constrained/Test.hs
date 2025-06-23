@@ -13,55 +13,17 @@
 -- | Useful properties for debugging HasSpec instances and this library itself
 module Constrained.Test where
 
-import Constrained.API
-import Constrained.Base (
-  AppRequires,
-  BaseW (..),
-  HOLE (..),
-  appTerm,
-  memberSpecList,
-  typeSpec,
- )
-import Constrained.Conformance (
-  monitorSpec,
- )
-import Constrained.Core (
-  Value (..),
-  Var (..),
-  unValue,
- )
-import Constrained.FunctionSymbol (getWitness)
-import Constrained.GenT (
-  GE (..),
-  fromGEDiscard,
-  fromGEProp,
-  strictGen,
- )
+import Constrained.API.Extend
+import Constrained.Base
+import Constrained.Core
+import Constrained.FunctionSymbol
+import Constrained.GenT
 import Constrained.Generation
-import Constrained.List (
-  All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  TypeList,
-  fillListCtx,
-  lengthList,
-  listShape,
-  mapListCtxC,
-  mapMListC,
-  uncurryList,
-  uncurryList_,
- )
-import Constrained.NumOrd (
-  IntW (..),
-  OrdW (..),
- )
+import Constrained.List
+import Constrained.NumOrd
 import Constrained.PrettyUtils
-import Constrained.Properties
-import Constrained.Spec.Map (
-  MapW (..),
- )
-import Constrained.Spec.SumProd ()
+import Constrained.Spec.Map
+import Constrained.Spec.Set
 import Constrained.TheKnot
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NE

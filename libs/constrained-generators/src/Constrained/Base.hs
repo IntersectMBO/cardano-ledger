@@ -552,7 +552,7 @@ instance HasSpec Bool where
   cardinalTrueSpec = equalSpec 2
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = TruePred
 
 instance HasSpec () where
   type TypeSpec () = ()
@@ -643,7 +643,7 @@ fromSimpleRepSpec ::
   Specification (SimpleRep a) ->
   Specification a
 fromSimpleRepSpec = \case
-  ExplainSpec es s -> explainSpecOpt es (fromSimpleRepSpec s)
+  ExplainSpec es s -> explainSpec es (fromSimpleRepSpec s)
   TrueSpec -> TrueSpec
   ErrorSpec e -> ErrorSpec e
   TypeSpec s'' cant -> TypeSpec s'' $ map fromSimpleRep cant
@@ -658,7 +658,7 @@ toSimpleRepSpec ::
   Specification a ->
   Specification (SimpleRep a)
 toSimpleRepSpec = \case
-  ExplainSpec es s -> explainSpecOpt es (toSimpleRepSpec s)
+  ExplainSpec es s -> explainSpec es (toSimpleRepSpec s)
   TrueSpec -> TrueSpec
   ErrorSpec e -> ErrorSpec e
   TypeSpec s'' cant -> TypeSpec s'' $ map toSimpleRep cant
@@ -806,12 +806,8 @@ memberSpecList xs messages =
 
 explainSpec :: [String] -> Specification a -> Specification a
 explainSpec [] x = x
+explainSpec es (ExplainSpec es' spec) = ExplainSpec (es ++ es') spec
 explainSpec es spec = ExplainSpec es spec
-
-explainSpecOpt :: [String] -> Specification a -> Specification a
-explainSpecOpt [] x = x
-explainSpecOpt es1 (ExplainSpec es2 x) = explainSpecOpt (es1 ++ es2) x
-explainSpecOpt es spec = ExplainSpec es spec
 
 equalSpec :: a -> Specification a
 equalSpec = MemberSpec . pure

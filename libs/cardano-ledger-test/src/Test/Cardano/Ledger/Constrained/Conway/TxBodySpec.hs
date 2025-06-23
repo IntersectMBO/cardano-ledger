@@ -22,7 +22,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val
 import Constrained.API
-import Constrained.Base (IsPred (..))
+import Data.Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.TreeDiff
@@ -59,7 +59,7 @@ subMapSubDependsOnSuper ::
   Term (Map k v) ->
   Pred
 subMapSubDependsOnSuper sub super =
-  And
+  fold
     [ dependsOn sub super
     , assert $ super /=. lit (Map.empty)
     , assert $ subset_ (dom_ sub) (dom_ super)
@@ -73,7 +73,7 @@ subMapSuperDependsOnSub ::
   Term (Map k v) ->
   Pred
 subMapSuperDependsOnSub sub super =
-  And
+  fold
     [ dependsOn super sub
     , assert $ super /=. lit (Map.empty)
     , assert $ subset_ (dom_ sub) (dom_ super)
@@ -107,23 +107,6 @@ getDepositRefund pp certState certs =
     vs = certState ^. certVStateL
     ps = certState ^. certPStateL
     ds = certState ^. certDStateL
-
--- | This is exactly the same as reify, except it names the existential varaible for better error messages
-reifyX ::
-  ( HasSpec a
-  , HasSpec b
-  , IsPred p
-  ) =>
-  Term a ->
-  (a -> b) ->
-  (Term b -> p) ->
-  Pred
-reifyX t f body =
-  exists (\eval -> pure $ f (eval t)) $ \ [var|reifyvar|] ->
-    -- NOTE we name the existenital variable 'reifyvar'
-    [ reifies reifyvar t f
-    , Explain (pure ("reifies " ++ show reifyvar)) $ toPred $ body reifyvar
-    ]
 
 -- ==============================================================================
 -- Some code to visualize what is happening, this code will disappear eventually

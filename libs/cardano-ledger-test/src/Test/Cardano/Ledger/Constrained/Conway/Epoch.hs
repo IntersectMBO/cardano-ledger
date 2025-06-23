@@ -31,7 +31,7 @@ data EpochExecEnv era = EpochExecEnv
   deriving (Generic, Eq, Show)
 
 epochEnvSpec :: Specification (EpochExecEnv ConwayEra)
-epochEnvSpec = TrueSpec
+epochEnvSpec = trueSpec
 
 epochStateSpec ::
   Term EpochNo ->

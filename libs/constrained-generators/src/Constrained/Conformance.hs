@@ -17,7 +17,7 @@ import Constrained.Base (
   addToErrorSpec,
   combineSpec,
   conformsTo,
-  explainSpecOpt,
+  explainSpec,
   forAllToList,
   memberSpecList,
   notMemberSpec,
@@ -204,7 +204,7 @@ checkPredE env msgs = \case
           GenError es -> Just (msgs <> catMessageList es)
   Explain es p -> checkPredE env (msgs <> es) p
 
--- | conformsToSpec with explanation. Nothing if (conformsToSpec a spec),
+-- | @conformsToSpec@ with explanation. Nothing if (conformsToSpec a spec),
 --   but (Just explanations) if not(conformsToSpec a spec).
 conformsToSpecE ::
   forall a.
@@ -259,8 +259,8 @@ satisfies _ (ErrorSpec e) = FalsePred e
 -- ==================================================================
 
 instance HasSpec a => Semigroup (Specification a) where
-  ExplainSpec es x <> y = explainSpecOpt es (x <> y)
-  x <> ExplainSpec es y = explainSpecOpt es (x <> y)
+  ExplainSpec es x <> y = explainSpec es (x <> y)
+  x <> ExplainSpec es y = explainSpec es (x <> y)
   TrueSpec <> s = s
   s <> TrueSpec = s
   ErrorSpec e <> ErrorSpec e' =

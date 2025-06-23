@@ -21,8 +21,6 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.UMap (umElems, umElemsL)
 import Constrained.API
-import Constrained.Base (IsPred (..))
-import Constrained.Spec.Tree (rootLabel_)
 import Data.Coerce
 import Data.Foldable
 import Data.Map qualified as Map
@@ -149,8 +147,8 @@ proposalsSpec geEpoch gePPolicy geCertState =
             (branch $ \_ _ -> False) -- HardForkInitiation
             -- Treasury Withdrawal
             ( branch $ \ [var|withdrawMap|] [var|policy|] ->
-                Explain (pure "TreasuryWithdrawal fails") $
-                  And
+                explanation (pure "TreasuryWithdrawal fails") $
+                  fold $
                     [ dependsOn gasOther withdrawMap
                     , match geCertState $ \_vState _pState [var|dState|] ->
                         match dState $ \ [var|rewardMap|] _ _ _ ->
@@ -224,7 +222,7 @@ withPrevActId ::
   (Term (StrictMaybe GovActionId) -> Pred) ->
   Pred
 withPrevActId gas k =
-  And
+  fold
     [ match (gasProposalProcedure_ gas) $ \_deposit [var|retAddr|] _action _anchor ->
         match retAddr $ \ [var|net|] _ -> [dependsOn gas net, assert $ net ==. lit Testnet]
     , caseOn
