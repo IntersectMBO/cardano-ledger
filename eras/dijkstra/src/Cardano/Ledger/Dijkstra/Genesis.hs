@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -9,6 +10,8 @@ module Cardano.Ledger.Dijkstra.Genesis (
 
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
  )

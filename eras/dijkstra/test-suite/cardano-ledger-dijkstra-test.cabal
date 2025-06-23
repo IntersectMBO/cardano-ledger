@@ -1,0 +1,49 @@
+cabal-version: 3.0
+name: cardano-ledger-dijkstra-test
+version: 1.3.1.1
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Tests for Cardano ledger Dijkstra era
+description: This package builds upon the Alonzo ledger
+category: Network
+build-type: Simple
+
+source-repository head
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/dijkstra/test-suite
+
+library
+  exposed-modules: Test.Cardano.Ledger.Dijkstra.Examples.Consensus
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+  build-depends:
+    base >=4.18 && <5,
+    cardano-data >=1.2.2,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.12,
+    cardano-ledger-babbage >=1.10.1,
+    cardano-ledger-binary >=1.0,
+    cardano-ledger-conway ^>=1.20,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-dijkstra ^>=0.1,
+    cardano-ledger-mary >=1.4,
+    cardano-ledger-shelley >=1.16,
+    cardano-ledger-shelley-ma-test >=1.1,
+    cardano-ledger-shelley-test >=1.6,
+    cardano-strict-containers,
+    containers,
+    data-default,
+    microlens,
+    plutus-ledger-api,
+    small-steps >=1.1,

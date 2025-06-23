@@ -138,6 +138,9 @@ cradle:
     - path: "eras/dijkstra/test"
       component: "cardano-ledger-dijkstra:test:tests"
 
+    - path: "eras/dijkstra/test-suite/src"
+      component: "lib:cardano-ledger-dijkstra-test"
+
     - path: "eras/mary/impl/src"
       component: "lib:cardano-ledger-mary"
 
