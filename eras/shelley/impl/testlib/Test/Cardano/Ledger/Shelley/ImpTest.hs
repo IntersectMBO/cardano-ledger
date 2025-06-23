@@ -136,6 +136,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNativeScriptsG,
   produceScript,
   advanceToPointOfNoReturn,
+  simulateThenRestore,
 
   -- * ImpSpec re-exports
   ImpM,
@@ -218,7 +219,7 @@ import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), evalStateT, gets, modify)
+import Control.Monad.State.Strict (MonadState (..), evalStateT, get, gets, modify, put)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
@@ -1703,3 +1704,18 @@ unlessMajorVersion a = do
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
+
+-- | Runs a simulation action and then restores the ledger state to what it was
+-- before the simulation started.
+-- This is useful for testing or running actions whose effects on the ledger
+-- state should not persist. The return value of the simulation is preserved,
+-- but any changes to the internal state (e.g., the UTxO set, protocol parameters,
+-- etc.) are discarded and replaced with the original snapshot.
+simulateThenRestore ::
+  ImpTestM era a ->
+  ImpTestM era a
+simulateThenRestore sim = do
+  snapshot <- get
+  result <- sim
+  put snapshot
+  pure result
