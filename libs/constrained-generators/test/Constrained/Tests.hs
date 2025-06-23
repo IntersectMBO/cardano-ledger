@@ -14,7 +14,7 @@
 
 module Constrained.Tests where
 
-import Constrained.API
+import Constrained.API.Extend
 import Constrained.Examples.Basic
 import Constrained.Examples.Either
 import Constrained.Examples.Fold (

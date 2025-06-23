@@ -15,7 +15,6 @@
 module Constrained.Examples.ManualExamples where
 
 import Constrained.API
-import Constrained.Properties (forAllSpec)
 import Data.Set (Set)
 import GHC.Generics
 import GHC.Natural
@@ -53,11 +52,10 @@ leqPair = constrained $ \p ->
 sumPair :: Specification (Int, Int)
 sumPair = constrained $ \p ->
   match p $ \x y ->
-    And
-      [ assert $ x <=. y
-      , assert $ y >=. 20
-      , assert $ x + y ==. 25
-      ]
+    [ assert $ x <=. y
+    , assert $ y >=. 20
+    , assert $ x + y ==. 25
+    ]
 
 ex1 :: Specification Int
 ex1 = constrained $ \_x -> True
@@ -292,14 +290,14 @@ ex22b = constrained $ \ [var|pair|] ->
 ex24 :: Specification Int
 ex24 = constrained $ \ [var|oddx|] ->
   unsafeExists
-    (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
+    (\ [var|y|] -> [assert $ oddx ==. y + y + 1])
 
 ex25 :: Specification Int
-ex25 = ExplainSpec ["odd via (y+y+1)"] $
+ex25 = explainSpec ["odd via (y+y+1)"] $
   constrained $ \ [var|oddx|] ->
     exists
       (\eval -> pure (div (eval oddx - 1) 2))
-      (\ [var|y|] -> [Assert $ oddx ==. y + y + 1])
+      (\ [var|y|] -> [assert $ oddx ==. y + y + 1])
 
 {-  Conditionals
 1.  `whenTrue`
@@ -342,7 +340,7 @@ ex28a = constrained $ \s ->
   ]
 
 ex28b :: Specification (Set Int)
-ex28b = ExplainSpec ["5 must be in the set"] $
+ex28b = explainSpec ["5 must be in the set"] $
   constrained $ \s ->
     [ assert $ member_ (lit 5) s
     , forAll s $ \x -> [x >. lit 6, x <. lit 20]
@@ -447,16 +445,16 @@ skeleton2 :: Specification Nested
 skeleton2 = constrained $ \ [var|nest|] ->
   match nest $ \ [var|three|] [var|rect|] [var|line|] ->
     [ (caseOn (three :: Term Three))
-        (branch @Pred $ \_i -> TruePred) -- One,
-        (branch @Pred $ \_k -> TruePred) -- Two,
-        (branch @Pred $ \_j -> TruePred) -- Three,
-    , match @Pred rect $ \ [var|_wid|] [var|_len|] [var|_square|] -> TruePred
-    , forAll @Pred line $ \ [var|_point|] -> TruePred
+        (branch @Pred $ \_i -> truePred) -- One,
+        (branch @Pred $ \_k -> truePred) -- Two,
+        (branch @Pred $ \_j -> truePred) -- Three,
+    , match @Pred rect $ \ [var|_wid|] [var|_len|] [var|_square|] -> truePred
+    , forAll @Pred line $ \ [var|_point|] -> truePred
     ]
 
 -- We can do a similar thing by introducing `truePred` with the monomorphic type.
 truePred :: Pred
-truePred = TruePred
+truePred = mempty
 
 skeleton :: Specification Nested
 skeleton = constrained $ \ [var|nest|] ->

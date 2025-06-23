@@ -13,17 +13,11 @@
 -- | Useful properties for debugging HasSpec instances and this library itself
 module Constrained.Test where
 
-import Constrained.API
+import Constrained.API.Extend
 import Constrained.Base (
   AppRequires,
   BaseW (..),
-  HOLE (..),
-  appTerm,
   memberSpecList,
-  typeSpec,
- )
-import Constrained.Conformance (
-  monitorSpec,
  )
 import Constrained.Core (
   Value (..),
@@ -57,7 +51,6 @@ import Constrained.NumOrd (
   OrdW (..),
  )
 import Constrained.PrettyUtils
-import Constrained.Properties
 import Constrained.Spec.Map (
   MapW (..),
  )

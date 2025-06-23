@@ -85,7 +85,7 @@ vsX = do
     aggregateDRep
       <$> genFromSpec -- ensures that each credential delegates to exactly one DRep
         @(Map (Credential 'Staking) DRep)
-        TrueSpec
+        trueSpec
   genFromSpec @(VState era) (vstateSpec univ (lit epoch) (lit delegatees))
 
 csX :: forall era. EraSpecLedger era => Gen (CertState era)

@@ -46,10 +46,8 @@ import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Constrained.API
-import Constrained.Base
 import Constrained.GenT
 import Constrained.NumOrd
-import Constrained.SumList (genListWithSize)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
 import Data.Maybe
@@ -105,12 +103,6 @@ instance OrdLike Coin
 instance NumLike Coin
 
 instance Foldy Coin where
-  genList s s' = map fromSimpleRep <$> genList @Word64 (toSimpleRepSpec s) (toSimpleRepSpec s')
-  theAddFn = AddW
-  theZero = Coin 0
-  genSizedList sz elemSpec foldSpec =
-    map fromSimpleRep
-      <$> genListWithSize @Word64 sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
   noNegativeValues = True
 
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
@@ -136,34 +128,34 @@ instance HasSpec EpochInterval
 instance HasSpec UnitInterval where
   type TypeSpec UnitInterval = ()
   emptySpec = ()
-  combineSpec _ _ = TrueSpec
+  combineSpec _ _ = trueSpec
   genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSpec NonNegativeInterval where
   type TypeSpec NonNegativeInterval = ()
   emptySpec = ()
-  combineSpec _ _ = TrueSpec
+  combineSpec _ _ = trueSpec
   genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep CostModels
 
 instance HasSpec CostModels where
   type TypeSpec CostModels = ()
   emptySpec = ()
-  combineSpec _ _ = TrueSpec
+  combineSpec _ _ = trueSpec
   genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep Prices
 
@@ -240,12 +232,12 @@ succV_ = fromGeneric_ . (+ 1) . toGeneric_
 instance Typeable r => HasSpec (KeyHash r) where
   type TypeSpec (KeyHash r) = ()
   emptySpec = ()
-  combineSpec _ _ = TrueSpec
+  combineSpec _ _ = trueSpec
   genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = trueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 -- =========================================================================================
 

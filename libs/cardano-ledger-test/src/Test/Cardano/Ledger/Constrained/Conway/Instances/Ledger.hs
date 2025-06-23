@@ -116,15 +116,10 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
-import Constrained.API
-import Constrained.Base
+import Constrained.API.Extend hiding (Sized)
+import Constrained.API.Extend qualified as C
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
-import Constrained.NumOrd
-import Constrained.Spec.Map
-import Constrained.Spec.Tree ()
-import Constrained.SumList (genListWithSize)
-import Constrained.TheKnot qualified as C
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -233,14 +228,7 @@ instance OrdLike DeltaCoin
 
 instance NumLike DeltaCoin
 
-instance Foldy DeltaCoin where
-  genList s s' = map fromSimpleRep <$> genList @Integer (toSimpleRepSpec s) (toSimpleRepSpec s')
-  theAddFn = AddW
-  theZero = DeltaCoin 0
-  genSizedList sz elemSpec foldSpec =
-    map fromSimpleRep
-      <$> genListWithSize @Integer sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
-  noNegativeValues = False
+instance Foldy DeltaCoin
 
 deriving via Integer instance Num DeltaCoin
 
@@ -274,7 +262,7 @@ instance Typeable index => HasSpec (SafeHash index) where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep TxId
 
@@ -441,7 +429,7 @@ instance HasSpec PV1.Data where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance Era era => HasSimpleRep (Data era) where
   type SimpleRep (Data era) = PV1.Data
@@ -544,7 +532,7 @@ instance
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep CompactAddr where
   type SimpleRep CompactAddr = SimpleRep Addr
@@ -597,7 +585,7 @@ instance Typeable b => HasSpec (AbstractHash Blake2b_224 b) where
   shrinkWithTypeSpec _ _ = []
   cardinalTypeSpec _ = TrueSpec
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep StakeReference
 
@@ -654,7 +642,7 @@ instance Typeable r => HasSpec (VRFVerKeyHash r) where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   type TypeSpec (Hash a b) = ()
@@ -664,7 +652,7 @@ instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep (ConwayTxCert era)
 
@@ -694,7 +682,7 @@ instance HasSpec StakePoolRelay where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep Port
 
@@ -718,7 +706,7 @@ instance HasSpec Url where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSpec Text where
   type TypeSpec Text = ()
@@ -728,7 +716,7 @@ instance HasSpec Text where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 newtype StringSpec = StringSpec {strSpecLen :: Specification Int}
 
@@ -911,7 +899,7 @@ instance HasSpec Char where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSpec CostModel where
   type TypeSpec CostModel = ()
@@ -921,7 +909,7 @@ instance HasSpec CostModel where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSimpleRep Language
 
@@ -1690,7 +1678,7 @@ instance Typeable r => HasSpec (WitVKey r) where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance HasSpec BootstrapWitness where
   type TypeSpec BootstrapWitness = ()
@@ -1700,7 +1688,7 @@ instance HasSpec BootstrapWitness where
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
-  toPreds _ _ = toPred True
+  toPreds _ _ = assert True
 
 instance Era era => HasSimpleRep (LedgerEnv era)
 
@@ -1843,7 +1831,7 @@ class Coercible a b => CoercibleLike a b where
     Specification b
 
 instance Typeable krole => CoercibleLike (KeyHash krole) (KeyHash 'Witness) where
-  coerceSpec (ExplainSpec es x) = explainSpecOpt es (coerceSpec x)
+  coerceSpec (ExplainSpec es x) = explainSpec es (coerceSpec x)
   coerceSpec (TypeSpec z excl) = TypeSpec z $ coerceKeyRole <$> excl
   coerceSpec (MemberSpec s) = MemberSpec $ coerceKeyRole <$> s
   coerceSpec (ErrorSpec e) = ErrorSpec e

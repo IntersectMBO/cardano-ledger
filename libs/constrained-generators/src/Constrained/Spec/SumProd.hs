@@ -35,8 +35,8 @@ module Constrained.Spec.SumProd (
   chooseSpec,
   left_,
   right_,
-  cJust_,
-  cNothing_,
+  just_,
+  nothing_,
   fst_,
   snd_,
   fstW,
@@ -539,11 +539,11 @@ con =
   curryList @(ConstrOf c (TheSop a)) @Term
     (fromGeneric_ @a . inj_ @c @(TheSop a) . prodOver_)
 
-cJust_ :: (HasSpec a, IsNormalType a) => Term a -> Term (Maybe a)
-cJust_ = con @"Just"
+just_ :: (HasSpec a, IsNormalType a) => Term a -> Term (Maybe a)
+just_ = con @"Just"
 
-cNothing_ :: (HasSpec a, IsNormalType a) => Term (Maybe a)
-cNothing_ = con @"Nothing" (Lit ())
+nothing_ :: (HasSpec a, IsNormalType a) => Term (Maybe a)
+nothing_ = con @"Nothing" (Lit ())
 
 sel ::
   forall n a c as.

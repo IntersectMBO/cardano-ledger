@@ -6,6 +6,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,8 +36,9 @@ import Constrained.Base (
   Specification,
   Term,
   bind,
-  explainSpecOpt,
+  explainSpec,
   forAllToList,
+  name,
   toPred,
  )
 import Constrained.Core (
@@ -533,16 +535,6 @@ fromLit _ = Nothing
 isLit :: Term a -> Bool
 isLit = isJust . fromLit
 
-name :: String -> Term a -> Term a
-name nh (V (Var i _)) = V (Var i nh)
-name _ _ = error "applying name to non-var thing! Shame on you!"
-
--- | Give a Term a nameHint, if its a Var, and doesn't already have one,
---  otherwise return the Term unchanged.
-named :: String -> Term a -> Term a
-named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
-named _ t = t
-
 mkCase ::
   HasSpec (SumOver as) => Term (SumOver as) -> List (Weighted Binder) as -> Pred
 mkCase tm cs
@@ -782,7 +774,7 @@ reify ::
   (Term b -> p) ->
   Pred
 reify t f body =
-  exists (\eval -> pure $ f (eval t)) $ \x ->
+  exists (\eval -> pure $ f (eval t)) $ \(name "reify_variable" -> x) ->
     [ reifies x t f
     , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
@@ -897,7 +889,7 @@ regularizeNamesPred pred = case pred of
   Explain es p' -> Explain es (regularizeNamesPred p')
 
 regularizeNames :: Specification a -> Specification a
-regularizeNames (ExplainSpec es x) = explainSpecOpt es (regularizeNames x)
+regularizeNames (ExplainSpec es x) = explainSpec es (regularizeNames x)
 regularizeNames (SuspendedSpec x p) =
   SuspendedSpec x' p'
   where

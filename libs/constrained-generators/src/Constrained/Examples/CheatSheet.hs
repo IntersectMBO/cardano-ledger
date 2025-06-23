@@ -6,7 +6,6 @@
 module Constrained.Examples.CheatSheet where
 
 import Constrained.API
-import Constrained.Properties (forAllSpec)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import GHC.Generics

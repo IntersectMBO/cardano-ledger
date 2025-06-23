@@ -344,7 +344,7 @@ instance Logic MapW where
                letBind (fst_ kv) $ \k' ->
                  letBind (snd_ kv) $ \v ->
                    whenTrue (Lit k ==. k') $
-                     -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
+                     -- TODO: What you want to write is `just_ v `satisfies` spec` but we can't
                      -- do that because we don't have access to `IsNormalType v` here. When
                      -- we refactor the `IsNormalType` machinery we will be able to make
                      -- this nicer.

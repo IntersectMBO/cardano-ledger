@@ -28,7 +28,7 @@ import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Constrained.API
+import Constrained.API hiding (Sized)
 import Constrained.Generic
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)

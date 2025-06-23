@@ -36,7 +36,7 @@ mapMemberB ::
 mapMemberB m key val =
   And
     [ assert $ member_ key (dom_ (lit m))
-    , assert $ cJust_ val ==. lookup_ key (lit m)
+    , assert $ just_ val ==. lookup_ key (lit m)
     ]
 
 mapMemberC ::

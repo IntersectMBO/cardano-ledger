@@ -33,7 +33,7 @@ import Constrained.Base (
   appTerm,
   constrained,
   equalSpec,
-  explainSpecOpt,
+  explainSpec,
   flipCtx,
   fromSimpleRepSpec,
   memberSpecList,
@@ -559,8 +559,8 @@ operateSpec ::
   Specification n ->
   Specification n ->
   Specification n
-operateSpec operator f ft (ExplainSpec es x) y = explainSpecOpt es $ operateSpec operator f ft x y
-operateSpec operator f ft x (ExplainSpec es y) = explainSpecOpt es $ operateSpec operator f ft x y
+operateSpec operator f ft (ExplainSpec es x) y = explainSpec es $ operateSpec operator f ft x y
+operateSpec operator f ft x (ExplainSpec es y) = explainSpec es $ operateSpec operator f ft x y
 operateSpec operator f ft x y = case (x, y) of
   (ErrorSpec xs, ErrorSpec ys) -> ErrorSpec (xs <> ys)
   (ErrorSpec xs, _) -> ErrorSpec xs
@@ -614,7 +614,7 @@ instance Number Integer => Num (Specification Integer) where
 --   from (TypeSpec Integer) to (Specification Integer)
 cardinality ::
   forall a. (Number Integer, HasSpec a) => Specification a -> Specification Integer
-cardinality (ExplainSpec es s) = explainSpecOpt es (cardinality s)
+cardinality (ExplainSpec es s) = explainSpec es (cardinality s)
 cardinality TrueSpec = cardinalTrueSpec @a
 cardinality (MemberSpec es) = equalSpec (toInteger $ length (nub (NE.toList es)))
 cardinality ErrorSpec {} = equalSpec 0
@@ -681,14 +681,16 @@ data IntW (as :: [Type]) b where
 deriving instance Eq (IntW dom rng)
 
 instance Show (IntW d r) where
-  show AddW = "addFn"
-  show NegateW = "negateFn"
+  show AddW = "+"
+  show NegateW = "negate_"
 
 instance Semantics IntW where
   semantics AddW = (+)
   semantics NegateW = negate
 
-instance Syntax IntW -- Use default methods
+instance Syntax IntW where
+  isInfix AddW = True
+  isInfix NegateW = False
 
 type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a)
 
