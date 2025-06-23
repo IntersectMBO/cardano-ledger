@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Translation () where
+module Cardano.Ledger.Dijkstra.Translation (Tx (..)) where
 
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraTx (..),
@@ -72,7 +72,7 @@ import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
-newtype Tx era = Tx (Core.Tx era)
+newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance TranslateEra DijkstraEra Tx where
   type TranslationError DijkstraEra Tx = DecoderError
