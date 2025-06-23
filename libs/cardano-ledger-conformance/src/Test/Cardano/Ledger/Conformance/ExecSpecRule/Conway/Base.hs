@@ -395,7 +395,7 @@ ratifyStateSpec _ RatifyEnv {..} =
     preferSmallerCCMinSizeValues pp = match pp $ \simplepp ->
       satisfies (committeeMinSize_ simplepp) $
         chooseSpec
-          (1, TrueSpec)
+          (1, trueSpec)
           (1, constrained (<=. committeeSize))
       where
         committeeSize = lit . fromIntegral . Set.size $ ccColdKeys
@@ -573,7 +573,7 @@ instance ExecSpecRule "ENACT" ConwayEra where
   type ExecState "ENACT" ConwayEra = EnactState ConwayEra
   type ExecSignal "ENACT" ConwayEra = EnactSignal ConwayEra
 
-  environmentSpec _ = TrueSpec
+  environmentSpec _ = trueSpec
   stateSpec = enactStateSpec
   signalSpec = enactSignalSpec
   runAgdaRule env st sig = unComputationResult $ Agda.enactStep env st sig

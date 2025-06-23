@@ -10,7 +10,6 @@
 module Constrained.Bench where
 
 import Constrained.API
-import Constrained.Spec.Tree
 import Control.DeepSeq
 import Criterion
 import Data.Map (Map)
@@ -21,14 +20,14 @@ benchmarks :: Benchmark
 benchmarks =
   bgroup
     "constrained"
-    [ benchSpec 10 30 "TrueSpec@Map" (TrueSpec :: Specification (Map Int Int))
-    , benchSpec 10 30 "TrueSpec@[]" (TrueSpec :: Specification [Int])
-    , benchSpec 10 30 "TrueSpec@Set" (TrueSpec :: Specification (Set Int))
+    [ benchSpec 10 30 "TrueSpec@Map" (trueSpec :: Specification (Map Int Int))
+    , benchSpec 10 30 "TrueSpec@[]" (trueSpec :: Specification [Int])
+    , benchSpec 10 30 "TrueSpec@Set" (trueSpec :: Specification (Set Int))
     , benchSpec
         10
         30
         "TrueSpec@Tree"
-        (giveHint (Nothing, 30) <> TrueSpec :: Specification (Tree Int))
+        (giveHint (Nothing, 30) <> trueSpec :: Specification (Tree Int))
     , benchSpec 10 30 "roseTreeMaybe" roseTreeMaybe
     , benchSpec 10 30 "listSumPair" listSumPair
     ]

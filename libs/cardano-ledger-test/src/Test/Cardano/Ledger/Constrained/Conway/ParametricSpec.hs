@@ -48,6 +48,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Constrained.API
+import Data.Foldable
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Word (Word64)
@@ -161,7 +162,7 @@ txOutSpec ::
   Term (TxOut era) ->
   Pred
 txOutSpec univ delegs txOut =
-  And
+  fold
     [ assert $ 0 <. txOutCoin_ @era txOut
     , assert $ txOutCoin_ @era txOut <=. fromIntegral (maxBound :: Word64)
     , (caseOn (txOutAddr_ @era txOut))

@@ -182,7 +182,7 @@ genNumList elemSIn foldSIn = do
     )
     $ gen narrowedSpecs 50 [] >>= pureGen . shuffle
   where
-    normalize (ExplainSpec es x) = explainSpecOpt es <$> normalize x
+    normalize (ExplainSpec es x) = explainSpec es <$> normalize x
     normalize spec@SuspendedSpec {} = do
       sz <- sizeT
       spec' <- buildMemberSpec sz (100 :: Int) mempty spec

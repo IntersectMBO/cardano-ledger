@@ -29,13 +29,12 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
-import Constrained.Base ()
+import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
 import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
-import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
