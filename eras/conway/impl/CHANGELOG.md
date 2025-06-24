@@ -2,11 +2,13 @@
 
 ## 1.20.0.0
 
-- Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
+* Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
+* Add `totalRefScriptSizeInBlock`
+* Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
   - `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
   - `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
-- Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
-- Change the type of `authorizedELectedCommitteeCredentials` to
+* Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
+* Change the type of `authorizedELectedCommitteeCredentials` to
   `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091
 * Deprecated `toConwayTransitionConfigPairs`
 * Fixed `FromJSON` instance for `TransitionConfig ConwayEra`
