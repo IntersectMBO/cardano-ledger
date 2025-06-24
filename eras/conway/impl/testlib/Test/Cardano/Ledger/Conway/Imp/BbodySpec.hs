@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,15 +25,14 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
+  Event,
   ShelleyBbodyState (..),
  )
-import Cardano.Ledger.TxIn
 import Control.Monad (forM)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
-import qualified Data.Set as Set
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -45,12 +43,13 @@ spec ::
   ( AlonzoEraImp era
   , BabbageEraTxBody era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = describe "BBODY" $ do
+spec = do
   it "BodyRefScriptsSizeTooBig" $ do
-    Just (script :: Script era) <- pure largeScript
-    let scriptSize = originalBytesSize script
+    Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
+    let scriptSize = originalBytesSize plutusScript
 
     -- Determine a number of transactions and a number of times the reference script
     -- needs to be included as an input in each transaction,
@@ -62,36 +61,22 @@ spec = describe "BBODY" $ do
         maxRefScriptSizePerTx
         maxRefScriptSizePerBlock
 
-    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
+    let mkTxWithNScripts n = do
+          -- Instead of using the rootTxIn, we are creating an input for each transaction
+          -- that we subsequently need to submit,
+          -- so that we can submit them independently of each other.
+          txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 8_000_000)
+          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+          pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
+
     txs <- do
-      -- Instead of using the rootTxIn, we are creating an input for each transaction
-      -- that we subsequently need to submit,
-      -- so that we can submit them independently of each other.
       forM txScriptCounts $ \n -> do
-        txIn <- mkTxIn
-        mkTxWithNScripts txIn script n
+        mkTxWithNScripts n
           >>= fixupFees
           >>= updateAddrTxWits
 
-    let txSeq = toTxSeq @era $ SSeq.fromList txs
-    nes <- use impNESL
-    let ls = nes ^. nesEsL . esLStateL
-        pp = nes ^. nesEsL . curPParamsEpochStateL
-    kh <- freshKeyHash
-    slotNo <- use impLastTickG
-    let bhView =
-          BHeaderView
-            { bhviewID = kh
-            , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
-            , bhviewHSize = 0
-            , bhviewBHash = hashTxSeq txSeq
-            , bhviewSlot = slotNo
-            }
-    Left predFailures <-
-      tryRunImpRule @"BBODY"
-        (BbodyEnv pp (nes ^. chainAccountStateL))
-        (BbodyState ls (BlocksMade Map.empty))
-        (Block bhView txSeq)
+    let expectedTotalRefScriptSize = scriptSize * sum txScriptCounts
+    predFailures <- expectLeftExpr =<< tryRunBBODY txs
     predFailures
       `shouldBe` NE.fromList
         [ injectFailure
@@ -103,24 +88,25 @@ spec = describe "BBODY" $ do
             )
         ]
   where
-    mkTxIn :: ImpTestM era TxIn
-    mkTxIn = do
-      addr <- freshKeyAddr_
-      sendCoinTo addr (Coin 8_000_000)
-
-    largeScript :: Maybe (Script era)
-    largeScript = do
-      script <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
-      pure $ fromPlutusScript script
-
-    mkTxWithNScripts :: TxIn -> Script era -> Int -> ImpTestM era (Tx era)
-    mkTxWithNScripts txIn script n = do
-      txIns <- replicateM n (produceRefScript script)
-      pure $
-        mkBasicTx $
-          mkBasicTxBody
-            & referenceInputsTxBodyL .~ Set.fromList txIns
-            & inputsTxBodyL .~ [txIn]
+    tryRunBBODY txs = do
+      let txSeq = toTxSeq @era $ SSeq.fromList txs
+      nes <- use impNESL
+      let ls = nes ^. nesEsL . esLStateL
+          pp = nes ^. nesEsL . curPParamsEpochStateL
+      kh <- freshKeyHash
+      slotNo <- use impLastTickG
+      let bhView =
+            BHeaderView
+              { bhviewID = kh
+              , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
+              , bhviewHSize = 0
+              , bhviewBHash = hashTxSeq txSeq
+              , bhviewSlot = slotNo
+              }
+      tryRunImpRule @"BBODY"
+        (BbodyEnv pp (nes ^. chainAccountStateL))
+        (BbodyState ls (BlocksMade Map.empty))
+        (Block bhView txSeq)
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
 -- and each individual value multiplied by the scale is smaller than maxSingle
