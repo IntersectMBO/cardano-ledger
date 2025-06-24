@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -21,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   maxRefScriptSizePerBlock,
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
+  totalRefScriptSizeInBlock,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -35,13 +37,21 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  ProtVer,
+  Relation (..),
+  ShelleyBase,
+  natVersion,
+  pvMajor,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..))
@@ -71,6 +81,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -80,10 +91,14 @@ import Control.State.Transition (
   (?!),
  )
 import Data.Foldable (Foldable (foldMap'))
+import qualified Data.Foldable as F (foldl')
+import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (getSum))
 import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq (..))
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 -- | In the next era this will become a proper protocol parameter.
@@ -242,7 +257,7 @@ instance
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , EraRule "BBODY" era ~ ConwayBBODY era
-  , EraTx era
+  , AlonzoEraTx era
   , BabbageEraTxBody era
   ) =>
   STS (ConwayBBODY era)
@@ -266,27 +281,26 @@ conwayBbodyTransition ::
   forall era.
   ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , EraTx era
+  , AlonzoEraTx era
   , BabbageEraTxBody era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 conwayBbodyTransition = do
   judgmentContext
     >>= \( TRC
-             ( _
+             ( BbodyEnv pp _
                , state@(BbodyState ls _)
                , Block _ txsSeq
                )
            ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
             txs = txSeqTxns txsSeq
-            totalRefScriptSize =
-              getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize utxo) txs
+            totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure
@@ -308,3 +322,18 @@ instance
   where
   wrapFailed = LedgersFailure
   wrapEvent = ShelleyInAlonzoEvent . LedgersEvent
+
+totalRefScriptSizeInBlock ::
+  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx era) -> UTxO era -> Int
+totalRefScriptSizeInBlock protVer txs (UTxO utxo)
+  | pvMajor protVer <= natVersion @10 =
+      getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs
+  | otherwise =
+      snd $ F.foldl' accum (utxo, 0) txs
+  where
+    accum (!accUtxo, !accSum) tx =
+      let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
+          toAdd
+            | IsValid True <- tx ^. isValidTxL = txouts $ tx ^. bodyTxL
+            | otherwise = collOuts $ tx ^. bodyTxL
+       in (updatedUtxo, accSum + txNonDistinctRefScriptsSize (UTxO accUtxo) tx)
