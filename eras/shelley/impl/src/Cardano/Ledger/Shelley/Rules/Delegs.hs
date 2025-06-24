@@ -228,7 +228,7 @@ delegsTransition = do
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
           accounts = dState ^. accountsL
       failOnJust
-        (whichWithdrawalsDoNotDrainAccounts withdrawals network accounts)
+        (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
         WithdrawalsNotInRewardsDELEGS
       -- validateZeroRewards dState withdrawals network
       pure $ certState & certDStateL . accountsL %~ drainAccounts withdrawals

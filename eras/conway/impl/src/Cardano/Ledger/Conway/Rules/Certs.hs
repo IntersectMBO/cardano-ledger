@@ -256,7 +256,7 @@ conwayCertsTransition = do
 
       -- Validate withdrawals and rewards and drain withdrawals
       failOnJust
-        (whichWithdrawalsDoNotDrainAccounts withdrawals network (dState ^. accountsL))
+        (withdrawalsThatDoNotDrainAccounts withdrawals network (dState ^. accountsL))
         WithdrawalsNotInRewardsCERTS
 
       pure $ certStateWithDRepExpiryUpdated & certDStateL . accountsL %~ drainAccounts withdrawals

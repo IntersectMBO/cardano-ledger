@@ -20,7 +20,7 @@ module Cardano.Ledger.State.Account (
   sumBalancesAccounts,
   sumDepositsAccounts,
   addToBalanceAccounts,
-  whichWithdrawalsDoNotDrainAccounts,
+  withdrawalsThatDoNotDrainAccounts,
   drainAccounts,
   removeStakePoolDelegations,
 ) where
@@ -167,13 +167,13 @@ lookupStakePoolDelegation cred accounts =
 
 -- | This function returns `True` iff all of the accounts that withdrawals are trying to drain are
 -- indeed registered and all of the amounts in the withdrawals match the respective balances exactly.
-whichWithdrawalsDoNotDrainAccounts ::
+withdrawalsThatDoNotDrainAccounts ::
   EraAccounts era =>
   Withdrawals ->
   Network ->
   Accounts era ->
   Maybe Withdrawals
-whichWithdrawalsDoNotDrainAccounts (Withdrawals withdrawalsMap) networkId accounts
+withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawalsMap) networkId accounts
   | Map.foldrWithKey checkAllValidWithdrawals True withdrawalsMap =
       Nothing
   | otherwise =
@@ -197,7 +197,7 @@ whichWithdrawalsDoNotDrainAccounts (Withdrawals withdrawalsMap) networkId accoun
 --
 -- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
 -- `NetworkId`. Nor there are any checks that amounts in withdrawals match up the balance in the
--- corresponding accounts. Use `whichWithdrawalsDoNotDrainAccounts` to verify that calling
+-- corresponding accounts. Use `withdrawalsThatDoNotDrainAccounts` to verify that calling
 -- `drainAccounts` is actually safe on the supplied arguments
 drainAccounts ::
   EraAccounts era =>
