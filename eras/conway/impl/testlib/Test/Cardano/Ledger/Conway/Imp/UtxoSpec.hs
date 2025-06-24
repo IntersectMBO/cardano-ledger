@@ -219,7 +219,7 @@ spec = do
           mkBasicTxBody
             & outputsTxBodyL @era
               .~ SSeq.fromList [mkBasicTxOut @era scriptAddr mempty]
-      pure $ txInAt (0 :: Int) tx
+      pure $ txInAt 0 tx
 
     createRefScriptsUtxos ::
       HasCallStack => [Script era] -> ImpTestM era (Map.Map TxIn (Script era))

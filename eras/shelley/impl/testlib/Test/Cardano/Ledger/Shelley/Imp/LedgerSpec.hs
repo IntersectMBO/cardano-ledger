@@ -32,7 +32,7 @@ spec = describe "LEDGER" $ do
             .~ SSeq.singleton
               (mkBasicTxOut addr1 $ inject coin1)
     UTxO utxo1 <- getUTxO
-    case Map.lookup (txInAt (0 :: Int) tx1) utxo1 of
+    case Map.lookup (txInAt 0 tx1) utxo1 of
       Just out1 -> out1 ^. coinTxOutL `shouldBe` coin1
       Nothing -> expectationFailure "Could not find the TxOut of the first transaction"
     addr2 <- freshKeyAddr_
@@ -42,11 +42,11 @@ spec = describe "LEDGER" $ do
         mkBasicTxBody
           & inputsTxBodyL
             .~ Set.singleton
-              (txInAt (0 :: Int) tx1)
+              (txInAt 0 tx1)
           & outputsTxBodyL @era
             .~ SSeq.singleton (mkBasicTxOut addr2 $ inject coin2)
     UTxO utxo2 <- getUTxO
-    case Map.lookup (txInAt (0 :: Int) tx2) utxo2 of
+    case Map.lookup (txInAt 0 tx2) utxo2 of
       Just out1 -> do
         out1 ^. coinTxOutL `shouldBe` coin2
       Nothing -> expectationFailure "Could not find the TxOut of the second transaction"

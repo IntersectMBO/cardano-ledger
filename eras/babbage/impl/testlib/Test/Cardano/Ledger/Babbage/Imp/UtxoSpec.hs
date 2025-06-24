@@ -59,7 +59,7 @@ spec = describe "UTXO" $ do
         submitTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . outputsTxBodyL .~ SSeq.singleton txOut
-      let txIn = txInAt (0 :: Integer) tx
+      let txIn = txInAt 0 tx
       majorVer <- pvMajor <$> getsPParams ppProtocolVersionL
       when (majorVer < natVersion @9 || majorVer > natVersion @10) $
         submitTx_ @era $

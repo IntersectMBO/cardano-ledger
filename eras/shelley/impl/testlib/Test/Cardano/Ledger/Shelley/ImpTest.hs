@@ -1397,7 +1397,7 @@ sendValueTo addr amount = do
       ("Giving " <> show amount <> " to " <> show addr)
       $ mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
-  pure $ txInAt (0 :: Int) tx
+  pure $ txInAt 0 tx
 
 sendValueTo_ :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era ()
 sendValueTo_ addr = void . sendValueTo addr
@@ -1631,7 +1631,7 @@ produceScript scriptHash = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
   logString $ "Produced script: " <> show scriptHash
-  txInAt (0 :: Int) <$> submitTx tx
+  txInAt 0 <$> submitTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()
 advanceToPointOfNoReturn = do

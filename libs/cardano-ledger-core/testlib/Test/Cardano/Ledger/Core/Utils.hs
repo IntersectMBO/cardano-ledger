@@ -45,7 +45,7 @@ testGlobals =
 mkDummySafeHash :: forall a. Int -> SafeHash a
 mkDummySafeHash = unsafeMakeSafeHash . mkDummyHash @HASH
 
-txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn
+txInAt :: (HasCallStack, EraTx era) => Int -> Tx era -> TxIn
 txInAt index tx =
   let txId = txIdTx tx
    in mkTxInPartial txId (toInteger index)
