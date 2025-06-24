@@ -108,6 +108,7 @@ spec ::
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "BBODY" era))
   , TxCert era ~ ConwayTxCert era
   ) =>
   Spec
