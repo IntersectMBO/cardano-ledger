@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +14,9 @@ module Test.Cardano.Ledger.Babbage.ImpTest (
   module Test.Cardano.Ledger.Alonzo.ImpTest,
   produceRefScript,
   produceRefScripts,
+  produceRefScriptsTx,
+  mkTxWithRefInputs,
+  submitTxWithRefInputs,
 ) where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -35,6 +39,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -120,6 +125,14 @@ produceRefScripts ::
   NonEmpty (Script era) ->
   ImpTestM era (NonEmpty TxIn)
 produceRefScripts scripts = do
+  txId <- txIdTx <$> produceRefScriptsTx scripts
+  pure $ NE.zipWith (\_ -> mkTxInPartial txId) scripts (0 :| [1 ..])
+
+produceRefScriptsTx ::
+  (ShelleyEraImp era, BabbageEraTxOut era) =>
+  NonEmpty (Script era) ->
+  ImpTestM era (Tx era)
+produceRefScriptsTx scripts = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   txOuts <- forM scripts $ \script -> do
     addr <- freshKeyAddr_
@@ -127,5 +140,22 @@ produceRefScripts scripts = do
           mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script
     pure $ setMinCoinTxOut pp txOutZero
   let txBody = mkBasicTxBody & outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
-  txId <- txIdTx <$> submitTx (mkBasicTx txBody)
-  pure $ NE.zipWith (\_ -> mkTxInPartial txId) scripts (0 :| [1 ..])
+  submitTx (mkBasicTx txBody)
+
+mkTxWithRefInputs ::
+  (ShelleyEraImp era, BabbageEraTxBody era) =>
+  TxIn ->
+  NonEmpty TxIn ->
+  Tx era
+mkTxWithRefInputs txIn refIns =
+  mkBasicTx $
+    mkBasicTxBody
+      & referenceInputsTxBodyL .~ Set.fromList (NE.toList refIns)
+      & inputsTxBodyL .~ [txIn]
+
+submitTxWithRefInputs ::
+  (ShelleyEraImp era, BabbageEraTxBody era) =>
+  TxIn ->
+  NonEmpty TxIn ->
+  ImpTestM era (Tx era)
+submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
