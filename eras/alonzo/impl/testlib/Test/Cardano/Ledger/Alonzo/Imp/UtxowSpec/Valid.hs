@@ -62,7 +62,7 @@ spec = describe "Valid transactions" $ do
       datumHash = hashData @era $ Data (P.I 123)
       txOut = mkBasicTxOut addr (inject amount) & dataHashTxOutL .~ SJust datumHash
       tx1 = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
-    txIn <- txInAt (0 :: Int) <$> submitTx tx1
+    txIn <- txInAt 0 <$> submitTx tx1
     let
       tx2 = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
     submitTx_ tx2
