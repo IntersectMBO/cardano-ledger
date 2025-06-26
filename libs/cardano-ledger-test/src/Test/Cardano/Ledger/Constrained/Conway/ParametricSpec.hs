@@ -32,6 +32,7 @@ module Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   EraSpecDeleg (..),
   delegatedStakeReference,
   CertKey (..),
+  testir,
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -210,3 +211,6 @@ instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
       , assert $ toDelta_ (foldMap_ id (rng_ reserves)) - deltaRes <=. toDelta_ acctRes
       , assert $ toDelta_ (foldMap_ id (rng_ treasury)) - deltaTreas <=. toDelta_ acctTreas
       ]
+
+testir :: Era era => WitUniv era -> Specification (InstantaneousRewards, ChainAccountState)
+testir univ = constrained' $ \ir chainAcct -> satisfies ir (instantaneousRewardsSpec univ chainAcct)

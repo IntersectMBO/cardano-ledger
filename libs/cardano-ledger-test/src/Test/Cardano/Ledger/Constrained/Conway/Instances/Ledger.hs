@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -78,6 +79,7 @@ import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -378,6 +380,40 @@ txOutVal_ ::
   Term (BabbageTxOut era) ->
   Term (Value era)
 txOutVal_ = sel @1
+
+instance
+  ( Compactible a
+  , HasSimpleRep a
+  , Show (SimpleRep a)
+  ) =>
+  HasSimpleRep (CompactForm a)
+  where
+  type SimpleRep (CompactForm a) = SimpleRep a
+  toSimpleRep = toSimpleRep . fromCompact
+  fromSimpleRep x = fromMaybe err . toCompact $ fromSimpleRep x
+    where
+      err = error $ "toCompact @" ++ show (typeOf x) ++ " " ++ show x
+
+instance
+  ( Compactible a
+  , GenericallyInstantiated (CompactForm a)
+  , Typeable (TypeSpec (SimpleRep a))
+  , Show (TypeSpec (SimpleRep a))
+  , HasSpec a
+  , HasSimpleRep a
+  , HasSpec (SimpleRep a)
+  ) =>
+  HasSpec (CompactForm a)
+
+instance MaybeBounded (CompactForm Coin) where
+  lowerBound = Just (CompactCoin 0)
+  upperBound = Just (CompactCoin (maxBound @Word64))
+
+instance OrdLike (CompactForm Coin)
+
+deriving instance Num (CompactForm Coin)
+
+instance NumLike (CompactForm Coin)
 
 instance HasSimpleRep MaryValue where
   type TheSop MaryValue = '["MaryValue" ::: '[Coin]]

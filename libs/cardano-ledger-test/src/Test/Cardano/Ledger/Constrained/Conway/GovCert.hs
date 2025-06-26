@@ -39,10 +39,10 @@ vStateSpec ::
   Set (Credential 'DRepRole) ->
   Specification (VState era)
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
-  match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
+  match vstate $ \ [var|dreps2|] [var|committeestate|] [var|_numdormant|] ->
     [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
-    , assert $ dom_ dreps ==. lit delegatees -- TODO, there are missing constraints about the (rng_ dreps)
-    , forAll dreps $ \ [var|pair|] ->
+    , assert $ dom_ dreps2 ==. lit delegatees -- TODO, there are missing constraints about the (rng_ dreps)
+    , forAll dreps2 $ \ [var|pair|] ->
         match pair $ \ [var|drep|] [var|drepstate|] ->
           [ dependsOn drepstate drep
           , witness univ drep
