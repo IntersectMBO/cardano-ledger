@@ -62,6 +62,13 @@ module Test.Cardano.Ledger.Common (
   goldenForToJSON,
   roundTripAesonProperty,
 
+  -- * Uniform
+  uniformSubMap,
+  uniformSubMapElems,
+  uniformSubSet,
+  uniformMapElem,
+  uniformSetElem,
+
   -- * Miscellanous helpers
   tracedDiscard,
   forEachEraVersion,
@@ -75,6 +82,8 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as Aeson (parseEither)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Map.Strict (Map)
+import Data.Set (Set)
 import Data.Typeable
 import qualified Debug.Trace as Debug
 import Test.Cardano.Ledger.Binary.Golden (toPackageGolden)
@@ -89,11 +98,18 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
   expectExprEqualWithMessage,
   showExpr,
  )
+import qualified Test.Cardano.Ledger.Random as R (
+  uniformMapElem,
+  uniformSetElem,
+  uniformSubMap,
+  uniformSubMapElems,
+  uniformSubSet,
+ )
 import Test.Hspec as X
 import qualified Test.Hspec.Golden as Golden (Golden (..))
 import Test.Hspec.QuickCheck as X
 import Test.Hspec.Runner
-import Test.ImpSpec (ansiDocToString, impSpecConfig, impSpecMainWithConfig)
+import Test.ImpSpec (HasStatefulGen (..), ansiDocToString, impSpecConfig, impSpecMainWithConfig)
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X hiding (NonZero, Witness)
 import Test.QuickCheck.Gen (Gen (..))
@@ -255,3 +271,51 @@ roundTripAesonProperty expected = property $ do
   -- There is no need to go through `ByteString` if we fully force the `Value`.
   produced <- expectRightDeep $ Aeson.parseEither Aeson.parseJSON jsonValue
   produced `shouldBeExpr` expected
+
+uniformSetElem ::
+  HasStatefulGen g m =>
+  Set k ->
+  m (Maybe k)
+uniformSetElem inputSet = askStatefulGen >>= R.uniformSetElem inputSet
+{-# INLINE uniformSetElem #-}
+
+uniformSubSet ::
+  (HasStatefulGen g m, Ord k) =>
+  -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Set k ->
+  m (Set k)
+uniformSubSet mSubSetSize inputSet =
+  askStatefulGen >>= R.uniformSubSet mSubSetSize inputSet
+{-# INLINE uniformSubSet #-}
+
+uniformMapElem ::
+  HasStatefulGen g m =>
+  Map k v ->
+  m (Maybe (k, v))
+uniformMapElem inputMap = askStatefulGen >>= R.uniformMapElem inputMap
+{-# INLINE uniformMapElem #-}
+
+uniformSubMap ::
+  (HasStatefulGen g m, Ord k) =>
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  m (Map k v)
+uniformSubMap mSubMapSize inputMap =
+  askStatefulGen >>= R.uniformSubMap mSubMapSize inputMap
+{-# INLINE uniformSubMap #-}
+
+uniformSubMapElems ::
+  (HasStatefulGen g m, Monoid f) =>
+  (k -> v -> f -> f) ->
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  m f
+uniformSubMapElems insert mSubMapSize inputMap =
+  askStatefulGen >>= R.uniformSubMapElems insert mSubMapSize inputMap
+{-# INLINE uniformSubMapElems #-}

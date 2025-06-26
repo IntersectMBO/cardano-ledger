@@ -25,6 +25,7 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   LedgerSpec,
+  HasKeyPairs (..),
   SomeSTSEvent (..),
   ImpTestState,
   ImpTestEnv (..),

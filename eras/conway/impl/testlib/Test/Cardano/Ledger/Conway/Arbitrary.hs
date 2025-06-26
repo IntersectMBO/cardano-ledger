@@ -75,9 +75,8 @@ import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, genValidCostModel)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer, uniformSubMap)
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 
 instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
@@ -319,7 +318,7 @@ instance
     hardForks <- chooseLineage grHardForkL ps Seq.Empty
     committees <- chooseLineage grCommitteeL ps Seq.Empty
     constitutions <- chooseLineage grConstitutionL ps Seq.Empty
-    noLineageMap <- uniformSubMap Nothing (Map.filter gasHasNoLineage $ proposalsActionsMap ps) QC
+    noLineageMap <- uniformSubMap Nothing (Map.filter gasHasNoLineage $ proposalsActionsMap ps)
     noLineage <- Seq.fromList <$> shuffle (Map.elems noLineageMap)
     sequencedGass <-
       sequenceLineages

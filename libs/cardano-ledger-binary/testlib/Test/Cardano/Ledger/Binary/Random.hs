@@ -3,6 +3,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+-- Not sure why GHC is complaining about HasStatefulGen instance being an orphan.
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Random (
   QC (..),
@@ -22,6 +24,7 @@ import System.Random.Stateful (
   mkStdGen,
   runStateGen_,
  )
+import Test.ImpSpec (HasStatefulGen (..))
 import Test.QuickCheck.Gen (Gen (MkGen))
 
 -- | This is a pseudo random number generator used by QuickCheck and allows to use
@@ -43,6 +46,9 @@ instance StatefulGen QC Gen where
     MkGen (\r _n -> runStateGen_ r (uniformShortByteString k))
   {-# INLINE uniformShortByteString #-}
 #endif
+
+instance HasStatefulGen QC Gen where
+  askStatefulGen = pure QC
 
 -- | It is possible to use a hash of a binary representation of any type as a source of
 -- randomness, since hash value by its definiteion is uniformly distributed.

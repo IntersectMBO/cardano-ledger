@@ -192,6 +192,7 @@ library testlib
     Test.Cardano.Ledger.Conway.DRepRatifySpec
     Test.Cardano.Ledger.Conway.Era
     Test.Cardano.Ledger.Conway.Examples
+    Test.Cardano.Ledger.Conway.Gen
     Test.Cardano.Ledger.Conway.Genesis
     Test.Cardano.Ledger.Conway.GenesisSpec
     Test.Cardano.Ledger.Conway.GovActionReorderSpec
@@ -267,6 +268,7 @@ library testlib
     mtl,
     plutus-ledger-api,
     prettyprinter,
+    random >=1.2,
     small-steps >=1.1,
     text,
     time,
