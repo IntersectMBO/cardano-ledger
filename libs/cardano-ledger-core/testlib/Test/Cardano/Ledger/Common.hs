@@ -45,12 +45,19 @@ module Test.Cardano.Ledger.Common (
   expectJustDeep_,
   expectNothing,
 
+  -- * Uniform
+  uniformSubMap,
+  uniformSubMapElems,
+  uniformSubSet,
+
   -- * Miscellanous helpers
   tracedDiscard,
 ) where
 
 import Control.DeepSeq (NFData)
 import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))
+import Data.Map.Strict (Map)
+import Data.Set (Set)
 import qualified Debug.Trace as Debug
 import Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
@@ -63,10 +70,15 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
   expectExprEqualWithMessage,
   showExpr,
  )
+import qualified Test.Cardano.Ledger.Random as R (
+  uniformSubMap,
+  uniformSubMapElems,
+  uniformSubSet,
+ )
 import Test.Hspec as X
 import Test.Hspec.QuickCheck as X
 import Test.Hspec.Runner
-import Test.ImpSpec (ansiDocToString, impSpecConfig, impSpecMainWithConfig)
+import Test.ImpSpec (HasStatefulGen (..), ansiDocToString, impSpecConfig, impSpecMainWithConfig)
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X
 import Test.QuickCheck.Gen (Gen (..))
@@ -136,3 +148,37 @@ runGen ::
   Gen a ->
   a
 runGen seed size gen = unGen gen (mkQCGen seed) size
+
+uniformSubSet ::
+  (HasStatefulGen g m, Ord k) =>
+  -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Set k ->
+  m (Set k)
+uniformSubSet mSubSetSize inputSet =
+  askStatefulGen >>= R.uniformSubSet mSubSetSize inputSet
+{-# INLINE uniformSubSet #-}
+
+uniformSubMap ::
+  (HasStatefulGen g m, Ord k) =>
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  m (Map k v)
+uniformSubMap mSubMapSize inputMap =
+  askStatefulGen >>= R.uniformSubMap mSubMapSize inputMap
+{-# INLINE uniformSubMap #-}
+
+uniformSubMapElems ::
+  (HasStatefulGen g m, Monoid f) =>
+  (k -> v -> f -> f) ->
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  m f
+uniformSubMapElems insert mSubMapSize inputMap =
+  askStatefulGen >>= R.uniformSubMapElems insert mSubMapSize inputMap
+{-# INLINE uniformSubMapElems #-}

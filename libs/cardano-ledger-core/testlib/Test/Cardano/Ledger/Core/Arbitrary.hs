@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -36,13 +35,6 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genValidAndUnknownCostModels,
   genValidCostModel,
   genValidCostModels,
-
-  -- * Utils
-
-  -- | Will need to find a better home in the future
-  uniformSubSet,
-  uniformSubMap,
-  uniformSubMapElems,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -130,11 +122,12 @@ import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import System.Random.Stateful (StatefulGen, uniformM, uniformRM)
+import System.Random.Stateful (uniformM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Ledger.Random (uniformSubSet)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -613,94 +606,6 @@ genValidUMapNonEmpty :: forall era. Era era => Gen UMap
 genValidUMapNonEmpty = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty @era
   pure $ unify rdPairs ptrs sPools dReps
-
--- | Either clamp requested size to the range of @[0, actualSize]@ or generate at random
--- in the same range when requested size is not supplied.
-uniformSubSize ::
-  StatefulGen g m =>
-  -- | Requested size
-  Maybe Int ->
-  -- | Actual size
-  Int ->
-  g ->
-  m Int
-uniformSubSize mReqSize actualSize gen =
-  case mReqSize of
-    Nothing -> uniformRM (0, actualSize) gen
-    Just reqSize -> pure $ max 0 $ min actualSize reqSize
-
-uniformSubSet ::
-  (StatefulGen g m, Ord k) =>
-  -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
-  -- otherwise will be generated randomly.
-  Maybe Int ->
-  Set k ->
-  g ->
-  m (Set k)
-uniformSubSet mSubSetSize inputSet gen = do
-  subSetSize <- uniformSubSize mSubSetSize (Set.size inputSet) gen
-  if subSetSize < Set.size inputSet `div` 2
-    then
-      goAdd inputSet Set.empty subSetSize
-    else
-      goDelete inputSet (Set.size inputSet - subSetSize)
-  where
-    -- Constructing a new Set is faster when less then a half of original Set will be used
-    goAdd !s !acc !i
-      | i <= 0 = pure acc
-      | otherwise = do
-          ix <- uniformRM (0, Set.size s - 1) gen
-          goAdd (Set.deleteAt ix s) (Set.insert (Set.elemAt ix s) acc) (i - 1)
-    -- Deleting is faster when more items need to be retained in the Set
-    goDelete !acc !i
-      | i <= 0 = pure acc
-      | otherwise = do
-          ix <- uniformRM (0, Set.size acc - 1) gen
-          goDelete (Set.deleteAt ix acc) (i - 1)
-
-uniformSubMap ::
-  (StatefulGen g m, Ord k) =>
-  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
-  -- otherwise will be generated randomly.
-  Maybe Int ->
-  Map k v ->
-  g ->
-  m (Map k v)
-uniformSubMap mSubMapSize inputMap gen = do
-  subMapSize <- uniformSubSize mSubMapSize (Map.size inputMap) gen
-  if subMapSize < Map.size inputMap `div` 2
-    then
-      -- Constructing a new Map is faster when less then a half of original Map will be used
-      uniformSubMapElems Map.insert (Just subMapSize) inputMap gen
-    else
-      -- Deleting is faster when more items need to be retained in the Map
-      goDelete inputMap (Map.size inputMap - subMapSize)
-  where
-    goDelete !acc !i
-      | i <= 0 = pure acc
-      | otherwise = do
-          ix <- uniformRM (0, Map.size acc - 1) gen
-          goDelete (Map.deleteAt ix acc) (i - 1)
-
-uniformSubMapElems ::
-  (StatefulGen g m, Monoid f) =>
-  (k -> v -> f -> f) ->
-  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
-  -- otherwise will be generated randomly.
-  Maybe Int ->
-  Map k v ->
-  g ->
-  m f
-uniformSubMapElems insert mSubMapSize inputMap gen = do
-  subMapSize <- uniformSubSize mSubMapSize (Map.size inputMap) gen
-  go inputMap mempty subMapSize
-  where
-    go !s !acc !i
-      | i <= 0 = pure acc
-      | otherwise = do
-          ix <- uniformRM (0, Map.size s - 1) gen
-          let (k, v) = Map.elemAt ix s
-          go (Map.deleteAt ix s) (insert k v acc) (i - 1)
 
 genValidUMapWithCreds :: forall era. Era era => Gen (UMap, Set (Credential 'Staking))
 genValidUMapWithCreds = do

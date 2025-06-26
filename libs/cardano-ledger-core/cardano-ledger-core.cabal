@@ -185,6 +185,7 @@ library testlib
     Test.Cardano.Ledger.Plutus.Guardrail
     Test.Cardano.Ledger.Plutus.ScriptTestContext
     Test.Cardano.Ledger.Plutus.ToPlutusData
+    Test.Cardano.Ledger.Random
     Test.Cardano.Ledger.TreeDiff
 
   visibility: public

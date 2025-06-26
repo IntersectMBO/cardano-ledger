@@ -38,7 +38,6 @@ import Data.Typeable (cast)
 import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
 import Type.Reflection (Typeable)
@@ -669,7 +668,7 @@ committeeSpec =
               & bodyTxL . certsTxBodyL
                 .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
         newCommittee <- arbitrary
-        initialSubCommittee <- askStatefulGen >>= uniformSubSet Nothing initialCommittee
+        initialSubCommittee <- uniformSubSet Nothing initialCommittee
         proposal <-
           mkUpdateCommitteeProposal Nothing initialSubCommittee newCommittee (1 %! 2)
         mbRemoveCCGaid <-
