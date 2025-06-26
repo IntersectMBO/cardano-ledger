@@ -24,6 +24,7 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   LedgerSpec,
+  HasKeyPairs (..),
   SomeSTSEvent (..),
   ImpTestState,
   ImpTestEnv (..),
@@ -1701,7 +1702,8 @@ whenMajorVersion ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersion a = do
   pv <- getProtVer
   when (pvMajor pv == natVersion @v) a
@@ -1713,7 +1715,8 @@ whenMajorVersionAtLeast ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersionAtLeast a = do
   pv <- getProtVer
   when (pvMajor pv >= natVersion @v) a
@@ -1725,7 +1728,8 @@ whenMajorVersionAtMost ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 whenMajorVersionAtMost a = do
   pv <- getProtVer
   when (pvMajor pv <= natVersion @v) a
@@ -1737,7 +1741,8 @@ unlessMajorVersion ::
   , MinVersion <= v
   , v <= MaxVersion
   ) =>
-  ImpTestM era () -> ImpTestM era ()
+  ImpTestM era () ->
+  ImpTestM era ()
 unlessMajorVersion a = do
   pv <- getProtVer
   unless (pvMajor pv == natVersion @v) a
