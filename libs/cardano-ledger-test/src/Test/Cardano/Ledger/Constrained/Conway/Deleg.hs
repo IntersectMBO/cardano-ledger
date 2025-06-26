@@ -18,7 +18,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -28,6 +28,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
@@ -62,6 +63,7 @@ accountBalanceSpec balance =
         (3, constrained (const True))
     )
 
+{-
 stakePoolDelegationPred ::
   Map (KeyHash 'StakePool) a ->
   Term (StrictMaybe (KeyHash 'StakePool)) ->
@@ -81,6 +83,8 @@ dRepDelegationPred dReps dRepDelegation =
       (branch (const True))
       (branch (dRepMembershipPred dReps))
 
+-}
+
 dRepMembershipPred :: Map (Credential 'DRepRole) a -> Term DRep -> Pred
 dRepMembershipPred dRepsMap dRep =
   assert $
@@ -90,7 +94,18 @@ dRepMembershipPred dRepsMap dRep =
       (branchW 1 $ const True)
       (branchW 1 $ const True)
   where
+    dRepsSet :: Ord a => (Credential 'DRepRole -> Maybe a) -> Set a
     dRepsSet f = Set.fromList [k' | k <- Map.keys dRepsMap, Just k' <- [f k]]
+
+-- | The DState needs a witnessed set of delegations to be usefull. Use this Spec to obtain a random one
+witnessedKeyHashPoolParamMapSpec ::
+  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) PoolParams)
+witnessedKeyHashPoolParamMapSpec univ =
+  ( constrained $ \keyPoolParamMap ->
+      [witness univ (dom_ keyPoolParamMap), witness univ (rng_ keyPoolParamMap)]
+  )
+
+{-  I don't think these are necessary
 
 shelleyAccountStatePred ::
   Era era =>
@@ -175,13 +190,45 @@ conwayAccountsSpec ::
 conwayAccountsSpec univ stakePoolDelegations dRepDelegations =
   constrained $ \ [var|conwayAccountState|] ->
     match conwayAccountState $ \ [var|conwayAccountsMap|] ->
-      [ witness univ (dom_ conwayAccountsMap)
+      [ witness univ conwayAccountsMap
       , forAll conwayAccountsMap $ \ [var|accountPair|] ->
           match accountPair $ \ [var|cred|] [var|accountState|] ->
             reify (lookup_ cred stakePoolDelegations) maybeToStrictMaybe $ \stakePoolDelegationStrict ->
               reify (lookup_ cred dRepDelegations) maybeToStrictMaybe $ \dRepRepDelegationStrict ->
                 conwayAccountStatePred'' stakePoolDelegationStrict dRepRepDelegationStrict accountState
       ]
+-}
+
+conwayAccountsSpec ::
+  Era era =>
+  WitUniv era ->
+  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Specification (ConwayAccounts era)
+conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
+  match conwayAccounts $ \ [var|accountmap|] ->
+    [ witness univ (dom_ accountmap)
+    , forAll accountmap $ \ [var|pair|] ->
+        match pair $ \ [var|stakecred|] [var|accountstate|] ->
+          [ witness univ stakecred
+          , witness univ accountstate
+          , match accountstate $ \ [var|_rewardbal|] [var|_depositbal|] [var|mStakeDelegKeyhash|] [var|mDRep|] ->
+              [ ( caseOn
+                    (mStakeDelegKeyhash :: Term (StrictMaybe (KeyHash 'StakePool)))
+                    (branchW 1 $ \_ -> True)
+                    (branchW 3 $ \ [var|stakekeyhash|] -> mapMember_ stakekeyhash poolreg)
+                )
+              , (caseOn mDRep) -- This case only adds frequency info, the (witness univ accountstate) ensures witnessing
+                  (branchW 1 $ \_ -> True)
+                  ( branchW 3 $ \(drep :: Term DRep) ->
+                      (caseOn drep)
+                        (branchW 3 $ \_keyhash -> True)
+                        (branchW 3 $ \_scripthash -> True)
+                        (branchW 1 $ \_abstain -> True)
+                        (branchW 1 $ \_noconfidence -> True)
+                  )
+              ]
+          ]
+    ]
 
 stakePoolDelegationsSpec ::
   Era era =>
@@ -205,19 +252,6 @@ dRepDelegationsSpec univ =
           (branchW 1 $ const True)
           (branchW 1 $ const True)
     ]
-
-conwayAccountsSpec' ::
-  Era era =>
-  WitUniv era ->
-  Map (KeyHash 'StakePool) a ->
-  Map (Credential 'DRepRole) b ->
-  Specification (ConwayAccounts era)
-conwayAccountsSpec' univ stakePools dReps =
-  constrained $ \ [var|conwayAccountState|] ->
-    match conwayAccountState $ \ [var|conwayAccountsMap|] ->
-      [ witness univ (dom_ conwayAccountsMap)
-      , forAll (rng_ conwayAccountsMap) (conwayAccountStatePred stakePools dReps)
-      ]
 
 dStateSpec ::
   (Era era, HasSpec (Accounts era), IsNormalType (Accounts era)) =>

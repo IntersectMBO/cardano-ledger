@@ -23,10 +23,10 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Constrained.API
 import Data.Map (Map)
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (
-  dRepDelegationsSpec,
-  stakePoolDelegationsSpec,
- )
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (witnessedKeyHashPoolParamMapSpec)
+--   dRepDelegationsSpec,
+--   stakePoolDelegationsSpec,
+--  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
@@ -49,10 +49,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (..))
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (
-  GenScript (..),
-  genWitUniv,
- )
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (GenScript (..), genWitUniv)
 import Test.QuickCheck (Gen)
 
 -- ==============================================================
@@ -67,14 +64,15 @@ acctX = genFromSpec @ChainAccountState accountStateSpec
 
 psX :: forall era. GenScript era => Gen (PState era)
 psX = do
-  univ <- genWitUniv 25
+  univ <- genWitUniv @era 25
   epoch <- genFromSpec @EpochNo epochNoSpec
-  stakePoolDelegations <- genFromSpec $ stakePoolDelegationsSpec univ
-  genFromSpec @(PState era) (pStateSpec univ (lit stakePoolDelegations) (lit epoch))
+  -- stakePoolDelegations <- genFromSpec $ stakePoolDelegationsSpec univ
+  genFromSpec @(PState era) (pStateSpec univ {- (lit stakePoolDelegations) -} (lit epoch))
 
-shelleyDStateGen ::
-  forall era. (EraSpecLedger era, Accounts era ~ ShelleyAccounts era) => Gen (DState era)
-shelleyDStateGen = do undefined
+shelleyDStateGen :: Gen (DState era)
+shelleyDStateGen =
+  error
+    "FIX ME shelleyDStateGen line 76 Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed"
 
 -- univ <- genWitUniv 25
 -- acct <- genFromSpec @ChainAccountState accountStateSpec
@@ -87,10 +85,9 @@ conwayDStateGen ::
   forall era. (EraSpecLedger era, Accounts era ~ ConwayAccounts era) => Gen (DState era)
 conwayDStateGen = do
   univ <- genWitUniv 25
-  stakePoolDelegations <- genFromSpec $ stakePoolDelegationsSpec univ
-  dRepDelegations <- genFromSpec $ dRepDelegationsSpec univ
+  khppMap <- genFromSpec (witnessedKeyHashPoolParamMapSpec univ)
   genFromSpec @(DState era)
-    (conwayDStateSpec @era univ (lit stakePoolDelegations) (lit dRepDelegations))
+    (conwayDStateSpec @era univ (lit khppMap))
 
 vsX :: forall era. GenScript era => Gen (VState era)
 vsX = do

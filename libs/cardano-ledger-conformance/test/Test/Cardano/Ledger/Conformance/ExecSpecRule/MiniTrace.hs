@@ -22,6 +22,9 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (GovSignal (..))
 import Cardano.Ledger.Core
 import Constrained.API
+-- \| This is where most of the ExecSpecRule instances are defined
+
+import Constrained.PrettyUtils (showType)
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -29,7 +32,6 @@ import qualified Data.OSet.Strict as OSet
 import Data.Proxy
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
--- \| This is where most of the ExecSpecRule instances are defined
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   nameCerts,
   nameDelegCert,
@@ -56,15 +58,17 @@ minitraceEither ::
   Int ->
   Gen (Either [String] [Signal (EraRule s e)])
 minitraceEither witrule n0 = do
-  ctxt <- genExecContext @s @e
-  env <- genFromSpec @(ExecEnvironment s e) (environmentSpec @s @e ctxt)
+  !ctxt <- genExecContext @s @e
+
+  !env <- genFromSpec @(ExecEnvironment s e) (environmentSpec @s @e ctxt)
   let env2 :: Environment (EraRule s e)
       env2 = inject env
   !state0 <- genFromSpec @(ExecState s e) (stateSpec @s @e ctxt env)
+
   let go :: State (EraRule s e) -> Int -> Gen (Either [String] [Signal (EraRule s e)])
       go _ 0 = pure (Right [])
       go state n = do
-        signal <- genFromSpec @(ExecSignal s e) (signalSpec @s @e ctxt env state)
+        !signal <- genFromSpec @(ExecSignal s e) (signalSpec @s @e ctxt env state)
         let signal2 :: Signal (EraRule s e)
             signal2 = inject signal
         goSTS @s @e @(Gen (Either [String] [Signal (EraRule s e)]))
@@ -169,12 +173,14 @@ spec = do
     prop
       "CERT"
       (withMaxSuccess 50 (minitraceProp (CERT Conway) 50 nameTxCert))
+
     prop
       "CERTS"
       ( withMaxSuccess
           50
           (minitraceProp (CERTS Conway) 50 nameCerts)
       )
+
     prop
       "RATIFY"
       (withMaxSuccess 50 (minitraceProp (RATIFY Conway) 50 nameRatify))
