@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.State (ConwayAccountState (..), ConwayAccounts (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -206,8 +207,8 @@ wbMap :: WitBlock t era -> Map t (ProofType t era)
 wbMap (WitBlock _ y) = y
 
 -- | when we print a WitBlock, we are only interested in the hashes, not the witnesses
-instance ToExpr t => Show (WitBlock t era) where
-  show (WitBlock hashset _) = show (prettyE hashset)
+instance (Show t, ToExpr t) => Show (WitBlock t era) where
+  show (WitBlock hashset _) = unlines (map show (Set.toList hashset)) -- show (prettyE hashset)
 
 instance NFData (WitBlock t era) where
   rnf (WitBlock x y) = deepseq (rnf x) (deepseq (rnf y) ())
@@ -311,7 +312,17 @@ data WitUniv era
   }
   deriving (Eq, NFData, ToExpr, Generic)
 
-instance Show (WitUniv era) where show x = show (prettyE x)
+instance Show (WitUniv era) where
+  show (WitUniv n k _b s d) =
+    "WitUniv\n"
+      ++ show n
+      ++ "\n"
+      ++ show k
+      ++ "\n"
+      ++ show s
+      ++ "\n"
+      ++ show d
+      ++ "\n"
 
 instance Era era => EncCBOR (WitUniv era) where
   encCBOR (WitUniv n w x y z) = encode $ Rec WitUniv !> To n !> To w !> To x !> To y !> To z
@@ -732,6 +743,22 @@ instance (Era era, HasSpec t, Witnessed era t) => Witnessed era [t] where
   witness univ t =
     assertExplain (pure ("In the " ++ show (typeRep (Proxy @([t]))) ++ " instance of Witnessed")) $
       forAll t (witness univ)
+
+instance Era era => Witnessed era (ConwayAccounts era) where
+  witness univ t = match t $ \ [var|conwayAccountsMap|] ->
+    assertExplain
+      (pure ("In the ConwayAccounts instance of Witnessed"))
+      [ witness univ (dom_ conwayAccountsMap)
+      , witness univ (rng_ conwayAccountsMap)
+      ]
+
+instance Era era => Witnessed era (ConwayAccountState era) where
+  witness univ t = match t $ \_bal _dep [var|strictmaybeKeyhash|] [var|strictmaybeDrep|] ->
+    assertExplain
+      (pure ("In the ConwayAccountState instance of Witnessed"))
+      [ witness univ strictmaybeKeyhash
+      , witness univ strictmaybeDrep
+      ]
 
 -- ===================================================================
 

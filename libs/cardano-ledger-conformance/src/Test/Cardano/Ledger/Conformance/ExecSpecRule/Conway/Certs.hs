@@ -24,7 +24,7 @@ import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert ()
 import Test.Cardano.Ledger.Constrained.Conway hiding (conwayCertStateSpec)
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (conwayCertStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Imp.Common hiding (context)
 
@@ -38,16 +38,8 @@ instance ExecSpecRule "CERTS" ConwayEra where
 
   environmentSpec _ = certsEnvSpec
 
-  stateSpec (univ, context) _ =
+  stateSpec (univ, _context) _ =
     conwayCertStateSpec univ (lit (EpochNo 100))
-
-  -- constrained $ \x ->
-  --   match x $ \vstate pstate dstate ->
-  --     [ satisfies vstate (vStateSpec @ConwayEra univ (ccecDelegatees context))
-  --     , satisfies pstate (pStateSpec @ConwayEra univ)
-  --     , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
-  --       satisfies dstate (conwayDStateSpec univ (ccecDelegatees context) (ccecWithdrawals context))
-  --     ]
 
   signalSpec (univ, _) env state = txCertsSpec @ConwayEra univ env state
 

@@ -127,7 +127,7 @@ specSuite n = do
 
   soundSpecWith @(PState era) (5 * n) $ do
     univ <- genWitUniv @era 200
-    pStateSpec @era univ !$! stakePoolDelegationsSpec @era univ !*! epochNoSpec
+    pStateSpec @era univ !$! epochNoSpec
 
   soundSpecWith @(DState era) (5 * n) $ do
     univ <- genWitUniv @era 50
