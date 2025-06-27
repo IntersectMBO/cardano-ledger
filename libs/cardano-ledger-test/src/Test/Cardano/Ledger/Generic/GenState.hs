@@ -143,13 +143,11 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Era
-import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
   primaryLanguage,
   protocolVersion,
-  txoutFields,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
@@ -160,7 +158,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   mPoolDeposits,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Tasty.QuickCheck (
   Gen,
@@ -172,6 +169,7 @@ import Test.Tasty.QuickCheck (
   frequency,
   generate,
  )
+import Cardano.Ledger.Alonzo.Core (ppCostModelsL, ppMaxValSizeL, ppMaxTxExUnitsL, ppMaxCollateralInputsL, ppCollateralPercentageL)
 
 -- =================================================
 
@@ -660,35 +658,16 @@ genPositiveVal = inject . Coin . getPositive <$> arbitrary
 genRewardVal :: Val v => Gen v
 genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 
--- | Test if the Payment part of the Address in the TxOut
---   is valid in the current ValidityInterval. Using the simple rule allowing
---   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
-validTxOut ::
-  Proof era ->
-  Map ScriptHash (Script era) ->
-  TxIn ->
-  TxOut era ->
-  Bool
-validTxOut proof m _txin txout = case txoutFields proof txout of
-  (Addr _ (KeyHashObj _) _, _, _) -> True
-  (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway, Just (PlutusScript _)) -> True
-    (Babbage, Just (PlutusScript _)) -> True
-    (Alonzo, Just (PlutusScript _)) -> True
-    (Shelley, Just _msig) -> True
-    _ -> False
-  _bootstrap -> False
-
 -- | Pick a UTxO element where we can use it in a new Tx. Most of the time we generate new
 --   elements for each Tx, but once in a while we choose an existing one. We must be carefull
 --   that that the Pay credential of the TxOut can run in the curent ValidityInterval
 --   A crude but simple way is to insist Pay credential is either Key locked, or locked
 --   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
-getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn, TxOut era))
+getUtxoElem :: EraTest era => GenRS era (Maybe (TxIn, TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
-  lift $ genMapElemWhere x 20 (validTxOut reify scriptmap)
+  lift $ genMapElemWhere x 20 (\_ -> validTxOut scriptmap)
 
 getUtxoTest :: GenRS era (TxIn -> Bool)
 getUtxoTest = do
@@ -713,7 +692,7 @@ runGenRS ::
   GenRS era a ->
   Gen (a, GenState era)
 runGenRS proof gsize action = do
-  genenv <- genGenEnv proof gsize
+  genenv <- genGenEnv gsize
   (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
   pure (ans, state)
 
@@ -722,29 +701,27 @@ ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenS
 ioGenRS proof gsize action = generate $ runGenRS proof gsize action
 
 -- | Generate a random, well-formed, GenEnv
-genGenEnv :: EraPParams era => Proof era -> GenSize -> Gen (GenEnv era)
-genGenEnv proof gsize = do
+genGenEnv :: forall era. EraPParams era => GenSize -> Gen (GenEnv era)
+genGenEnv gsize = do
   maxTxExUnits <- arbitrary :: Gen ExUnits
   maxCollateralInputs <- elements [1 .. collInputsMax gsize]
   collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
   minfeeA <- Coin <$> choose (0, 1000)
   minfeeB <- Coin <$> choose (0, 10000)
-  let pp =
-        newPParams
-          proof
-          [ MinfeeA minfeeA
-          , MinfeeB minfeeB
-          , defaultCostModels proof
-          , MaxValSize 1000
-          , MaxTxSize $ fromIntegral (maxBound :: Int)
-          , MaxTxExUnits maxTxExUnits
-          , MaxCollateralInputs maxCollateralInputs
-          , CollateralPercentage collateralPercentage
-          , ProtocolVersion $ protocolVersion proof
-          , PoolDeposit $ Coin 5
-          , KeyDeposit $ Coin 2
-          , EMax $ EpochInterval 5
-          ]
+  let 
+    pp = emptyPParams
+      & ppMinFeeAL .~ minfeeA
+      & ppMinFeeBL .~ minfeeB
+      & ppCostModelsL .~ defaultCostModels
+      & ppMaxValSizeL .~ 1000
+      & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
+      & ppMaxTxExUnitsL .~ maxTxExUnits
+      & ppMaxCollateralInputsL .~ maxCollateralInputs
+      & ppCollateralPercentageL .~ collateralPercentage
+      & ppProtocolVersionL .~ protocolVersion @era
+      & ppPoolDepositL .~ Coin 5
+      & ppKeyDepositL .~ Coin 2
+      & ppEMaxL .~ EpochInterval 5
   pure $
     GenEnv
       { gePParams = pp

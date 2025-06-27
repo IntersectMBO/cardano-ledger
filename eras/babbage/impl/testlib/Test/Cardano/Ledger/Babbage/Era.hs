@@ -11,6 +11,8 @@ import Cardano.Ledger.Babbage.Core
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
+import Cardano.Ledger.Plutus (Language(..))
 
 class
   ( AlonzoEraTest era
@@ -19,7 +21,9 @@ class
   ) =>
   BabbageEraTest era
 
-instance EraTest BabbageEra
+instance EraTest BabbageEra where
+  validTxOut = alonzoValidTxOut
+  zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
 
 instance ShelleyEraTest BabbageEra
 

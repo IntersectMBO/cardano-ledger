@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Test.Cardano.Ledger.Era (
-  EraTest,
+  EraTest (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
@@ -10,10 +11,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity
+import Data.Map.Strict (Map)
 import Data.Typeable
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff ()
+import Cardano.Ledger.Plutus (CostModels)
 
 class
   ( -- Core
@@ -70,3 +73,6 @@ class
   , Arbitrary (TranslationContext era)
   ) =>
   EraTest era
+  where
+  validTxOut :: Map ScriptHash (Script era) -> TxOut era -> Bool
+  zeroCostModels :: CostModels

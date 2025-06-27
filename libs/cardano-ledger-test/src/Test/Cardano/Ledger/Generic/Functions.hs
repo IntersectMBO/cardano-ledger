@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Functions in this module take a (Proof era) as their first
 --   parameter and do something potentially different in each Era.
@@ -22,7 +23,6 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   Globals (epochInfo),
   ProtVer (..),
-  natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -62,7 +62,6 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFailsLang, alwaysSucceedsLang)
-import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
@@ -95,13 +94,8 @@ collateralPercentage' Conway pp = pp ^. ppCollateralPercentageL
 collateralPercentage' _proof _pp = 0
 {-# NOINLINE collateralPercentage' #-}
 
-protocolVersion :: Proof era -> ProtVer
-protocolVersion Conway = ProtVer (natVersion @9) 0
-protocolVersion Babbage = ProtVer (natVersion @7) 0
-protocolVersion Alonzo = ProtVer (natVersion @6) 0
-protocolVersion Mary = ProtVer (natVersion @4) 0
-protocolVersion Allegra = ProtVer (natVersion @3) 0
-protocolVersion Shelley = ProtVer (natVersion @2) 0
+protocolVersion :: forall era. Era era => ProtVer
+protocolVersion = ProtVer (eraProtVerLow @era) 0
 {-# NOINLINE protocolVersion #-}
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
@@ -169,16 +163,6 @@ txInBalance ::
   MUtxo era ->
   Coin
 txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
-
--- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> TxOut era -> (Addr, Value era, [TxOutField era])
-txoutFields Conway (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Babbage (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Alonzo (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
-txoutFields Mary (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Allegra (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Shelley (ShelleyTxOut addr val) = (addr, val, [])
-{-# NOINLINE txoutFields #-}
 
 injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
 injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)

@@ -3,20 +3,26 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Era (
-  EraTest,
+  EraTest (..),
   ShelleyEraTest,
 ) where
 
+import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Core (EraTxOut (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.State
 import Data.Default
+import qualified Data.Map.Strict as Map
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Cardano.Ledger.Plutus (emptyCostModels)
 
 class
   ( EraTest era
@@ -33,6 +39,12 @@ class
   ) =>
   ShelleyEraTest era
 
-instance EraTest ShelleyEra
+instance EraTest ShelleyEra where
+  validTxOut scripts txOut =
+    case txOut ^. addrTxOutL of
+      Addr _ (KeyHashObj _) _ -> True
+      Addr _ (ScriptHashObj sh) _ -> Map.member sh scripts
+      AddrBootstrap {} -> False
+  zeroCostModels = emptyCostModels
 
 instance ShelleyEraTest ShelleyEra

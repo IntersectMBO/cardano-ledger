@@ -11,6 +11,7 @@ import Cardano.Ledger.Mary.Core
 import Test.Cardano.Ledger.Allegra.Era
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.TreeDiff ()
+import Cardano.Ledger.Plutus (emptyCostModels)
 
 class
   ( AllegraEraTest era
@@ -18,7 +19,9 @@ class
   ) =>
   MaryEraTest era
 
-instance EraTest MaryEra
+instance EraTest MaryEra where
+  validTxOut = allegraValidTxOut
+  zeroCostModels = emptyCostModels
 
 instance ShelleyEraTest MaryEra
 

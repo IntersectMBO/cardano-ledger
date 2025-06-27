@@ -1,21 +1,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.Era () where
+module Test.Cardano.Ledger.Dijkstra.Era (
+  module Test.Cardano.Ledger.Conway.Era,
+) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Test.Cardano.Ledger.Conway.Era (
-  AllegraEraTest,
-  AlonzoEraTest,
-  BabbageEraTest,
-  ConwayEraTest,
-  EraTest,
-  MaryEraTest,
-  ShelleyEraTest,
- )
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 
-instance EraTest DijkstraEra
+instance EraTest DijkstraEra where
+  validTxOut = alonzoValidTxOut
+  -- TODO add PlutusV4?
+  zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV3]
 
 instance ShelleyEraTest DijkstraEra
 
