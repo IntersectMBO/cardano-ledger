@@ -12,13 +12,13 @@ import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Plutus (emptyCostModels)
 import Data.Map.Strict (Map)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Era
-import Cardano.Ledger.Plutus (emptyCostModels)
 
 class
   ( ShelleyEraTest era
@@ -36,6 +36,7 @@ allegraValidTxOut _ txOut = case txOut ^. addrTxOutL of
 instance EraTest AllegraEra where
   validTxOut = allegraValidTxOut
   zeroCostModels = emptyCostModels
+  genPParams _ = shelleyGenPParams
 
 instance ShelleyEraTest AllegraEra
 

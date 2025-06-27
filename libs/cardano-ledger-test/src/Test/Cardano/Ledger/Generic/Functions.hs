@@ -22,7 +22,6 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   Globals (epochInfo),
-  ProtVer (..),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -93,10 +92,6 @@ collateralPercentage' Babbage pp = pp ^. ppCollateralPercentageL
 collateralPercentage' Conway pp = pp ^. ppCollateralPercentageL
 collateralPercentage' _proof _pp = 0
 {-# NOINLINE collateralPercentage' #-}
-
-protocolVersion :: forall era. Era era => ProtVer
-protocolVersion = ProtVer (eraProtVerLow @era) 0
-{-# NOINLINE protocolVersion #-}
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::

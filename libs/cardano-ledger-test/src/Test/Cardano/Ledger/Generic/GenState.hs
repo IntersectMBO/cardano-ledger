@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   GenRS,
   GenState (..),
   GenSize (..),
+  defaultGenSize,
   PlutusPurposeTag (..),
   plutusPurposeTags,
   mkRedeemers,
@@ -56,7 +57,6 @@ module Test.Cardano.Ledger.Generic.GenState (
   getUtxoTest,
   getCollInputsMax,
   getNewPoolTest,
-  viewGenState,
   initialLedgerState,
   modifyModel,
   runGenRS,
@@ -83,7 +83,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   modifyModelMutFee,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -94,7 +94,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
+import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -123,7 +123,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, when, zipWithM_)
+import Control.Monad (join, replicateM, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Control.SetAlgebra (eval, (⨃))
@@ -140,6 +140,7 @@ import GHC.Word (Word32, Word64)
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Era
@@ -147,7 +148,6 @@ import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
   primaryLanguage,
-  protocolVersion,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
@@ -164,37 +164,33 @@ import Test.Tasty.QuickCheck (
   Positive (..),
   arbitrary,
   choose,
-  chooseInt,
   elements,
   frequency,
   generate,
  )
-import Cardano.Ledger.Alonzo.Core (ppCostModelsL, ppMaxValSizeL, ppMaxTxExUnitsL, ppMaxCollateralInputsL, ppCollateralPercentageL)
 
 -- =================================================
 
--- | Constants that determine how big a GenState is generated.
-data GenSize = GenSize
-  { treasury :: !Integer
-  , reserves :: !Integer
-  , startSlot :: !Word64
-  , slotDelta :: !(Word64, Word64)
-  , blocksizeMax :: !Integer
-  , collInputsMax :: !Natural
-  , spendInputsMax :: !Int
-  , refInputsMax :: !Int
-  , utxoChoicesMax :: !Int
-  , certificateMax :: !Int
-  , withdrawalMax :: !Int
-  , oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
-  , maxStablePools :: !Int
-  , invalidScriptFreq :: !Int -- percentage
-  , regCertFreq :: !Int
-  , delegCertFreq :: !Int
-  }
-  deriving (Show, Generic)
-
-instance ToExpr GenSize
+defaultGenSize :: GenSize
+defaultGenSize =
+  GenSize
+    { treasury = 1000000
+    , reserves = 1000000
+    , startSlot = 0
+    , slotDelta = (3, 7)
+    , blocksizeMax = 10
+    , collInputsMax = 5
+    , oldUtxoPercent = 15
+    , spendInputsMax = 10
+    , refInputsMax = 6
+    , utxoChoicesMax = 30
+    , certificateMax = 10
+    , withdrawalMax = 10
+    , maxStablePools = 5
+    , invalidScriptFreq = 5
+    , regCertFreq = 75
+    , delegCertFreq = 50
+    }
 
 data GenEnv era = GenEnv
   { gePParams :: PParams era
@@ -222,7 +218,6 @@ data GenState era = GenState
   , gsStableDelegators :: !(Set StakeCredential)
   , gsAvoidCred :: !(Set (Credential 'Staking))
   , gsAvoidKey :: !(Set (KeyHash 'StakePool))
-  , gsProof :: !(Proof era)
   , gsGenEnv :: !(GenEnv era)
   , gsSeedIdx :: !Int
   }
@@ -230,8 +225,8 @@ data GenState era = GenState
 
 instance EraTest era => ToExpr (GenEnv era)
 
-emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
-emptyGenState proof genv =
+emptyGenState :: EraTest era => GenEnv era -> GenState era
+emptyGenState genv =
   GenState
     (ValidityInterval SNothing SNothing)
     mempty
@@ -249,31 +244,9 @@ emptyGenState proof genv =
     Set.empty
     Set.empty
     Set.empty
-    proof
     genv
     0
 {-# NOINLINE emptyGenState #-}
-
-instance Default GenSize where
-  def =
-    GenSize
-      { treasury = 1000000
-      , reserves = 1000000
-      , startSlot = 0
-      , slotDelta = (3, 7)
-      , blocksizeMax = 10
-      , collInputsMax = 5
-      , oldUtxoPercent = 15
-      , spendInputsMax = 10
-      , refInputsMax = 6
-      , utxoChoicesMax = 30
-      , certificateMax = 10
-      , withdrawalMax = 10
-      , maxStablePools = 5
-      , invalidScriptFreq = 5
-      , regCertFreq = 75
-      , delegCertFreq = 50
-      }
 
 small :: GenSize
 small =
@@ -686,56 +659,37 @@ getNewPoolTest = do
 -- Tools to get started in the Monad
 
 runGenRS ::
-  Reflect era =>
-  Proof era ->
+  EraTest era =>
   GenSize ->
   GenRS era a ->
   Gen (a, GenState era)
-runGenRS proof gsize action = do
+runGenRS gsize action = do
   genenv <- genGenEnv gsize
-  (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
+  (ans, state, ()) <- runRWST action genenv (emptyGenState genenv)
   pure (ans, state)
 
 -- | Should not be used in tests, this is a helper function to be used in ghci only!
-ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
-ioGenRS proof gsize action = generate $ runGenRS proof gsize action
+ioGenRS :: EraTest era => GenSize -> GenRS era ans -> IO (ans, GenState era)
+ioGenRS gsize action = generate $ runGenRS gsize action
 
 -- | Generate a random, well-formed, GenEnv
-genGenEnv :: forall era. EraPParams era => GenSize -> Gen (GenEnv era)
+genGenEnv :: forall era. EraTest era => GenSize -> Gen (GenEnv era)
 genGenEnv gsize = do
-  maxTxExUnits <- arbitrary :: Gen ExUnits
-  maxCollateralInputs <- elements [1 .. collInputsMax gsize]
-  collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
-  minfeeA <- Coin <$> choose (0, 1000)
-  minfeeB <- Coin <$> choose (0, 10000)
-  let 
-    pp = emptyPParams
-      & ppMinFeeAL .~ minfeeA
-      & ppMinFeeBL .~ minfeeB
-      & ppCostModelsL .~ defaultCostModels
-      & ppMaxValSizeL .~ 1000
-      & ppMaxTxSizeL .~ fromIntegral (maxBound :: Int)
-      & ppMaxTxExUnitsL .~ maxTxExUnits
-      & ppMaxCollateralInputsL .~ maxCollateralInputs
-      & ppCollateralPercentageL .~ collateralPercentage
-      & ppProtocolVersionL .~ protocolVersion @era
-      & ppPoolDepositL .~ Coin 5
-      & ppKeyDepositL .~ Coin 2
-      & ppEMaxL .~ EpochInterval 5
+  pp <- genPParams gsize
   pure $
     GenEnv
       { gePParams = pp
       , geSize = gsize
       }
 
-genGenState :: Reflect era => Proof era -> GenSize -> Gen (GenState era)
-genGenState proof gsize = do
+genGenState :: forall era. EraTest era => GenSize -> Gen (GenState era)
+genGenState gsize = do
   let slotNo = startSlot gsize
   minSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, slotNo))]
   maxSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (slotNo + 1, maxBound))]
   let vi = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo)
-  env <- genGenEnv proof gsize
-  pure (setVi (emptyGenState proof env) vi)
+  env <- genGenEnv gsize
+  pure (setVi (emptyGenState env) vi)
 
 -- | Generate a transaction body validity interval which is close in proximity
 --  (less than a stability window) from the current slot.
@@ -750,12 +704,6 @@ genValidityInterval (SlotNo s) = do
 
 pcGenState :: ShelleyEraTest era => GenState era -> Expr
 pcGenState = toExpr
-
--- | Helper function for development and debugging in ghci
-viewGenState :: (Reflect era, ShelleyEraTest era) => Proof era -> GenSize -> Bool -> IO ()
-viewGenState proof gsize verbose = do
-  st <- generate (genGenState proof gsize)
-  when verbose $ print (pcGenState st)
 
 instance ShelleyEraTest era => ToExpr (GenState era)
 

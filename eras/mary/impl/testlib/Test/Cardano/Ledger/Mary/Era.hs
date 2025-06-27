@@ -22,6 +22,7 @@ class
 instance EraTest MaryEra where
   validTxOut = allegraValidTxOut
   zeroCostModels = emptyCostModels
+  genPParams _ = shelleyGenPParams
 
 instance ShelleyEraTest MaryEra
 

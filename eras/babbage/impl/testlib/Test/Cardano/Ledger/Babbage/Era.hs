@@ -24,6 +24,7 @@ class
 instance EraTest BabbageEra where
   validTxOut = alonzoValidTxOut
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
+  genPParams = alonzoGenPParams
 
 instance ShelleyEraTest BabbageEra
 

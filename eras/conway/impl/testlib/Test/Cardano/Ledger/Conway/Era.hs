@@ -27,6 +27,7 @@ class
 instance EraTest ConwayEra where
   validTxOut = alonzoValidTxOut
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV3]
+  genPParams = alonzoGenPParams
 
 instance ShelleyEraTest ConwayEra
 
