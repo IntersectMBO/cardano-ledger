@@ -9,42 +9,50 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Generic.Properties where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Shelley as S (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
+  NewEpochState,
+  PulsingRewUpdate,
+  UTxOState,
+ )
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv (..),
+  RupdEnv,
+  ShelleyLedgersEnv,
+  ShelleyTICK,
+  UtxoEnv (..),
+ )
 import Cardano.Ledger.State
-import Cardano.Slotting.Slot (SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo, SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (coerce)
 import Data.Default (Default (def))
-import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe)
+import Data.Sequence (Seq)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
-import Test.Cardano.Ledger.Common (ToExpr (..))
+import Test.Cardano.Ledger.Common (ToExpr (..), showExpr)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Fields (
-  abstractTxBody,
-  abstractTxOut,
-  abstractWitnesses,
- )
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState (
+  EraGenericGen,
   GenEnv (..),
-  GenRS,
   GenSize (..),
   GenState (..),
-  blocksizeMax,
   initStableFields,
   modifyModel,
   runGenRS,
@@ -60,114 +68,91 @@ import Test.Cardano.Ledger.Generic.Trace (
   traceProp,
  )
 import Test.Cardano.Ledger.Generic.TxGen (
-  Box (..),
-  applySTSByProof,
-  assembleWits,
-  coreTxBody,
-  coreTxOut,
   genAlonzoTx,
   genUTxO,
+  runSTSWithContext,
  )
+import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace (Trace (..), lastState)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Test.QuickCheck
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, testGroup)
 
 -- =====================================
 -- Top level generators of TRC
 
 genTxAndUTXOState ::
-  Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
-genTxAndUTXOState proof@Conway gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
+  ( Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , EraGenericGen era
+  ) =>
+  GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
+genTxAndUTXOState gsize = do
+  (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx), genState) <- genTxAndLEDGERState gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@Babbage gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@Alonzo gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@Mary gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@Allegra gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@Shelley gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ _ pp _, ledgerState, vtx)) genState) <-
-    genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-
-genTxAndLEDGERStateShelley ::
-  GenSize -> Gen (TRC (EraRule "LEDGER" S.ShelleyEra), GenState S.ShelleyEra)
-genTxAndLEDGERStateShelley genSize = do
-  Box _ trc genState <- genTxAndLEDGERState Shelley genSize
-  pure (trc, genState)
-
-testTxValidForLEDGERShelley ::
-  (TRC (EraRule "LEDGER" S.ShelleyEra), GenState S.ShelleyEra) -> Property
-testTxValidForLEDGERShelley (trc, genState) =
-  testTxValidForLEDGER Shelley (Box Shelley trc genState)
 
 genTxAndLEDGERState ::
   forall era.
-  ( Reflect era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  ( Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , EraGenericGen era
   ) =>
-  Proof era ->
   GenSize ->
-  Gen (Box era)
-genTxAndLEDGERState proof sizes = do
+  Gen (TRC (EraRule "LEDGER" era), GenState era)
+genTxAndLEDGERState sizes = do
   let slotNo = SlotNo (startSlot sizes)
   txIx <- arbitrary
   let genT = do
         (initial, _) <- genUTxO -- Generate a random UTxO, so mUTxO is not empty
         modifyModel (\m -> m {mUTxO = initial})
-        (_utxo, tx) <- genAlonzoTx proof slotNo
+        (_utxo, tx) <- genAlonzoTx slotNo
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
             ledgerEnv = LedgerEnv slotNo Nothing txIx pp (ChainAccountState (Coin 0) (Coin 0))
         pure $ TRC (ledgerEnv, ledgerState, tx)
-  (trc, genstate) <- runGenRS proof sizes (initStableFields >> genT)
-  pure (Box proof trc genstate)
+  (trc, genstate) <- runGenRS sizes (initStableFields >> genT)
+  pure (trc, genstate)
 
 -- =============================================
 -- Now a test
 
 testTxValidForLEDGER ::
+  forall era.
   ( Reflect era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraTest era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , STS (EraRule "LEDGER" era)
+  , ToExpr (Environment (EraRule "LEDGER" era))
   ) =>
-  Proof era ->
-  Box era ->
+  (TRC (EraRule "LEDGER" era), GenState era) ->
   Property
-testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
+testTxValidForLEDGER (trc@(TRC (env, ledgerState, vtx)), _genstate) =
   -- trc encodes the initial (generated) state, vtx is the transaction
-  case applySTSByProof proof trc of
+  case runSTSWithContext @era trc of
     Right ledgerState' ->
       -- UTxOState and CertState after applying the transaction $$$
-      classify (coerce (isValid' proof vtx)) "TxValid" $
+      classify (coerce (isValid' (reify @era) vtx)) "TxValid" $
         totalAda ledgerState' === totalAda ledgerState
     Left errs ->
       counterexample
-        ( show (toExpr ledgerState)
+        ( showExpr env
             ++ "\n\n"
-            ++ show (toExpr vtx)
+            ++ showExpr ledgerState
             ++ "\n\n"
-            ++ show (toExpr errs)
+            ++ showExpr vtx
+            ++ "\n\n"
+            ++ showExpr errs
         )
         (property False)
 
@@ -177,81 +162,35 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
 -- =========================================================================
 -- The generic types make a roundtrip without adding or losing information
 
-txOutRoundTrip ::
-  EraTxOut era => Proof era -> TxOut era -> Property
-txOutRoundTrip proof x = coreTxOut proof (abstractTxOut proof x) === x
-
-txBodyRoundTrip ::
-  EraTxBody era => Proof era -> TxBody era -> Property
-txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) === x
-
-txWitRoundTrip ::
-  EraTxWits era => Proof era -> TxWits era -> Property
-txWitRoundTrip proof x = assembleWits proof (abstractWitnesses proof x) === x
-
-coreTypesRoundTrip :: TestTree
-coreTypesRoundTrip =
-  testGroup
-    "Core types make generic roundtrips"
-    [ testGroup
-        "TxWits roundtrip"
-        [ testPropMax 30 "Babbage era" $ txWitRoundTrip Babbage
-        , testPropMax 30 "Alonzo era" $ txWitRoundTrip Alonzo
-        , testPropMax 30 "Mary era" $ txWitRoundTrip Mary
-        , testPropMax 30 "Allegra era" $ txWitRoundTrip Allegra
-        , testPropMax 30 "Shelley era" $ txWitRoundTrip Shelley
-        ]
-    , testGroup
-        "TxBody roundtrips"
-        [ testPropMax 30 "Babbage era" $ txBodyRoundTrip Babbage
-        , testPropMax 30 "Alonzo era" $ txBodyRoundTrip Alonzo
-        , testPropMax 30 "Mary era" $ txBodyRoundTrip Mary
-        , testPropMax 30 "Allegra era" $ txBodyRoundTrip Allegra
-        , testPropMax 30 "Shelley era" $ txBodyRoundTrip Shelley
-        ]
-    , testGroup
-        "TxOut roundtrips"
-        [ testPropMax 30 "Babbage era" $ txOutRoundTrip Babbage
-        , testPropMax 30 "Alonzo era" $ txOutRoundTrip Alonzo
-        , testPropMax 30 "Mary era" $ txOutRoundTrip Mary
-        , testPropMax 30 "Allegra era" $ txOutRoundTrip Allegra
-        , testPropMax 30 "Shelley era" $ txOutRoundTrip Shelley
-        ]
-    ]
-
 -- | A single Tx preserves Ada
 txPreserveAda :: GenSize -> TestTree
 txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
-    [ testPropMax 30 "Shelley Tx preservers Ada" $
-        forAll (genTxAndLEDGERStateShelley genSize) (testTxValidForLEDGERShelley)
+    [ testPropMax 30 "Shelley Tx preserves Ada" $
+        forAll (genTxAndLEDGERState @ShelleyEra genSize) testTxValidForLEDGER
     , testPropMax 30 "Allegra Tx preserves ADA" $
-        forAll (genTxAndLEDGERState Allegra genSize) (testTxValidForLEDGER Allegra)
+        forAll (genTxAndLEDGERState @AllegraEra genSize) testTxValidForLEDGER
     , testPropMax 30 "Mary Tx preserves ADA" $
-        forAll (genTxAndLEDGERState Mary genSize) (testTxValidForLEDGER Mary)
+        forAll (genTxAndLEDGERState @MaryEra genSize) testTxValidForLEDGER
     , testPropMax 30 "Alonzo ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState Alonzo genSize) (testTxValidForLEDGER Alonzo)
+        forAll (genTxAndLEDGERState @AlonzoEra genSize) testTxValidForLEDGER
     , testPropMax 30 "Babbage ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState Babbage genSize) (testTxValidForLEDGER Babbage)
-        -- TODO
-        -- testPropMax 30 "Conway ValidTx preserves ADA" $
-        --  forAll (genTxAndLEDGERState Conway genSize) (testTxValidForLEDGER Conway)
+        forAll (genTxAndLEDGERState @BabbageEra genSize) testTxValidForLEDGER
     ]
 
 -- | Ada is preserved over a trace of length 100
 adaIsPreserved ::
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  forall era.
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   TestTree
-adaIsPreserved proof numTx gensize =
-  testPropMax 30 (show proof ++ " era. Trace length = " ++ show numTx) $
-    traceProp
-      proof
+adaIsPreserved numTx gensize =
+  testPropMax 30 (eraName @era ++ " era. Trace length = " ++ show numTx) $
+    traceProp @era
       numTx
       gensize
       (\firstSt lastSt -> totalAda (mcsNes firstSt) === totalAda (mcsNes lastSt))
@@ -260,15 +199,12 @@ tracePreserveAda :: Int -> GenSize -> TestTree
 tracePreserveAda numTx gensize =
   testGroup
     ("Total Ada is preserved over traces of length " ++ show numTx)
-    [ adaIsPreservedBabbage numTx gensize
-    , adaIsPreserved Alonzo numTx gensize
-    , adaIsPreserved Mary numTx gensize
-    , adaIsPreserved Allegra numTx gensize
-    , adaIsPreserved Shelley numTx gensize
+    [ adaIsPreserved @BabbageEra numTx gensize
+    , adaIsPreserved @AlonzoEra numTx gensize
+    , adaIsPreserved @MaryEra numTx gensize
+    , adaIsPreserved @AllegraEra numTx gensize
+    , adaIsPreserved @ShelleyEra numTx gensize
     ]
-
-adaIsPreservedBabbage :: Int -> GenSize -> TestTree
-adaIsPreservedBabbage = adaIsPreserved Babbage
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100=
 stakeInvariant :: EraStake era => MockChainState era -> MockChainState era -> Property
@@ -277,15 +213,15 @@ stakeInvariant (MockChainState {}) (MockChainState nes _ _ _) =
    in nes ^. instantStakeL === addInstantStake utxo mempty
 
 incrementStakeInvariant ::
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  forall era.
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   GenSize ->
   TestTree
-incrementStakeInvariant proof gensize =
-  testPropMax 30 (show proof ++ " era. Trace length = 100") $
-    traceProp proof 100 gensize stakeInvariant
+incrementStakeInvariant gensize =
+  testPropMax 30 (eraName @era ++ " era. Trace length = 100") $
+    traceProp @era 100 gensize stakeInvariant
 
 incrementalStake :: GenSize -> TestTree
 incrementalStake genSize =
@@ -293,19 +229,18 @@ incrementalStake genSize =
     "Incremental Stake invariant holds"
     [ -- TODO re-enable this once we have added all the new rules to Conway
       -- incrementStakeInvariant Conway genSize,
-      incrementStakeInvariant Babbage genSize
-    , incrementStakeInvariant Alonzo genSize
-    , incrementStakeInvariant Mary genSize
-    , incrementStakeInvariant Allegra genSize
-    , incrementStakeInvariant Shelley genSize
+      incrementStakeInvariant @BabbageEra genSize
+    , incrementStakeInvariant @AlonzoEra genSize
+    , incrementStakeInvariant @MaryEra genSize
+    , incrementStakeInvariant @AllegraEra genSize
+    , incrementStakeInvariant @ShelleyEra genSize
     ]
 
 genericProperties :: GenSize -> TestTree
 genericProperties genSize =
   testGroup
     "Generic Property tests"
-    [ coreTypesRoundTrip
-    , txPreserveAda genSize
+    [ txPreserveAda genSize
     , tracePreserveAda 45 genSize
     , incrementalStake genSize
     , testTraces 45
@@ -317,22 +252,38 @@ epochPreserveAda :: GenSize -> TestTree
 epochPreserveAda genSize =
   testGroup
     "Ada is preserved in each epoch"
-    [ adaIsPreservedInEachEpoch Babbage genSize
-    , adaIsPreservedInEachEpoch Alonzo genSize
-    , adaIsPreservedInEachEpoch Mary genSize
-    , adaIsPreservedInEachEpoch Allegra genSize
-    , adaIsPreservedInEachEpoch Shelley genSize
+    [ adaIsPreservedInEachEpoch @BabbageEra genSize
+    , adaIsPreservedInEachEpoch @AlonzoEra genSize
+    , adaIsPreservedInEachEpoch @MaryEra genSize
+    , adaIsPreservedInEachEpoch @AllegraEra genSize
+    , adaIsPreservedInEachEpoch @ShelleyEra genSize
     ]
 
 adaIsPreservedInEachEpoch ::
   forall era.
-  Reflect era =>
-  Proof era ->
+  ( ShelleyEraImp era
+  , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
+  , Environment (EraRule "NEWEPOCH" era) ~ ()
+  , Environment (EraRule "RUPD" era) ~ RupdEnv era
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , Signal (EraRule "RUPD" era) ~ SlotNo
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , BaseM (EraRule "NEWEPOCH" era) ~ ShelleyBase
+  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
+  , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
+  , Embed (EraRule "RUPD" era) (ShelleyTICK era)
+  , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
+  , EraGenericGen era
+  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
+  ) =>
   GenSize ->
   TestTree
-adaIsPreservedInEachEpoch proof genSize =
-  testPropMax 30 (show proof) $
-    forEachEpochTrace proof 200 genSize withTrace
+adaIsPreservedInEachEpoch genSize =
+  testPropMax 30 (eraName @era) $
+    forEachEpochTrace @era 200 genSize withTrace
   where
     withTrace :: Trace (MOCKCHAIN era) -> Property
     withTrace trc = totalAda (mcsNes trcInit) === totalAda (mcsNes trcLast)
@@ -358,60 +309,3 @@ twiddleInvariantHoldsEras =
     [ twiddleInvariantHolds @(TxBody AlonzoEra) "Alonzo"
     , twiddleInvariantHolds @(TxBody BabbageEra) "Babbage"
     ]
-
--- ==============================================================
--- Infrastrucure for running individual tests, with easy replay.
--- In ghci just type
--- :main --quickcheck-replay=205148
-
-main :: IO ()
-main = defaultMain $ adaIsPreservedBabbage 100 (def {blocksizeMax = 4})
-
-main8 :: IO ()
-main8 = test 100 Babbage
-
-test :: Int -> Proof era -> IO ()
-test n proof = defaultMain $
-  case proof of
-    -- TODO
-    -- Conway ->
-    --  testPropMax 30 "Conway ValidTx preserves ADA" $
-    --    withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Babbage ->
-      testPropMax 30 "Babbage ValidTx preserves ADA" $
-        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Alonzo ->
-      testPropMax 30 "Alonzo ValidTx preserves ADA" $
-        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Shelley ->
-      testPropMax 30 "Shelley ValidTx preserves ADA" $
-        withMaxSuccess n (forAll (genTxAndLEDGERStateShelley def) testTxValidForLEDGERShelley)
-    other -> error ("NO Test in era " ++ show other)
-
--- ===============================================================
--- Tools for generating other things from a GenEnv. This way one can
--- test individual functions in this file. These are intended for use
--- when developng and debugging.
-
--- | Construct a random (Gen b)
-makeGen :: Reflect era => Proof era -> (Proof era -> GenRS era b) -> Gen b
-makeGen proof computeWith = fst <$> runGenRS proof def (computeWith proof)
-
-runTest ::
-  (Reflect era, ToExpr a) =>
-  (Proof era -> GenRS era a) ->
-  (a -> IO ()) ->
-  Proof era ->
-  IO ()
-runTest computeWith action proof = do
-  ans <- generate (makeGen proof computeWith)
-  print (toExpr ans)
-  action ans
-
-main2 :: IO ()
-main2 = runTest (\x -> fst <$> genAlonzoTx x (SlotNo 0)) (const (pure ())) Babbage
-
-main3 :: IO ()
-main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action Alonzo
-  where
-    action (UTxO x) = putStrLn ("Size = " ++ show (Map.size x))

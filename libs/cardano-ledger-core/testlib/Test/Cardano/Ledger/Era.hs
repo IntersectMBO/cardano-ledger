@@ -1,12 +1,14 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Era (
-  EraTest,
+  EraTest (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity
@@ -70,3 +72,5 @@ class
   , Arbitrary (TranslationContext era)
   ) =>
   EraTest era
+  where
+  zeroCostModels :: CostModels

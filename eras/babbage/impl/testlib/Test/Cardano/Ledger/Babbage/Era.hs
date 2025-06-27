@@ -8,9 +8,11 @@ module Test.Cardano.Ledger.Babbage.Era (
 
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Plutus (Language (..))
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 class
   ( AlonzoEraTest era
@@ -19,7 +21,8 @@ class
   ) =>
   BabbageEraTest era
 
-instance EraTest BabbageEra
+instance EraTest BabbageEra where
+  zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
 
 instance ShelleyEraTest BabbageEra
 

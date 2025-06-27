@@ -7,10 +7,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -60,6 +60,7 @@ import Control.Monad.Trans.Reader (ReaderT (..))
 import qualified Control.State.Transition as STS
 import Control.State.Transition.Extended (IRC (), STS (..), TRC (..))
 import Data.Default (Default (def))
+import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
 import Data.List.NonEmpty (NonEmpty)
@@ -75,17 +76,18 @@ import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Era
-import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.Functions (
   adaPots,
   totalAda,
-  txoutFields,
  )
 import Test.Cardano.Ledger.Generic.GenState (
+  EraGenericGen,
   GenEnv (..),
   GenRS,
   GenSize (..),
   GenState (..),
+  defaultGenSize,
   getBlocksizeMax,
   getReserves,
   getSlot,
@@ -96,12 +98,13 @@ import Test.Cardano.Ledger.Generic.GenState (
   modifyModel,
   runGenRS,
  )
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
-import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
@@ -114,59 +117,59 @@ import Test.Tasty.QuickCheck (testProperty)
 -- | Generate a Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
 genRsTxAndModel ::
-  forall era. Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
-genRsTxAndModel proof n slot = do
-  (_, tx) <- genAlonzoTx proof slot
-  modifyModel (\model -> applyTx proof n slot model tx)
+  forall era.
+  EraGenericGen era =>
+  Int -> SlotNo -> GenRS era (Tx era)
+genRsTxAndModel n slot = do
+  (_, tx) <- genAlonzoTx slot
+  modifyModel (\model -> applyTx n slot model tx)
   pure tx
 
 -- | Generate a Vector of (StrictSeq (Tx era))  representing a (Vector Block)
 genRsTxSeq ::
   forall era.
-  Reflect era =>
-  Proof era ->
+  EraGenericGen era =>
   Int ->
   Int ->
   [(StrictSeq (Tx era), SlotNo)] ->
   SlotNo ->
   GenRS era (Vector (StrictSeq (Tx era), SlotNo))
-genRsTxSeq _ this lastN ans _slot | this >= lastN = do
+genRsTxSeq this lastN ans _slot | this >= lastN = do
   pure (Vector.fromList (reverse ans))
-genRsTxSeq proof this lastN ans slot = do
+genRsTxSeq this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
-  txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel proof (this + i) slot)
+  txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel (this + i) slot)
   newSlotRange <- gets getSlotDelta
   nextSlotNo <- lift $ SlotNo . (+ unSlotNo slot) <$> choose newSlotRange
-  genRsTxSeq proof (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
+  genRsTxSeq (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
 genTxSeq ::
   forall era.
-  Reflect era =>
-  Proof era -> -- Proof of the Era we want to generate the sequence in
+  EraGenericGen era =>
   GenSize -> -- Size of things the generated code should adhere to
   Int -> -- The number of Tx in the sequence
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
   -- use (pure ()) if you don't want or need initialization
   Gen (Vector (StrictSeq (Tx era), SlotNo), GenState era)
-genTxSeq proof gensize numTx initialize = do
-  runGenRS proof gensize (initialize >> genRsTxSeq proof 0 numTx [] (SlotNo $ 1))
+genTxSeq gensize numTx initialize = do
+  runGenRS gensize (initialize >> genRsTxSeq 0 numTx [] (SlotNo 1))
 
 runTest :: IO ()
 runTest = do
-  (v, _) <- generate $ genTxSeq Babbage def 20 (pure ())
+  (v, _) <- generate $ genTxSeq @BabbageEra defaultGenSize 20 (pure ())
   print (Vector.length v)
 
 -- ==================================================================
 -- Constructing the "real", initial NewEpochState, from the GenState
 
 initialMockChainState ::
+  forall era.
   Reflect era =>
-  Proof era ->
   GenState era ->
   MockChainState era
-initialMockChainState proof gstate =
+initialMockChainState gstate =
   MockChainState newepochstate newepochstate (getSlot gstate) 0
   where
     ledgerstate = initialLedgerState gstate
@@ -178,7 +181,7 @@ initialMockChainState proof gstate =
         , nesEs = makeEpochState gstate ledgerstate
         , nesRu = SNothing
         , nesPd = PoolDistr (gsInitialPoolDistr gstate) (CompactCoin 1)
-        , stashedAVVMAddresses = stashedAVVMAddressesZero proof
+        , stashedAVVMAddresses = stashedAVVMAddressesZero (reify @era)
         }
 
 makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
@@ -279,9 +282,9 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-shortTxOut :: EraTxOut era => Proof era -> TxOut era -> Expr
-shortTxOut proof out = case txoutFields proof out of
-  (Addr _ pay _, _, _) -> toExpr (pay, out ^. coinTxOutL)
+shortTxOut :: EraTxOut era => TxOut era -> Expr
+shortTxOut out = case out ^. addrTxOutL of
+  Addr _ pay _ -> toExpr (pay, out ^. coinTxOutL)
   _ -> error "Bootstrap Address in shortTxOut"
 
 smartTxBody :: EraTest era => MUtxo era -> TxBody era -> Expr
@@ -305,6 +308,9 @@ instance
   ( STS (MOCKCHAIN era)
   , Reflect era
   , EraTest era
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where
@@ -328,7 +334,12 @@ instance
          in Debug.trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               ( error . unlines $
-                  "sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS" : map show (Fold.toList pdfs)
+                  ["EpochState:"]
+                    <> [showExpr epochstate]
+                    <> ["Tx:"]
+                    <> toList (showExpr <$> txs)
+                    <> ["sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS"]
+                    <> map showExpr (Fold.toList pdfs)
               )
       Right mcs2 -> seq mcs2 (pure mockblock)
 
@@ -376,18 +387,17 @@ chooseIssuer epochnum lastSlot count (PoolDistr m _) = mapProportion epochnum la
 
 genTrace ::
   forall era.
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
   -- use (pure ()) if you don't want or need initialization
   Gen (Trace (MOCKCHAIN era))
-genTrace proof numTxInTrace gsize initialize = do
-  (vs, genstate) <- genTxSeq proof gsize numTxInTrace initialize
-  let initState = initialMockChainState proof genstate
+genTrace numTxInTrace gsize initialize = do
+  (vs, genstate) <- genTxSeq gsize numTxInTrace initialize
+  let initState = initialMockChainState genstate
   traceFromInitState @(MOCKCHAIN era)
     testGlobals
     (fromIntegral (length vs))
@@ -396,37 +406,37 @@ genTrace proof numTxInTrace gsize initialize = do
 
 traceProp ::
   forall era prop.
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   (MockChainState era -> MockChainState era -> prop) ->
   Gen prop
-traceProp proof numTxInTrace gsize f = do
-  trace1 <- genTrace proof numTxInTrace gsize initStableFields
+traceProp numTxInTrace gsize f = do
+  trace1 <- genTrace numTxInTrace gsize initStableFields
   pure (f (_traceInitState trace1) (lastState trace1))
 
 forEachEpochTrace ::
   forall era prop.
   ( Testable prop
-  , Reflect era
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   (Trace (MOCKCHAIN era) -> prop) ->
   Gen Property
-forEachEpochTrace proof tracelen genSize f = do
+forEachEpochTrace tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
-  trc <- case proof of
-    Conway -> genTrace proof tracelen genSize initStableFields
-    Babbage -> genTrace proof tracelen genSize initStableFields
-    Alonzo -> genTrace proof tracelen genSize initStableFields
-    Allegra -> genTrace proof tracelen genSize initStableFields
-    Mary -> genTrace proof tracelen genSize initStableFields
-    Shelley -> genTrace proof tracelen genSize initStableFields
+  trc <- do
+    (vs, genstate) <- genTxSeq genSize tracelen initStableFields
+    let initState = initialMockChainState genstate
+    traceFromInitState @(MOCKCHAIN era)
+      testGlobals
+      (fromIntegral (length vs))
+      (Gen1 vs genstate)
+      (Just (\_ -> pure $ Right initState))
   let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
   -- The very last sub-trace may not be a full epoch, so we throw it away.
   case reverse (splitTrace newEpoch trc) of
@@ -467,20 +477,18 @@ testPropMax n name x = testProperty name (withMaxSuccess n x)
 
 chainTest ::
   forall era.
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   TestTree
-chainTest proof n gsize = testPropMax 30 message action
+chainTest n gsize = testPropMax 30 (eraName @era) action
   where
-    message = show proof ++ " era."
     action = do
-      (vs, genstate) <- genTxSeq proof gsize n initStableFields
-      let initState = initialMockChainState proof genstate
+      (vs, genstate) <- genTxSeq @era gsize n initStableFields
+      let initState = initialMockChainState genstate
       trace1 <-
         traceFromInitState @(MOCKCHAIN era)
           testGlobals
@@ -494,29 +502,29 @@ testTraces :: Int -> TestTree
 testTraces n =
   testGroup
     "MockChainTrace"
-    [ chainTest Babbage n def
-    , chainTest Alonzo n def
-    , chainTest Mary n def
-    , chainTest Allegra n def
-    , multiEpochTest Babbage 225 def
-    , multiEpochTest Shelley 225 def
+    [ chainTest @BabbageEra n defaultGenSize
+    , chainTest @AlonzoEra n defaultGenSize
+    , chainTest @MaryEra n defaultGenSize
+    , chainTest @AllegraEra n defaultGenSize
+    , multiEpochTest @BabbageEra 225 defaultGenSize
+    , multiEpochTest @ShelleyEra 225 defaultGenSize
     ]
 
 -- | Show that Ada is preserved across multiple Epochs
 multiEpochTest ::
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  forall era.
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   TestTree
-multiEpochTest proof numTx gsize =
+multiEpochTest numTx gsize =
   let gensize = gsize {blocksizeMax = 4, slotDelta = (6, 12)}
       getEpoch mockchainstate = nesEL (mcsNes mockchainstate)
       propf firstSt lastSt =
         collect (getEpoch lastSt) (totalAda firstSt === totalAda lastSt)
    in testPropMax
         30
-        ("Multi epoch. Ada is preserved. " ++ show proof ++ " era. Trace length = " ++ show numTx)
-        (traceProp proof numTx gensize propf)
+        ("Multi epoch. Ada is preserved. " ++ (eraName @era) ++ ". Trace length = " ++ show numTx)
+        (traceProp @era numTx gensize propf)

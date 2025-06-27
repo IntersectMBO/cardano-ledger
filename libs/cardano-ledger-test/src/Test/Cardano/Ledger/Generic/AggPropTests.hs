@@ -1,9 +1,12 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
@@ -23,7 +26,6 @@ import Cardano.Ledger.State (EraCertState (..), UTxO (..))
 import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
-import Data.Default (Default (def))
 import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -34,18 +36,21 @@ import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
   getCollateralOutputs,
-  getInputs,
-  getOutputs,
   isValid',
  )
-import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
+import Test.Cardano.Ledger.Generic.GenState (
+  EraGenericGen,
+  GenSize (..),
+  defaultGenSize,
+  initStableFields,
+ )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  AlonzoEra,
+  MaryEra,
   Proof (..),
-  Reflect (..),
-  Some (..),
-  preBabbage,
-  unReflect,
+  ShelleyEra,
  )
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
 import Test.Control.State.Transition.Trace (
@@ -80,7 +85,7 @@ consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
     aggTx count tx =
       count
         + ( if valid
-              then length (getOutputs proof body) - Set.size (getInputs proof body)
+              then length (body ^. outputsTxBodyL) - Set.size (body ^. inputsTxBodyL)
               else length (getCollateralOutputs proof body) - Set.size (getCollateralInputs proof body)
           )
       where
@@ -93,12 +98,12 @@ consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
 aggUTxO ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
-  , Reflect era
+  , EraGenericGen era
   ) =>
   Proof era ->
   Gen Property
 aggUTxO proof = do
-  trace1 <- genTrace proof 100 (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
+  trace1 <- genTrace 100 (defaultGenSize {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
   pure $ consistentUtxoSizeProp proof trace1
 
 aggTests :: TestTree
@@ -116,19 +121,14 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace ::
-  (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@Conway n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@Babbage n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@Alonzo n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@Mary n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@Allegra n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@Shelley n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
+  ( Testable prop
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
+  ) =>
+  Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
+forAllChainTrace n propf =
+  property $
+    propf <$> genTrace n (defaultGenSize {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 
 -- ===========================================================
 
@@ -180,24 +180,29 @@ itemPropToTraceProp ::
   (SourceSignalTarget (MOCKCHAIN era) -> Property) -> Trace (MOCKCHAIN era) -> Property
 itemPropToTraceProp f trace1 = conjoin (map f (sourceSignalTargets trace1))
 
-depositEra :: forall era. Reflect era => Proof era -> TestTree
-depositEra proof =
+depositEra ::
+  forall era.
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
+  ) =>
+  TestTree
+depositEra =
   testGroup
-    (show proof)
+    (eraName @era)
     [ testProperty
         "Deposits = KeyDeposits + PoolDeposits"
-        (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era)))
+        (forAllChainTrace 10 (itemPropToTraceProp (depositInvariant @era)))
     , testProperty
         "Reward domain = Deposit domain"
-        (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
+        (forAllChainTrace 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
     ]
 
--- | Build a TestTree that tests 'f' at all the Eras listed in 'ps'
-testEras :: String -> [Some Proof] -> (forall era. Reflect era => Proof era -> TestTree) -> TestTree
-testEras message ps f = testGroup message (applyF ps)
-  where
-    applyF [] = []
-    applyF (Some e : more) = unReflect f e : applyF more
-
 depositTests :: TestTree
-depositTests = testEras "deposit invariants" preBabbage depositEra
+depositTests =
+  testGroup
+    "deposit invariants"
+    [ depositEra @ShelleyEra
+    , depositEra @AllegraEra
+    , depositEra @MaryEra
+    , depositEra @AlonzoEra
+    ]

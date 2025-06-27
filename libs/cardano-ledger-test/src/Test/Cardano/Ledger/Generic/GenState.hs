@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -14,22 +15,20 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Strategy for Generic Tests
 --   Make the GenState include a Mode of the NewEpochState, modify
 --   the ModelNewEpochState to reflect what we generated.
 module Test.Cardano.Ledger.Generic.GenState (
+  EraGenericGen (..),
   GenEnv (..),
   GenRS,
   GenState (..),
   GenSize (..),
+  defaultGenSize,
   PlutusPurposeTag (..),
   plutusPurposeTags,
-  mkRedeemers,
-  mkRedeemersFromTags,
-  mkPlutusPurposePointer,
-  mkAlonzoPlutusPurposePointer,
-  mkConwayPlutusPurposePointer,
   elementsT, -- TODO move to a utilities module
   frequencyT, -- TODO move to a utilities module
   positiveSingleDigitInt,
@@ -56,11 +55,9 @@ module Test.Cardano.Ledger.Generic.GenState (
   getUtxoTest,
   getCollInputsMax,
   getNewPoolTest,
-  viewGenState,
   initialLedgerState,
   modifyModel,
   runGenRS,
-  ioGenRS,
   small,
   genDatumWithHash,
   genKeyHash,
@@ -83,7 +80,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   modifyModelMutFee,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -91,14 +88,14 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Plutus (CostModels, ExUnits, Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -123,7 +120,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, when, zipWithM_)
+import Control.Monad (join, replicateM, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Control.SetAlgebra (eval, (⨃))
@@ -136,20 +133,19 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
-import GHC.Word (Word32, Word64)
+import GHC.Word (Word64)
 import Lens.Micro
 import Numeric.Natural
+import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Era
-import Test.Cardano.Ledger.Generic.Fields
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..), PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
-  primaryLanguage,
-  protocolVersion,
-  txoutFields,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
@@ -160,18 +156,54 @@ import Test.Cardano.Ledger.Generic.ModelState (
   mPoolDeposits,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Tasty.QuickCheck (
   Gen,
   Positive (..),
   arbitrary,
   choose,
-  chooseInt,
   elements,
   frequency,
-  generate,
  )
+
+class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
+  setValidity :: ValidityInterval -> TxBody era -> TxBody era
+
+  setReferenceInputs :: Set TxIn -> TxBody era -> TxBody era
+
+  setCollateralInputs :: Set TxIn -> TxBody era -> TxBody era
+
+  setTotalCollateral :: StrictMaybe Coin -> TxBody era -> TxBody era
+
+  setCollateralReturn :: StrictMaybe (TxOut era) -> TxBody era -> TxBody era
+
+  addRedeemers :: Redeemers era -> TxWits era -> TxWits era
+
+  setScriptIntegrityHash :: StrictMaybe ScriptIntegrityHash -> TxBody era -> TxBody era
+
+  setNetworkIdTxBody :: StrictMaybe Network -> TxBody era -> TxBody era
+
+  genExUnits :: Int -> GenRS era [ExUnits]
+
+  genPParams :: GenSize -> Gen (PParams era)
+
+  -- Era generic "lenses" for testing
+
+  ppMaxCollateralInputsT :: Lens' (PParams era) Natural
+
+  ppCollateralPercentageT :: Lens' (PParams era) Natural
+
+  ppCostModelsT :: Lens' (PParams era) CostModels
+
+  ppMaxTxExUnitsT :: Lens' (PParams era) ExUnits
+
+  ppMaxBlockExUnitsT :: Lens' (PParams era) ExUnits
+
+  ppMaxValSizeT :: Lens' (PParams era) Natural
+
+  -- Utils
+
+  mkScriptIntegrityHash :: PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
 
 -- =================================================
 
@@ -197,6 +229,27 @@ data GenSize = GenSize
   deriving (Show, Generic)
 
 instance ToExpr GenSize
+
+defaultGenSize :: GenSize
+defaultGenSize =
+  GenSize
+    { treasury = 1000000
+    , reserves = 1000000
+    , startSlot = 0
+    , slotDelta = (3, 7)
+    , blocksizeMax = 10
+    , collInputsMax = 5
+    , oldUtxoPercent = 15
+    , spendInputsMax = 10
+    , refInputsMax = 6
+    , utxoChoicesMax = 30
+    , certificateMax = 10
+    , withdrawalMax = 10
+    , maxStablePools = 5
+    , invalidScriptFreq = 5
+    , regCertFreq = 75
+    , delegCertFreq = 50
+    }
 
 data GenEnv era = GenEnv
   { gePParams :: PParams era
@@ -224,7 +277,6 @@ data GenState era = GenState
   , gsStableDelegators :: !(Set StakeCredential)
   , gsAvoidCred :: !(Set (Credential 'Staking))
   , gsAvoidKey :: !(Set (KeyHash 'StakePool))
-  , gsProof :: !(Proof era)
   , gsGenEnv :: !(GenEnv era)
   , gsSeedIdx :: !Int
   }
@@ -232,8 +284,8 @@ data GenState era = GenState
 
 instance EraTest era => ToExpr (GenEnv era)
 
-emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
-emptyGenState proof genv =
+emptyGenState :: Reflect era => GenEnv era -> GenState era
+emptyGenState genv =
   GenState
     (ValidityInterval SNothing SNothing)
     mempty
@@ -251,31 +303,9 @@ emptyGenState proof genv =
     Set.empty
     Set.empty
     Set.empty
-    proof
     genv
     0
 {-# NOINLINE emptyGenState #-}
-
-instance Default GenSize where
-  def =
-    GenSize
-      { treasury = 1000000
-      , reserves = 1000000
-      , startSlot = 0
-      , slotDelta = (3, 7)
-      , blocksizeMax = 10
-      , collInputsMax = 5
-      , oldUtxoPercent = 15
-      , spendInputsMax = 10
-      , refInputsMax = 6
-      , utxoChoicesMax = 30
-      , certificateMax = 10
-      , withdrawalMax = 10
-      , maxStablePools = 5
-      , invalidScriptFreq = 5
-      , regCertFreq = 75
-      , delegCertFreq = 50
-      }
 
 small :: GenSize
 small =
@@ -298,17 +328,6 @@ small =
     , delegCertFreq = 50
     }
 
-data PlutusPurposeTag
-  = Spending
-  | Minting
-  | Certifying
-  | Rewarding
-  | Voting
-  | Proposing
-  deriving (Eq, Ord, Show, Enum, Bounded, Generic)
-
-instance ToExpr PlutusPurposeTag
-
 plutusPurposeTags :: Proof era -> [PlutusPurposeTag]
 plutusPurposeTags = \case
   Shelley {} -> []
@@ -317,79 +336,6 @@ plutusPurposeTags = \case
   Alonzo {} -> [Spending .. Rewarding]
   Babbage {} -> [Spending .. Rewarding]
   Conway {} -> [Spending .. Proposing]
-
-mkRedeemers ::
-  forall era.
-  Proof era ->
-  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemers proof redeemerMap =
-  -- Pattern match on proof is needed in order to avoid leacking Ord constraint.
-  case proof of
-    Shelley {} -> error "No Redeemers"
-    Allegra {} -> error "No Redeemers"
-    Mary {} -> error "No Redeemers"
-    Alonzo {} -> Redeemers $ Map.fromList redeemerMap
-    Babbage {} -> Redeemers $ Map.fromList redeemerMap
-    Conway {} -> Redeemers $ Map.fromList redeemerMap
-
-mkRedeemersFromTags ::
-  forall era.
-  Proof era ->
-  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemersFromTags proof redeemerPointers =
-  case proof of
-    Shelley {} -> error "No Redeemers"
-    Allegra {} -> error "No Redeemers"
-    Mary {} -> error "No Redeemers"
-    Alonzo {} -> mkRedeemers proof redeemerAssocs
-    Babbage {} -> mkRedeemers proof redeemerAssocs
-    Conway {} -> mkRedeemers proof redeemerAssocs
-  where
-    redeemerAssocs :: [(PlutusPurpose AsIx era, (Data era, ExUnits))]
-    redeemerAssocs =
-      [ (mkPlutusPurposePointer proof tag i, redeemer)
-      | ((tag, i), redeemer) <- redeemerPointers
-      ]
-
-mkPlutusPurposePointer ::
-  Proof era ->
-  PlutusPurposeTag ->
-  Word32 ->
-  PlutusPurpose AsIx era
-mkPlutusPurposePointer proof tag i =
-  case proof of
-    Shelley {} -> error "No PlutusPurpose"
-    Allegra {} -> error "No PlutusPurpose"
-    Mary {} -> error "No PlutusPurpose"
-    Alonzo {} -> mkAlonzoPlutusPurposePointer tag i
-    Babbage {} -> mkAlonzoPlutusPurposePointer tag i
-    Conway {} -> mkConwayPlutusPurposePointer tag i
-
-mkAlonzoPlutusPurposePointer ::
-  forall era.
-  Era era =>
-  PlutusPurposeTag ->
-  Word32 ->
-  AlonzoPlutusPurpose AsIx era
-mkAlonzoPlutusPurposePointer tag i =
-  case tag of
-    Spending -> AlonzoSpending (AsIx i)
-    Minting -> AlonzoMinting (AsIx i)
-    Certifying -> AlonzoCertifying (AsIx i)
-    Rewarding -> AlonzoRewarding (AsIx i)
-    _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
-
-mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
-mkConwayPlutusPurposePointer tag i =
-  case tag of
-    Spending -> ConwaySpending (AsIx i)
-    Minting -> ConwayMinting (AsIx i)
-    Certifying -> ConwayCertifying (AsIx i)
-    Rewarding -> ConwayRewarding (AsIx i)
-    Voting -> ConwayVoting (AsIx i)
-    Proposing -> ConwayProposing (AsIx i)
 
 -- =====================================================================
 -- Accessing information
@@ -660,35 +606,16 @@ genPositiveVal = inject . Coin . getPositive <$> arbitrary
 genRewardVal :: Val v => Gen v
 genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 
--- | Test if the Payment part of the Address in the TxOut
---   is valid in the current ValidityInterval. Using the simple rule allowing
---   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
-validTxOut ::
-  Proof era ->
-  Map ScriptHash (Script era) ->
-  TxIn ->
-  TxOut era ->
-  Bool
-validTxOut proof m _txin txout = case txoutFields proof txout of
-  (Addr _ (KeyHashObj _) _, _, _) -> True
-  (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway, Just (PlutusScript _)) -> True
-    (Babbage, Just (PlutusScript _)) -> True
-    (Alonzo, Just (PlutusScript _)) -> True
-    (Shelley, Just _msig) -> True
-    _ -> False
-  _bootstrap -> False
-
 -- | Pick a UTxO element where we can use it in a new Tx. Most of the time we generate new
 --   elements for each Tx, but once in a while we choose an existing one. We must be carefull
 --   that that the Pay credential of the TxOut can run in the curent ValidityInterval
 --   A crude but simple way is to insist Pay credential is either Key locked, or locked
 --   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
-getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn, TxOut era))
+getUtxoElem :: EraModel era => GenRS era (Maybe (TxIn, TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
-  lift $ genMapElemWhere x 20 (validTxOut reify scriptmap)
+  lift $ genMapElemWhere x 20 (\_ -> validTxOut scriptmap)
 
 getUtxoTest :: GenRS era (TxIn -> Bool)
 getUtxoTest = do
@@ -707,58 +634,36 @@ getNewPoolTest = do
 -- Tools to get started in the Monad
 
 runGenRS ::
-  Reflect era =>
-  Proof era ->
+  EraGenericGen era =>
   GenSize ->
   GenRS era a ->
   Gen (a, GenState era)
-runGenRS proof gsize action = do
-  genenv <- genGenEnv proof gsize
-  (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
+runGenRS gsize action = do
+  genenv <- genGenEnv gsize
+  (ans, state, ()) <- runRWST action genenv (emptyGenState genenv)
   pure (ans, state)
 
--- | Should not be used in tests, this is a helper function to be used in ghci only!
-ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
-ioGenRS proof gsize action = generate $ runGenRS proof gsize action
-
 -- | Generate a random, well-formed, GenEnv
-genGenEnv :: EraPParams era => Proof era -> GenSize -> Gen (GenEnv era)
-genGenEnv proof gsize = do
-  maxTxExUnits <- arbitrary :: Gen ExUnits
-  maxCollateralInputs <- elements [1 .. collInputsMax gsize]
-  collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
-  minfeeA <- Coin <$> choose (0, 1000)
-  minfeeB <- Coin <$> choose (0, 10000)
-  let pp =
-        newPParams
-          proof
-          [ MinfeeA minfeeA
-          , MinfeeB minfeeB
-          , defaultCostModels proof
-          , MaxValSize 1000
-          , MaxTxSize $ fromIntegral (maxBound :: Int)
-          , MaxTxExUnits maxTxExUnits
-          , MaxCollateralInputs maxCollateralInputs
-          , CollateralPercentage collateralPercentage
-          , ProtocolVersion $ protocolVersion proof
-          , PoolDeposit $ Coin 5
-          , KeyDeposit $ Coin 2
-          , EMax $ EpochInterval 5
-          ]
-  pure $
+genGenEnv :: forall era. EraGenericGen era => GenSize -> Gen (GenEnv era)
+genGenEnv gsize = do
+  pp <- genPParams gsize
+  pure
     GenEnv
-      { gePParams = pp
-      , geSize = gsize
+      { geSize = gsize
+      , gePParams = pp
       }
 
-genGenState :: Reflect era => Proof era -> GenSize -> Gen (GenState era)
-genGenState proof gsize = do
+genGenState ::
+  EraGenericGen era =>
+  GenSize ->
+  Gen (GenState era)
+genGenState gsize = do
   let slotNo = startSlot gsize
   minSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, slotNo))]
   maxSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (slotNo + 1, maxBound))]
   let vi = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo)
-  env <- genGenEnv proof gsize
-  pure (setVi (emptyGenState proof env) vi)
+  env <- genGenEnv gsize
+  pure (setVi (emptyGenState env) vi)
 
 -- | Generate a transaction body validity interval which is close in proximity
 --  (less than a stability window) from the current slot.
@@ -773,12 +678,6 @@ genValidityInterval (SlotNo s) = do
 
 pcGenState :: ShelleyEraTest era => GenState era -> Expr
 pcGenState = toExpr
-
--- | Helper function for development and debugging in ghci
-viewGenState :: (Reflect era, ShelleyEraTest era) => Proof era -> GenSize -> Bool -> IO ()
-viewGenState proof gsize verbose = do
-  st <- generate (genGenState proof gsize)
-  when verbose $ print (pcGenState st)
 
 instance ShelleyEraTest era => ToExpr (GenState era)
 
@@ -854,11 +753,11 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era ScriptHash
-genScript proof tag = case proof of
-  Conway -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Babbage -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Alonzo -> elementsT [genTimelockScript, genPlutusScript proof tag]
+genScript :: forall era. Reflect era => PlutusPurposeTag -> GenRS era ScriptHash
+genScript tag = case reify @era of
+  Conway -> elementsT [genTimelockScript, genPlutusScript tag]
+  Babbage -> elementsT [genTimelockScript, genPlutusScript tag]
+  Alonzo -> elementsT [genTimelockScript, genPlutusScript tag]
   Mary -> genTimelockScript
   Allegra -> genTimelockScript
   Shelley -> genMultiSigScript
@@ -944,18 +843,19 @@ genMultiSigScript = do
 -- Adds to gsPlutusScripts
 genPlutusScript ::
   forall era.
-  Reflect era =>
-  Proof era ->
+  ( Reflect era
+  , EraPlutusContext era
+  ) =>
   PlutusPurposeTag ->
   GenRS era ScriptHash
-genPlutusScript proof tag = do
+genPlutusScript tag = do
   falseFreq <- asks $ invalidScriptFreq . geSize
   isValid <- lift $ frequency [(falseFreq, pure False), (100 - falseFreq, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
   -- alwaysFails needs exactly numArgs to have the desired affect.
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
-  let numArgs = case (proof, tag) of
+  let numArgs = case (reify @era, tag) of
         (Conway, Spending) -> 2
         (Conway, _) -> 1
         (Babbage, Spending) -> 2
@@ -964,25 +864,18 @@ genPlutusScript proof tag = do
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  let mlanguage = primaryLanguage proof
+  let mlanguage = case reify @era of
+        Conway -> Just PlutusV2
+        Babbage -> Just PlutusV2
+        Alonzo -> Just PlutusV1
+        _ -> Nothing
   script <-
     if isValid
-      then alwaysTrue proof mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
-      else pure $ alwaysFalse proof mlanguage numArgs
+      then alwaysTrue mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
+      else pure $ alwaysFalse mlanguage numArgs
 
-  let corescript :: Script era
-      corescript = case proof of
-        Alonzo -> script
-        Babbage -> script
-        Conway -> script
-        _ ->
-          error
-            ( "PlutusScripts are available starting in the Alonzo era. "
-                ++ show proof
-                ++ " does not support PlutusScripts."
-            )
-      scriptHash = hashScript @era corescript
-  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, corescript))
+  let scriptHash = hashScript @era script
+  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, script))
   pure scriptHash
 
 -- ======================================================================
@@ -1015,7 +908,7 @@ genCredential tag =
         f n
           | n <= 0 = error "Failed to generate a fresh script hash"
           | otherwise = do
-              sh <- genScript @era reify tag
+              sh <- genScript @era tag
               initialRewards <- gets gsInitialRewards
               avoidCredentials <- gets gsAvoidCred
               let newcred = ScriptHashObj sh
@@ -1040,16 +933,16 @@ genCredential tag =
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
       lift (genMapElem plutusScriptsMap) >>= \case
         Just ((h, _), _) -> pure h
-        Nothing -> genScript reify tag
+        Nothing -> genScript tag
     pickExistingTimelockScript = do
       -- Only pick one if it matches the
       vi <- gets gsValidityInterval -- current ValidityInterval
       vimap <- gets gsVI
       case Map.lookup vi vimap of
-        Nothing -> genScript @era reify tag
+        Nothing -> genScript @era tag
         Just s ->
           lift (genSetElem s) >>= \case
-            Nothing -> genScript reify tag
+            Nothing -> genScript tag
             Just hash -> pure hash
 
 -- Return a fresh credential, one that is not a member of the set 'old'.

@@ -10,9 +10,11 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Plutus (Language (..))
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 class
   ( BabbageEraTest era
@@ -22,7 +24,8 @@ class
   ) =>
   ConwayEraTest era
 
-instance EraTest ConwayEra
+instance EraTest ConwayEra where
+  zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV3]
 
 instance ShelleyEraTest ConwayEra
 

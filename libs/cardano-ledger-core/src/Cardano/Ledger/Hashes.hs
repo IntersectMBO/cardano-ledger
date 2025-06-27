@@ -76,9 +76,12 @@ module Cardano.Ledger.Hashes (
   -- ** Other operations
   castSafeHash,
   extractHash,
+  standardHashSize,
+  standardAddrHashSize,
 ) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
+import Cardano.Crypto.Hash (sizeHash)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
@@ -405,3 +408,9 @@ class SafeToHash x => HashAnnotated x i | x -> i where
 -- | To change the index parameter of SafeHash (which is a phantom type) use castSafeHash
 castSafeHash :: forall i j. SafeHash i -> SafeHash j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
+
+standardHashSize :: Int
+standardHashSize = fromIntegral . sizeHash $ Proxy @HASH
+
+standardAddrHashSize :: Int
+standardAddrHashSize = fromIntegral . sizeHash $ Proxy @ADDRHASH

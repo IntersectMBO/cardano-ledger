@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,42 +13,17 @@
 module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
-import Cardano.Ledger.Alonzo.Scripts (emptyCostModels)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Conway.PParams (
-  ppCommitteeMaxTermLengthL,
-  ppCommitteeMinSizeL,
-  ppDRepActivityL,
-  ppDRepDepositL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
-  ppPoolVotingThresholdsL,
- )
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.TxOut as Shelley (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits as Shelley (
-  addrWits,
-  bootWits,
-  scriptWits,
- )
-import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro
-import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 -- ===========================================================================
 -- Upaters and the use of Policy to specify Merge Semantics and use of [t] as inputs.
@@ -100,282 +74,18 @@ instance Merge (Map ScriptHash v) where
 -- Building Era parametric Records
 -- ====================================================================
 
---------------------------------------------------------------------
--- Updaters for TxBody
-
-updateTxBody :: EraTxBody era => Proof era -> TxBody era -> TxBodyField era -> TxBody era
-updateTxBody pf txBody dt =
-  case pf of
-    _ | Inputs ins <- dt -> txBody & inputsTxBodyL .~ ins
-    _ | Outputs outs <- dt -> txBody & outputsTxBodyL .~ outs
-    _ | Txfee fee <- dt -> txBody & feeTxBodyL .~ fee
-    _ | AdHash auxDataHash <- dt -> txBody & auxDataHashTxBodyL .~ auxDataHash
-    Shelley -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      TTL ttl -> txBody & ttlTxBodyL .~ ttl
-      Update update -> txBody & updateTxBodyL .~ update
-      _ -> txBody
-    Allegra -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
-      _ -> txBody
-    Mary -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
-      Mint mint -> txBody & mintTxBodyL .~ mint
-      _ -> txBody
-    Alonzo -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
-      Mint mint -> txBody & mintTxBodyL .~ mint
-      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
-      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
-      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
-      _ -> txBody
-    Babbage -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Update update -> txBody & updateTxBodyL .~ update
-      Mint mint -> txBody & mintTxBodyL .~ mint
-      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
-      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
-      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
-      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
-      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
-      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      _ -> txBody
-    Conway -> case dt of
-      Certs certs -> txBody & certsTxBodyL .~ certs
-      Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
-      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
-      Mint mint -> txBody & mintTxBodyL .~ mint
-      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
-      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
-      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
-      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
-      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
-      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      VotingProc vp -> txBody & votingProceduresTxBodyL .~ vp
-      ProposalProc pp -> txBody & proposalProceduresTxBodyL .~ pp
-      _ -> txBody
-{-# NOINLINE updateTxBody #-}
-
-newTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
-newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
-
---------------------------------------------------------------------
--- Updaters for TxWits
-
-updateWitnesses :: forall era. Policy -> Proof era -> TxWits era -> WitnessesField era -> TxWits era
-updateWitnesses p Shelley w dw = case dw of
-  (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
-  (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
-  (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
-  _ -> w
-updateWitnesses p Allegra w dw = case dw of
-  (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
-  (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
-  (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
-  _ -> w
-updateWitnesses p Mary w dw = case dw of
-  (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
-  (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
-  (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
-  _ -> w
-updateWitnesses p Alonzo w dw = case dw of
-  (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
-  (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
-  (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
-  (DataWits ds) -> w {txdats = p (txdats w) ds}
-  (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
-updateWitnesses p Babbage w dw = case dw of
-  (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
-  (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
-  (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
-  (DataWits ds) -> w {txdats = p (txdats w) ds}
-  (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
-updateWitnesses p Conway w dw = case dw of
-  (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
-  (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
-  (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
-  (DataWits ds) -> w {txdats = p (txdats w) ds}
-  (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
-{-# NOINLINE updateWitnesses #-}
-
-newWitnesses :: Policy -> Proof era -> [WitnessesField era] -> TxWits era
-newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
-
---------------------------------------------------------------------
--- Updaters for TxOut
-
-notAddress :: TxOutField era -> Bool
-notAddress (Address _) = False
-notAddress _ = True
-
-updateTxOut :: Proof era -> TxOut era -> TxOutField era -> TxOut era
-updateTxOut Shelley (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Allegra (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Mary (out@(ShelleyTxOut a v)) txoutd = case txoutd of
-  Address addr -> ShelleyTxOut addr v
-  Amount val -> ShelleyTxOut a val
-  _ -> out
-updateTxOut Alonzo (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
-  Address addr -> AlonzoTxOut addr v h
-  Amount val -> AlonzoTxOut a val h
-  DHash mdh -> AlonzoTxOut a v mdh
-  FDatum d -> error ("This feature is only available from Babbage onward " ++ show d)
-  _ -> out
-updateTxOut Babbage (BabbageTxOut a v h refscript) txoutd = case txoutd of
-  Address addr -> BabbageTxOut addr v h refscript
-  Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
-  FDatum d -> BabbageTxOut a v d refscript
-  RefScript s -> BabbageTxOut a v h s
-updateTxOut Conway (BabbageTxOut a v h refscript) txoutd = case txoutd of
-  Address addr -> BabbageTxOut addr v h refscript
-  Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
-  FDatum d -> BabbageTxOut a v d refscript
-  RefScript s -> BabbageTxOut a v h s
-{-# NOINLINE updateTxOut #-}
-
-newTxOut :: Proof era -> [TxOutField era] -> TxOut era
-newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
--- This is because we don't have a good story about an initial Address, so the user MUST supply one
-newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
-
--- =====================================================
-
--- | updatePParams uses the Override policy exclusively
-updatePParams :: EraPParams era => Proof era -> PParams era -> PParamsField era -> PParams era
-updatePParams proof pp' ppf =
-  -- update all of the common fields first
-  let pp = case ppf of
-        MinfeeA minFeeA -> pp' & ppMinFeeAL .~ minFeeA
-        MinfeeB minFeeB -> pp' & ppMinFeeBL .~ minFeeB
-        MaxBBSize maxBBSize -> pp' & ppMaxBBSizeL .~ maxBBSize
-        MaxTxSize maxTxSize -> pp' & ppMaxTxSizeL .~ maxTxSize
-        MaxBHSize maxBHSize -> pp' & ppMaxBHSizeL .~ maxBHSize
-        KeyDeposit keyDeposit -> pp' & ppKeyDepositL .~ keyDeposit
-        PoolDeposit poolDeposit -> pp' & ppPoolDepositL .~ poolDeposit
-        EMax e -> pp' & ppEMaxL .~ e
-        NOpt nat -> pp' & ppNOptL .~ nat
-        A0 a0 -> pp' & ppA0L .~ a0
-        Rho rho -> pp' & ppRhoL .~ rho
-        Tau tau -> pp' & ppTauL .~ tau
-        ProtocolVersion pv -> pp' & ppProtocolVersionL .~ pv
-        MinPoolCost coin -> pp' & ppMinPoolCostL .~ coin
-        _ -> pp'
-   in case proof of
-        Shelley ->
-          case ppf of
-            D d -> pp & ppDL .~ d
-            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
-            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
-            _ -> pp
-        Allegra ->
-          case ppf of
-            D d -> pp & ppDL .~ d
-            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
-            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
-            _ -> pp
-        Mary ->
-          case ppf of
-            D d -> pp & ppDL .~ d
-            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
-            MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
-            _ -> pp
-        Alonzo ->
-          case ppf of
-            D d -> pp & ppDL .~ d
-            ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
-            CoinPerUTxOWord coinPerWord -> pp & ppCoinsPerUTxOWordL .~ coinPerWord
-            Costmdls costModels -> pp & ppCostModelsL .~ costModels
-            Prices prices -> pp & ppPricesL .~ prices
-            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
-            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
-            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
-            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
-            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
-            _ -> pp
-        Babbage ->
-          case ppf of
-            CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
-            Costmdls costModels -> pp & ppCostModelsL .~ costModels
-            Prices prices -> pp & ppPricesL .~ prices
-            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
-            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
-            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
-            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
-            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
-            _ -> pp
-        Conway ->
-          case ppf of
-            CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
-            Costmdls costModels -> pp & ppCostModelsL .~ costModels
-            Prices prices -> pp & ppPricesL .~ prices
-            MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
-            MaxBlockExUnits maxBlockExUnits -> pp & ppMaxBlockExUnitsL .~ maxBlockExUnits
-            MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
-            CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
-            MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
-            GovActionDeposit c -> pp & ppGovActionDepositL .~ c
-            DRepDeposit c -> pp & ppDRepDepositL .~ c
-            DRepActivity c -> pp & ppDRepActivityL .~ c
-            PoolVotingThreshold c -> pp & ppPoolVotingThresholdsL .~ c
-            DRepVotingThreshold c -> pp & ppDRepVotingThresholdsL .~ c
-            MinCommitteeSize c -> pp & ppCommitteeMinSizeL .~ c
-            CommitteeTermLimit c -> pp & ppCommitteeMaxTermLengthL .~ c
-            GovActionExpiration c -> pp & ppGovActionLifetimeL .~ c
-            _ -> pp
-
-newPParams :: EraPParams era => Proof era -> [PParamsField era] -> PParams era
-newPParams era = List.foldl' (updatePParams era) emptyPParams
-
--- ====================================
-
 -- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
-newScriptIntegrityHash ::
-  Proof era ->
+alonzoNewScriptIntegrityHash ::
+  ( AlonzoEraScript era
+  , AlonzoEraPParams era
+  ) =>
   PParams era ->
   [Language] ->
   Redeemers era ->
   TxDats era ->
   StrictMaybe Alonzo.ScriptIntegrityHash
-newScriptIntegrityHash Conway pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Babbage pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash Alonzo pp ls rds dats =
-  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
-
-defaultCostModels :: Proof era -> PParamsField era
-defaultCostModels Shelley = Costmdls emptyCostModels
-defaultCostModels Allegra = Costmdls emptyCostModels
-defaultCostModels Mary = Costmdls emptyCostModels
-defaultCostModels Alonzo = Costmdls $ zeroTestingCostModels [PlutusV1]
-defaultCostModels Babbage = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
-defaultCostModels Conway = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
+alonzoNewScriptIntegrityHash pp ls =
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls))
 
 languages :: Proof era -> [Language]
 languages Shelley = []

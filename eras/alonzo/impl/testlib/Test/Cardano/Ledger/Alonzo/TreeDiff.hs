@@ -31,6 +31,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Data.TreeDiff.OMap as OMap
+import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
@@ -183,3 +184,22 @@ instance
 instance
   ToExpr (Event (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyEvent era)
+
+instance ToExpr EvaluationError where
+  toExpr = toExpr . show
+
+instance ToExpr SatInt
+
+instance ToExpr ExCPU
+
+instance ToExpr ExMemory
+
+instance ToExpr ExBudget
+
+instance
+  ( ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (PlutusScript era)
+  , ToExpr (ContextError era)
+  ) =>
+  ToExpr (TransactionScriptFailure era)

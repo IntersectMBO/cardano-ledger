@@ -268,6 +268,7 @@ data TransactionScriptFailure era
     NoCostModelInLedgerState !Language
   | -- | Error that can happen during plutus context translation
     ContextError !(ContextError era)
+  deriving (Generic)
 
 deriving instance
   ( Era era

@@ -1,12 +1,14 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Era (
-  EraTest,
+  EraTest (..),
   ShelleyEraTest,
 ) where
 
+import Cardano.Ledger.Plutus (emptyCostModels)
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
@@ -33,6 +35,7 @@ class
   ) =>
   ShelleyEraTest era
 
-instance EraTest ShelleyEra
+instance EraTest ShelleyEra where
+  zeroCostModels = emptyCostModels
 
 instance ShelleyEraTest ShelleyEra

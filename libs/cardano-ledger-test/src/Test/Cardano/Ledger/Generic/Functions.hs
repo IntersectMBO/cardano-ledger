@@ -1,7 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -21,15 +23,12 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   Globals (epochInfo),
-  ProtVer (..),
-  natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
-import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -41,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
  )
+import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
 import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..), sumCoinUTxO, unScriptsProvided)
@@ -55,54 +55,21 @@ import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (maybeToList)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFailsLang, alwaysSucceedsLang)
-import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
-import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
-import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 -- ====================================================================
 -- Era agnostic actions on (PParams era) (TxOut era) and
 -- other XX types Mostly by pattern matching against Proof objects
-
-maxCollateralInputs' :: Proof era -> PParams era -> Natural
-maxCollateralInputs' Alonzo pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' Babbage pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' Conway pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' _proof _pp = 0
-{-# NOINLINE maxCollateralInputs' #-}
-
-maxTxExUnits' :: Proof era -> PParams era -> ExUnits
-maxTxExUnits' Alonzo pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' Babbage pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' Conway pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' _proof _x = mempty
-{-# NOINLINE maxTxExUnits' #-}
-
-collateralPercentage' :: Proof era -> PParams era -> Natural
-collateralPercentage' Alonzo pp = pp ^. ppCollateralPercentageL
-collateralPercentage' Babbage pp = pp ^. ppCollateralPercentageL
-collateralPercentage' Conway pp = pp ^. ppCollateralPercentageL
-collateralPercentage' _proof _pp = 0
-{-# NOINLINE collateralPercentage' #-}
-
-protocolVersion :: Proof era -> ProtVer
-protocolVersion Conway = ProtVer (natVersion @9) 0
-protocolVersion Babbage = ProtVer (natVersion @7) 0
-protocolVersion Alonzo = ProtVer (natVersion @6) 0
-protocolVersion Mary = ProtVer (natVersion @4) 0
-protocolVersion Allegra = ProtVer (natVersion @3) 0
-protocolVersion Shelley = ProtVer (natVersion @2) 0
-{-# NOINLINE protocolVersion #-}
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::
@@ -147,18 +114,8 @@ scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
-scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
-scriptsNeeded' Conway utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Babbage utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Alonzo utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Mary utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Allegra utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Shelley utxo txBody =
+scriptsNeeded' :: EraUTxO era => MUtxo era -> TxBody era -> Set ScriptHash
+scriptsNeeded' utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptsNeeded' #-}
 
@@ -170,18 +127,8 @@ txInBalance ::
   Coin
 txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
 
--- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> TxOut era -> (Addr, Value era, [TxOutField era])
-txoutFields Conway (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Babbage (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields Alonzo (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
-txoutFields Mary (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Allegra (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields Shelley (ShelleyTxOut addr val) = (addr, val, [])
-{-# NOINLINE txoutFields #-}
-
-injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
-injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
+injectFee :: EraTxOut era => Coin -> TxOut era -> TxOut era
+injectFee fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
 
 getTxOutRefScript :: Proof era -> TxOut era -> StrictMaybe (Script era)
 getTxOutRefScript Conway (BabbageTxOut _ _ _ ms) = ms
@@ -242,7 +189,7 @@ txoutEvidence Shelley (ShelleyTxOut addr _) =
 {-# NOINLINE txoutEvidence #-}
 
 addrCredentials :: Addr -> [Credential 'Payment]
-addrCredentials addr = maybe [] (: []) (paymentCredAddr addr)
+addrCredentials addr = maybeToList (paymentCredAddr addr)
 
 paymentCredAddr :: Addr -> Maybe (Credential 'Payment)
 paymentCredAddr (Addr _ cred _) = Just cred
@@ -279,29 +226,6 @@ getCollateralOutputs Allegra _ = []
 getCollateralOutputs Shelley _ = []
 {-# NOINLINE getCollateralOutputs #-}
 
-getInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
-getInputs _ tx = tx ^. inputsTxBodyL
-
-getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
-getOutputs _ tx = tx ^. outputsTxBodyL
-
-getScriptWits ::
-  EraTxWits era => Proof era -> TxWits era -> Map ScriptHash (Script era)
-getScriptWits _ tx = tx ^. scriptTxWitsL
-
-allInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
-allInputs _ txb = txb ^. allInputsTxBodyF
-
-getWitnesses :: EraTx era => Proof era -> Tx era -> TxWits era
-getWitnesses _ tx = tx ^. witsTxL
-
-primaryLanguage :: Proof era -> Maybe Language
-primaryLanguage Conway = Just PlutusV2
-primaryLanguage Babbage = Just PlutusV2
-primaryLanguage Alonzo = Just PlutusV1
-primaryLanguage _ = Nothing
-{-# NOINLINE primaryLanguage #-}
-
 alwaysSucceedsLang' :: forall era. EraPlutusContext era => Language -> Natural -> Script era
 alwaysSucceedsLang' l =
   fromPlutusScript . alwaysSucceedsLang (errorFail (mkSupportedLanguageM @era l))
@@ -310,28 +234,14 @@ alwaysFailsLang' :: forall era. EraPlutusContext era => Language -> Natural -> S
 alwaysFailsLang' l =
   fromPlutusScript . alwaysFailsLang (errorFail (mkSupportedLanguageM @era l))
 
-alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysTrue Conway (Just l) n = alwaysSucceedsLang' @era l n
-alwaysTrue p@Conway Nothing _ = fromNativeScript $ Scriptic.allOf [] p
-alwaysTrue Babbage (Just l) n = alwaysSucceedsLang' @era l n
-alwaysTrue p@Babbage Nothing _ = fromNativeScript $ Scriptic.allOf [] p
-alwaysTrue Alonzo (Just l) n = alwaysSucceedsLang' @era l n
-alwaysTrue p@Alonzo Nothing _ = fromNativeScript $ Scriptic.allOf [] p
-alwaysTrue p@Mary _ n = always n p
-alwaysTrue p@Allegra _ n = always n p
-alwaysTrue p@Shelley _ n = always n p
+alwaysTrue :: forall era. EraPlutusContext era => Maybe Language -> Natural -> Script era
+alwaysTrue (Just l) n = alwaysSucceedsLang' @era l n
+alwaysTrue Nothing _ = fromNativeScript $ RequireAllOf mempty
 {-# NOINLINE alwaysTrue #-}
 
-alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysFalse Conway (Just l) n = alwaysFailsLang' @era l n
-alwaysFalse p@Conway Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
-alwaysFalse Babbage (Just l) n = alwaysFailsLang' @era l n
-alwaysFalse p@Babbage Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
-alwaysFalse Alonzo (Just l) n = alwaysFailsLang' @era l n
-alwaysFalse p@Alonzo Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
-alwaysFalse p@Mary _ n = never n p
-alwaysFalse p@Allegra _ n = never n p
-alwaysFalse p@Shelley _ n = never n p
+alwaysFalse :: forall era. EraPlutusContext era => Maybe Language -> Natural -> Script era
+alwaysFalse (Just l) n = alwaysFailsLang' @era l n
+alwaysFalse Nothing _ = fromNativeScript $ RequireAnyOf mempty
 {-# NOINLINE alwaysFalse #-}
 
 certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [TxCert era]
@@ -340,10 +250,10 @@ certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
 createRUpdNonPulsing' ::
   forall era.
-  Proof era ->
+  EraPParams era =>
   Model era ->
   RewardUpdateOld
-createRUpdNonPulsing' proof model =
+createRUpdNonPulsing' model =
   let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
       ss = mSnapshots model
       as = mChainAccountState model
@@ -357,13 +267,8 @@ createRUpdNonPulsing' proof model =
       slotsPerEpoch = case epochInfoSize (epochInfo testGlobals) en of
         Left err -> error ("Failed to calculate slots per epoch:\n" ++ show err)
         Right x -> x
-   in (`runReader` testGlobals) $ case proof of
-        Conway -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Babbage -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Alonzo -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Mary -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Allegra -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Shelley -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+   in (`runReader` testGlobals) $
+        createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
 {-# NOINLINE createRUpdNonPulsing' #-}
 
 languagesUsed ::

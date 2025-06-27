@@ -193,26 +193,15 @@ dPStateZero =
 nonMyopicZero :: NonMyopic
 nonMyopicZero = NonMyopic Map.empty mempty
 
-pParamsZeroByProof :: Proof era -> PParams era
-pParamsZeroByProof Conway = def
-pParamsZeroByProof Babbage = def
-pParamsZeroByProof Alonzo = def
-pParamsZeroByProof Mary = def
-pParamsZeroByProof Allegra = def
-pParamsZeroByProof Shelley = def
-
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =
   smartUTxOState
-    pParamsZero
+    def
     utxoZero
     mempty
     mempty
     emptyGovState
     mempty
-
-pParamsZero :: Reflect era => PParams era
-pParamsZero = lift pParamsZeroByProof
 
 ledgerStateZero :: forall era. Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
@@ -224,8 +213,8 @@ epochStateZero =
     ledgerStateZero
     emptySnapShots
     nonMyopicZero
-    & curPParamsEpochStateL .~ pParamsZero
-    & prevPParamsEpochStateL .~ pParamsZero
+    & curPParamsEpochStateL .~ def
+    & prevPParamsEpochStateL .~ def
 
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
@@ -246,7 +235,7 @@ stashedAVVMAddressesZero Alonzo = ()
 stashedAVVMAddressesZero Mary = ()
 stashedAVVMAddressesZero Allegra = ()
 
-mNewEpochStateZero :: Reflect era => ModelNewEpochState era
+mNewEpochStateZero :: EraPParams era => ModelNewEpochState era
 mNewEpochStateZero =
   ModelNewEpochState
     { mPoolParams = Map.empty
@@ -258,7 +247,7 @@ mNewEpochStateZero =
     , mMutFee = Map.empty
     , mChainAccountState = accountStateZero
     , mPoolDistr = Map.empty
-    , mPParams = pParamsZero
+    , mPParams = def
     , mDeposited = Coin 0
     , mFees = Coin 0
     , mCount = 0
