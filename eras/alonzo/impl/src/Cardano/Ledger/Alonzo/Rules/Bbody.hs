@@ -86,6 +86,7 @@ data AlonzoBbodyPredFailure era
 
 newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (ShelleyBbodyEvent era)
+  deriving (Generic)
 
 type instance EraRuleFailure "BBODY" AlonzoEra = AlonzoBbodyPredFailure AlonzoEra
 

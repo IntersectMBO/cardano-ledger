@@ -206,6 +206,14 @@ instance
   ToExpr (ShelleyLedgerEvent era)
 
 instance
+  ToExpr (Event (EraRule "LEDGER" era)) =>
+  ToExpr (ShelleyLedgersEvent era)
+
+instance
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyEvent era)
+
+instance
   ToExpr (Event (EraRule "UTXO" era)) =>
   ToExpr (ShelleyUtxowEvent era)
 

@@ -2,14 +2,15 @@
 
 ## 1.17.0.0
 
-- Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
-  - `aggregateRewards` to `hardforkAllegraAggregateRewards`.
-  - `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
-  - `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
-  - `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
+* Add `Generic` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
+* Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
+  * `aggregateRewards` to `hardforkAllegraAggregateRewards`.
+  * `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
+  * `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
+  * `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
   - Delete the `Shelley.HardForks` module.
-- Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
-  - This tests if the protocol version is greater than 10.
+* Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
+  * This tests if the protocol version is greater than 10.
 * Deprecated `toShelleyGenesisPairs`
 * Add `ToJSON` and `FromJSON` instances for `FromByronTranslationContext`
 * Deprecated `toShelleyGenesisPairs` and `toShelleyTransitionConfigPairs`
@@ -52,6 +53,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
 * Move `EncCBOR` instance for `RawSeed` from `cardano-ledger-shelley-test`
 * Added `Arbitrary` instance for `TransitionConfig ShelleyEra`
 * Rename `poolParams` to `freshPoolParams`
