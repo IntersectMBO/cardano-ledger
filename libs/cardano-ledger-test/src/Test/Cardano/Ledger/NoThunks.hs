@@ -1,17 +1,29 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
-import Data.Default (def)
-import Test.Cardano.Ledger.Generic.GenState (GenSize)
+import Cardano.Ledger.Conway.Core (Era (..))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
+import NoThunks.Class (NoThunks)
+import Test.Cardano.Ledger.Generic.GenState (EraGenericGen, GenSize, defaultGenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
+import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  AlonzoEra,
+  BabbageEra,
+  ConwayEra,
+  MaryEra,
+  ShelleyEra,
+ )
 import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace)
@@ -22,33 +34,39 @@ test :: TestTree
 test =
   testGroup
     "There are no unexpected thunks in MockChainState"
-    [ f Shelley
-    , f Allegra
-    , f Mary
-    , f Alonzo
-    , f Babbage
-    , f Conway
+    [ f @ShelleyEra
+    , f @AllegraEra
+    , f @MaryEra
+    , f @AlonzoEra
+    , f @BabbageEra
+    , f @ConwayEra
     ]
   where
-    f proof = testThunks proof 100 def
+    f ::
+      forall era.
+      ( HasTrace (MOCKCHAIN era) (Gen1 era)
+      , EraGenericGen era
+      , NoThunks (StashedAVVMAddresses era)
+      ) =>
+      TestTree
+    f = testThunks @era 100 defaultGenSize
 
 testThunks ::
   forall era.
-  ( Reflect era
-  , HasTrace (MOCKCHAIN era) (Gen1 era)
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
+  , NoThunks (StashedAVVMAddresses era)
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
   TestTree
-testThunks proof numTx gensize =
-  testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
-    traceProp
-      proof
+testThunks numTx gensize =
+  testProperty (eraName @era ++ " era. Trace length = " ++ show numTx) $
+    traceProp @era
       numTx
       gensize
       ( \_ !trc -> do
-          nt <- noThunksGen proof trc
+          nt <- noThunksGen trc
           case nt of
             Just x -> error $ "Thunks present: " <> show x
             Nothing -> return ()

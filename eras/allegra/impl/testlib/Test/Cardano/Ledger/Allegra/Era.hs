@@ -9,9 +9,9 @@ module Test.Cardano.Ledger.Allegra.Era (
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Plutus (emptyCostModels)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
-import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Era
 
 class
@@ -22,7 +22,8 @@ class
   ) =>
   AllegraEraTest era
 
-instance EraTest AllegraEra
+instance EraTest AllegraEra where
+  zeroCostModels = emptyCostModels
 
 instance ShelleyEraTest AllegraEra
 

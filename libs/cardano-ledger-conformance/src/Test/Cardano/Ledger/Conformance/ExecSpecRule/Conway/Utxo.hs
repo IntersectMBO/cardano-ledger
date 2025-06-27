@@ -50,12 +50,11 @@ import Test.Cardano.Ledger.Generic.GenState (
   runGenRS,
  )
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
-import qualified Test.Cardano.Ledger.Generic.Proof as Proof
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 
 genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
 genUtxoExecContext = do
-  let proof = Proof.reify @ConwayEra
   ueSlot <- arbitrary
   let
     genSize =
@@ -64,9 +63,7 @@ genUtxoExecContext = do
         , regCertFreq = 0
         , delegCertFreq = 0
         }
-  ((uecUTxO, uecTx), gs) <-
-    runGenRS proof genSize $
-      genAlonzoTx proof ueSlot
+  ((uecUTxO, uecTx), gs) <- runGenRS genSize $ genAlonzoTx ueSlot
   let
     txSize = uecTx ^. sizeTxF
     lState = initialLedgerState gs

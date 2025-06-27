@@ -12,12 +12,13 @@ module Test.Cardano.Ledger.Alonzo.Era (
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.UTxO
+import Cardano.Ledger.Plutus (Language (..))
 import Data.TreeDiff
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Mary.Era
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 class
   ( MaryEraTest era
@@ -32,7 +33,8 @@ class
   ) =>
   AlonzoEraTest era
 
-instance EraTest AlonzoEra
+instance EraTest AlonzoEra where
+  zeroCostModels = zeroTestingCostModels [PlutusV1]
 
 instance ShelleyEraTest AlonzoEra
 

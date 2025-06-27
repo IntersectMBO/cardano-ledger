@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Add `standardHashSize` and `standardAddrHashSize`
+* Add `zeroCostModels` method to `EraTest`
 * Added support for `PlutusV4`
 * Add a timeout argument to `plutusDebug`
 * Add `pdoExUnitsEnforced` to `PlutusDebugOverrides` and add `defaultPlutusDebugOverrides`

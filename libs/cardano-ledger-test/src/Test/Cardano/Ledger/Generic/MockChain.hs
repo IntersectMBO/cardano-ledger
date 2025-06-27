@@ -55,7 +55,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
+import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
@@ -231,10 +231,12 @@ instance ToExpr (StrictSeq (Tx era)) => ToExpr (MockBlock era)
 ppMockChainFailure :: ToExpr (MockChainFailure era) => MockChainFailure era -> Expr
 ppMockChainFailure = toExpr
 
-noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
-noThunksGen Conway = noThunks []
-noThunksGen Babbage = noThunks []
-noThunksGen Alonzo = noThunks []
-noThunksGen Mary = noThunks []
-noThunksGen Allegra = noThunks []
-noThunksGen Shelley = noThunks []
+noThunksGen ::
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  , NoThunks (CertState era)
+  , NoThunks (InstantStake era)
+  , NoThunks (StashedAVVMAddresses era)
+  ) =>
+  MockChainState era -> IO (Maybe ThunkInfo)
+noThunksGen = noThunks []

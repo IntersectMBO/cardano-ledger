@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.Conformance.Orphans where
 
+import Cardano.Ledger.Hashes (standardAddrHashSize)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
 import Data.List (nub, sortOn)
