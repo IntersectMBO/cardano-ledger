@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Fix `AlonzoPlutusPurpose` CBOR(Group) instances. #5135
+  * Reset shuffled serialization indexes for `AlonzoPlutusPurpose AsItem`.
 * Deprecated `toAlonzoTransitionConfigPairs`
 * Fixed `FromJSON` instance for `TransitionConfig AlonzoEra`
 * Added `COMPLETE` pragma for `TxCert AlonzoEra`

@@ -81,17 +81,12 @@ spec = describe "UTXOW" $ do
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ [txIn]
               & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (dt, ExUnits 0 0)
-      let submit =
-            submitFailingTx
-              tx
-              [ injectFailure $ ExtraRedeemers [prp]
-              , injectFailure $
-                  CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
-              ]
-      if eraProtVerLow @era < natVersion @9
-        then -- PlutusPurpose serialization was fixed in Conway
-          withCborRoundTripFailures submit
-        else submit
+      submitFailingTx
+        tx
+        [ injectFailure $ ExtraRedeemers [prp]
+        , injectFailure $
+            CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
+        ]
 
   it "P1 reference scripts must be witnessed" $ do
     (_, addr) <- freshKeyAddr

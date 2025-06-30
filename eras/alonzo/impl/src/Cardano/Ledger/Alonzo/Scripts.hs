@@ -66,6 +66,7 @@ import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
+  CBORGroup (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
   Decoder,
@@ -83,7 +84,6 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   (!>),
-  (<!),
   (<*!),
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
@@ -323,36 +323,62 @@ instance
     AlonzoCertifying x -> rnf x
     AlonzoRewarding x -> rnf x
 
-instance Era era => EncCBORGroup (AlonzoPlutusPurpose AsIx era) where
+instance
+  ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+  , Era era
+  , Typeable f
+  , EncCBOR (TxCert era)
+  ) =>
+  EncCBORGroup (AlonzoPlutusPurpose f era)
+  where
   listLen _ = 2
   listLenBound _ = 2
   encCBORGroup = \case
-    AlonzoSpending (AsIx redeemerIx) -> encodeWord8 0 <> encCBOR redeemerIx
-    AlonzoMinting (AsIx redeemerIx) -> encodeWord8 1 <> encCBOR redeemerIx
-    AlonzoCertifying (AsIx redeemerIx) -> encodeWord8 2 <> encCBOR redeemerIx
-    AlonzoRewarding (AsIx redeemerIx) -> encodeWord8 3 <> encCBOR redeemerIx
+    AlonzoSpending p -> encodeWord8 0 <> encCBOR p
+    AlonzoMinting p -> encodeWord8 1 <> encCBOR p
+    AlonzoCertifying p -> encodeWord8 2 <> encCBOR p
+    AlonzoRewarding p -> encodeWord8 3 <> encCBOR p
   encodedGroupSizeExpr size_ _proxy =
     encodedSizeExpr size_ (Proxy :: Proxy Word8)
       + encodedSizeExpr size_ (Proxy :: Proxy Word16)
 
-instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIx era) where
+instance
+  ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+  , Era era
+  , Typeable f
+  , DecCBOR (TxCert era)
+  ) =>
+  DecCBORGroup (AlonzoPlutusPurpose f era)
+  where
   decCBORGroup =
     decodeWord8 >>= \case
-      0 -> AlonzoSpending . AsIx <$> decCBOR
-      1 -> AlonzoMinting . AsIx <$> decCBOR
-      2 -> AlonzoCertifying . AsIx <$> decCBOR
-      3 -> AlonzoRewarding . AsIx <$> decCBOR
+      0 -> AlonzoSpending <$> decCBOR
+      1 -> AlonzoMinting <$> decCBOR
+      2 -> AlonzoCertifying <$> decCBOR
+      3 -> AlonzoRewarding <$> decCBOR
       n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
-instance Era era => EncCBOR (AlonzoPlutusPurpose AsIx era) where
-  encCBOR = encCBORGroup
+deriving via
+  (CBORGroup (AlonzoPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , Era era
+    , Typeable f
+    , EncCBOR (TxCert era)
+    ) =>
+    EncCBOR (AlonzoPlutusPurpose f era)
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
-instance Era era => DecCBOR (AlonzoPlutusPurpose AsIx era) where
-  decCBOR = decCBORGroup
+deriving via
+  (CBORGroup (AlonzoPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+    , Era era
+    , Typeable f
+    , EncCBOR (TxCert era)
+    , DecCBOR (TxCert era)
+    ) =>
+    DecCBOR (AlonzoPlutusPurpose f era)
 
 instance
   ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
@@ -368,29 +394,6 @@ instance
     AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
-
--- | /Note/ - serialization of `AlonzoPlutusPurpose` `AsItem`
---
--- * Tags do not match the `AlonzoPlutusPurpose` `AsIx`. Unfortunate inconsistency
---
--- * It is only used for predicate failures. Thus we can change it after Conway to be
---   consistent with `AlonzoPlutusPurpose` `AsIx`
-instance (Era era, EncCBOR (TxCert era)) => EncCBOR (AlonzoPlutusPurpose AsItem era) where
-  encCBOR = \case
-    AlonzoSpending (AsItem x) -> encode (Sum (AlonzoSpending @_ @era . AsItem) 1 !> To x)
-    AlonzoMinting (AsItem x) -> encode (Sum (AlonzoMinting @_ @era . AsItem) 0 !> To x)
-    AlonzoCertifying (AsItem x) -> encode (Sum (AlonzoCertifying . AsItem) 3 !> To x)
-    AlonzoRewarding (AsItem x) -> encode (Sum (AlonzoRewarding @_ @era . AsItem) 2 !> To x)
-
--- | See note on the `EncCBOR` instace.
-instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem era) where
-  decCBOR = decode (Summands "AlonzoPlutusPurpose" dec)
-    where
-      dec 1 = SumD (AlonzoSpending . AsItem) <! From
-      dec 0 = SumD (AlonzoMinting . AsItem) <! From
-      dec 3 = SumD (AlonzoCertifying . AsItem) <! From
-      dec 2 = SumD (AlonzoRewarding . AsItem) <! From
-      dec n = Invalid n
 
 pattern SpendingPurpose ::
   AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
