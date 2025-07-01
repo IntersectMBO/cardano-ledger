@@ -17,7 +17,6 @@
 
 module Test.Cardano.Ledger.Generic.TxGen (
   genAlonzoTx,
-  Box (..),
   applySTSByProof,
   genUTxO,
 ) where
@@ -31,16 +30,17 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
   unRedeemers,
  )
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (DecShareCBOR (..), Interns)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (BabbageEraTxOut (..), ppMaxTxExUnitsL, ppCollateralPercentageL, ppMaxCollateralInputsL)
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
@@ -51,6 +51,7 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   RewardAccount (..),
   ShelleyDelegCert (..),
+  StakeReference (..),
   Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -87,16 +88,18 @@ import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
+import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr (toExpr))
 import Data.Word (Word16)
 import GHC.Stack
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
+import Test.Cardano.Ledger.Era (EraTest)
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
@@ -132,6 +135,7 @@ import Test.Cardano.Ledger.Generic.GenState (
   modifyModelMutFee,
   modifyModelUTxO,
  )
+import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.ModelState (
   MUtxo,
   ModelNewEpochState (..),
@@ -143,6 +147,20 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
+
+class EraGenericGen era where
+  genTx :: GenRS era (Tx era)
+  genTxOut :: Value era -> GenRS era (TxOut era)
+
+initialAddr :: Addr
+initialAddr = Addr Testnet pCred sCred
+  where
+    (KeyPair svk _ssk) = theKeyPair 0
+    pCred = KeyHashObj . hashKey . vKey $ theKeyPair 1
+    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+
+coreTxOut :: EraTest era => TxOut era
+coreTxOut = mkBasicTxOut initialAddr mempty
 
 -- ====================================================================
 
@@ -158,10 +176,10 @@ lookupByKeyM name k getMap = do
 
 -- | Generate a list of specified length with randomish `ExUnit`s where the sum
 --   of all values produced will not exceed the maxTxExUnits.
-genExUnits :: Proof era -> Int -> GenRS era [ExUnits]
-genExUnits era n = do
+genExUnits :: Era era => Int -> GenRS era [ExUnits]
+genExUnits n = do
   GenEnv {gePParams} <- gets gsGenEnv
-  let ExUnits maxMemUnits maxStepUnits = maxTxExUnits' era gePParams
+  let ExUnits maxMemUnits maxStepUnits = gePParams ^. ppMaxTxExUnitsL
   memUnits <- lift $ genSequenceSum maxMemUnits
   stepUnits <- lift $ genSequenceSum maxStepUnits
   pure $ zipWith ExUnits memUnits stepUnits
@@ -192,47 +210,47 @@ lookupScript scriptHash mTag = do
 
 -- =====================================
 
-genGenericScriptWitness ::
-  forall era.
-  Reflect era =>
-  Maybe PlutusPurposeTag ->
-  Script era ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-genGenericScriptWitness mTag script =
-  case reify @era of
-    Shelley -> mkMultiSigWit mTag script
-    Allegra -> mkTimelockWit mTag script
-    Mary -> mkTimelockWit mTag script
-    Alonzo -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
-      PlutusScript _ -> pure (const [])
-    Babbage -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
-      PlutusScript _ -> pure (const [])
-    Conway -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
-      PlutusScript _ -> pure (const [])
+-- genGenericScriptWitness ::
+--  forall era.
+--  Reflect era =>
+--  Maybe PlutusPurposeTag ->
+--  Script era ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- genGenericScriptWitness mTag script =
+--  case reify @era of
+--    Shelley -> mkMultiSigWit mTag script
+--    Allegra -> mkTimelockWit mTag script
+--    Mary -> mkTimelockWit mTag script
+--    Alonzo -> case script of
+--      TimelockScript timelock -> mkTimelockWit mTag timelock
+--      PlutusScript _ -> pure (const [])
+--    Babbage -> case script of
+--      TimelockScript timelock -> mkTimelockWit mTag timelock
+--      PlutusScript _ -> pure (const [])
+--    Conway -> case script of
+--      TimelockScript timelock -> mkTimelockWit mTag timelock
+--      PlutusScript _ -> pure (const [])
 
 -- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts
 --   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
-mkWitVKey ::
-  forall era kr.
-  Reflect era =>
-  Proof era ->
-  Maybe PlutusPurposeTag ->
-  Credential kr ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-mkWitVKey _ _mTag (KeyHashObj keyHash) = do
-  keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
-  pure $ \bodyHash -> [AddrWits' [mkWitnessVKey bodyHash keyPair]]
-mkWitVKey era mTag (ScriptHashObj scriptHash) =
-  lookupScript @era scriptHash mTag >>= \case
-    Nothing ->
-      error $ "Impossible: Cannot find script with hash " ++ show scriptHash
-    Just script -> do
-      let scriptWit = ScriptWits' [script]
-      otherWit <- genGenericScriptWitness era mTag script
-      pure (\hash -> scriptWit : otherWit hash)
+-- mkWitVKey ::
+--  forall era kr.
+--  Reflect era =>
+--  Proof era ->
+--  Maybe PlutusPurposeTag ->
+--  Credential kr ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- mkWitVKey _ _mTag (KeyHashObj keyHash) = do
+--  keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
+--  pure $ \bodyHash -> [AddrWits' [mkWitnessVKey bodyHash keyPair]]
+-- mkWitVKey era mTag (ScriptHashObj scriptHash) =
+--  lookupScript @era scriptHash mTag >>= \case
+--    Nothing ->
+--      error $ "Impossible: Cannot find script with hash " ++ show scriptHash
+--    Just script -> do
+--      let scriptWit = ScriptWits' [script]
+--      otherWit <- genGenericScriptWitness era mTag script
+--      pure (\hash -> scriptWit : otherWit hash)
 
 -- ========================================================================
 -- Generating TxWits, here we are not adding anything to the GenState
@@ -240,89 +258,89 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
 -- make TxWits.
 
 -- | Used in Shelley Eras
-mkMultiSigWit ::
-  forall era.
-  (ShelleyEraScript era, NativeScript era ~ MultiSig era, Reflect era) =>
-  Proof era ->
-  Maybe PlutusPurposeTag ->
-  MultiSig era ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-mkMultiSigWit era mTag (RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
-mkMultiSigWit era mTag (RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
-mkMultiSigWit era mTag (RequireAnyOf timelocks)
-  | F.null timelocks = pure (const [])
-  | otherwise = mkMultiSigWit era mTag =<< lift (elements (F.toList timelocks))
-mkMultiSigWit era mTag (RequireMOf m timelocks) = do
-  ts <- take m <$> lift (shuffle (F.toList timelocks))
-  F.fold <$> mapM (mkMultiSigWit era mTag) ts
-mkMultiSigWit _ _ _ = error "Impossible: All NativeScripts should have been accounted for"
+-- mkMultiSigWit ::
+--  forall era.
+--  (ShelleyEraScript era, NativeScript era ~ MultiSig era, Reflect era) =>
+--  Proof era ->
+--  Maybe PlutusPurposeTag ->
+--  MultiSig era ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- mkMultiSigWit era mTag (RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
+-- mkMultiSigWit era mTag (RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
+-- mkMultiSigWit era mTag (RequireAnyOf timelocks)
+--  | F.null timelocks = pure (const [])
+--  | otherwise = mkMultiSigWit era mTag =<< lift (elements (F.toList timelocks))
+-- mkMultiSigWit era mTag (RequireMOf m timelocks) = do
+--  ts <- take m <$> lift (shuffle (F.toList timelocks))
+--  F.fold <$> mapM (mkMultiSigWit era mTag) ts
+-- mkMultiSigWit _ _ _ = error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Timeock scripts are used in Mary and subsequent Eras.
-mkTimelockWit ::
-  forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era, Reflect era) =>
-  Proof era ->
-  Maybe PlutusPurposeTag ->
-  Timelock era ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-mkTimelockWit era mTag =
-  \case
-    RequireSignature keyHash -> mkWitVKey era mTag (KeyHashObj keyHash)
-    RequireAllOf timelocks -> F.fold <$> mapM (mkTimelockWit era mTag) timelocks
-    RequireAnyOf timelocks
-      | F.null timelocks -> pure (const [])
-      | otherwise -> mkTimelockWit era mTag =<< lift (elements (F.toList timelocks))
-    RequireMOf m timelocks -> do
-      ts <- take m <$> lift (shuffle (F.toList timelocks))
-      F.fold <$> mapM (mkTimelockWit era mTag) ts
-    RequireTimeStart _ -> pure (const [])
-    RequireTimeExpire _ -> pure (const [])
-    _ -> error "Impossible: All NativeScripts should have been accounted for"
+-- mkTimelockWit ::
+--  forall era.
+--  (AllegraEraScript era, NativeScript era ~ Timelock era, Reflect era) =>
+--  Proof era ->
+--  Maybe PlutusPurposeTag ->
+--  Timelock era ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- mkTimelockWit era mTag =
+--  \case
+--    RequireSignature keyHash -> mkWitVKey era mTag (KeyHashObj keyHash)
+--    RequireAllOf timelocks -> F.fold <$> mapM (mkTimelockWit era mTag) timelocks
+--    RequireAnyOf timelocks
+--      | F.null timelocks -> pure (const [])
+--      | otherwise -> mkTimelockWit era mTag =<< lift (elements (F.toList timelocks))
+--    RequireMOf m timelocks -> do
+--      ts <- take m <$> lift (shuffle (F.toList timelocks))
+--      F.fold <$> mapM (mkTimelockWit era mTag) ts
+--    RequireTimeStart _ -> pure (const [])
+--    RequireTimeExpire _ -> pure (const [])
+--    _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Same as `genCredKeyWit`, but for `TxOuts`
-genTxOutKeyWitness ::
-  forall era.
-  Reflect era =>
-  Proof era ->
-  Maybe PlutusPurposeTag ->
-  TxOut era ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-genTxOutKeyWitness era mTag txOut =
-  case txOut ^. addrTxOutL of
-    AddrBootstrap baddr ->
-      error $ "Can't authorize bootstrap address: " ++ show baddr
-    Addr _ payCred _ ->
-      case getTxOutRefScript reify txOut of
-        SNothing -> mkWitVKey era mTag payCred
-        SJust script -> do
-          f1 <- mkWitVKey era mTag payCred
-          f2 <- genGenericScriptWitness reify (Just Spending) script
-          pure (\safehash -> f1 safehash ++ f2 safehash)
+-- genTxOutKeyWitness ::
+--  forall era.
+--  Reflect era =>
+--  Proof era ->
+--  Maybe PlutusPurposeTag ->
+--  TxOut era ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- genTxOutKeyWitness era mTag txOut =
+--  case txOut ^. addrTxOutL of
+--    AddrBootstrap baddr ->
+--      error $ "Can't authorize bootstrap address: " ++ show baddr
+--    Addr _ payCred _ ->
+--      case getTxOutRefScript reify txOut of
+--        SNothing -> mkWitVKey era mTag payCred
+--        SJust script -> do
+--          f1 <- mkWitVKey era mTag payCred
+--          f2 <- genGenericScriptWitness reify (Just Spending) script
+--          pure (\safehash -> f1 safehash ++ f2 safehash)
 
-genCredKeyWit ::
-  forall era k.
-  Reflect era =>
-  Proof era ->
-  Maybe PlutusPurposeTag ->
-  Credential k ->
-  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
-genCredKeyWit era mTag cred = mkWitVKey era mTag cred
+-- genCredKeyWit ::
+--  forall era k.
+--  Reflect era =>
+--  Proof era ->
+--  Maybe PlutusPurposeTag ->
+--  Credential k ->
+--  GenRS era (SafeHash EraIndependentTxBody -> [WitnessesField era])
+-- genCredKeyWit era mTag cred = mkWitVKey era mTag cred
 
-makeDatumWitness :: Proof era -> TxOut era -> GenRS era [WitnessesField era]
-makeDatumWitness proof txout = case (proof, txout) of
-  (Babbage, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
-  (Babbage, BabbageTxOut _ _ (Datum _) _) -> pure []
-  (Babbage, BabbageTxOut _ _ NoDatum _) -> pure []
-  (Conway, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
-  (Conway, BabbageTxOut _ _ (Datum _) _) -> pure []
-  (Conway, BabbageTxOut _ _ NoDatum _) -> pure []
-  (Alonzo, AlonzoTxOut _ _ mDatum) -> mkDatumWit mDatum
-  _ -> pure [] -- No other era has data witnesses
-  where
-    mkDatumWit SNothing = pure []
-    mkDatumWit (SJust datumHash) = do
-      datum <- lookupByKeyM "datum" datumHash gsDatums
-      pure [DataWits' [datum]]
+-- makeDatumWitness :: Proof era -> TxOut era -> GenRS era [WitnessesField era]
+-- makeDatumWitness proof txout = case (proof, txout) of
+--  (Babbage, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
+--  (Babbage, BabbageTxOut _ _ (Datum _) _) -> pure []
+--  (Babbage, BabbageTxOut _ _ NoDatum _) -> pure []
+--  (Conway, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
+--  (Conway, BabbageTxOut _ _ (Datum _) _) -> pure []
+--  (Conway, BabbageTxOut _ _ NoDatum _) -> pure []
+--  (Alonzo, AlonzoTxOut _ _ mDatum) -> mkDatumWit mDatum
+--  _ -> pure [] -- No other era has data witnesses
+--  where
+--    mkDatumWit SNothing = pure []
+--    mkDatumWit (SJust datumHash) = do
+--      datum <- lookupByKeyM "datum" datumHash gsDatums
+--      pure [DataWits' [datum]]
 
 -- | Does the current Credential point to a PlutusScript? If so return its IsValid and Hash
 plutusScriptHashFromTag ::
@@ -337,46 +355,46 @@ plutusScriptHashFromTag (ScriptHashObj scriptHash) tag =
 
 -- | Make RdmrWits WitnessesField only if the Credential is for a Plutus Script
 --  And it is in the spending inputs, not the reference inputs
-redeemerWitnessMaker ::
-  forall era k.
-  ( Era era
-  , Share (GovState era)
-      ~ ( Interns (Credential Staking)
-        , Interns (KeyHash StakePool)
-        , Interns (Credential DRepRole)
-        , Interns (Credential HotCommitteeRole)
-        )
-  , Share (TxOut era) ~ Interns (Credential Staking)
-  , Share (InstantStake era) ~ Interns (Credential Staking)
-  , Share (CertState era)
-      ~ ( Interns (Credential Staking)
-        , Interns (KeyHash StakePool)
-        , Interns (Credential DRepRole)
-        , Interns (Credential HotCommitteeRole)
-        )
-  ) =>
-  PlutusPurposeTag ->
-  [Maybe (GenRS era (Data era), Credential k)] ->
-  GenRS era (IsValid, [ExUnits -> [WitnessesField era]])
-redeemerWitnessMaker tag listWithCred =
-  let creds =
-        [ (ix, genDat, cred)
-        | (ix, mCred) <- zip [0 ..] listWithCred
-        , Just (genDat, cred) <- [mCred]
-        ]
-      allValid :: [IsValid] -> IsValid
-      allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
-   in fmap (first allValid . unzip . catMaybes) $
-        forM creds $ \(ix, genDat, cred) ->
-          plutusScriptHashFromTag cred tag >>= \case
-            Nothing -> pure Nothing
-            Just (isValid, _) -> do
-              datum <- genDat
-              let mkWit3 exUnits =
-                    [RdmrWits (mkRedeemersFromTags @era [((tag, ix), (datum, exUnits))])]
-              -- we should not add this if the tx turns out to be in the reference inputs.
-              -- we accomplish this by not calling this function on referenceInputs
-              pure $ Just (isValid, mkWit3)
+-- redeemerWitnessMaker ::
+--  forall era k.
+--  ( Era era
+--  , Share (GovState era)
+--      ~ ( Interns (Credential Staking)
+--        , Interns (KeyHash StakePool)
+--        , Interns (Credential DRepRole)
+--        , Interns (Credential HotCommitteeRole)
+--        )
+--  , Share (TxOut era) ~ Interns (Credential Staking)
+--  , Share (InstantStake era) ~ Interns (Credential Staking)
+--  , Share (CertState era)
+--      ~ ( Interns (Credential Staking)
+--        , Interns (KeyHash StakePool)
+--        , Interns (Credential DRepRole)
+--        , Interns (Credential HotCommitteeRole)
+--        )
+--  ) =>
+--  PlutusPurposeTag ->
+--  [Maybe (GenRS era (Data era), Credential k)] ->
+--  GenRS era (IsValid, [ExUnits -> [WitnessesField era]])
+-- redeemerWitnessMaker tag listWithCred =
+--  let creds =
+--        [ (ix, genDat, cred)
+--        | (ix, mCred) <- zip [0 ..] listWithCred
+--        , Just (genDat, cred) <- [mCred]
+--        ]
+--      allValid :: [IsValid] -> IsValid
+--      allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
+--   in fmap (first allValid . unzip . catMaybes) $
+--        forM creds $ \(ix, genDat, cred) ->
+--          plutusScriptHashFromTag cred tag >>= \case
+--            Nothing -> pure Nothing
+--            Just (isValid, _) -> do
+--              datum <- genDat
+--              let mkWit3 exUnits =
+--                    [RdmrWits (mkRedeemersFromTags @era [((tag, ix), (datum, exUnits))])]
+--              -- we should not add this if the tx turns out to be in the reference inputs.
+--              -- we accomplish this by not calling this function on referenceInputs
+--              pure $ Just (isValid, mkWit3)
 
 -- ===================================================================================
 -- Now we start actual generators that create things and enter them into
@@ -418,41 +436,41 @@ genRefScript = do
     Just script -> pure (SJust script)
 
 -- | Gen the Datum and RefScript fields of a TxOut by Analyzing the payment credential's script
-genDataHashField :: forall era. Reflect era => Maybe (Script era) -> GenRS era [TxOutField era]
-genDataHashField maybeCoreScript =
-  case reify @era of
-    Conway -> case maybeCoreScript of
-      Just (PlutusScript _) -> do
-        datum <- genBabbageDatum
-        script <- genRefScript
-        pure [FDatum datum, RefScript script]
-      _ -> pure []
-    Babbage -> case maybeCoreScript of
-      Just (PlutusScript _) -> do
-        datum <- genBabbageDatum
-        script <- genRefScript
-        pure [FDatum datum, RefScript script]
-      _ -> pure []
-    Alonzo -> case maybeCoreScript of
-      Just (PlutusScript _) -> do
-        (datahash, _data) <- genDatumWithHash
-        pure [DHash (SJust datahash)]
-      _ -> pure []
-    _ -> pure [] -- No other Era has any datum in the TxOut
+-- genDataHashField :: forall era. Reflect era => Maybe (Script era) -> GenRS era [TxOutField era]
+-- genDataHashField maybeCoreScript =
+--  case reify @era of
+--    Conway -> case maybeCoreScript of
+--      Just (PlutusScript _) -> do
+--        datum <- genBabbageDatum
+--        script <- genRefScript
+--        pure [FDatum datum, RefScript script]
+--      _ -> pure []
+--    Babbage -> case maybeCoreScript of
+--      Just (PlutusScript _) -> do
+--        datum <- genBabbageDatum
+--        script <- genRefScript
+--        pure [FDatum datum, RefScript script]
+--      _ -> pure []
+--    Alonzo -> case maybeCoreScript of
+--      Just (PlutusScript _) -> do
+--        (datahash, _data) <- genDatumWithHash
+--        pure [DHash (SJust datahash)]
+--      _ -> pure []
+--    _ -> pure [] -- No other Era has any datum in the TxOut
 
 -- | Generate the list of TxOutField that constitute a TxOut
-genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
-genTxOut val = do
-  addr <- genRecipient
-  cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
-  dataHashFields <-
-    case cred of
-      KeyHashObj _ -> pure []
-      ScriptHashObj scriptHash -> do
-        maybeCoreScript <- lookupScript scriptHash (Just Spending)
-        genDataHashField maybeCoreScript
-  --pure $ [Address addr, Amount val] ++ dataHashFields
-  pure $ mkBasicTxOut addr val
+-- genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
+-- genTxOut val = do
+--  addr <- genRecipient
+--  cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
+--  dataHashFields <-
+--    case cred of
+--      KeyHashObj _ -> pure []
+--      ScriptHashObj scriptHash -> do
+--        maybeCoreScript <- lookupScript scriptHash (Just Spending)
+--        genDataHashField maybeCoreScript
+--  --pure $ [Address addr, Amount val] ++ dataHashFields
+--  pure $ mkBasicTxOut addr val
 
 -- ================================================================================
 
@@ -501,8 +519,7 @@ genUTxO = do
     maybeCons _ xs = xs
     genOut = do
       val <- lift genPositiveVal
-      fields <- genTxOut val
-      pure (coreTxOut fields)
+      genTxOut val
 
 -- | Generate both the spending and reference inputs and a key from the spending
 --   inputs we can use to pay the fee. That key is never from the oldUTxO
@@ -714,7 +731,7 @@ genCollateralUTxO ::
   GenRS era (MUtxo era, Map.Map TxIn (TxOut era), Coin)
 genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   GenEnv {gePParams} <- gets gsGenEnv
-  let collPerc = collateralPercentage' reify gePParams
+  let collPerc = gePParams ^. ppCollateralPercentageL
       minCollTotal = Coin (ceiling ((fee * toInteger collPerc) % 100))
       -- Generate a collateral that is neither in UTxO map nor has already been generated
       genNewCollateral addr coll um c = do
@@ -725,7 +742,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         txIn <- lift (resize 30 (arbitrary :: Gen TxIn))
         if Map.member txIn utxo || Map.member txIn coll || txIn `Map.member` entriesInUse
           then genNewCollateral addr coll um c
-          else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
+          else pure (um, Map.insert txIn (mkBasicTxOut addr (inject c)) coll, c)
       -- Either pick a collateral from a map or generate a completely new one
       genCollateral addr coll um
         | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
@@ -764,7 +781,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
 --   This way we generate a 'balanced' TxBody (modulo fees, deposits, refunds etc. which are
 --   handled separately). The idea is to make sum(txOuts) == sum(genRecipientsFrom txouts), the
 --   sum will be the same, but the size may be different.
-genRecipientsFrom :: Reflect era => [TxOut era] -> GenRS era [TxOut era]
+genRecipientsFrom :: forall era. EraTest era => [TxOut era] -> GenRS era [TxOut era]
 genRecipientsFrom txOuts = do
   let outCount = length txOuts
   approxCount <- lift $ choose (1, outCount)
@@ -788,19 +805,19 @@ genRecipientsFrom txOuts = do
       -- In either case whether it adds 1 or 2 TxOuts to 'rs', the coin value of
       -- the new TxOut(s), is the same as the coin value of 'txout'.
       genWithChange s txout rs = do
-        let !(!addr, !v, !ds) = txoutFields reify txout
+        let v = txout ^. valueTxOutL
             vCoin = unCoin (coin v)
         if vCoin == 0 -- If the coin balance is 0, don't add any TxOuts to 'rs'
           then pure rs
           else do
             c <- Coin <$> lift (choose (1, vCoin))
-            fields <- genTxOut reify (s <+> inject c)
+            newTxOut <- genTxOut $ s <+> inject c
             pure $
               if c < coin v
                 then
-                  let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
-                   in coreTxOut reify fields : change : rs
-                else coreTxOut reify fields : rs
+                  let !change = txout & valueTxOutL %~ (<-> inject c)
+                   in newTxOut : change : rs
+                else newTxOut : rs
   goNew extra txOuts []
 
 getTxCertCredential ::
@@ -930,7 +947,7 @@ genAlonzoTxAndInfo proof slot = do
   rewardsWithdrawalTxOut <-
     if withdrawalAmount == Coin 0
       then pure Nothing
-      else Just . coreTxOut proof <$> genTxOut proof (inject withdrawalAmount)
+      else Just <$> genTxOut (inject withdrawalAmount)
   let wdrlCreds = map (raCredential . fst) $ Map.toAscList wdrlMap
   (IsValid v2, mkWithdrawalsWits) <-
     redeemerWitnessMaker proof Rewarding $ map (Just . (,) genDatum) wdrlCreds
@@ -941,12 +958,10 @@ genAlonzoTxAndInfo proof slot = do
     redeemerWitnessMaker proof Certifying $ map ((,) genDatum <$>) dcertCreds
 
   let isValid = IsValid (v1 && v2 && v3)
-      mkWits :: [ExUnits -> [WitnessesField era]]
       mkWits = mkPaymentWits ++ mkCertsWits ++ mkWithdrawalsWits
-  exUnits <- genExUnits proof (length mkWits)
+  exUnits <- genExUnits (length mkWits)
 
-  let redeemerWitsList :: [WitnessesField era]
-      redeemerWitsList = concat (zipWith ($) mkWits exUnits)
+  let redeemerWitsList = concat (zipWith ($) mkWits exUnits)
   datumWitsList <- concat <$> mapM (makeDatumWitness proof) (Map.elems toSpendNoCollateral)
   keyWitsMakers <-
     mapM
@@ -957,7 +972,7 @@ genAlonzoTxAndInfo proof slot = do
 
   -- 5. Estimate inputs that will be used as collateral
   maxCollateralCount <-
-    lift $ chooseInt (1, fromIntegral (maxCollateralInputs' proof gePParams))
+    lift $ chooseInt (1, fromIntegral (gePParams ^. ppMaxCollateralInputsL))
   bogusCollateralTxId <- lift (arbitrary :: Gen TxId)
   let bogusCollateralTxIns =
         Set.fromList
@@ -966,7 +981,7 @@ genAlonzoTxAndInfo proof slot = do
           ]
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <- forM collateralAddresses $ \a ->
-    genTxOutKeyWitness proof Nothing (coreTxOut proof [Address a, Amount (inject maxCoin)])
+    genTxOutKeyWitness proof Nothing $ mkBasicTxOut a (inject maxCoin)
   networkId <- lift $ elements [SNothing, SJust Testnet]
 
   -- 6. Generate bogus collateral fields, and functions for updating them when we know their real values
@@ -980,7 +995,7 @@ genAlonzoTxAndInfo proof slot = do
       then
         frequencyT
           [ (1, pure SNothing)
-          , (9, SJust . coreTxOut proof <$> genTxOut proof (inject (Coin 0)))
+          , (9, SJust <$> genTxOut (inject (Coin 0)))
           ]
       else pure SNothing
   let updateCollReturn SNothing _ = SNothing
@@ -988,36 +1003,28 @@ genAlonzoTxAndInfo proof slot = do
 
   -- 7. Estimate the fee
   let redeemerDatumWits = redeemerWitsList ++ datumWitsList
-      bogusIntegrityHash = newScriptIntegrityHash proof gePParams mempty (mkRedeemers proof []) mempty
+      bogusIntegrityHash = newScriptIntegrityHash gePParams mempty (mkRedeemers []) mempty
       inputSet = Map.keysSet toSpendNoCollateral
       outputList = maybe recipients (: recipients) rewardsWithdrawalTxOut
       txBodyNoFee =
-        coreTxBody
-          proof
-          [ Inputs inputSet
-          , Collateral bogusCollateralTxIns
-          , RefInputs (Map.keysSet refInputsUtxo)
-          , TotalCol bogusTotalCol
-          , Outputs' outputList
-          , CollateralReturn bogusCollReturn
-          , Certs' dcerts
-          , Withdrawals' withdrawals
-          , Txfee maxCoin
-          , if Some proof >= Some Allegra
-              then Vldt validityInterval
-              else TTL (timeToLive validityInterval)
-          , Update' []
-          , ReqSignerHashes' []
-          , Generic.Mint mempty
-          , WppHash bogusIntegrityHash
-          , AdHash' []
-          , Txnetworkid networkId
-          ]
+        mkBasicTxBody
+          & inputsTxBodyL .~ inputSet
+          & collateralInputsTxBodyL .~ bogusCollateralTxIns
+          & referenceInputsTxBodyL .~ Map.keysSet refInputsUtxo
+          -- , TotalCol bogusTotalCol
+          & outputsTxBodyL .~ SSeq.fromList outputList
+          & collateralReturnTxBodyL .~ bogusCollReturn
+          & certsTxBodyL .~ SSeq.fromList dcerts
+          & withdrawalsTxBodyL .~ withdrawals
+          & feeTxBodyL .~ maxCoin
+          -- , if Some proof >= Some Allegra
+          --    then Vldt validityInterval
+          --    else TTL (timeToLive validityInterval)
+          & scriptIntegrityHashTxBodyL .~ bogusIntegrityHash
+          & networkIdTxBodyL .~ networkId
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
-      witsMakers :: [SafeHash EraIndependentTxBody -> [WitnessesField era]]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
       bogusNeededScripts = scriptWitsNeeded' proof utxoNoCollateral txBodyNoFee
-      noFeeWits :: [WitnessesField era]
       noFeeWits =
         onlyNecessaryScripts proof bogusNeededScripts $
           redeemerDatumWits
@@ -1052,25 +1059,21 @@ genAlonzoTxAndInfo proof slot = do
       langs = Set.toList $ languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) sNeeded
       mIntegrityHash =
         newScriptIntegrityHash
-          proof
           gePParams
           langs
-          (mkTxrdmrs proof redeemerDatumWits)
+          (mkTxrdmrs redeemerDatumWits)
           (mkTxdats redeemerDatumWits)
       balance =
         case bogusCollReturn of
           SNothing -> txInBalance (Map.keysSet collMap) utxo
           SJust _ -> txInBalance (Map.keysSet collMap) utxo <-> excessColCoin
       txBody =
-        overrideTxBody
-          proof
-          txBodyNoFee
-          [ Txfee fee
-          , Collateral (Map.keysSet collMap)
-          , CollateralReturn (updateCollReturn bogusCollReturn excessColCoin)
-          , TotalCol (updateTotalColl bogusTotalCol balance)
-          , WppHash mIntegrityHash
-          ]
+        txBodyNoFee
+          & feeTxBodyL .~ fee
+          & collateralInputsTxBodyL .~ Map.keysSet collMap
+          & collateralReturnTxBodyL .~ updateCollReturn bogusCollReturn excessColCoin
+          -- , TotalCol (updateTotalColl bogusTotalCol balance)
+          & scriptIntegrityHashTxBodyL .~ mIntegrityHash
       txBodyHash = hashAnnotated txBody
       neededScripts = scriptWitsNeeded' proof utxo txBody
       wits =
@@ -1091,45 +1094,28 @@ genAlonzoTxAndInfo proof slot = do
   pure (UTxO utxo, validTx, feepair, maybeoldpair)
 
 -- | Keep only Script witnesses that are neccessary in 'era',
-onlyNecessaryScripts ::
-  Proof era -> Set ScriptHash -> [WitnessesField era] -> [WitnessesField era]
-onlyNecessaryScripts _ _ [] = []
-onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
-  ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
-onlyNecessaryScripts proof hashes (x : xs) = x : onlyNecessaryScripts proof hashes xs
+-- onlyNecessaryScripts ::
+--  Proof era -> Set ScriptHash -> [WitnessesField era] -> [WitnessesField era]
+-- onlyNecessaryScripts _ _ [] = []
+-- onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
+--  ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
+-- onlyNecessaryScripts proof hashes (x : xs) = x : onlyNecessaryScripts proof hashes xs
 
 -- | Scan though the fields unioning all the RdrmWits fields into one Redeemer map
-mkTxrdmrs :: Proof era -> [WitnessesField era] -> Redeemers era
-mkTxrdmrs proof fields = mkRedeemers proof $ List.foldl' accum [] fields
-  where
-    accum m1 (RdmrWits r2) = m1 ++ Map.toList (unRedeemers r2)
-    accum m1 _ = m1
+-- mkTxrdmrs :: Proof era -> [WitnessesField era] -> Redeemers era
+-- mkTxrdmrs proof fields = mkRedeemers proof $ List.foldl' accum [] fields
+--  where
+--    accum m1 (RdmrWits r2) = m1 ++ Map.toList (unRedeemers r2)
+--    accum m1 _ = m1
 
 -- | Scan though the fields unioning all the DataWits fields into one TxDat
-mkTxdats :: forall era. Era era => [WitnessesField era] -> TxDats era
-mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
-  where
-    accum m (DataWits' ds) = List.foldl' accum2 m ds
-      where
-        accum2 m2 d = Map.insert (hashData @era d) d m2
-    accum m _ = m
-
--- =======================================================
--- An encapsulation of the Top level types we generate,
--- but that has its own Show instance that we can control.
-
-data Box era = Box (Proof era) (TRC (EraRule "LEDGER" era)) (GenState era)
-
-instance (Era era, Signal (EraRule "LEDGER" era) ~ Tx era) => ToExpr (Box era) where
-  toExpr = toExpr . show
-
-instance
-  ( Era era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  ) =>
-  Show (Box era)
-  where
-  show _ = "Box {}"
+-- mkTxdats :: forall era. Era era => [WitnessesField era] -> TxDats era
+-- mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
+--  where
+--    accum m (DataWits' ds) = List.foldl' accum2 m ds
+--      where
+--        accum2 m2 d = Map.insert (hashData @era d) d m2
+--    accum m _ = m
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism
