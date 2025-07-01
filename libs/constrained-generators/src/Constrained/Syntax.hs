@@ -39,6 +39,7 @@ import Constrained.Base (
   explainSpec,
   forAllToList,
   name,
+  named,
   toPred,
  )
 import Constrained.Core (

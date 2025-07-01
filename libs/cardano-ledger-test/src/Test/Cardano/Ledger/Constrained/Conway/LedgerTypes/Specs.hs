@@ -26,7 +26,7 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (CompactForm (..))
+import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))

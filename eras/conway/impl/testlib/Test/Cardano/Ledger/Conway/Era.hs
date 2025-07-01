@@ -20,7 +20,6 @@ import Cardano.Ledger.UMap
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -54,20 +53,19 @@ instance BabbageEraTest ConwayEra
 
 instance ConwayEraTest ConwayEra
 
+-- | similar to mkShelleyTestAccountState, but it ignores the mPtr, and doesn't
+--   need to test that mDRep is SNothing, since this is the Conway Era, where DReps can be allocated.
 mkConwayTestAccountState ::
-  (HasCallStack, ConwayEraAccounts era) =>
+  ConwayEraAccounts era =>
   Maybe Ptr ->
   CompactForm Coin ->
   Maybe (KeyHash 'StakePool) ->
   Maybe DRep ->
   AccountState era
 mkConwayTestAccountState _mPtr deposit mStakePool mDRep =
-  case mDRep of
-    Nothing ->
-      mkConwayAccountState deposit
-        & stakePoolDelegationAccountStateL .~ mStakePool
-        & dRepDelegationAccountStateL .~ mDRep
-    Just _ -> error "Delegation to DRep is not supported until Conway"
+  mkConwayAccountState deposit
+    & stakePoolDelegationAccountStateL .~ mStakePool
+    & dRepDelegationAccountStateL .~ mDRep
 
 conwayAccountsToUMap :: ConwayEraAccounts era => Accounts era -> UMap
 conwayAccountsToUMap accounts =

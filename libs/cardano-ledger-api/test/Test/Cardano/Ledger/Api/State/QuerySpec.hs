@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 
@@ -65,11 +67,15 @@ spec = do
   queryStakePoolDelegsAndRewardsSpec @MaryEra
   queryStakePoolDelegsAndRewardsSpec @AlonzoEra
   queryStakePoolDelegsAndRewardsSpec @BabbageEra
-  queryStakePoolDelegsAndRewardsSpec @ConwayEra
+  -- queryStakePoolDelegsAndRewardsSpec @ConwayEra -- See comment about queryStakePoolDelegsAndRewardsSpec and eras
   describe "GetCommitteeMembersState" $ do
     committeeMembersStateSpec @ConwayEra
 
-queryStakePoolDelegsAndRewardsSpec :: forall era. ShelleyEraTest era => Spec
+-- | This does not make sense for Eras after Babbage. It requires only (ShelleyEraTest era)
+-- which pretends that from every era, one can extract a UMap.
+-- One cannot extract a UMap from the ConwayEra
+queryStakePoolDelegsAndRewardsSpec ::
+  forall era. (AtMostEra BabbageEra era, ShelleyEraTest era) => Spec
 queryStakePoolDelegsAndRewardsSpec =
   describe (eraName @era) $ do
     describe "GetFilteredDelegationsAndRewardAccounts" $ do
@@ -77,8 +83,8 @@ queryStakePoolDelegsAndRewardsSpec =
         forAll (genValidUMapWithCreds @era) $ \(umap :: UMap, creds) ->
           let nes :: NewEpochState era
               nes = def & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accountsFromUMap umap
-           in queryStakePoolDelegsAndRewards nes creds
-                `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
+           in (queryStakePoolDelegsAndRewards nes creds)
+                `shouldBe` (getFilteredDelegationsAndRewardAccounts umap creds)
 
 committeeMembersStateSpec ::
   forall era.

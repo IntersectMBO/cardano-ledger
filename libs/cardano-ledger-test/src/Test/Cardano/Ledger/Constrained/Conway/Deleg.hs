@@ -254,7 +254,7 @@ dRepDelegationsSpec univ =
     ]
 
 dStateSpec ::
-  (Era era, HasSpec (Accounts era), IsNormalType (Accounts era)) =>
+  (Era era, HasSpec (Accounts era)) =>
   WitUniv era ->
   Map RewardAccount Coin ->
   Specification (DState era)

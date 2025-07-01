@@ -621,6 +621,7 @@ votingSpec =
     describe "Active voting stake" $ do
       describe "DRep" $ do
         it "UTxOs contribute to active voting stake" $ whenPostBootstrap $ do
+          modifyPParams $ \pp -> pp & ppCoinsPerUTxOByteL .~ (CoinPerByte (Coin 1))
           -- Setup DRep delegation #1
           (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
@@ -644,13 +645,15 @@ votingSpec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake" $ whenPostBootstrap $ do
+          modifyPParams $ \pp -> pp & ppCoinsPerUTxOByteL .~ (CoinPerByte (Coin 1))
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
           -- Setup DRep delegation #1
-          (drep1, staking1, _) <- setupSingleDRep 1_000_000_000
+          (drep1, staking1, _) <- impAnn ("PParams " ++ show pp) $ setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
-          _ <- setupSingleDRep 1_000_000_000
-          (spoC, _, _) <- setupPoolWithStake =<< arbitrary
+          _ <- impAnn "Setup DRep delegation #2" $ setupSingleDRep 1_000_000_000
+          (spoC, _, _) <- impAnn ("Setup pool with stake " ++ show pp) $ setupPoolWithStake =<< arbitrary
           -- Submit a committee proposal
-          cc <- KeyHashObj <$> freshKeyHash
+          cc <- impAnn "get arbitrary keyhash" $ KeyHashObj <$> freshKeyHash
           addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitYesVote_ (DRepVoter drep1) addCCGaid
@@ -912,6 +915,7 @@ votingSpec =
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ whenPostBootstrap $ do
           -- Only modify the applicable thresholds
+          modifyPParams $ \pp -> pp & ppCoinsPerUTxOByteL .~ (CoinPerByte (Coin 1))
           modifyPParams $
             ppPoolVotingThresholdsL
               .~ def
