@@ -29,7 +29,8 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (
   ConwayBbodyPredFailure (..),
@@ -558,7 +559,8 @@ poolMDHTooBigTx pf =
       newTxBody
         pf
         [ Inputs' [mkGenesisTxIn 3]
-        , Outputs' [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995 <-> poolDeposit)]]
+        , Outputs'
+            [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995 <-> fromCompact poolDeposit)]]
         , Certs' [RegPoolTxCert poolParams]
         , Txfee (Coin 5)
         ]
@@ -733,8 +735,8 @@ defaultPPs =
   , PoolDeposit poolDeposit
   ]
 
-poolDeposit :: Coin
-poolDeposit = Coin 5
+poolDeposit :: CompactForm Coin
+poolDeposit = CompactCoin 5
 
 pp :: EraPParams era => Proof era -> PParams era
 pp pf = newPParams pf defaultPPs

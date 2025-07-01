@@ -18,7 +18,8 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxCert
@@ -64,7 +65,7 @@ spec = do
     it "Reg/UnReg collect and refund correct amounts" $ do
       utxoStart <- getUTxO
       accountDeposit <- getsPParams ppKeyDepositL
-      stakePoolDeposit <- getsPParams ppPoolDepositL
+      stakePoolDeposit <- fromCompact <$> getsPParams ppPoolDepositL
       dRepDeposit <- getsPParams ppDRepDepositL
       cred0 <- KeyHashObj <$> freshKeyHash @'Staking
       cred1 <- KeyHashObj <$> freshKeyHash @'Staking
@@ -97,7 +98,7 @@ spec = do
         ( \pp ->
             pp
               & ppKeyDepositL .~ Coin 1
-              & ppPoolDepositL .~ Coin 2
+              & ppPoolDepositL .~ CompactCoin 2
               & ppDRepDepositL .~ Coin 3
         )
       (sumUTxO utxoStart <-> sumUTxO utxoAfterRegister)

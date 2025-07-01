@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
@@ -134,7 +134,7 @@ ppsBench =
     & ppMinFeeAL .~ Coin 0
     & ppMinFeeBL .~ Coin 0
     & ppMinUTxOValueL .~ Coin 10
-    & ppPoolDepositL .~ Coin 0
+    & ppPoolDepositL .~ CompactCoin 0
     & ppRhoL .~ unsafeBoundRational 0.0021
     & ppTauL .~ unsafeBoundRational 0.2
 

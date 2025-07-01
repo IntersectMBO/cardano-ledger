@@ -25,6 +25,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
@@ -118,7 +119,7 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c
-    accum ans (RegPoolTxCert _) = pp ^. ppPoolDepositL <+> ans
+    accum ans (RegPoolTxCert _) = fromCompact (pp ^. ppPoolDepositL) <+> ans
     accum ans (RetirePoolTxCert _ _) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
 
@@ -426,7 +427,7 @@ instance TotalAda (DState era) where
       <> (UM.fromCompact $ UM.sumDepositUView (UM.RewDepUView (dsUnified dstate)))
 
 instance TotalAda (PState era) where
-  totalAda pstate = Fold.fold (psDeposits pstate)
+  totalAda pstate = Fold.fold (fromCompact <$> psDeposits pstate)
 
 instance TotalAda (VState era) where
   totalAda _ = mempty

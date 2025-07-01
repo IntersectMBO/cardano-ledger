@@ -94,6 +94,7 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -614,7 +615,7 @@ shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
   numKeys
     <×> (pp ^. ppKeyDepositL)
     <+> numNewRegPoolCerts
-    <×> (pp ^. ppPoolDepositL)
+    <×> fromCompact (pp ^. ppPoolDepositL)
   where
     numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (F.foldl' addNewPoolIds Set.empty certs)

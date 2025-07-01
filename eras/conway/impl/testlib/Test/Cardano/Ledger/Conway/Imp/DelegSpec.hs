@@ -525,7 +525,7 @@ spec = do
         logRatificationChecks hfGaid
         impAnn "Version should be bumped" $
           getProtVer `shouldReturn` nextVer
-        withdrawalAmount <- getsPParams ppPoolDepositL
+        withdrawalAmount <- fromCompact <$> getsPParams ppPoolDepositL
         rewardAccount <- getRewardAccountFor cred
         submitTx_ $
           mkBasicTx mkBasicTxBody
@@ -551,7 +551,7 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ [DelegTxCert cred (DelegStake khSPO)]
       passNEpochs 3
-      withdrawalAmount <- getsPParams ppPoolDepositL
+      withdrawalAmount <- fromCompact <$> getsPParams ppPoolDepositL
       rewardAccount <- getRewardAccountFor cred
       submitTx_ $
         mkBasicTx mkBasicTxBody

@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
@@ -102,7 +102,7 @@ initStUpdates = initSt initUTxO
 ppVoteA :: PParamsUpdate ShelleyEra
 ppVoteA =
   emptyPParamsUpdate
-    & ppuPoolDepositL .~ SJust (Coin 200)
+    & ppuPoolDepositL .~ SJust (CompactCoin 200)
     & ppuExtraEntropyL .~ SJust (mkNonceFromNumber 123)
 
 collectVotes ::
@@ -356,7 +356,7 @@ blockEx4 =
 ppExUpdated :: PParams ShelleyEra
 ppExUpdated =
   ppEx
-    & ppPoolDepositL .~ Coin 200
+    & ppPoolDepositL .~ CompactCoin 200
     & ppExtraEntropyL .~ mkNonceFromNumber 123
 
 expectedStEx4 :: ChainState ShelleyEra

@@ -15,7 +15,8 @@ import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), addDeltaCoin)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraTxWits (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -88,7 +89,7 @@ defaultPPs =
   , MaxBlockExUnits $ ExUnits 1000000 1000000
   , ProtocolVersion $ ProtVer (natVersion @5) 0
   , KeyDeposit (Coin 2)
-  , PoolDeposit (Coin 5)
+  , PoolDeposit (CompactCoin 5)
   , CollateralPercentage 100
   ]
 
@@ -194,12 +195,12 @@ applyShelleyCert model dcert = case dcert of
       , mDeposited =
           if Map.member hk (mPoolDeposits model)
             then mDeposited model
-            else mDeposited model <+> pp ^. ppPoolDepositL
+            else mDeposited model <+> fromCompact (pp ^. ppPoolDepositL)
       , mPoolDeposits -- Only add if it isn't already there
         =
           if Map.member hk (mPoolDeposits model)
             then mPoolDeposits model
-            else Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
+            else Map.insert hk (fromCompact $ pp ^. ppPoolDepositL) (mPoolDeposits model)
       }
     where
       hk = ppId poolparams
@@ -207,7 +208,7 @@ applyShelleyCert model dcert = case dcert of
   ShelleyTxCertPool (RetirePool keyhash epoch) ->
     model
       { mRetiring = Map.insert keyhash epoch (mRetiring model)
-      , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
+      , mDeposited = mDeposited model <-> fromCompact (pp ^. ppPoolDepositL)
       }
     where
       pp = mPParams model

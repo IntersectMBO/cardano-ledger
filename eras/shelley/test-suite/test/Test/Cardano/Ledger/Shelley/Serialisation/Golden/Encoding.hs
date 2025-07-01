@@ -61,7 +61,7 @@ import Cardano.Ledger.Binary.Crypto (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
   DSIGN,
@@ -622,7 +622,7 @@ tests =
           maxtxsize = 3
           maxbhsize = 4
           keydeposit = Coin 5
-          pooldeposit = Coin 6
+          pooldeposit = CompactCoin 6
           emax = EpochInterval 7
           nopt = 8
           a0 = unsafeBoundRational $ 1 % 6

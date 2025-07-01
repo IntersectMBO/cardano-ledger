@@ -64,7 +64,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary (sizedValue)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
@@ -251,7 +251,7 @@ data PParamsField era
   | -- | The amount of a key registration deposit
     KeyDeposit Coin
   | -- | The amount of a pool registration deposit
-    PoolDeposit Coin
+    PoolDeposit (CompactForm Coin)
   | -- | epoch bound on pool retirement
     EMax EpochInterval
   | -- | Desired number of pools

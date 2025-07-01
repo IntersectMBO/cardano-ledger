@@ -73,7 +73,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -229,7 +229,7 @@ data PState era = PState
   -- of the Shelley Ledger Specification for a sequence diagram.
   , psRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
-  , psDeposits :: !(Map (KeyHash 'StakePool) Coin)
+  , psDeposits :: !(Map (KeyHash 'StakePool) (CompactForm Coin))
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
@@ -424,7 +424,7 @@ payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
       | Map.notMember keyhash pool = Map.insert keyhash deposit pool
       | otherwise = pool
 
-refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (Coin, PState era)
+refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (CompactForm Coin, PState era)
 refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
   where
     pool = psDeposits pstate
@@ -499,5 +499,5 @@ psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureSt
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
 
-psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
+psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
 psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})

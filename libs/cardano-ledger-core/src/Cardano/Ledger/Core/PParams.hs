@@ -3,13 +3,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -39,6 +39,7 @@ module Cardano.Ledger.Core.PParams (
   ppMaxBHSizeL,
   ppKeyDepositL,
   ppPoolDepositL,
+  ppPoolDepositCompactL,
   ppEMaxL,
   ppNOptL,
   ppA0L,
@@ -57,6 +58,7 @@ module Cardano.Ledger.Core.PParams (
   ppuMaxBHSizeL,
   ppuKeyDepositL,
   ppuPoolDepositL,
+  ppuPoolDepositCompactL,
   ppuEMaxL,
   ppuNOptL,
   ppuA0L,
@@ -89,9 +91,19 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   maybeToStrictMaybe,
  )
-import Cardano.Ledger.Binary
-import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  encodeMapLen,
+  encodeWord,
+ )
+import Cardano.Ledger.Binary.Coders (Decode (..), Field, decode, field, invalidField)
+import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -110,8 +122,12 @@ import qualified Data.Text as T
 import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
+import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
+
+partialCompactCoinL :: HasCallStack => Lens' (CompactForm Coin) Coin
+partialCompactCoinL = lens fromCompact $ const compactCoinOrError
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
@@ -356,7 +372,7 @@ class
   hkdKeyDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | The amount of a pool registration deposit
-  hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | epoch bound on pool retirement
   hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
@@ -444,7 +460,11 @@ ppKeyDepositL = ppLensHKD . hkdKeyDepositL @era @Identity
 
 -- | The amount of a pool registration deposit
 ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppPoolDepositL = ppLensHKD . hkdPoolDepositL @era @Identity
+ppPoolDepositL = ppLensHKD . hkdPoolDepositL @era @Identity . partialCompactCoinL
+
+-- | The amount of a pool registration deposit in compacted form
+ppPoolDepositCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppPoolDepositCompactL = ppLensHKD . hkdPoolDepositL @era @Identity
 
 -- | epoch bound on pool retirement
 ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochInterval
@@ -509,8 +529,19 @@ ppuKeyDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Stric
 ppuKeyDepositL = ppuLensHKD . hkdKeyDepositL @era @StrictMaybe
 
 -- | The amount of a pool registration deposit
-ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuPoolDepositL = ppuLensHKD . hkdPoolDepositL @era @StrictMaybe
+ppuPoolDepositL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuPoolDepositL = ppuLensHKD . hkdPoolDepositL @era @StrictMaybe . helper
+  where
+    helper :: Lens' (StrictMaybe (CompactForm Coin)) (StrictMaybe Coin)
+    helper = lens (fmap fromCompact) $ \case
+      SNothing -> const SNothing
+      SJust _ -> fmap compactCoinOrError
+
+-- | The amount of a pool registration deposit in compacted form
+ppuPoolDepositCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuPoolDepositCompactL = ppuLensHKD . hkdPoolDepositL @era @StrictMaybe
 
 -- | epoch bound on pool retirement
 ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)

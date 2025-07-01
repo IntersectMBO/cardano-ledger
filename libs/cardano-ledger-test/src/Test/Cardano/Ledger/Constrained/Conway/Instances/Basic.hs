@@ -263,7 +263,7 @@ data SimplePParams era = SimplePParams
   , maxTxSize :: Word32
   , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
   , keyDeposit :: Coin
-  , poolDeposit :: Coin
+  , poolDeposit :: CompactForm Coin
   , eMax :: EpochInterval
   , nOpt :: Word16
   , a0 :: NonNegativeInterval
@@ -304,10 +304,19 @@ instance ToExpr DRepVotingThresholds
 instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
   show x = show (toExpr (subsetToPP @era x))
 
+instance HasSimpleRep (CompactForm Coin)
+
+instance HasSpec (CompactForm Coin)
+
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
 
-instance (EraSpecPParams era, EraGov era, EraTxOut era) => HasSpec (SimplePParams era)
+instance
+  ( EraSpecPParams era
+  , EraGov era
+  , EraTxOut era
+  ) =>
+  HasSpec (SimplePParams era)
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
@@ -317,7 +326,7 @@ data SimplePPUpdate = SimplePPUpdate
   , umaxTxSize :: StrictMaybe Word32
   , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16
   , ukeyDeposit :: StrictMaybe Coin
-  , upoolDeposit :: StrictMaybe Coin
+  , upoolDeposit :: StrictMaybe (CompactForm Coin)
   , ueMax :: StrictMaybe EpochInterval
   , unOpt :: StrictMaybe Word16
   , ua0 :: StrictMaybe NonNegativeInterval
@@ -377,7 +386,13 @@ instance EraSpecPParams era => HasSimpleRep (PParams era) where
   fromSimpleRep = subsetToPP
 
 -- | HasSpec instance for PParams
-instance (EraSpecPParams era, EraTxOut era, EraGov era) => HasSpec (PParams era) where
+instance
+  ( EraSpecPParams era
+  , EraTxOut era
+  , EraGov era
+  ) =>
+  HasSpec (PParams era)
+  where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- =======================================
@@ -388,7 +403,12 @@ instance EraSpecPParams era => HasSpec (ProposedPPUpdates era)
 
 instance EraSpecPParams era => HasSimpleRep (FuturePParams era)
 
-instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (FuturePParams era)
+instance
+  ( EraGov era
+  , EraTxOut era
+  , EraSpecPParams era
+  ) =>
+  HasSpec (FuturePParams era)
 
 -- =============================================================
 
