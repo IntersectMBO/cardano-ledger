@@ -82,6 +82,7 @@ library testlib
     Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
     Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo
     Test.Cardano.Ledger.Api.Examples.Consensus.Babbage
+    Test.Cardano.Ledger.Api.Examples.Consensus.Conway
     Test.Cardano.Ledger.Api.Examples.Consensus.Mary
     Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
     Test.Cardano.Ledger.Api.State.Query
@@ -102,11 +103,13 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
     cardano-ledger-api,
     cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
     cardano-ledger-mary,
