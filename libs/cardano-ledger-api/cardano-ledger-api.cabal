@@ -80,6 +80,7 @@ library testlib
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
     Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
+    Test.Cardano.Ledger.Api.Examples.Consensus.Mary
     Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
     Test.Cardano.Ledger.Api.State.Query
     Test.Cardano.Ledger.Api.Upgrade
@@ -104,6 +105,7 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:testlib,
+    cardano-ledger-mary,
     cardano-ledger-shelley,
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
     cardano-strict-containers,
