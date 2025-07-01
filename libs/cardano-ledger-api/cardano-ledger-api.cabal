@@ -80,6 +80,7 @@ library testlib
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
     Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
+    Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo
     Test.Cardano.Ledger.Api.Examples.Consensus.Mary
     Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
     Test.Cardano.Ledger.Api.State.Query
@@ -101,6 +102,7 @@ library testlib
     base,
     bytestring,
     cardano-ledger-allegra,
+    cardano-ledger-alonzo,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -111,6 +113,7 @@ library testlib
     cardano-strict-containers,
     containers,
     data-default,
+    plutus-ledger-api,
     prettyprinter,
 
 test-suite cardano-ledger-api-test
