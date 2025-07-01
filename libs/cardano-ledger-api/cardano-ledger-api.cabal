@@ -79,6 +79,7 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
+    Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
     Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
     Test.Cardano.Ledger.Api.State.Query
     Test.Cardano.Ledger.Api.Upgrade
@@ -98,6 +99,7 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-ledger-allegra,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
