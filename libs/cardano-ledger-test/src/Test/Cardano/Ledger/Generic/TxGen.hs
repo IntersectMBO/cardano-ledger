@@ -125,7 +125,6 @@ import Test.Cardano.Ledger.Generic.GenState (
   getUtxoElem,
   getUtxoTest,
   mkRedeemers,
-  mkRedeemersFromTags,
   modifyGenStateInitialRewards,
   modifyGenStateInitialUtxo,
   modifyModelCount,

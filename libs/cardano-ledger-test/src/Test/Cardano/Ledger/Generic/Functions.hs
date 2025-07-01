@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,7 +8,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | Functions in this module take a (Proof era) as their first
 --   parameter and do something potentially different in each Era.
@@ -260,10 +260,10 @@ certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
 createRUpdNonPulsing' ::
   forall era.
-  Proof era ->
+  EraPParams era =>
   Model era ->
   RewardUpdateOld
-createRUpdNonPulsing' proof model =
+createRUpdNonPulsing' model =
   let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
       ss = mSnapshots model
       as = mChainAccountState model
@@ -277,13 +277,8 @@ createRUpdNonPulsing' proof model =
       slotsPerEpoch = case epochInfoSize (epochInfo testGlobals) en of
         Left err -> error ("Failed to calculate slots per epoch:\n" ++ show err)
         Right x -> x
-   in (`runReader` testGlobals) $ case proof of
-        Conway -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Babbage -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Alonzo -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Mary -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Allegra -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Shelley -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+   in (`runReader` testGlobals) $
+        createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
 {-# NOINLINE createRUpdNonPulsing' #-}
 
 languagesUsed ::

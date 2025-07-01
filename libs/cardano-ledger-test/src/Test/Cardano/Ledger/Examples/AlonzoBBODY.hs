@@ -81,7 +81,6 @@ import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import qualified Data.ByteString as BS (replicate)
-import Data.Data (Proxy (..))
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -488,10 +487,7 @@ validatingTxWithMint ::
   ( EraTx era
   , Value era ~ MaryValue
   , AlonzoEraTxWits era
-<<<<<<< HEAD
-=======
   , AlonzoEraTxBody era
->>>>>>> 7240cb0e29 (WIP)
   ) =>
   Tx era
 validatingTxWithMint =
