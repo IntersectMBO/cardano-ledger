@@ -99,6 +99,7 @@ allTestScripts =
         PlutusV1 -> Just V1.alwaysSucceedsNoDatumBytes
         PlutusV2 -> Just V2.alwaysSucceedsNoDatumBytes
         PlutusV3 -> Just V3.alwaysSucceedsNoDatumBytes
+        PlutusV4 -> Just V3.alwaysSucceedsNoDatumBytes
     , pure "Script that always succeeds, unless arguments are malformed or context contains a datum"
     )
   ,
@@ -107,6 +108,7 @@ allTestScripts =
         PlutusV1 -> Just V1.alwaysSucceedsWithDatumBytes
         PlutusV2 -> Just V2.alwaysSucceedsWithDatumBytes
         PlutusV3 -> Just V3.alwaysSucceedsWithDatumBytes
+        PlutusV4 -> Just V3.alwaysSucceedsWithDatumBytes
     , pure
         "Script that always succeeds, unless arguments are malformed or context does not contain a datum"
     )
@@ -116,6 +118,7 @@ allTestScripts =
         PlutusV1 -> Just V1.alwaysFailsNoDatumBytes
         PlutusV2 -> Just V2.alwaysFailsNoDatumBytes
         PlutusV3 -> Just V3.alwaysFailsNoDatumBytes
+        PlutusV4 -> Just V3.alwaysFailsNoDatumBytes
     , pure "Script that always fails, unless arguments are malformed or context contains a datum"
     )
   ,
@@ -124,6 +127,7 @@ allTestScripts =
         PlutusV1 -> Just V1.alwaysFailsWithDatumBytes
         PlutusV2 -> Just V2.alwaysFailsWithDatumBytes
         PlutusV3 -> Just V3.alwaysFailsWithDatumBytes
+        PlutusV4 -> Just V3.alwaysFailsWithDatumBytes
     , pure "Script that always fails, unless arguments are malformed or context does not contain a datum"
     )
   ,
@@ -132,6 +136,7 @@ allTestScripts =
         PlutusV1 -> Just V1.redeemerSameAsDatumBytes
         PlutusV2 -> Just V2.redeemerSameAsDatumBytes
         PlutusV3 -> Just V3.redeemerSameAsDatumBytes
+        PlutusV4 -> Just V3.redeemerSameAsDatumBytes
     , "Script that succeeds whenever redeemer equals to the datum"
         :| [ "Fails on malformed arguments"
            ]
@@ -142,6 +147,7 @@ allTestScripts =
         PlutusV1 -> Just V1.evenDatumBytes
         PlutusV2 -> Just V2.evenDatumBytes
         PlutusV3 -> Just V3.evenDatumBytes
+        PlutusV4 -> Just V3.evenDatumBytes
     , "Script that succeeds whenever Integer datum is supplied and it's value is even."
         :| [ "Fails on malformed arguments"
            ]
@@ -152,6 +158,7 @@ allTestScripts =
         PlutusV1 -> Just V1.evenRedeemerNoDatumBytes
         PlutusV2 -> Just V2.evenRedeemerNoDatumBytes
         PlutusV3 -> Just V3.evenRedeemerNoDatumBytes
+        PlutusV4 -> Just V3.evenRedeemerNoDatumBytes
     , "Script that succeeds whenever Integer redeemer is supplied and it's value is even"
         :| [ "Fails on malformed arguments or whenever datum is present in the context"
            ]
@@ -162,6 +169,7 @@ allTestScripts =
         PlutusV1 -> Just V1.evenRedeemerWithDatumBytes
         PlutusV2 -> Just V2.evenRedeemerWithDatumBytes
         PlutusV3 -> Just V3.evenRedeemerWithDatumBytes
+        PlutusV4 -> Just V3.evenRedeemerWithDatumBytes
     , "Script that succeeds whenever Integer redeemer is supplied and it's value is even"
         :| [ "Fails on malformed arguments or whenever datum is missing from the context"
            ]
@@ -172,6 +180,7 @@ allTestScripts =
         PlutusV1 -> Just V1.purposeIsWellformedNoDatumBytes
         PlutusV2 -> Just V2.purposeIsWellformedNoDatumBytes
         PlutusV3 -> Just V3.purposeIsWellformedNoDatumBytes
+        PlutusV4 -> Just V3.purposeIsWellformedNoDatumBytes
     , "Script that succeeds when datum is not expected and purpose arguments are validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -182,6 +191,7 @@ allTestScripts =
         PlutusV1 -> Just V1.purposeIsWellformedWithDatumBytes
         PlutusV2 -> Just V2.purposeIsWellformedWithDatumBytes
         PlutusV3 -> Just V3.purposeIsWellformedWithDatumBytes
+        PlutusV4 -> Just V3.purposeIsWellformedWithDatumBytes
     , "Script that succeeds when datum is expected and purpose arguments are validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -192,6 +202,7 @@ allTestScripts =
         PlutusV1 -> Just V1.datumIsWellformedBytes
         PlutusV2 -> Just V2.datumIsWellformedBytes
         PlutusV3 -> Just V3.datumIsWellformedBytes
+        PlutusV4 -> Just V3.datumIsWellformedBytes
     , "Script that succeeds when datum is expected and datum is validated against txInfo"
         :| [ "Fails on malformed arguments"
            ]
@@ -202,6 +213,7 @@ allTestScripts =
         PlutusV1 -> Just V1.inputsOutputsAreNotEmptyNoDatumBytes
         PlutusV2 -> Just V2.inputsOutputsAreNotEmptyNoDatumBytes
         PlutusV3 -> Just V3.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV4 -> Just V3.inputsOutputsAreNotEmptyNoDatumBytes
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]
@@ -212,6 +224,7 @@ allTestScripts =
         PlutusV1 -> Just V1.inputsOutputsAreNotEmptyWithDatumBytes
         PlutusV2 -> Just V2.inputsOutputsAreNotEmptyWithDatumBytes
         PlutusV3 -> Just V3.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV4 -> Just V3.inputsOutputsAreNotEmptyWithDatumBytes
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]
@@ -222,6 +235,7 @@ allTestScripts =
         PlutusV1 -> Nothing
         PlutusV2 -> Just V2.inputsOverlapsWithRefInputsBytes
         PlutusV3 -> Just V3.inputsOverlapsWithRefInputsBytes
+        PlutusV4 -> Just V3.inputsOverlapsWithRefInputsBytes
     , "Script that succeeds only if any the inputs also appears in the reference inputs" :| []
     )
   ]

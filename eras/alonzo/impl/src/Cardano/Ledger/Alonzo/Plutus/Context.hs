@@ -199,16 +199,19 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
+  PlutusTxCert 'PlutusV4 = PV3.TxCert
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
+  PlutusScriptPurpose 'PlutusV4 = PV3.ScriptPurpose
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
+  PlutusTxInfo 'PlutusV4 = PV3.TxInfo
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus
