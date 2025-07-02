@@ -98,11 +98,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkTxDats,
   testUTXOW,
  )
-import Test.Cardano.Ledger.Generic.GenState (
-  mkRedeemers,
- )
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Cardano.Ledger.TreeDiff (ToExpr, showExpr)
@@ -209,6 +206,7 @@ inlineDatum ::
   , AlonzoEraTxBody era
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
+  , EraModel era
   ) =>
   TestCaseData era
 inlineDatum =
@@ -243,6 +241,7 @@ inlineDatumFailingScript ::
   , AlonzoEraTxBody era
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
+  , EraModel era
   ) =>
   TestCaseData era
 inlineDatumFailingScript =
@@ -277,7 +276,7 @@ inlineDatumFailingScript =
 
 referenceScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 referenceScript =
   TestCaseData
@@ -311,7 +310,7 @@ referenceScript =
 
 commonReferenceScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 commonReferenceScript =
   TestCaseData
@@ -351,7 +350,7 @@ commonReferenceScript =
 
 inlineDatumAndRefScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 inlineDatumAndRefScript =
   TestCaseData
@@ -387,7 +386,7 @@ inlineDatumAndRefScript =
 
 inlineDatumAndRefScriptWithRedundantWitScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 inlineDatumAndRefScriptWithRedundantWitScript =
   TestCaseData
@@ -456,7 +455,7 @@ refInputWithDataHashNoWit =
 
 refInputWithDataHashWithWit ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 refInputWithDataHashWithWit =
   TestCaseData
@@ -486,7 +485,7 @@ refInputWithDataHashWithWit =
 -- ====================================================================================
 
 certRedeemers ::
-  AlonzoEraScript era =>
+  (AlonzoEraScript era, EraModel era) =>
   Redeemers era
 certRedeemers =
   mkRedeemers [(CertifyingPurpose @_ @AsIx 0, (Data (PV1.I 42), ExUnits 5000 5000))]
@@ -497,7 +496,7 @@ refscriptForDelegCert ::
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , EraPlutusTxInfo PlutusV2 era
-  , EraTx era
+  , EraModel era
   ) =>
   TestCaseData era
 refscriptForDelegCert =
@@ -533,7 +532,7 @@ refscriptForDelegCert =
 
 useCollateralReturn ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 useCollateralReturn =
   TestCaseData
@@ -546,7 +545,7 @@ useCollateralReturn =
           & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
           & feeTxBodyL .~ (Coin 5)
           & scriptIntegrityHashTxBodyL
-            .~ (newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats)
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
@@ -570,7 +569,7 @@ useCollateralReturn =
 
 incorrectCollateralTotal ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era) => TestCaseData era
+  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) => TestCaseData era
 incorrectCollateralTotal =
   TestCaseData
     { txBody =
@@ -609,6 +608,7 @@ inlineDatumRedundantDatumWit ::
   , AlonzoEraTxBody era
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
+  , EraModel era
   ) =>
   TestCaseData era
 inlineDatumRedundantDatumWit =
@@ -651,6 +651,7 @@ inlineDatumWithPlutusV1Script ::
   , EraPlutusTxInfo PlutusV1 era
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
+  , EraModel era
   ) =>
   TestCaseData era
 inlineDatumWithPlutusV1Script =
@@ -692,6 +693,7 @@ referenceScriptWithPlutusV1Script ::
   , BabbageEraTxOut era
   , EraPlutusTxInfo PlutusV1 era
   , AlonzoEraTxWits era
+  , EraModel era
   ) =>
   TestCaseData era
 referenceScriptWithPlutusV1Script =
@@ -732,7 +734,7 @@ referenceScriptWithPlutusV1Script =
 
 referenceInputWithPlutusV1Script ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 referenceInputWithPlutusV1Script =
   TestCaseData
@@ -867,7 +869,7 @@ largeOutput =
 
 noSuchThingAsReferenceDatum ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era) =>
+  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
   TestCaseData era
 noSuchThingAsReferenceDatum =
   TestCaseData
@@ -1104,6 +1106,7 @@ genericBabbageFeatures ::
   , STS (EraRule "UTXOW" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , EraPlutusTxInfo PlutusV2 era
+  , EraModel era
   ) =>
   TestTree
 genericBabbageFeatures =
@@ -1148,6 +1151,7 @@ plutusV1RefScriptFailures ::
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , AlonzoEraTx era
   , EraPlutusTxInfo PlutusV1 era
+  , EraModel era
   ) =>
   Proof era ->
   TestTree
@@ -1193,6 +1197,7 @@ genericBabbageFailures ::
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
+  , EraModel era
   ) =>
   Proof era ->
   TestTree

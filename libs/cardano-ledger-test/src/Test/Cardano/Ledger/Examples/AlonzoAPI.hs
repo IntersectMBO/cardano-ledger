@@ -57,21 +57,14 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
  )
 import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..), AlonzoEra)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-tests ::
-  forall era.
-  ( Reflect era
-  , AlonzoEraTxWits era
-  , AlonzoEraTxBody era
-  , EraModel era
-  ) =>
-  TestTree
+tests :: TestTree
 tests =
-  testGroup "Alonzo API" [testCase "estimateMinFee" $ testEstimateMinFee @era]
+  testGroup "Alonzo API" [testCase "estimateMinFee" $ testEstimateMinFee @AlonzoEra]
 
 testEstimateMinFee ::
   forall era.

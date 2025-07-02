@@ -7,7 +7,6 @@
 
 module Main where
 
-import Data.Default (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
@@ -23,6 +22,7 @@ import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Cardano.Ledger.Generic.GenState (defaultGenSize)
 
 main :: IO ()
 main = do
@@ -46,7 +46,7 @@ defaultTests =
       , AlonzoAPI.tests
       , AlonzoCollectInputs.tests
       ]
-  , genericProperties def
+  , genericProperties defaultGenSize
   , aggTests
   , ConstraintSTS.tests_STS
   ]

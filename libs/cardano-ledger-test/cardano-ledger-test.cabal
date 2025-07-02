@@ -144,7 +144,6 @@ test-suite cardano-ledger-test
     base,
     cardano-ledger-core:testlib,
     cardano-ledger-test,
-    data-default,
     tasty,
 
 benchmark bench

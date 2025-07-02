@@ -107,9 +107,8 @@ testExUnitCalculation ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , AlonzoEraTx era
   , STS (EraRule "UTXOS" era)
-  , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , EraPlutusContext era
+  , EraPlutusContext era, EraGenericGen era
   ) =>
   Tx era ->
   UTxOState era ->
@@ -139,7 +138,6 @@ exampleExUnitCalc ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
-  , EraModel era
   , EraGenericGen era
   ) =>
   IO ()
@@ -159,7 +157,6 @@ exampleInvalidExUnitCalc ::
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   , EraGenericGen era
-  , EraModel era
   ) =>
   IO ()
 exampleInvalidExUnitCalc =
@@ -185,7 +182,6 @@ exampleTx ::
   forall era.
   ( AlonzoEraTx era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
-  , EraModel era
   , EraGenericGen era
   ) =>
   PlutusPurpose AsIx era ->
@@ -204,7 +200,6 @@ exampleTx ptr = mkBasicTx validatingBody & witsTxL .~ wits
 validatingBody ::
   forall era.
   ( PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
-  , EraModel era
   , EraGenericGen era
   ) =>
   TxBody era
