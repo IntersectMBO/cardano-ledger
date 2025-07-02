@@ -8,20 +8,24 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (AsIx (..), ExUnits (ExUnits), AlonzoPlutusPurpose (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, natVersion)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsIx (..), ExUnits (ExUnits))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraPParams,
   AlonzoEraScript (..),
+  AlonzoEraTx (..),
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
+  BabbageEraTxBody (..),
   Withdrawals (..),
   ppCollateralPercentageL,
   ppCostModelsL,
@@ -29,7 +33,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
  )
-import Cardano.Ledger.Conway.State (EraStake)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -52,7 +56,7 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Era ()
+import Test.Cardano.Ledger.Conway.Era (EraTest)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
@@ -62,30 +66,69 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
  )
 import Test.Cardano.Ledger.Generic.Functions (
   createRUpdNonPulsing',
+  txInBalance,
  )
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemers)
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.ModelState (
   Model,
   ModelNewEpochState (..),
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (
-  newScriptIntegrityHash,
- )
+import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 
-class EraModel era where
+class EraTest era => EraModel era where
   applyTx :: Int -> SlotNo -> Model era -> Tx era -> Model era
   applyCert :: Model era -> TxCert era -> Model era
+
+  mkRedeemersFromTags :: [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
+  mkRedeemersFromTags = error $ "No redeemers in " <> eraName @era
+
+  mkRedeemers :: [(PlutusPurpose AsIx era, (Data era, ExUnits))] -> Redeemers era
+  mkRedeemers = error $ "No redeemers in " <> eraName @era
+
+  newScriptIntegrityHash ::
+    PParams era ->
+    [Language] ->
+    Redeemers era ->
+    TxDats era ->
+    StrictMaybe ScriptIntegrityHash
+  newScriptIntegrityHash _ _ _ _ = SNothing
+
+alonzoMkRedeemersFromTags ::
+  (AlonzoEraScript era, AlonzoEraModel era) =>
+  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
+alonzoMkRedeemersFromTags redeemerPointers =
+  alonzoMkRedeemers redeemerAssocs
+  where
+    redeemerAssocs =
+      [ (mkPlutusPurposePointer tag i, redeemer)
+      | ((tag, i), redeemer) <- redeemerPointers
+      ]
+
+alonzoMkRedeemers ::
+  forall era.
+  AlonzoEraScript era =>
+  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
+  Redeemers era
+alonzoMkRedeemers = Redeemers . Map.fromList
 
 class EraModel era => AlonzoEraModel era where
   mkPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> PlutusPurpose AsIx era
 
-shelleyApplyTx ::
-  (EraTx era, EraModel era) => Int -> SlotNo -> Model era -> Tx era -> Model era
+instance EraModel BabbageEra where
+  applyTx = babbageApplyTx
+  applyCert = applyShelleyCert
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+
+instance AlonzoEraModel BabbageEra where
+  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
+
+shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
 shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
   where
     modelEpoch = mEL model
@@ -96,18 +139,58 @@ instance EraModel ShelleyEra where
   applyTx = shelleyApplyTx
   applyCert = applyShelleyCert
 
--- applyTx count slot model tx = case hasValid fields of
---  Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
---  Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
---  Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
---  where
---    proof = reify @era
---    transactionEpoch = epochFromSlotNo slot
---    modelEpoch = mEL model
---    epochAccurateModel = epochBoundary proof transactionEpoch modelEpoch model
---    txbody = getBody proof tx
---    outputs = txbody ^. outputsTxBodyL
---    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
+babbageApplyTx ::
+  forall era.
+  (EraModel era, AlonzoEraTx era, Reflect era, BabbageEraTxBody era) =>
+  Int -> SlotNo -> Model era -> Tx era -> Model era
+babbageApplyTx count slot model tx = case tx ^. isValidTxL of
+  IsValid True -> applyTxSimple count epochAccurateModel tx
+  IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx
+  where
+    transactionEpoch = epochFromSlotNo slot
+    modelEpoch = mEL model
+    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
+    txbody = tx ^. bodyTxL
+    outputs = txbody ^. outputsTxBodyL
+    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
+
+applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx era -> Model era
+applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL
+
+applyTxFail ::
+  (Reflect era, BabbageEraTxBody era) => Int -> TxIx -> Model era -> Tx era -> Model era
+applyTxFail count nextTxIx model tx = updateInfo info model
+  where
+    info = collInfo count nextTxIx model emptyCollInfo $ tx ^. bodyTxL
+
+collInfo ::
+  (Reflect era, HasCallStack, BabbageEraTxBody era) =>
+  Int ->
+  TxIx ->
+  Model era ->
+  CollInfo era ->
+  TxBody era ->
+  CollInfo era
+collInfo count firstTxIx model info txbody =
+  afterColReturn
+    { ciDelset = inputs
+    , ciBal = txInBalance inputs $ mUTxO model
+    }
+  where
+    inputs = txbody ^. collateralInputsTxBodyL
+    afterColReturn =
+      case txbody ^. collateralReturnTxBodyL of
+        SNothing -> info
+        SJust txOut ->
+          case Map.lookup count (mIndex model) of
+            Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
+            Just (TxId hash) ->
+              info
+                { ciRet = txOut ^. coinTxOutL
+                , ciAddmap = newstuff
+                }
+              where
+                newstuff = additions hash firstTxIx [txOut]
 
 -- ========================================================================
 
@@ -139,7 +222,7 @@ epochBoundary transactionEpoch modelEpoch model =
   where
     ru = createRUpdNonPulsing' @era model
 
-applyTxBody :: (EraModel era, EraTxBody era) => Int -> Model era -> TxBody era -> Model era
+applyTxBody :: EraModel era => Int -> Model era -> TxBody era -> Model era
 applyTxBody count model txbody =
   Map.foldlWithKey' applyWithdrawals (foldl' applyCert model' $ txbody ^. certsTxBodyL)
     . unWithdrawals
@@ -293,9 +376,7 @@ applyRUpd ru m =
 
 notValidatingTx ::
   forall era.
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , EraStake era
+  ( AlonzoEraTxWits era
   , EraPlutusTxInfo PlutusV1 era
   , AlonzoEraTxBody era
   , AlonzoEraModel era
@@ -319,19 +400,6 @@ notValidatingTx =
         & scriptIntegrityHashTxBodyL
           .~ newScriptIntegrityHash pparams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0)))
     redeemers = mkRedeemersFromTags [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]
-
-mkRedeemersFromTags ::
-  forall era.
-  (AlonzoEraScript era, AlonzoEraModel era) =>
-  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemersFromTags redeemerPointers = mkRedeemers redeemerAssocs
-  where
-    redeemerAssocs :: [(PlutusPurpose AsIx era, (Data era, ExUnits))]
-    redeemerAssocs =
-      [ (mkPlutusPurposePointer tag i, redeemer)
-      | ((tag, i), redeemer) <- redeemerPointers
-      ]
 
 mkAlonzoPlutusPurposePointer ::
   forall era.

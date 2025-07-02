@@ -114,18 +114,8 @@ scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
-scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
-scriptsNeeded' Conway utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Babbage utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Alonzo utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Mary utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Allegra utxo txBody =
-  getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' Shelley utxo txBody =
+scriptsNeeded' :: EraUTxO era => MUtxo era -> TxBody era -> Set ScriptHash
+scriptsNeeded' utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptsNeeded' #-}
 
@@ -137,8 +127,8 @@ txInBalance ::
   Coin
 txInBalance txinSet m = sumCoinUTxO (UTxO (restrictKeys m txinSet))
 
-injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
-injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
+injectFee :: EraTxOut era => Coin -> TxOut era -> TxOut era
+injectFee fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
 
 getTxOutRefScript :: Proof era -> TxOut era -> StrictMaybe (Script era)
 getTxOutRefScript Conway (BabbageTxOut _ _ _ ms) = ms

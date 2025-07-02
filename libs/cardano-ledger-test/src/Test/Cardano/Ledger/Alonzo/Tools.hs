@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
@@ -52,14 +53,15 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
+import Test.Cardano.Ledger.Generic.TxGen (EraGenericGen (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
-import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 
 tests :: TestTree
 tests =
@@ -201,24 +203,22 @@ exampleTx ptr = mkBasicTx validatingBody & witsTxL .~ wits
 
 validatingBody ::
   forall era.
-  ( AlonzoEraTxBody era
-  , AlonzoEraScript era
-  , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
+  ( PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
+  , EraModel era
+  , EraGenericGen era
   ) =>
   TxBody era
 validatingBody =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.fromList [mkGenesisTxIn 1]
-    & collateralInputsTxBodyL .~ Set.fromList [mkGenesisTxIn 11]
+    & setCollateralInputs (Set.fromList [mkGenesisTxIn 11])
     & outputsTxBodyL
       .~ SSeq.fromList [mkBasicTxOut someAddr (inject $ Coin 4995)]
     & feeTxBodyL .~ Coin 5
-    & scriptIntegrityHashTxBodyL
-      .~ newScriptIntegrityHash testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
+    & setScriptIntegrityHash
+      (newScriptIntegrityHash testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
   where
-    redeemers =
-      Redeemers $
-        Map.singleton (AlonzoSpending @_ @era (AsIx 0)) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = Redeemers $ Map.singleton (AlonzoSpending @_ @era (AsIx 0)) (Data (PV1.I 42), ExUnits 5000 5000)
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

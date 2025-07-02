@@ -27,7 +27,6 @@ module Test.Cardano.Ledger.Generic.GenState (
   defaultGenSize,
   PlutusPurposeTag (..),
   plutusPurposeTags,
-  mkRedeemers,
   elementsT, -- TODO move to a utilities module
   frequencyT, -- TODO move to a utilities module
   positiveSingleDigitInt,
@@ -88,9 +87,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -283,13 +280,6 @@ plutusPurposeTags = \case
   Alonzo {} -> [Spending .. Rewarding]
   Babbage {} -> [Spending .. Rewarding]
   Conway {} -> [Spending .. Proposing]
-
-mkRedeemers ::
-  forall era.
-  AlonzoEraScript era =>
-  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemers redeemerMap = Redeemers $ Map.fromList redeemerMap
 
 -- =====================================================================
 -- Accessing information

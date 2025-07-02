@@ -75,7 +75,7 @@ instance Merge (Map ScriptHash v) where
 -- ====================================================================
 
 -- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
-newScriptIntegrityHash ::
+alonzoNewScriptIntegrityHash ::
   ( AlonzoEraScript era
   , AlonzoEraPParams era
   ) =>
@@ -84,7 +84,7 @@ newScriptIntegrityHash ::
   Redeemers era ->
   TxDats era ->
   StrictMaybe Alonzo.ScriptIntegrityHash
-newScriptIntegrityHash pp ls =
+alonzoNewScriptIntegrityHash pp ls =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls))
 
 languages :: Proof era -> [Language]
