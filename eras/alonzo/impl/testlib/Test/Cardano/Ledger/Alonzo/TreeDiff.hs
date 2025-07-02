@@ -179,3 +179,7 @@ instance
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (AlonzoBbodyPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
+  ToExpr (AlonzoBbodyEvent era)

@@ -66,6 +66,7 @@
 
 ### `testlib`
 
+* Change argument of `txInAt` from `Integral` to `Int`
 * Add `roundTripJsonShelleyEraSpec`
 * Add superclass constraint to `EraTest` for `Eq`, `Show`, `Typeable`, `ToJSON`, `FromJSON` and `Arbitrary` classes for `TranslationContext` type
 * Added `goldenJsonPParamsUpdateSpec`

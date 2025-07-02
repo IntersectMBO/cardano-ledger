@@ -145,7 +145,7 @@ spec = describe "Invalid transactions" $ do
                            _ -> error "Expected non-empty outputs"
                        )
 
-            txInAt (0 :: Int)
+            txInAt 0
               <$> withPostFixup
                 (fixupResetAddrWits <$> resetTxOutDataHash)
                 (submitTx tx)
