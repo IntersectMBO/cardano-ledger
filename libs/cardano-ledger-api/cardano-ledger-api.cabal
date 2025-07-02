@@ -111,7 +111,7 @@ library testlib
     cardano-ledger-api,
     cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-conway,
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-mary,
@@ -124,6 +124,7 @@ library testlib
     microlens,
     plutus-ledger-api,
     prettyprinter,
+    small-steps,
     time,
 
 test-suite cardano-ledger-api-test
