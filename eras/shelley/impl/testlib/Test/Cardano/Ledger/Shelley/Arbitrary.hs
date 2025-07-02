@@ -29,6 +29,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
@@ -86,6 +87,7 @@ import qualified Data.Map.Strict as Map (fromList)
 import Data.Sequence.Strict (fromList)
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T (encodeUtf8)
+import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
@@ -747,3 +749,7 @@ instance Arbitrary FromByronTranslationContext where
   shrink _ = []
 
 deriving newtype instance Arbitrary (TransitionConfig ShelleyEra)
+
+instance EncCBOR RawSeed where
+  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
+  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
