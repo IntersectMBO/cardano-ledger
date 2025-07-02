@@ -118,6 +118,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.TreeDiff
+    Test.Cardano.Ledger.Dijkstra.TxInfoSpec
 
   other-modules: Paths_cardano_ledger_dijkstra
   default-language: Haskell2010
