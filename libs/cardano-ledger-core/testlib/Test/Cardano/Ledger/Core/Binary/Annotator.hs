@@ -23,9 +23,9 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
 instance
-  ( EraSegWits era
+  ( EraBlockBody era
   , DecCBOR h
-  , DecCBOR (TxSeq era)
+  , DecCBOR (BlockBody era)
   ) =>
   DecCBOR (Block h era)
   where

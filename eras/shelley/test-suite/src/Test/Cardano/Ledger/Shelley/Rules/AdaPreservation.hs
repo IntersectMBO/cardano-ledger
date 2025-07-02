@@ -161,7 +161,7 @@ infoRetire deposits keyhash = showKeyHash keyhash ++ extra
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
   forall era.
-  ( EraSegWits era
+  ( EraBlockBody era
   , GovState era ~ ShelleyGovState era
   , EraGov era
   , EraCertState era

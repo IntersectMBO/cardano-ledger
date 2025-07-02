@@ -92,7 +92,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 deriving instance
   ( EraTx era
   , EraGov era
-  , Eq (TxSeq era)
+  , Eq (BlockBody era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
@@ -107,7 +107,7 @@ deriving instance
 
 defaultShelleyLedgerExamples ::
   forall era.
-  ( EraSegWits era
+  ( EraBlockBody era
   , EraGov era
   , EraStake era
   , EraCertState era
@@ -164,7 +164,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlock ::
   forall era.
-  EraSegWits era =>
+  EraBlockBody era =>
   Tx era ->
   Block (BHeader StandardCrypto) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody

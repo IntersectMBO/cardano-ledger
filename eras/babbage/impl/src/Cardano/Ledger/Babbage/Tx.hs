@@ -47,8 +47,8 @@ instance AlonzoEraTx BabbageEra where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance EraSegWits BabbageEra where
-  type TxSeq BabbageEra = AlonzoTxSeq BabbageEra
+instance EraBlockBody BabbageEra where
+  type BlockBody BabbageEra = AlonzoTxSeq BabbageEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

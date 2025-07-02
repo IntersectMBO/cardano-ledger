@@ -192,7 +192,7 @@ initialBBodyState pf utxo =
 testAlonzoBlock ::
   ( HasTokens era
   , Scriptic era
-  , EraSegWits era
+  , EraBlockBody era
   , Value era ~ MaryValue
   , ShelleyEraTxCert era
   , AlonzoEraTxWits era
@@ -692,7 +692,7 @@ coldKeys = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
+  forall era. EraBlockBody era => [Tx era] -> Block BHeaderView era
 makeNaiveBlock txs = Block bhView txSeq
   where
     bhView =

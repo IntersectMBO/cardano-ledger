@@ -236,8 +236,8 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
-  , EraSegWits era
+  , BlockBody era ~ AlonzoTxSeq era
+  , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
@@ -267,7 +267,7 @@ conwayBbodyTransition ::
   ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era

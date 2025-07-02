@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Tx (
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..), hashAlonzoTxSeq)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core (
-  EraSegWits (..),
+  EraBlockBody (..),
   EraTx (..),
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -52,8 +52,8 @@ instance AlonzoEraTx DijkstraEra where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance EraSegWits DijkstraEra where
-  type TxSeq DijkstraEra = AlonzoTxSeq DijkstraEra
+instance EraBlockBody DijkstraEra where
+  type BlockBody DijkstraEra = AlonzoTxSeq DijkstraEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

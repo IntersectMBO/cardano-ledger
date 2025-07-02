@@ -149,7 +149,7 @@ deriving newtype instance Arbitrary KESPeriod
 
 instance
   ( Crypto c
-  , EraSegWits era
+  , EraBlockBody era
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
   , Arbitrary (Tx era)
@@ -163,7 +163,7 @@ genBlock ::
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
-  , EraSegWits era
+  , EraBlockBody era
   , Arbitrary (Tx era)
   ) =>
   [AllIssuerKeys c r] ->
@@ -180,7 +180,7 @@ genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era r c.
-  ( EraSegWits era
+  ( EraBlockBody era
   , Arbitrary (Tx era)
   , KES.Signable (KES c) ~ SignableRepresentation
   , PraosCrypto c

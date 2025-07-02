@@ -139,7 +139,7 @@ instance
   NoThunks (ShelleyBbodyPredFailure era)
 
 instance
-  ( EraSegWits era
+  ( EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -168,7 +168,7 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (ShelleyBBODY era)
-  , EraSegWits era
+  , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
