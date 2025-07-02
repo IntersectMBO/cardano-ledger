@@ -41,7 +41,7 @@ esac
 EXTRA_ARGS=$(mktemp)
 trap 'rm -f "$EXTRA_ARGS"' EXIT
 cat <<EOF >"$EXTRA_ARGS"
-cardano-ledger-api:lib:cardano-ledger-api --build-depends=cardano-ledger-babbage:testlib --build-depends=cardano-ledger-babbage-test
+cardano-ledger-api:lib:cardano-ledger-api --build-depends=cardano-ledger-babbage:testlib
 EOF
 
 # Run the doctests for some or all packages
