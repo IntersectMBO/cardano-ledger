@@ -9,7 +9,42 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Examples.Consensus where
+module Test.Cardano.Ledger.Shelley.Examples.Consensus (
+  ShelleyResultExamples (..),
+  ShelleyLedgerExamples (..),
+  defaultShelleyLedgerExamples,
+  exampleShelleyLedgerBlock,
+  exampleHashHeader,
+  exampleTx,
+  exampleProposedPParamsUpdates,
+  examplePoolDistr,
+  exampleNonMyopicRewards,
+  exampleNewEpochState,
+  exampleLedgerChainDepState,
+  exampleCoin,
+  exampleTxBodyShelley,
+  exampleAuxDataMap,
+  exampleTxIns,
+  exampleCerts,
+  exampleWithdrawals,
+  exampleProposedPPUpdates,
+  examplePayKey,
+  exampleStakeKey,
+  exampleKeys,
+  exampleAuxiliaryDataShelley,
+  examplePoolParams,
+  ledgerExamplesShelley,
+  testShelleyGenesis,
+
+  -- * helper functions used in other examples
+  keyToCredential,
+  mkKeyHash,
+  mkWitnessesPreAlonzo,
+  mkScriptHash,
+
+  -- * from Translation
+  emptyFromByronTranslationContext,
+) where
 
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
@@ -17,6 +52,7 @@ import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -35,7 +71,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.EpochInfo
 import qualified Data.ByteString as Strict
-import Data.Coerce (coerce)
+import Data.Coerce (Coercible, coerce)
 import Data.Default
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -46,14 +82,24 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (pack)
 import Data.Time
 import Data.Word (Word64, Word8)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, unsafeBoundRational)
+import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
+import Test.Cardano.Protocol.TPraos.Create (
+  AllIssuerKeys (..),
+  KESKeyPair (..),
+  VRFKeyPair (..),
+  kesSignKey,
+  mkOCert,
+ )
+
+{-------------------------------------------------------------------------------
+  ShelleyLedgerExamples
+-------------------------------------------------------------------------------}
 
 {-------------------------------------------------------------------------------
   ShelleyLedgerExamples
@@ -270,7 +316,7 @@ testShelleyGenesis =
     , -- Chosen to match activeSlotCoeff
       sgActiveSlotsCoeff = unsafeBoundRational 0.9
     , sgSecurityParam = securityParameter testGlobals
-    , sgEpochLength = runIdentity $ epochInfoSize testEpochInfo 0
+    , sgEpochLength = runIdentity $ epochInfoSize testEpochInfo (EpochNo 0)
     , sgSlotsPerKESPeriod = slotsPerKESPeriod testGlobals
     , sgMaxKESEvolutions = maxKESEvo testGlobals
     , -- Not important
@@ -381,13 +427,6 @@ exampleLedgerChainDepState seed =
 
 testEpochInfo :: EpochInfo Identity
 testEpochInfo = epochInfoPure testGlobals
-
-mkDummyAnchor :: Int -> Anchor
-mkDummyAnchor n =
-  Anchor
-    { anchorUrl = fromJust . textToUrl 64 $ "dummy@" <> pack (show n)
-    , anchorDataHash = mkDummySafeHash @AnchorData n
-    }
 
 {-------------------------------------------------------------------------------
   Shelley era specific functions
@@ -511,13 +550,17 @@ keyToCredential = KeyHashObj . hashKey . vKey
 mkDSIGNKeyPair :: forall kd. Word8 -> KeyPair kd
 mkDSIGNKeyPair byte = KeyPair (VKey $ DSIGN.deriveVerKeyDSIGN sk) sk
   where
-    seed =
-      Seed.mkSeedFromBytes $
-        Strict.replicate
-          (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN)))
-          byte
+    sk = DSIGN.genKeyDSIGN $ seedFromByte byte size
+    size = fromIntegral $ DSIGN.seedSizeDSIGN (Proxy @DSIGN)
 
-    sk = DSIGN.genKeyDSIGN seed
+mkKESKeyPair :: Crypto c => RawSeed -> KESKeyPair c
+mkKESKeyPair seed =
+  let sk = unsoundPureGenKeyKES (seedFromWords seed)
+      vk = unsoundPureDeriveVerKeyKES sk
+   in KESKeyPair
+        { kesSignKey = sk
+        , kesVerKey = vk
+        }
 
 mkVRFKeyPair ::
   forall c.
@@ -527,13 +570,8 @@ mkVRFKeyPair ::
   VRFKeyPair c
 mkVRFKeyPair _ byte = VRFKeyPair sk (VRF.deriveVerKeyVRF sk)
   where
-    seed =
-      Seed.mkSeedFromBytes $
-        Strict.replicate
-          (fromIntegral (VRF.seedSizeVRF (Proxy @(VRF c))))
-          byte
-
-    sk = VRF.genKeyVRF seed
+    sk = VRF.genKeyVRF $ seedFromByte byte size
+    size = fromIntegral $ VRF.seedSizeVRF (Proxy @(VRF c))
 
 examplePoolParams :: PoolParams
 examplePoolParams =
@@ -553,3 +591,26 @@ examplePoolParams =
             , pmHash = "{}"
             }
     }
+
+mkCertifiedVRF ::
+  ( VRF.Signable v a
+  , VRF.VRFAlgorithm v
+  , VRF.ContextVRF v ~ ()
+  , Coercible b (VRF.CertifiedVRF v a)
+  ) =>
+  a ->
+  VRF.SignKeyVRF v ->
+  b
+mkCertifiedVRF a sk =
+  coerce $ VRF.evalCertified () a sk
+
+seedFromByte :: Word8 -> Int -> Seed.Seed
+seedFromByte byte size =
+  Seed.mkSeedFromBytes $
+    Strict.replicate
+      size
+      byte
+
+seedFromWords :: RawSeed -> Seed.Seed
+seedFromWords ws =
+  Seed.mkSeedFromBytes . hashToBytes $ hashWithEncoder @HASH shelleyProtVer encCBOR ws
