@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -586,6 +587,10 @@ class
   EraBlockBody era
   where
   type BlockBody era = (r :: Type) | r -> era
+
+  mkBasicBlockBody :: BlockBody era
+  default mkBasicBlockBody :: BlockBody era
+  mkBasicBlockBody = toTxSeq mempty
 
   fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
   toTxSeq :: StrictSeq (Tx era) -> BlockBody era
