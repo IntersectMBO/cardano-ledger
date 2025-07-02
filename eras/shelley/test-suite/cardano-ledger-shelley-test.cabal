@@ -160,6 +160,7 @@ test-suite cardano-ledger-shelley-test
     bytestring,
     cardano-crypto-class,
     cardano-data,
+    cardano-ledger-api:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, testlib},

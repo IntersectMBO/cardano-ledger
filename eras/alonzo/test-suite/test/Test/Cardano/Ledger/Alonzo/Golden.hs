@@ -54,7 +54,8 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
+import Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo (ledgerExamplesAlonzo)
+import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as SLE
 import Test.Cardano.Ledger.Mary.Golden (
   largestName,
   minUTxO,
@@ -66,7 +67,6 @@ import Test.Cardano.Ledger.Mary.Golden (
  )
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
-import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
