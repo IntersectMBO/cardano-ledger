@@ -18,7 +18,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDatsL, TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), TxDats (..), unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
@@ -56,8 +56,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -67,6 +67,7 @@ tests ::
   ( Reflect era
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   TestTree
 tests =
@@ -77,6 +78,7 @@ testEstimateMinFee ::
   ( Reflect era
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Assertion
 testEstimateMinFee =

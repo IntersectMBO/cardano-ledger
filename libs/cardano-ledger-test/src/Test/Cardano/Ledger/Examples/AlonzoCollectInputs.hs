@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
+  EraPlutusTxInfo,
   LedgerTxInfo (..),
   toPlutusArgs,
   toPlutusTxInfo,
@@ -31,9 +32,8 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
-  AlonzoTxWits,
   Redeemers (..),
-  datsAlonzoTxWitsL,
+  TxDats (..),
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
@@ -45,6 +45,7 @@ import Cardano.Ledger.Plutus (
   ExUnits (..),
   Language (..),
   PlutusWithContext (..),
+  hashData,
   hashPlutusScript,
  )
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
@@ -56,6 +57,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -65,8 +67,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (
   alwaysSucceedsPlutus,
   zeroTestingCostModel,
@@ -129,30 +131,20 @@ spendingPurpose1 = SpendingPurpose . AsIxItem 1 $ mkGenesisTxIn 1
 
 validatingTx ::
   forall era.
-  ( EraTx era
-  , TxWits era ~ AlonzoTxWits era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTx =
-  mkBasicTx validatingBody
-    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated validatingBody) someKeys]
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . datsAlonzoTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ redeemers
+  let script = alwaysSucceeds @PlutusV1 @era 3
+   in mkBasicTx validatingBody
+        & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated validatingBody) someKeys]
+        & witsTxL . scriptTxWitsL .~ [(hashScript script, script)]
+        & witsTxL . datsTxWitsL .~ TxDats [(hashData @era datum, datum)]
+        & witsTxL . rdmrsTxWitsL .~ redeemers
   where
-    -- newTx
-    --  pf
-    --  [ Body validatingBody
-    --  , WitnessesI
-    --      [ AddrWits' [mkWitnessVKey (hashAnnotated validatingBody) (someKeys pf)]
-    --      , ScriptWits' [always 3 pf]
-    --      , DataWits' [datum]
-    --      , RdmrWits redeemers
-    --      ]
-    --  ]
-
     validatingBody =
       mkBasicTxBody
         & inputsTxBodyL .~ [mkGenesisTxIn 1]

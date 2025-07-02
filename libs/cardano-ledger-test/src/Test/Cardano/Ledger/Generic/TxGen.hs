@@ -16,11 +16,12 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Test.Cardano.Ledger.Generic.TxGen (
   EraGenericGen (..),
   genAlonzoTx,
-  applySTSByProof,
+  runSTSWithContext,
   genUTxO,
 ) where
 
@@ -45,19 +46,23 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (..),
  )
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..), BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), ShelleyBase, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   AlonzoEraPParams,
   AlonzoEraTxWits (..),
   BabbageEraTxOut (..),
   ppCollateralPercentageL,
+  ppCostModelsL,
+  ppMaxBlockExUnitsL,
   ppMaxCollateralInputsL,
   ppMaxTxExUnitsL,
+  ppMaxValSizeL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Plutus (Language)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
@@ -106,7 +111,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word16)
 import GHC.Stack
-import Lens.Micro ((%~), (&), (.~), (^.))
+import Lens.Micro (Lens', (%~), (&), (.~), (^.))
 import qualified Lens.Micro as L
 import qualified Lens.Micro.Extras as L
 import Numeric.Natural (Natural)
@@ -160,7 +165,12 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
 
-class (EraTest era, Reflect era) => EraGenericGen era where
+-- | Create an unlawful "lens" that returns the specified value when used as a
+-- getter and does nothing when used as a setter
+dummyLens :: b -> Lens' a b
+dummyLens val = L.lens (const val) const
+
+class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
   setValidity :: ValidityInterval -> TxBody era -> TxBody era
   setValidity = const id
 
@@ -188,11 +198,30 @@ class (EraTest era, Reflect era) => EraGenericGen era where
   genExUnits :: Int -> GenRS era [ExUnits]
   genExUnits _ = pure []
 
-  getMaxCollateralInputs :: PParams era -> Natural
-  getMaxCollateralInputs _ = 0
+  -- Era generic "lenses" for testing
 
-  getCollateralPercentage :: PParams era -> Natural
-  getCollateralPercentage _ = 0
+  ppMaxCollateralInputsT :: Lens' (PParams era) Natural
+  ppMaxCollateralInputsT = dummyLens 0
+
+  ppCollateralPercentageT :: Lens' (PParams era) Natural
+  ppCollateralPercentageT = dummyLens 0
+
+  ppCostModelsT :: Lens' (PParams era) CostModels
+  ppCostModelsT = dummyLens emptyCostModels
+
+  ppMaxTxExUnitsT :: Lens' (PParams era) ExUnits
+  ppMaxTxExUnitsT = dummyLens mempty
+
+  ppMaxBlockExUnitsT :: Lens' (PParams era) ExUnits
+  ppMaxBlockExUnitsT = dummyLens mempty
+
+  ppMaxValSizeT :: Lens' (PParams era) Natural
+  ppMaxValSizeT = dummyLens 0
+
+  -- Utils
+
+  mkScriptIntegrityHash :: PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
+  mkScriptIntegrityHash _ _ _ = SNothing
 
 -- \| Some (reify @era) >= Some Allegra = vldtTxBodyL .~ validityInterval
 -- \| otherwise = ttlTxBodyL .~ timeToLive validityInterval
@@ -234,14 +263,27 @@ instance EraGenericGen MaryEra
 
 instance EraGenericGen AllegraEra
 
+alonzoMkScriptIntegrityHash ::
+  ( EraModel era
+  , AlonzoEraTxWits era
+  ) =>
+  PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
+alonzoMkScriptIntegrityHash pp langs wits =
+  newScriptIntegrityHash pp langs (wits ^. rdmrsTxWitsL) (wits ^. datsTxWitsL)
+
 instance EraGenericGen AlonzoEra where
   setValidity = alonzoSetValidity
   setCollateralInputs = L.set collateralInputsTxBodyL
   setRedeemers = L.set rdmrsTxWitsL
   genExUnits = alonzoGenExUnits
   setNetworkIdTxBody = L.set networkIdTxBodyL
-  getMaxCollateralInputs pp = pp ^. ppMaxCollateralInputsL
-  getCollateralPercentage pp = pp ^. ppCollateralPercentageL
+  ppMaxCollateralInputsT = ppMaxCollateralInputsL
+  ppCollateralPercentageT = ppCollateralPercentageL
+  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
+  ppCostModelsT = ppCostModelsL
+  ppMaxTxExUnitsT = ppMaxTxExUnitsL
+  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
+  ppMaxValSizeT = ppMaxValSizeL
 
 instance EraGenericGen BabbageEra where
   setValidity = alonzoSetValidity
@@ -252,8 +294,13 @@ instance EraGenericGen BabbageEra where
   setRedeemers = L.set rdmrsTxWitsL
   genExUnits = alonzoGenExUnits
   setNetworkIdTxBody = L.set networkIdTxBodyL
-  getMaxCollateralInputs pp = pp ^. ppMaxCollateralInputsL
-  getCollateralPercentage pp = pp ^. ppCollateralPercentageL
+  ppMaxCollateralInputsT = ppMaxCollateralInputsL
+  ppCollateralPercentageT = ppCollateralPercentageL
+  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
+  ppCostModelsT = ppCostModelsL
+  ppMaxTxExUnitsT = ppMaxTxExUnitsL
+  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
+  ppMaxValSizeT = ppMaxValSizeL
 
 instance EraGenericGen ConwayEra where
   setValidity = alonzoSetValidity
@@ -264,8 +311,13 @@ instance EraGenericGen ConwayEra where
   setRedeemers = L.set rdmrsTxWitsL
   genExUnits = alonzoGenExUnits
   setNetworkIdTxBody = L.set networkIdTxBodyL
-  getMaxCollateralInputs pp = pp ^. ppMaxCollateralInputsL
-  getCollateralPercentage pp = pp ^. ppCollateralPercentageL
+  ppMaxCollateralInputsT = ppMaxCollateralInputsL
+  ppCollateralPercentageT = ppCollateralPercentageL
+  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
+  ppCostModelsT = ppCostModelsL
+  ppMaxTxExUnitsT = ppMaxTxExUnitsL
+  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
+  ppMaxValSizeT = ppMaxValSizeL
 
 genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
 genTxOut val = do
@@ -444,9 +496,7 @@ plutusScriptHashFromTag (ScriptHashObj scriptHash) tag =
 --  And it is in the spending inputs, not the reference inputs
 redeemerWitnessMaker ::
   forall era k.
-  ( EraGenericGen era
-  , EraModel era
-  ) =>
+  EraGenericGen era =>
   PlutusPurposeTag ->
   [Maybe (GenRS era (Data era), Credential k)] ->
   GenRS era (IsValid, [ExUnits -> TxWits era -> TxWits era])
@@ -814,7 +864,7 @@ genCollateralUTxO ::
   GenRS era (MUtxo era, Map.Map TxIn (TxOut era), Coin)
 genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   GenEnv {gePParams} <- gets gsGenEnv
-  let collPerc = getCollateralPercentage gePParams
+  let collPerc = gePParams ^. ppCollateralPercentageT
       minCollTotal = Coin (ceiling ((fee * toInteger collPerc) % 100))
       -- Generate a collateral that is neither in UTxO map nor has already been generated
       genNewCollateral addr coll um c = do
@@ -955,7 +1005,7 @@ minus m (Just (txin, _)) = Map.delete txin m
 
 genAlonzoTx ::
   forall era.
-  (EraGenericGen era, EraModel era) =>
+  EraGenericGen era =>
   SlotNo -> GenRS era (UTxO era, Tx era)
 genAlonzoTx slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo slot
@@ -972,7 +1022,7 @@ applyIsValid isValid = case reify @era of
 
 genAlonzoTxAndInfo ::
   forall era.
-  (EraGenericGen era, EraModel era) =>
+  EraGenericGen era =>
   SlotNo ->
   GenRS
     era
@@ -1055,7 +1105,7 @@ genAlonzoTxAndInfo slot = do
 
   -- 5. Estimate inputs that will be used as collateral
   maxCollateralCount <-
-    lift $ chooseInt (1, fromIntegral (getMaxCollateralInputs gePParams))
+    lift $ chooseInt (1, fromIntegral (gePParams ^. ppMaxCollateralInputsT))
   bogusCollateralTxId <- lift (arbitrary :: Gen TxId)
   let bogusCollateralTxIns =
         Set.fromList
@@ -1135,12 +1185,7 @@ genAlonzoTxAndInfo slot = do
   -- 10. Construct the correct Tx with valid fee and collaterals
   let sNeeded = scriptsNeeded' utxo txBodyNoFee
       langs = Set.toList $ languagesUsed (reify @era) bogusTxForFeeCalc (UTxO utxoNoCollateral) sNeeded
-      mIntegrityHash =
-        newScriptIntegrityHash
-          gePParams
-          langs
-          (redeemerDatumWits ^. rdmrsTxWitsL)
-          (redeemerDatumWits ^. datsTxWitsL)
+      mIntegrityHash = mkScriptIntegrityHash gePParams langs redeemerDatumWits
       balance =
         case bogusCollReturn of
           SNothing -> txInBalance (Map.keysSet collMap) utxo
@@ -1185,18 +1230,14 @@ onlyNecessaryScripts = undefined
 -- How we take the generated stuff and put it through the STS rule mechanism
 -- in a way that is Era Agnostic
 
-applySTSByProof ::
+runSTSWithContext ::
   forall era.
-  Era era =>
-  Proof era ->
+  ( BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , STS (EraRule "LEDGER" era)
+  ) =>
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
-applySTSByProof Conway trc = runShelleyBase $ applySTS trc
-applySTSByProof Babbage trc = runShelleyBase $ applySTS trc
-applySTSByProof Alonzo trc = runShelleyBase $ applySTS trc
-applySTSByProof Mary trc = runShelleyBase $ applySTS trc
-applySTSByProof Allegra trc = runShelleyBase $ applySTS trc
-applySTSByProof Shelley trc = runShelleyBase $ applySTS trc
+runSTSWithContext trc = runShelleyBase $ applySTS trc
 
 foldFn :: [a -> a] -> a -> a
 foldFn = foldr (.) id

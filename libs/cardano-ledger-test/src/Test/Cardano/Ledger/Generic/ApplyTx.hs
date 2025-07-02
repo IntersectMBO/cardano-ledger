@@ -97,8 +97,11 @@ class EraTest era => EraModel era where
     StrictMaybe ScriptIntegrityHash
   newScriptIntegrityHash _ _ _ _ = SNothing
 
+  mkPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> PlutusPurpose AsIx era
+  mkPlutusPurposePointer = error $ "mkPlutusPurposePointer not available in " <> eraName @era
+
 alonzoMkRedeemersFromTags ::
-  (AlonzoEraScript era, AlonzoEraModel era) =>
+  (AlonzoEraScript era, EraModel era) =>
   [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
 alonzoMkRedeemersFromTags redeemerPointers =
   alonzoMkRedeemers redeemerAssocs
@@ -115,19 +118,6 @@ alonzoMkRedeemers ::
   Redeemers era
 alonzoMkRedeemers = Redeemers . Map.fromList
 
-class EraModel era => AlonzoEraModel era where
-  mkPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> PlutusPurpose AsIx era
-
-instance EraModel BabbageEra where
-  applyTx = babbageApplyTx
-  applyCert = applyShelleyCert
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-
-instance AlonzoEraModel BabbageEra where
-  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-
 shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
 shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
   where
@@ -138,6 +128,29 @@ shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^
 instance EraModel ShelleyEra where
   applyTx = shelleyApplyTx
   applyCert = applyShelleyCert
+
+instance EraModel AllegraEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+
+instance EraModel MaryEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+
+instance EraModel AlonzoEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+
+instance EraModel BabbageEra where
+  applyTx = babbageApplyTx
+  applyCert = applyShelleyCert
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+
+instance EraModel ConwayEra where
+  applyTx = babbageApplyTx
+  applyCert = error "Not yet implemented"
 
 babbageApplyTx ::
   forall era.
@@ -379,7 +392,7 @@ notValidatingTx ::
   ( AlonzoEraTxWits era
   , EraPlutusTxInfo PlutusV1 era
   , AlonzoEraTxBody era
-  , AlonzoEraModel era
+  , EraModel era
   ) =>
   Tx era
 notValidatingTx =

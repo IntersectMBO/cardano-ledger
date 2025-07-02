@@ -104,9 +104,9 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
   someScriptAddr,
  )
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
@@ -137,18 +137,11 @@ alonzoBBODYexamplesP ::
   , InjectRuleFailure "BBODY" ShelleyPoolPredFailure era
   , STS (EraRule "BBODY" era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraGov era
-  , EraStake era
-  , EraCertState era
-  , EraSegWits era
   , ShelleyEraTxCert era
   , AlonzoEraTx era
   , Value era ~ MaryValue
   , ToExpr (PredicateFailure (EraRule "BBODY" era))
-  , ToExpr (TxOut era)
-  , ToExpr (GovState era)
-  , ToExpr (CertState era)
-  , ToExpr (InstantStake era)
+  , EraModel era
   ) =>
   Proof era ->
   TestTree
@@ -204,10 +197,10 @@ initialBBodyState utxo =
             }
 
 testAlonzoBlock ::
-  ( EraSegWits era
-  , Value era ~ MaryValue
+  ( Value era ~ MaryValue
   , ShelleyEraTxCert era
   , AlonzoEraTx era
+  , EraModel era
   ) =>
   Block BHeaderView era
 testAlonzoBlock =
@@ -239,9 +232,9 @@ anotherDatum = Data (PV1.I 0)
 
 validatingTx ::
   forall era.
-  ( EraTx era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 validatingTx =
@@ -263,6 +256,7 @@ validatingBody ::
   forall era.
   ( AlonzoEraTxBody era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   TxBody era
 validatingBody =
@@ -296,9 +290,9 @@ validatingTxOut = mkBasicTxOut someAddr (inject $ Coin 4995)
 
 notValidatingTx ::
   forall era.
-  ( EraTx era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 notValidatingTx =
@@ -324,7 +318,7 @@ notValidatingTx =
 
 validatingTxWithWithdrawal ::
   forall era.
-  (EraTx era, AlonzoEraTxBody era, AlonzoEraScript era) =>
+  (AlonzoEraTxBody era, AlonzoEraScript era, EraModel era) =>
   Tx era
 validatingTxWithWithdrawal =
   mkBasicTx mkBasicTxBody
@@ -344,6 +338,7 @@ validatingBodyWithWithdrawal ::
   forall era.
   ( AlonzoEraTxBody era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   TxBody era
 validatingBodyWithWithdrawal =
@@ -369,7 +364,7 @@ validatingTxWithWithdrawalOut = mkBasicTxOut someAddr . inject $ Coin 1995
 
 notValidatingTxWithWithdrawal ::
   forall era.
-  (EraTx era, AlonzoEraTxWits era, AlonzoEraTxBody era) =>
+  (AlonzoEraTxWits era, AlonzoEraTxBody era, EraModel era) =>
   Tx era
 notValidatingTxWithWithdrawal =
   mkBasicTx notValidatingBodyWithWithdrawal
@@ -401,10 +396,10 @@ notValidatingTxWithWithdrawal =
 
 validatingTxWithCert ::
   forall era.
-  ( EraTx era
-  , ShelleyEraTxCert era
+  ( ShelleyEraTxCert era
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 validatingTxWithCert =
@@ -428,6 +423,7 @@ validatingBodyWithCert ::
   ( ShelleyEraTxCert era
   , AlonzoEraTxBody era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   TxBody era
 validatingBodyWithCert =
@@ -449,10 +445,10 @@ validatingTxWithCertOut =
 
 notValidatingTxWithCert ::
   forall era.
-  ( EraTx era
-  , ShelleyEraTxCert era
+  ( ShelleyEraTxCert era
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 notValidatingTxWithCert =
@@ -484,10 +480,10 @@ notValidatingTxWithCert =
 
 validatingTxWithMint ::
   forall era.
-  ( EraTx era
-  , Value era ~ MaryValue
+  ( Value era ~ MaryValue
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 validatingTxWithMint =
@@ -511,6 +507,7 @@ validatingBodyWithMint ::
   ( Value era ~ MaryValue
   , AlonzoEraTxBody era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   TxBody era
 validatingBodyWithMint =
@@ -545,10 +542,10 @@ validatingTxWithMintOut =
 
 notValidatingTxWithMint ::
   forall era.
-  ( EraTx era
-  , Value era ~ MaryValue
+  ( Value era ~ MaryValue
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
+  , EraModel era
   ) =>
   Tx era
 notValidatingTxWithMint =
@@ -626,13 +623,11 @@ poolMDHTooBigTx =
 testBBodyState ::
   forall era.
   ( Value era ~ MaryValue
-  , EraGov era
-  , EraStake era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
-  , EraCertState era
   , AlonzoEraTxBody era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   ShelleyBbodyState era
 testBBodyState =

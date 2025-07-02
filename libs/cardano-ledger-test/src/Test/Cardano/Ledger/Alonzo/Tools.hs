@@ -56,7 +56,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
 import Test.Cardano.Ledger.Generic.TxGen (EraGenericGen (..))
-import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
@@ -137,13 +136,11 @@ exampleExUnitCalc ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
   , AlonzoEraTx era
-  , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
-  , EraGov era
-  , EraStake era
-  , EraCertState era
+  , EraModel era
+  , EraGenericGen era
   ) =>
   IO ()
 exampleExUnitCalc =
@@ -158,10 +155,11 @@ exampleExUnitCalc =
 exampleInvalidExUnitCalc ::
   forall era.
   ( AlonzoEraTx era
-  , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
+  , EraGenericGen era
+  , EraModel era
   ) =>
   IO ()
 exampleInvalidExUnitCalc =
@@ -187,6 +185,8 @@ exampleTx ::
   forall era.
   ( AlonzoEraTx era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
+  , EraModel era
+  , EraGenericGen era
   ) =>
   PlutusPurpose AsIx era ->
   Tx era
@@ -218,12 +218,12 @@ validatingBody =
     & setScriptIntegrityHash
       (newScriptIntegrityHash testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
   where
-    redeemers = Redeemers $ Map.singleton (AlonzoSpending @_ @era (AsIx 0)) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = mkRedeemers [(AlonzoSpending @_ @era (AsIx 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
-uenv :: (AlonzoEraPParams era, EraCertState era) => UtxoEnv era
+uenv :: EraGenericGen era => UtxoEnv era
 uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::
@@ -247,9 +247,9 @@ updateTxExUnits ::
   forall era m.
   ( MonadFail m
   , AlonzoEraTx era
-  , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraPlutusContext era
+  , EraGenericGen era
   ) =>
   Tx era ->
   UTxO era ->
@@ -277,11 +277,11 @@ failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (show e)
 
-testPParams :: forall era. AlonzoEraPParams era => PParams era
+testPParams :: forall era. EraGenericGen era => PParams era
 testPParams =
-  emptyPParams
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
-    & ppMaxValSizeL .~ 1000000000
-    & ppMaxTxExUnitsL .~ ExUnits 100000000 100000000
-    & ppMaxBlockExUnitsL .~ ExUnits 100000000 100000000
+  emptyPParams @era
+    & ppCostModelsT .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeT .~ 1000000000
+    & ppMaxTxExUnitsT .~ ExUnits 100000000 100000000
+    & ppMaxBlockExUnitsT .~ ExUnits 100000000 100000000
     & ppProtocolVersionL .~ ProtVer (eraProtVerHigh @era) 0
