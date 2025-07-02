@@ -5,7 +5,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Allegra.Examples.Consensus where
+module Test.Cardano.Ledger.Allegra.Examples.Consensus (
+  ledgerExamplesAllegra,
+  exampleAllegraTxBody,
+  exampleTimelock,
+  exampleAllegraTxAuxData,
+) where
 
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core

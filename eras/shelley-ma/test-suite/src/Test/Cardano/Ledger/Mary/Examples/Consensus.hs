@@ -4,7 +4,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Mary.Examples.Consensus where
+module Test.Cardano.Ledger.Mary.Examples.Consensus (
+  ledgerExamplesMary,
+  exampleMultiAssetValue,
+  exampleMultiAsset,
+) where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Genesis (NoGenesis (..))
@@ -15,10 +19,9 @@ import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Lens.Micro
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
-import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
--- | ShelleyLedgerExamples for Allegra era
+-- | ShelleyLedgerExamples for Mary era
 ledgerExamplesMary :: ShelleyLedgerExamples MaryEra
 ledgerExamplesMary =
   defaultShelleyLedgerExamples
@@ -37,6 +40,5 @@ exampleMultiAsset x =
   MultiAsset (Map.singleton policyId $ Map.singleton couttsCoin 1000)
   where
     policyId = PolicyID $ mkScriptHash x
-
     couttsCoin :: AssetName
     couttsCoin = AssetName "couttsCoin"
