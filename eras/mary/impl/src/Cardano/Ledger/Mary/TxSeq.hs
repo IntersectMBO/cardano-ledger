@@ -10,13 +10,13 @@
 
 module Cardano.Ledger.Mary.TxSeq () where
 
-import Cardano.Ledger.Core (EraSegWits (..))
+import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
 
-instance EraSegWits MaryEra where
-  type TxSeq MaryEra = ShelleyTxSeq MaryEra
+instance EraBlockBody MaryEra where
+  type BlockBody MaryEra = ShelleyTxSeq MaryEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = bbHash

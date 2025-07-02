@@ -266,7 +266,7 @@ spec = do
       let txSeq = toTxSeq @era $ SSeq.fromList txs
       nes <- use impNESL
       let ls = nes ^. nesEsL . esLStateL
-          pp = nes ^. nesEsL . curPParamsEpochStateL
+          pp = nes ^. nesEsL . curPParamsEpochStateL @era
       kh <- freshKeyHash
       slotNo <- use impLastTickG
       let bhView =

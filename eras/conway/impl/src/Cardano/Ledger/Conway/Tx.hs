@@ -121,8 +121,8 @@ instance AlonzoEraTx ConwayEra where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance EraSegWits ConwayEra where
-  type TxSeq ConwayEra = AlonzoTxSeq ConwayEra
+instance EraBlockBody ConwayEra where
+  type BlockBody ConwayEra = AlonzoTxSeq ConwayEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

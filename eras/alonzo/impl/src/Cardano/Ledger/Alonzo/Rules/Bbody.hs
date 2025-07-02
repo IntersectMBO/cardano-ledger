@@ -182,9 +182,9 @@ alonzoBbodyTransition ::
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraTxWits era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
@@ -269,9 +269,9 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)

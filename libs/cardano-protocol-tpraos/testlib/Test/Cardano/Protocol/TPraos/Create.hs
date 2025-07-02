@@ -249,7 +249,7 @@ evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current targe
 mkBlock ::
   forall era r c.
   ( Crypto c
-  , EraSegWits era
+  , EraBlockBody era
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
   ) =>
@@ -285,7 +285,7 @@ mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
 mkBlockFakeVRF ::
   forall era r c.
   ( Crypto c
-  , EraSegWits era
+  , EraBlockBody era
   , VRF.Signable (VRF c) (WithResult Seed)
   , KES.Signable (KES c) (BHBody c)
   ) =>

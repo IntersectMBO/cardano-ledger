@@ -86,8 +86,8 @@ data ShelleyTxSeq era = TxSeq'
   }
   deriving (Generic)
 
-instance EraSegWits ShelleyEra where
-  type TxSeq ShelleyEra = ShelleyTxSeq ShelleyEra
+instance EraBlockBody ShelleyEra where
+  type BlockBody ShelleyEra = ShelleyTxSeq ShelleyEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = txSeqHash
@@ -129,7 +129,7 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 
 -- ===========================
 
--- | Constuct a TxSeq (with all it bytes) from just Tx's
+-- | Constuct a BlockBody (with all it bytes) from just Tx's
 pattern ShelleyTxSeq ::
   forall era.
   ( EraTx era

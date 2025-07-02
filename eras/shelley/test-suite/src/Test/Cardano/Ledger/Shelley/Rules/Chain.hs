@@ -266,7 +266,7 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , EncCBORGroup (TxSeq era)
+  , EncCBORGroup (BlockBody era)
   , ProtVerAtMost era 6
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era

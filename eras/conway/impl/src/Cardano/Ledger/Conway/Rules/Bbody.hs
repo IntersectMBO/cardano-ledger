@@ -37,8 +37,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx, IsValid (..), isValidTxL)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx, IsValid (IsValid), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
@@ -251,8 +250,8 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
-  , EraSegWits era
+  , BlockBody era ~ AlonzoTxSeq era
+  , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
@@ -283,10 +282,12 @@ conwayBbodyTransition ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoTxSeq era
+  , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , AlonzoEraTx era
+  , EraBlockBody era
   , BabbageEraTxBody era
   ) =>
   TransitionRule (EraRule "BBODY" era)

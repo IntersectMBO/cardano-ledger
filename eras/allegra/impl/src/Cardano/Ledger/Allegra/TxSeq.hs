@@ -12,11 +12,11 @@ module Cardano.Ledger.Allegra.TxSeq () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
-import Cardano.Ledger.Core (EraSegWits (..))
+import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
 
-instance EraSegWits AllegraEra where
-  type TxSeq AllegraEra = ShelleyTxSeq AllegraEra
+instance EraBlockBody AllegraEra where
+  type BlockBody AllegraEra = ShelleyTxSeq AllegraEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = bbHash

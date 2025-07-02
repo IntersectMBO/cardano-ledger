@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
--- | Provides TxSeq internals
+-- | Provides BlockBody internals
 --
 -- = Warning
 --
@@ -68,7 +68,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 --
 -- * TxSeq
 --
--- TxSeq provides an alternate way of formatting transactions in a block, in
+-- BlockBody provides an alternate way of formatting transactions in a block, in
 -- order to support segregated witnessing.
 
 data AlonzoTxSeq era = AlonzoTxSeqRaw
@@ -88,8 +88,8 @@ data AlonzoTxSeq era = AlonzoTxSeqRaw
   }
   deriving (Generic)
 
-instance EraSegWits AlonzoEra where
-  type TxSeq AlonzoEra = AlonzoTxSeq AlonzoEra
+instance EraBlockBody AlonzoEra where
+  type BlockBody AlonzoEra = AlonzoTxSeq AlonzoEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
