@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
   tests,
@@ -33,9 +34,9 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
   forAllChainTrace,
   ledgerTraceFromBlock,
   traceLen,
@@ -58,12 +59,11 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
 tests ::
-  forall era ledger.
+  forall era.
   ( EraGen era
-  , EraStake era
   , ChainProperty era
-  , TestingLedger era ledger
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , ShelleyEraImp era
   ) =>
   TestTree
 tests =
@@ -72,20 +72,20 @@ tests =
       let ssts = sourceSignalTargets tr
       conjoin . concat $
         [ -- collision freeness
-          map (eliminateTxInputs @era @ledger) ssts
-        , map (newEntriesAndUniqueTxIns @era @ledger) ssts
+          map (eliminateTxInputs @era) ssts
+        , map (newEntriesAndUniqueTxIns @era) ssts
         , -- no double spend
           map noDoubleSpend ssts
         , -- tx signatures
-          map (requiredMSigSignaturesSubset @era @ledger) ssts
+          map (requiredMSigSignaturesSubset @era) ssts
         ]
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , ShelleyEraImp era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -95,7 +95,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
       map inputsEliminated $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     inputsEliminated
       SourceSignalTarget
         { target = LedgerState (UTxOState {utxosUtxo = (UTxO u')}) _
@@ -108,10 +108,10 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , ShelleyEraImp era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -121,7 +121,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
       map newEntryPresent $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     newEntryPresent
       SourceSignalTarget
         { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) _
@@ -139,10 +139,10 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
 -- of possible signatures for a multi-sig script which is a sub-set of the
 -- signatures of the tansaction.
 requiredMSigSignaturesSubset ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , ShelleyEraImp era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -152,8 +152,8 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       map signaturesSubset $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    signaturesSubset :: SourceSignalTarget ledger -> Property
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
+    signaturesSubset :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
        in property $

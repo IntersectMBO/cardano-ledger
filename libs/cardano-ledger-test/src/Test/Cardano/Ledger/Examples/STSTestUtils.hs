@@ -42,7 +42,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTx (..),
+  AlonzoEraTx (..),
   IsValid (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
@@ -80,6 +80,7 @@ import Data.MapExtras (fromElems)
 import GHC.IsList (IsList (..))
 import GHC.Natural (Natural)
 import GHC.Stack
+import Lens.Micro ((.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (ToExpr, toExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
@@ -170,7 +171,7 @@ initUTxO pf =
         ]
     someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
     collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
-    timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
+    timelockOut = newTxOut pf [Address timelockAddr, Amount (inject $ Coin 1)]
     timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
       where
         tlh = hashScript @era $ tls 0
@@ -218,10 +219,10 @@ mkSingleRedeemer proof tag datum =
   mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
-trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Babbage iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Conway iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP _ _ tx = tx
+trustMeP Alonzo iv = isValidTxL .~ IsValid iv
+trustMeP Babbage iv = isValidTxL .~ IsValid iv
+trustMeP Conway iv = isValidTxL .~ IsValid iv
+trustMeP _ _ = id
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
 -- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed

@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -28,9 +29,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   curPParamsEpochStateL,
  )
+import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
+import Control.Monad.Reader (ReaderT)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
+import Control.State.Transition (STS (..))
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -44,7 +48,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
   forAllChainTrace,
   ledgerTraceFromBlock,
   longTraceLen,
@@ -69,30 +72,33 @@ import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 
 incrStakeComputationTest ::
-  forall era ledger.
+  forall era.
   ( EraGen era
   , EraStake era
   , InstantStake era ~ ShelleyInstantStake era
-  , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , STS (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   TestTree
 incrStakeComputationTest =
   testProperty "instant stake calculation" $
     forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
-      let ssts = sourceSignalTargets tr
-
-      conjoin . concat $
-        [ -- preservation properties
-          map (incrStakeComp @era @ledger) ssts
-        ]
+      conjoin $ incrStakeComp @era <$> sourceSignalTargets tr
 
 incrStakeComp ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , InstantStake era ~ ShelleyInstantStake era
-  , TestingLedger era ledger
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , STS (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -101,8 +107,8 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     map checkIncrStakeComp $
       sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    checkIncrStakeComp :: SourceSignalTarget ledger -> Property
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
+    checkIncrStakeComp :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     checkIncrStakeComp
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp

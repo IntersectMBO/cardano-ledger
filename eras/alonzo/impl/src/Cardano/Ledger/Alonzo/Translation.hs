@@ -13,12 +13,11 @@
 module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Ledger.Alonzo.Core hiding (Tx)
-import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), Tx (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -30,7 +29,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
@@ -71,11 +70,9 @@ instance TranslateEra AlonzoEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
 instance TranslateEra AlonzoEra Tx where
   type TranslationError AlonzoEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -84,7 +81,11 @@ instance TranslateEra AlonzoEra Tx where
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
     let validating = IsValid True
-    pure $ Tx $ AlonzoTx txBody txWits validating txAuxData
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ txAuxData
+        & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
