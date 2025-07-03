@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,7 +17,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Test.Cardano.Ledger.Generic.TxGen (
   EraGenericGen (..),
@@ -1094,7 +1094,7 @@ genAlonzoTxAndInfo slot = do
 
   let
     redeemerWitsList :: TxWits era -> TxWits era
-    redeemerWitsList = undefined $ zipWith ($) mkWits exUnits
+    redeemerWitsList = foldFn $ zipWith ($) mkWits exUnits
   datumWitsList <- foldFn <$> mapM makeDatumWitness (Map.elems toSpendNoCollateral)
   keyWitsMakers <-
     mapM
@@ -1218,13 +1218,8 @@ genAlonzoTxAndInfo slot = do
 
 -- | Keep only Script witnesses that are neccessary in 'era',
 onlyNecessaryScripts ::
-  Set ScriptHash -> TxWits era -> TxWits era
-onlyNecessaryScripts = undefined
-
--- onlyNecessaryScripts _ _ [] = []
--- onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
--- ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
--- onlyNecessaryScripts proof hashes (x : xs) = x : onlyNecessaryScripts proof hashes xs
+  EraTxWits era => Set ScriptHash -> TxWits era -> TxWits era
+onlyNecessaryScripts necessary = scriptTxWitsL %~ \m -> Map.restrictKeys m necessary
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism

@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxBlockExUnitsL,
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
-  pattern SpendingPurpose,
+  pattern SpendingPurpose, ppMinFeeAL,
  )
 import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
 import Cardano.Ledger.Plutus (ExUnits (..))
@@ -56,7 +56,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
+import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..), defaultPPs)
 import Test.Cardano.Ledger.Generic.Proof (Reflect (..), AlonzoEra)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
@@ -83,7 +83,8 @@ testEstimateMinFee =
     0
     @?= alonzoMinFeeTx pparams validatingTx
   where
-    pparams = undefined -- newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
+    pparams = defaultPPs emptyPParams
+      & ppMinFeeAL .~ Coin 1
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty

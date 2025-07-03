@@ -160,6 +160,7 @@ import Test.Tasty.QuickCheck (
   elements,
   frequency,
  )
+import Cardano.Ledger.Plutus (Language(..))
 
 -- =================================================
 
@@ -812,7 +813,7 @@ genPlutusScript tag = do
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  let mlanguage = undefined
+  let mlanguage = Just PlutusV1
   script <-
     if isValid
       then alwaysTrue mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])

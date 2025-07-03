@@ -94,7 +94,9 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   genericCont,
+  mkDats,
   mkGenesisTxIn,
+  mkScriptWits,
   mkTxDats,
   testUTXOW,
  )
@@ -231,7 +233,7 @@ inlineDatum =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript @era)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [evenData3ArgsScript @era]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -266,7 +268,7 @@ inlineDatumFailingScript =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [evenData3ArgsScript]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -304,7 +306,7 @@ referenceScript =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes @era)]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes @era]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -339,7 +341,7 @@ commonReferenceScript =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -414,7 +416,7 @@ inlineDatumAndRefScriptWithRedundantWitScript =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV2 3)] -- This is redundant with the reference script
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysSucceeds @PlutusV2 3] -- This is redundant with the reference script
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -477,7 +479,7 @@ refInputWithDataHashWithWit =
           , ofCollateral = []
           }
     , keysForAddrWits = [someKeysPaymentKeyRole]
-    , otherWitsFields = witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+    , otherWitsFields = witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
     }
 
 -- ====================================================================================
@@ -558,8 +560,8 @@ useCollateralReturn =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysFails @PlutusV1 3)]
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysFails @PlutusV1 3]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -594,7 +596,7 @@ incorrectCollateralTotal =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [evenData3ArgsScript]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -635,8 +637,8 @@ inlineDatumRedundantDatumWit =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, evenData3ArgsScript)]
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [evenData3ArgsScript]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -678,7 +680,7 @@ inlineDatumWithPlutusV1Script =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysSucceeds @PlutusV1 3]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -723,8 +725,8 @@ referenceScriptWithPlutusV1Script =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysSucceeds @PlutusV1 3]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -765,8 +767,8 @@ referenceInputWithPlutusV1Script =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV1 3)]
-          & witsTxL . datsTxWitsL .~ TxDats [(undefined, datumExampleSixtyFiveBytes)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysSucceeds @PlutusV1 3]
+          & witsTxL . datsTxWitsL .~ mkDats [datumExampleSixtyFiveBytes]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -902,7 +904,7 @@ noSuchThingAsReferenceDatum =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . scriptTxWitsL .~ [(undefined, alwaysSucceeds @PlutusV2 1)]
+          & witsTxL . scriptTxWitsL .~ mkScriptWits [alwaysSucceeds @PlutusV2 1]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 

@@ -18,7 +18,8 @@ module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), unTxDatsL)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (
@@ -89,15 +90,19 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
+import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
   genericCont,
   initUTxO,
+  mkDats,
   mkGenesisTxIn,
+  mkScriptWits,
   mkSingleRedeemer,
   mkTxDats,
   someAddr,
@@ -118,6 +123,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
+
+forge :: forall era. EraScript era => Integer -> Script era -> MultiAsset
+forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
+  where
+    pid = PolicyID (hashScript @era s)
+    an = AssetName "an"
 
 tests :: TestTree
 tests =
@@ -142,6 +153,7 @@ alonzoBBODYexamplesP ::
   , Value era ~ MaryValue
   , ToExpr (PredicateFailure (EraRule "BBODY" era))
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Proof era ->
   TestTree
@@ -201,6 +213,7 @@ testAlonzoBlock ::
   , ShelleyEraTxCert era
   , AlonzoEraTx era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Block BHeaderView era
 testAlonzoBlock =
@@ -230,19 +243,23 @@ someDatum = Data (PV1.I 123)
 anotherDatum :: Era era => Data era
 anotherDatum = Data (PV1.I 0)
 
+always :: EraPlutusTxInfo PlutusV1 era => Natural -> Script era
+always = alwaysSucceeds @PlutusV1
+
 validatingTx ::
   forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTx =
   mkBasicTx validatingBody
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . datsTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBody @era) someKeys]
+    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 3, always 3)]
+    & witsTxL . datsTxWitsL .~ TxDats [(hashData @era someDatum, someDatum)]
+    & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
 
 -- [ WitnessesI
 --    [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
@@ -293,13 +310,14 @@ notValidatingTx ::
   ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTx =
   mkBasicTx notValidatingBody
-    & witsTxL . addrTxWitsL .~ Set.singleton undefined
-    & witsTxL . scriptTxWitsL .~ Map.singleton undefined undefined
-    & witsTxL . datsTxWitsL . unTxDatsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) someKeys]
+    & witsTxL . scriptTxWitsL .~ mkScriptWits [never 0]
+    & witsTxL . datsTxWitsL .~ mkDats [anotherDatum]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
     notValidatingBody =
@@ -362,26 +380,23 @@ validatingWithWithdrawalRedeemers = mkSingleRedeemer (RewardingPurpose $ AsIx 0)
 validatingTxWithWithdrawalOut :: EraTxOut era => TxOut era
 validatingTxWithWithdrawalOut = mkBasicTxOut someAddr . inject $ Coin 1995
 
+never :: forall era. EraPlutusTxInfo PlutusV1 era => Natural -> Script era
+never = alwaysFails @PlutusV1
+
 notValidatingTxWithWithdrawal ::
   forall era.
-  (AlonzoEraTxWits era, AlonzoEraTxBody era, EraModel era) =>
+  ( AlonzoEraTxWits era
+  , AlonzoEraTxBody era
+  , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
+  ) =>
   Tx era
 notValidatingTxWithWithdrawal =
   mkBasicTx notValidatingBodyWithWithdrawal
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) someKeys]
+    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ never 1, never 1)]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
-    -- newTx
-    --  pf
-    --  [ Body notValidatingBodyWithWithdrawal
-    --  , WitnessesI
-    --      [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) (someKeys pf)]
-    --      , ScriptWits' [never 1 pf]
-    --      , RdmrWits notValidatingRedeemers
-    --      ]
-    --  ]
-
     notValidatingBodyWithWithdrawal =
       mkBasicTxBody
         & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 6)
@@ -400,23 +415,14 @@ validatingTxWithCert ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTxWithCert =
   mkBasicTx validatingBodyWithCert
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ undefined
-
--- newTx
---  pf
---  [ Body (validatingBodyWithCert pf)
---  , WitnessesI
---      [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)]
---      , ScriptWits' [always 2 pf]
---      , RdmrWits $ validatingRedeemrsWithCert pf
---      ]
---  ]
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithCert @era) someKeys]
+    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 2, always 2)]
+    & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithCert
 
 validatingBodyWithCert ::
   forall era.
@@ -434,10 +440,10 @@ validatingBodyWithCert =
     & certsTxBodyL .~ SSeq.singleton (UnRegTxCert $ scriptStakeCredSuceed @era)
     & feeTxBodyL .~ Coin 5
     & scriptIntegrityHashTxBodyL
-      .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemrsWithCert mempty
+      .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemersWithCert mempty
 
-validatingRedeemrsWithCert :: AlonzoEraScript era => Redeemers era
-validatingRedeemrsWithCert = mkSingleRedeemer (CertifyingPurpose $ AsIx 0) (Data (PV1.I 42))
+validatingRedeemersWithCert :: AlonzoEraScript era => Redeemers era
+validatingRedeemersWithCert = mkSingleRedeemer (CertifyingPurpose $ AsIx 0) (Data (PV1.I 42))
 
 validatingTxWithCertOut :: EraTxOut era => TxOut era
 validatingTxWithCertOut =
@@ -449,24 +455,15 @@ notValidatingTxWithCert ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTxWithCert =
   mkBasicTx notValidatingBodyWithCert
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) someKeys]
+    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ never 1, never 1)]
+    & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithCert
   where
-    -- newTx
-    --  pf
-    --  [ Body notValidatingBodyWithCert
-    --  , WitnessesI
-    --      [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) (someKeys pf)]
-    --      , ScriptWits' [never 1 pf]
-    --      , RdmrWits notValidatingRedeemersWithCert
-    --      ]
-    --  ]
-
     notValidatingBodyWithCert =
       mkBasicTxBody
         & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 4)
@@ -484,13 +481,14 @@ validatingTxWithMint ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTxWithMint =
   mkBasicTx validatingBodyWithMint
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithMint @era) someKeys]
+    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 2, always 2)]
+    & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithMint
 
 -- newTx
 --  pf
@@ -506,8 +504,8 @@ validatingBodyWithMint ::
   forall era.
   ( Value era ~ MaryValue
   , AlonzoEraTxBody era
-  , AlonzoEraScript era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   TxBody era
 validatingBodyWithMint =
@@ -516,29 +514,25 @@ validatingBodyWithMint =
     & collateralInputsTxBodyL .~ Set.singleton (mkGenesisTxIn 17)
     & outputsTxBodyL .~ SSeq.singleton validatingTxWithMintOut
     & feeTxBodyL .~ Coin 5
-    & mintTxBodyL .~ multiAsset @era 1 (fromNativeScript $ RequireAllOf mempty)
+    & mintTxBodyL .~ multiAsset @era
     & scriptIntegrityHashTxBodyL
       .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemersWithMint mempty
 
 validatingRedeemersWithMint :: AlonzoEraScript era => Redeemers era
 validatingRedeemersWithMint = mkSingleRedeemer (MintingPurpose $ AsIx 0) (Data (PV1.I 42))
 
-multiAsset :: forall era. EraScript era => Integer -> Script era -> MultiAsset
-multiAsset n s =
-  MultiAsset $
-    Map.singleton
-      (PolicyID $ hashScript s)
-      (Map.singleton (AssetName "an") n)
+multiAsset :: forall era. EraPlutusTxInfo PlutusV1 era => MultiAsset
+multiAsset = forge @era 1 $ always 2
 
 validatingTxWithMintOut ::
   forall era.
   ( Value era ~ MaryValue
   , EraTxOut era
-  , EraScript era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   TxOut era
 validatingTxWithMintOut =
-  mkBasicTxOut someAddr . MaryValue (Coin 995) $ multiAsset @era undefined undefined
+  mkBasicTxOut someAddr . MaryValue (Coin 995) $ multiAsset @era
 
 notValidatingTxWithMint ::
   forall era.
@@ -546,24 +540,15 @@ notValidatingTxWithMint ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTxWithMint =
   mkBasicTx notValidatingBodyWithMint
-    & witsTxL . addrTxWitsL .~ undefined
-    & witsTxL . scriptTxWitsL .~ undefined
-    & witsTxL . rdmrsTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) someKeys]
+    & witsTxL . scriptTxWitsL .~ mkScriptWits [never 1]
+    & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithMint
   where
-    -- newTx
-    --  pf
-    --  [ Body notValidatingBodyWithMint
-    --  , WitnessesI
-    --      [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) (someKeys pf)]
-    --      , ScriptWits' [never 1 pf]
-    --      , RdmrWits notValidatingRedeemersWithMint
-    --      ]
-    --  ]
-
     notValidatingBodyWithMint =
       mkBasicTxBody
         & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 8)
@@ -575,7 +560,7 @@ notValidatingTxWithMint =
         & scriptIntegrityHashTxBodyL
           .~ newScriptIntegrityHash defaultPParams [PlutusV1] notValidatingRedeemersWithMint mempty
     notValidatingRedeemersWithMint = mkSingleRedeemer @era (MintingPurpose $ AsIx 0) (Data (PV1.I 0))
-    ma = undefined -- forge @era 1 (never 1 pf)
+    ma = forge @era 1 (never 1)
 
 poolMDHTooBigTx ::
   forall era.
@@ -585,16 +570,8 @@ poolMDHTooBigTx =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
   -- since it is checked in the POOL rule. BBODY will trigger it, however.
   mkBasicTx poolMDHTooBigTxBody
-    & witsTxL . addrTxWitsL .~ undefined
+    & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated poolMDHTooBigTxBody) someKeys]
   where
-    -- newTx
-    --  pf
-    --  [ Body poolMDHTooBigTxBody
-    --  , WitnessesI
-    --      [ AddrWits' [mkWitnessVKey (hashAnnotated poolMDHTooBigTxBody) (someKeys pf)]
-    --      ]
-    --  ]
-
     poolMDHTooBigTxBody =
       mkBasicTxBody
         & inputsTxBodyL .~ [mkGenesisTxIn 3]
@@ -626,8 +603,8 @@ testBBodyState ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
   , AlonzoEraTxBody era
-  , AlonzoEraScript era
   , EraModel era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   ShelleyBbodyState era
 testBBodyState =

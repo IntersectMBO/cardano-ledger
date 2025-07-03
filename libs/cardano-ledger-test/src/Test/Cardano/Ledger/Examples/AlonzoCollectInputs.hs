@@ -154,9 +154,7 @@ validatingTx =
         & scriptIntegrityHashTxBodyL
           .~ newScriptIntegrityHash defaultPParams [PlutusV1] redeemers (mkTxDats datum)
     redeemers =
-      Redeemers [(SpendingPurpose $ AsIx 0, (undefined, undefined))]
-
--- mkRedeemersFromTags pf [((Spending, 0), (redeemer, ExUnits 5000 5000))]
+      Redeemers [(SpendingPurpose $ AsIx 0, (redeemer, ExUnits 5000 5000))]
 
 -- ============================== Helper functions ===============================
 
