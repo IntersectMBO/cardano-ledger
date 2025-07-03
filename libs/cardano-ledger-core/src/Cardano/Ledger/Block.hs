@@ -37,7 +37,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro (to, (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
@@ -116,9 +116,9 @@ neededTxInsForBlock ::
   EraBlockBody era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block _ txsSeq) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block _ blockBody) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
+    txBodies = map (^. bodyTxL) $ blockBody ^. txSeqBlockBodyL . to toList
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

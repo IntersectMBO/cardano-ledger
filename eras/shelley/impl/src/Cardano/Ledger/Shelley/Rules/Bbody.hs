@@ -180,12 +180,12 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account
                , BbodyState ls b
-               , Block bhview txsSeq
+               , Block bhview blockBody
                )
            ) -> do
-        let txs = fromTxSeq txsSeq
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq txsSeq
+        let txs = blockBody ^. txSeqBlockBodyL
+            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
+            actualBodyHash = hashTxSeq blockBody
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)

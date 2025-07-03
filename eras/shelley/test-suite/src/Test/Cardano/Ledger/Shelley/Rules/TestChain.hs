@@ -62,7 +62,7 @@ import Data.Maybe (mapMaybe)
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Lens.Micro ((^.))
+import Lens.Micro (to, (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
@@ -253,13 +253,13 @@ ledgerTraceBase chainSt block =
   , txs
   )
   where
-    (Block (BHeader bhb _) txSeq) = block
+    (Block (BHeader bhb _) blockBody) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = nes ^. curPParamsEpochStateL
     -- Oldest to Newest first
-    txs = (reverse . toList . fromTxSeq) txSeq -- HERE WE USE SOME SegWit function
+    txs = blockBody ^. txSeqBlockBodyL . to toList . to reverse -- HERE WE USE SOME SegWit function
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing

@@ -296,12 +296,12 @@ goldenMinFee =
               case B16L.decode hex of
                 Left err -> error err
                 Right val -> val
-            txsSeq =
+            blockBody =
               case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
-                Right (Block _h txs :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
+                Right (Block _h blockBody' :: Block (BHeader StandardCrypto) AlonzoEra) -> blockBody'
             firstTx =
-              case fromTxSeq @AlonzoEra txsSeq of
+              case blockBody ^. txSeqBlockBodyL of
                 tx :<| _ -> tx
                 Empty -> error "Block doesn't have any transactions"
 

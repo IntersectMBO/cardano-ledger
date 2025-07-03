@@ -38,6 +38,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
 import Data.Proxy (Proxy (Proxy))
 import Generic.Random (genericArbitraryU)
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -156,7 +157,10 @@ instance
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
+  arbitrary =
+    Block
+      <$> arbitrary
+      <*> ((\x -> mkBasicBlockBody & txSeqBlockBodyL .~ x) <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
@@ -168,7 +172,10 @@ genBlock ::
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
-genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
+genBlock aiks =
+  Block
+    <$> genBHeader aiks
+    <*> ((\x -> mkBasicBlockBody & txSeqBlockBodyL .~ x) <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

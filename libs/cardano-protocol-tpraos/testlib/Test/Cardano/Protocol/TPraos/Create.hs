@@ -60,6 +60,7 @@ import Data.List.NonEmpty as NE
 import Data.Ratio (denominator, numerator, (%))
 import Data.Sequence.Strict as StrictSeq
 import Data.Word
+import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -274,12 +275,12 @@ mkBlock ::
   Block (BHeader c) era
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      txseq = toTxSeq @era (StrictSeq.fromList txns)
-      bodySize = fromIntegral $ bBodySize protVer txseq
-      bodyHash = hashTxSeq @era txseq
+      blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
+      bodySize = fromIntegral $ bBodySize protVer blockBody
+      bodyHash = hashTxSeq @era blockBody
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader txseq
+   in Block bHeader blockBody
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
@@ -314,10 +315,10 @@ mkBlockFakeVRF ::
   Block (BHeader c) era
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      txSeq = toTxSeq @era (StrictSeq.fromList txns)
-      bodySize = fromIntegral $ bBodySize protVer txSeq
-      bodyHash = hashTxSeq txSeq
+      blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txns
+      bodySize = fromIntegral $ bBodySize protVer blockBody
+      bodyHash = hashTxSeq blockBody
       bhBody =
         mkBHBodyFakeVRF bnonce l protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader txSeq
+   in Block bHeader blockBody

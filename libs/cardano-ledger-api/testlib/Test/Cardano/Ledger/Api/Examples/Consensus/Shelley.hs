@@ -240,7 +240,7 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxSeq @era (StrictSeq.fromList [tx])
+    blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList [tx]
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256

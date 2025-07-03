@@ -595,6 +595,7 @@ class
   txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx era))
 
   fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
+
   toTxSeq :: StrictSeq (Tx era) -> BlockBody era
 
   -- | Get the block body hash from the BlockBody. Note that this is not a regular
@@ -604,6 +605,10 @@ class
 
   -- | The number of segregated components
   numSegComponents :: Word64
+
+{-# DEPRECATED fromTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
+
+{-# DEPRECATED toTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
 
 bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
