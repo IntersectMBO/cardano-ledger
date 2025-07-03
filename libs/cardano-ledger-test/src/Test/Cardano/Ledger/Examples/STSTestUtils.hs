@@ -13,8 +13,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
@@ -55,6 +55,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Plutus (Language)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (Block, LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
@@ -71,29 +72,36 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
+import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
+import Data.TreeDiff (prettyEditExpr)
+import Data.Word (Word32)
 import GHC.Stack
 import Lens.Micro ((&), (.~))
+import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
+import Test.Cardano.Ledger.Conway.TreeDiff (
+  ToExpr (..),
+  ansiDocToString,
+  assertColorFailure,
+  diffExpr,
+  showExpr,
+ )
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
+import Test.Cardano.Ledger.Generic.ModelState (Model)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), runSTS, runSTS')
-import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest, EraTest)
+import Test.Cardano.Ledger.Shelley.Era (EraTest, ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-import Test.Cardano.Ledger.Generic.ModelState (Model)
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag)
-import Data.Word (Word32)
-import Cardano.Ledger.Plutus (Language)
-import Numeric.Natural (Natural)
 
 class EraTest era => EraModel era where
   applyTx :: Int -> SlotNo -> Model era -> Tx era -> Model era
@@ -125,11 +133,11 @@ class EraTest era => EraModel era where
 --   Data with specific semantics ("constants")
 -- =================================================================
 
-alwaysFailsHash :: forall era. ShelleyEraScript era => ScriptHash
-alwaysFailsHash = hashScript @era . fromNativeScript $ RequireAnyOf mempty
+alwaysFailsHash :: forall era. (ShelleyEraScript era, EraModel era) => Natural -> ScriptHash
+alwaysFailsHash n = hashScript @era $ never n
 
-alwaysSucceedsHash :: forall era. ShelleyEraScript era => ScriptHash
-alwaysSucceedsHash = hashScript @era . fromNativeScript $ RequireAllOf mempty
+alwaysSucceedsHash :: forall era. (ShelleyEraScript era, EraModel era) => Natural -> ScriptHash
+alwaysSucceedsHash n = hashScript @era $ always n
 
 someKeys :: KeyPair 'Payment
 someKeys = KeyPair vk sk
@@ -168,7 +176,8 @@ timelockStakeCred = ScriptHashObj (timelockHash @era 2)
 initUTxO ::
   forall era.
   ( AllegraEraScript era
-  , AlonzoEraTxOut era, EraModel era
+  , AlonzoEraTxOut era
+  , EraModel era
   ) =>
   UTxO era
 initUTxO =
@@ -189,7 +198,7 @@ initUTxO =
       mkBasicTxOut (someScriptAddr @era $ always 3) (inject $ Coin 5000)
         & dataHashTxOutL .~ SJust (hashData $ datumExample1 @era)
     alwaysFailsOutput =
-      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAnyOf mempty)) (inject $ Coin 3000)
+      mkBasicTxOut (someScriptAddr @era $ never 0) (inject $ Coin 3000)
         & dataHashTxOutL .~ SJust (hashData $ datumExample2 @era)
     someOutput = mkBasicTxOut someAddr (inject $ Coin 1000)
     collateralOutput = mkBasicTxOut someAddr (inject $ Coin 5)
@@ -205,7 +214,7 @@ initUTxO =
               ]
     -- This output is unspendable since it is locked by a plutus script, but has no datum hash.
     unspendableOut =
-      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAllOf mempty)) (inject $ Coin 5000)
+      mkBasicTxOut (someScriptAddr @era $ always 3) (inject $ Coin 5000)
     alwaysSucceedsOutputV1 =
       unspendableOut & dataHashTxOutL .~ SJust (hashData (datumExample1 @era))
     nonScriptOutWithDatum =
@@ -357,36 +366,22 @@ runLEDGER state pparams tx =
 
 -- | A small example of what a continuation for 'runSTS' might look like
 genericCont ::
-  ( Foldable t
-  , Eq (t x)
+  ( Eq (t x)
   , Eq y
-  , ToExpr x
   , ToExpr y
   , HasCallStack
+  , ToExpr (t x)
   ) =>
   String ->
   Either (t x) y ->
   Either (t x) y ->
   Assertion
 genericCont cause expected computed =
-  case (computed, expected) of
-    (Left c, Left e)
-      | c /= e -> assertFailure $ causedBy ++ expectedToFail e ++ failedWith c
-    (Right c, Right e)
-      | c /= e -> assertFailure $ causedBy ++ expectedToPass e ++ passedWith c
-    (Left x, Right y) ->
-      assertFailure $ causedBy ++ expectedToPass y ++ failedWith x
-    (Right x, Left y) ->
-      assertFailure $ causedBy ++ expectedToFail y ++ passedWith x
-    _ -> pure ()
+  when (computed /= expected) $
+    assertFailure $
+      "Mismatch between expected and computed:\n" <> ansiDocToString diff <> "\n\nCause:\n" <> cause
   where
-    causedBy
-      | null cause = ""
-      | otherwise = "Caused by:\n" ++ cause ++ "\n"
-    expectedToPass y = "Expected to pass with:\n" ++ show (toExpr y) ++ "\n"
-    expectedToFail x = "Expected to fail with:\n" ++ show (toExpr $ F.toList x) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (toExpr $ F.toList x)
-    passedWith y = "But passed with:\n" ++ show (toExpr y)
+    diff = diffExpr expected computed
 
 subsetCont ::
   ( Foldable t

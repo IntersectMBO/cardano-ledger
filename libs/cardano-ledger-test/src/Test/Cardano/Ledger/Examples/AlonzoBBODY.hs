@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), hashDataTxWitsL)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
@@ -27,6 +28,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ShelleyBase,
   StrictMaybe (..),
+  natVersion,
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
@@ -40,6 +42,11 @@ import Cardano.Ledger.Conway.Core (
   AlonzoEraTxWits (..),
   AsIx (..),
   MaryEraTxBody (..),
+  ppCollateralPercentageL,
+  ppCostModelsL,
+  ppMaxBlockExUnitsL,
+  ppMaxTxExUnitsL,
+  ppMaxValSizeL,
   pattern CertifyingPurpose,
   pattern MintingPurpose,
   pattern RewardingPurpose,
@@ -89,11 +96,12 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr)
+import Debug.Trace (trace)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   alwaysFailsHash,
   alwaysSucceedsHash,
   genericCont,
@@ -103,10 +111,12 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkTxDats,
   someAddr,
   someKeys,
-  someScriptAddr, EraModel (..),
+  someScriptAddr,
  )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
@@ -115,6 +125,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   mkVRFKeyPair,
   standardHashSize,
  )
+import Test.Cardano.Ledger.TreeDiff (showExpr)
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -159,28 +170,18 @@ alonzoBBODYexamplesP proof =
         runSTS @"BBODY" @era
           (TRC (BbodyEnv @era defaultPParams def, initialBBodyState @era initUTxO, testAlonzoBlock @era))
           (genericCont "" $ Right testBBodyState)
-    , -- (initialBBodyState initUTxO)
-      -- testAlonzoBlock
-      -- (Right testBBodyState)
-      -- defaultPParams
-      testCase "block with bad pool md hash in tx" $
+    , testCase "block with bad pool md hash in tx" $
         runSTS @"BBODY" @era
           (TRC (BbodyEnv @era defaultPParams def, initialBBodyState initUTxO, testAlonzoBadPMDHBlock))
           (genericCont "" . Left . pure $ makeTooBig @era)
-          -- (initialBBodyState initUTxO)
-          -- testAlonzoBadPMDHBlock
-          -- (Left . pure $ makeTooBig @era)
-          -- defaultPParams
     ]
 
 initialBBodyState ::
   forall era.
-  ( EraGov era
-  , EraStake era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraCertState era
+  ( State (EraRule "LEDGERS" era) ~ LedgerState era
   , AlonzoEraPParams era
   , AlonzoEraScript era
+  , EraModel era
   ) =>
   UTxO era ->
   ShelleyBbodyState era
@@ -195,7 +196,7 @@ initialBBodyState utxo =
           .~ DState
             { dsUnified =
                 UM.insert
-                  (scriptStakeCredSuceed @era)
+                  (scriptStakeCredSucceed @era)
                   (UM.RDPair (UM.CompactCoin 1000) successDeposit)
                   (RewDepUView UM.empty)
             , dsFutureGenDelegs = Map.empty
@@ -226,9 +227,13 @@ testAlonzoBlock =
 testAlonzoBadPMDHBlock ::
   ( EraSegWits era
   , AlonzoEraTx era
+  , ToExpr (Tx era)
+  , EraModel era
   ) =>
   Block BHeaderView era
-testAlonzoBadPMDHBlock = makeNaiveBlock [poolMDHTooBigTx & isValidTxL .~ IsValid True]
+testAlonzoBadPMDHBlock = makeNaiveBlock [trace (showExpr tx) tx]
+  where
+    tx = poolMDHTooBigTx & isValidTxL .~ IsValid True
 
 -- ============================== DATA ===============================
 
@@ -268,20 +273,6 @@ validatingBody =
     & scriptIntegrityHashTxBodyL
       .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers (mkTxDats someDatum)
 
--- [ Inputs' [mkGenesisTxIn 1]
--- , Collateral' [mkGenesisTxIn 11]
--- , Outputs' [validatingTxOut pf]
--- , Txfee (Coin 5)
--- , WppHash
---    ( newScriptIntegrityHash
---        pf
---        (pp pf)
---        [PlutusV1]
---        (validatingRedeemers pf)
---        (mkTxDats someDatum)
---    )
--- ]
-
 validatingRedeemers :: AlonzoEraScript era => Redeemers era
 validatingRedeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 0) (Data (PV1.I 42))
 
@@ -314,25 +305,18 @@ notValidatingTx =
             [PlutusV1]
             notValidatingRedeemers
             (mkTxDats anotherDatum)
-    notValidatingRedeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 1) (Data (PV1.I 1))
+    notValidatingRedeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 0) (Data (PV1.I 1))
 
 validatingTxWithWithdrawal ::
   forall era.
-  (AlonzoEraTxBody era, AlonzoEraScript era, EraModel era) =>
+  (AlonzoEraTxBody era, EraModel era, AlonzoEraTxWits era) =>
   Tx era
 validatingTxWithWithdrawal =
-  mkBasicTx mkBasicTxBody
-    & bodyTxL .~ validatingBodyWithWithdrawal
-
--- newTx
---  pf
---  [ Body (validatingBodyWithWithdrawal pf)
---  , WitnessesI
---      [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)]
---      , ScriptWits' [always 2 pf]
---      , RdmrWits $ validatingWithWithdrawalRedeemers pf
---      ]
---  ]
+  mkBasicTx validatingBodyWithWithdrawal
+    & witsTxL . addrTxWitsL
+      .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithWithdrawal @era) someKeys]
+    & witsTxL . hashScriptTxWitsL .~ [always 2]
+    & witsTxL . rdmrsTxWitsL .~ validatingWithWithdrawalRedeemers
 
 validatingBodyWithWithdrawal ::
   forall era.
@@ -348,7 +332,7 @@ validatingBodyWithWithdrawal =
     & outputsTxBodyL .~ SSeq.singleton validatingTxWithWithdrawalOut
     & feeTxBodyL .~ Coin 5
     & withdrawalsTxBodyL
-      .~ Withdrawals (Map.singleton (RewardAccount Testnet (scriptStakeCredSuceed @era)) $ Coin 1000)
+      .~ Withdrawals (Map.singleton (RewardAccount Testnet (scriptStakeCredSucceed @era)) $ Coin 1000)
     & scriptIntegrityHashTxBodyL
       .~ newScriptIntegrityHash @era
         defaultPParams
@@ -382,7 +366,7 @@ notValidatingTxWithWithdrawal =
         & outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut someAddr . inject $ Coin 1995)
         & feeTxBodyL .~ Coin 5
         & withdrawalsTxBodyL
-          .~ Withdrawals (Map.singleton (RewardAccount Testnet $ scriptStakeCredFail @era) . inject $ Coin 1995)
+          .~ Withdrawals (Map.singleton (RewardAccount Testnet $ scriptStakeCredFail @era) . inject $ Coin 1000)
         & scriptIntegrityHashTxBodyL
           .~ newScriptIntegrityHash defaultPParams [PlutusV1] notValidatingRedeemers mempty
     notValidatingRedeemers = mkSingleRedeemer (RewardingPurpose $ AsIx 0) (Data (PV1.I 0))
@@ -414,7 +398,7 @@ validatingBodyWithCert =
     & inputsTxBodyL .~ Set.singleton (mkGenesisTxIn 3)
     & collateralInputsTxBodyL .~ Set.singleton (mkGenesisTxIn 13)
     & outputsTxBodyL .~ SSeq.singleton validatingTxWithCertOut
-    & certsTxBodyL .~ SSeq.singleton (UnRegTxCert $ scriptStakeCredSuceed @era)
+    & certsTxBodyL .~ SSeq.singleton (UnRegTxCert $ scriptStakeCredSucceed @era)
     & feeTxBodyL .~ Coin 5
     & scriptIntegrityHashTxBodyL
       .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemersWithCert mempty
@@ -465,16 +449,6 @@ validatingTxWithMint =
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithMint @era) someKeys]
     & witsTxL . hashScriptTxWitsL .~ [always 2]
     & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithMint
-
--- newTx
---  pf
---  [ Body (validatingBodyWithMint pf)
---  , WitnessesI
---      [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)]
---      , ScriptWits' [always 2 pf]
---      , RdmrWits $ validatingRedeemersWithMint pf
---      ]
---  ]
 
 validatingBodyWithMint ::
   forall era.
@@ -538,7 +512,7 @@ notValidatingTxWithMint =
 
 poolMDHTooBigTx ::
   forall era.
-  (EraTx era, ShelleyEraScript era) =>
+  (EraTx era, ShelleyEraScript era, EraModel era) =>
   Tx era
 poolMDHTooBigTx =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
@@ -563,7 +537,7 @@ poolMDHTooBigTx =
             , ppPledge = Coin 0
             , ppCost = Coin 0
             , ppMargin = minBound
-            , ppRewardAccount = RewardAccount Testnet $ scriptStakeCredSuceed @era
+            , ppRewardAccount = RewardAccount Testnet $ scriptStakeCredSucceed @era
             , ppOwners = mempty
             , ppRelays = mempty
             , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes
@@ -604,7 +578,7 @@ testBBodyState =
             ]
       alwaysFailsOutput =
         mkBasicTxOut
-          (someScriptAddr . fromNativeScript @era $ RequireAnyOf mempty)
+          (someScriptAddr $ never @era 0)
           (inject $ Coin 3000)
           & dataHashTxOutL .~ SJust (hashData $ anotherDatum @era)
       timelockOut = mkBasicTxOut timelockAddr . inject $ Coin 1
@@ -617,11 +591,11 @@ testBBodyState =
       -- but has no datum hash.
       unspendableOut =
         mkBasicTxOut
-          (someScriptAddr . fromNativeScript @era $ RequireAllOf mempty)
+          (someScriptAddr $ always @era 3)
           (inject $ Coin 5000)
       alwaysSucceedsOutputV1 =
         mkBasicTxOut
-          (someScriptAddr . fromNativeScript @era $ RequireAllOf mempty)
+          (someScriptAddr $ always @era 3)
           (inject $ Coin 5000)
           & dataHashTxOutL .~ SJust (hashData $ someDatum @era)
       nonScriptOutWithDatum =
@@ -665,14 +639,14 @@ makeNaiveBlock txs = Block bhView txSeq
         }
     txSeq = toTxSeq $ StrictSeq.fromList txs
 
-scriptStakeCredFail :: forall era. ShelleyEraScript era => StakeCredential
-scriptStakeCredFail = ScriptHashObj (alwaysFailsHash @era)
+scriptStakeCredFail :: forall era. (ShelleyEraScript era, EraModel era) => StakeCredential
+scriptStakeCredFail = ScriptHashObj (alwaysFailsHash @era 1)
 
-scriptStakeCredSuceed :: forall era. ShelleyEraScript era => StakeCredential
-scriptStakeCredSuceed = ScriptHashObj (alwaysSucceedsHash @era)
+scriptStakeCredSucceed :: forall era. (ShelleyEraScript era, EraModel era) => StakeCredential
+scriptStakeCredSucceed = ScriptHashObj (alwaysSucceedsHash @era 2)
 
--- | The deposit made when 'scriptStakeCredSuceed' was registered. It is also
---   The Refund when 'scriptStakeCredSuceed' is de-registered.
+-- | The deposit made when 'scriptStakeCredSucceed' was registered. It is also
+--   The Refund when 'scriptStakeCredSucceed' is de-registered.
 successDeposit :: UM.CompactForm Coin
 successDeposit = UM.CompactCoin 7
 
@@ -680,3 +654,15 @@ successDeposit = UM.CompactCoin 7
 
 poolDeposit :: Coin
 poolDeposit = Coin 5
+
+defaultPParams :: AlonzoEraPParams era => PParams era
+defaultPParams =
+  emptyPParams
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeL .~ 1000000000
+    & ppMaxTxExUnitsL .~ ExUnits 1000000 1000000
+    & ppMaxBlockExUnitsL .~ ExUnits 1000000 1000000
+    & ppProtocolVersionL .~ ProtVer (natVersion @5) 0
+    & ppCollateralPercentageL .~ 100
+    & ppKeyDepositL .~ Coin 2
+    & ppPoolDepositL .~ poolDeposit

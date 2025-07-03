@@ -21,6 +21,11 @@
 
 module Test.Cardano.Ledger.Generic.TxGen (
   EraGenericGen (..),
+  alonzoMkRedeemers,
+  alonzoMkRedeemersFromTags,
+  alonzoNewScriptIntegrityHash,
+  mkAlonzoPlutusPurposePointer,
+  mkConwayPlutusPurposePointer,
   genAlonzoTx,
   runSTSWithContext,
   genUTxO,
@@ -36,29 +41,19 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxBody (
-  AllegraEraTxBody (..),
-  AlonzoEraTxBody (..),
   AlonzoEraTxOut (..),
   AlonzoTxOut (..),
-  ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
  )
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..), BabbageTxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), ShelleyBase, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
-  AlonzoEraPParams,
   AlonzoEraTxWits (..),
   BabbageEraTxOut (..),
-  ppCollateralPercentageL,
-  ppCostModelsL,
-  ppMaxBlockExUnitsL,
-  ppMaxCollateralInputsL,
-  ppMaxTxExUnitsL,
-  ppMaxValSizeL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
@@ -122,12 +117,8 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Era (EraTest)
 import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.ApplyTx (
-  applyShelleyCert,
-  applyTxBody,
-  applyTxFail,
-  applyTxSimple,
-  epochBoundary,
-  mkAlonzoPlutusPurposePointer, mkConwayPlutusPurposePointer,
+  mkAlonzoPlutusPurposePointer,
+  mkConwayPlutusPurposePointer,
  )
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
@@ -165,17 +156,14 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   MUtxo,
-  Model,
   ModelNewEpochState (..),
   UtxoEntry,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds, alwaysFails)
 
 alonzoMkRedeemersFromTags ::
   (AlonzoEraScript era, EraModel era) =>
@@ -194,28 +182,6 @@ alonzoMkRedeemers ::
   [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
   Redeemers era
 alonzoMkRedeemers = Redeemers . Map.fromList
-
-shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
-shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
-  where
-    modelEpoch = mEL model
-    transactionEpoch = epochFromSlotNo slot
-    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
-
-babbageApplyTx ::
-  forall era.
-  (EraModel era, AlonzoEraTx era, Reflect era, BabbageEraTxBody era) =>
-  Int -> SlotNo -> Model era -> Tx era -> Model era
-babbageApplyTx count slot model tx = case tx ^. isValidTxL of
-  IsValid True -> applyTxSimple count epochAccurateModel tx
-  IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx
-  where
-    transactionEpoch = epochFromSlotNo slot
-    modelEpoch = mEL model
-    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
-    txbody = tx ^. bodyTxL
-    outputs = txbody ^. outputsTxBodyL
-    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
 
 -- | Create an unlawful "lens" that returns the specified value when used as a
 -- getter and does nothing when used as a setter
@@ -277,147 +243,6 @@ class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
 
 -- \| Some (reify @era) >= Some Allegra = vldtTxBodyL .~ validityInterval
 -- \| otherwise = ttlTxBodyL .~ timeToLive validityInterval
-
-timeToLive :: ValidityInterval -> SlotNo
-timeToLive (ValidityInterval _ (SJust n)) = n
-timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
-
-shelleySetValidity :: ValidityInterval -> TxBody ShelleyEra -> TxBody ShelleyEra
-shelleySetValidity vi = ttlTxBodyL .~ timeToLive vi
-
-alonzoSetValidity :: AllegraEraTxBody era => ValidityInterval -> TxBody era -> TxBody era
-alonzoSetValidity vi = vldtTxBodyL .~ vi
-
--- | Generate a list of specified length with randomish `ExUnit`s where the sum
---   of all values produced will not exceed the maxTxExUnits.
-alonzoGenExUnits :: AlonzoEraPParams era => Int -> GenRS era [ExUnits]
-alonzoGenExUnits n = do
-  GenEnv {gePParams} <- gets gsGenEnv
-  let ExUnits maxMemUnits maxStepUnits = gePParams ^. ppMaxTxExUnitsL
-  memUnits <- lift $ genSequenceSum maxMemUnits
-  stepUnits <- lift $ genSequenceSum maxStepUnits
-  pure $ zipWith ExUnits memUnits stepUnits
-  where
-    un = fromIntegral n
-    genUpTo maxVal (!totalLeft, !acc) _
-      | totalLeft == 0 = pure (0, 0 : acc)
-      | otherwise = do
-          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-          pure (totalLeft - x, x : acc)
-    genSequenceSum maxVal
-      | maxVal == 0 = pure $ replicate n 0
-      | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) ([1 .. n] :: [Int])
-
-instance EraModel ShelleyEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-  always _ = fromNativeScript $ RequireAllOf []
-  never _ = fromNativeScript $ RequireAnyOf []
-
-instance EraModel AllegraEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-  always _ = fromNativeScript $ RequireAllOf []
-  never _ = fromNativeScript $ RequireAnyOf []
-
-instance EraModel MaryEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-  always _ = fromNativeScript $ RequireAllOf []
-  never _ = fromNativeScript $ RequireAnyOf []
-
-instance EraModel AlonzoEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-  always = alwaysSucceeds @PlutusV1
-  never = alwaysFails @PlutusV1
-
-instance EraModel BabbageEra where
-  applyTx = babbageApplyTx
-  applyCert = applyShelleyCert
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-  always = alwaysSucceeds @PlutusV2
-  never = alwaysFails @PlutusV1
-
-instance EraModel ConwayEra where
-  applyTx = babbageApplyTx
-  applyCert = error "Not yet implemented"
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkConwayPlutusPurposePointer
-  always = alwaysSucceeds @PlutusV2
-  never = alwaysFails @PlutusV1
-
-instance EraModel ShelleyEra => EraGenericGen ShelleyEra where
-  setValidity = shelleySetValidity
-
-instance EraGenericGen MaryEra
-
-instance EraGenericGen AllegraEra
-
-alonzoMkScriptIntegrityHash ::
-  ( EraModel era
-  , AlonzoEraTxWits era
-  ) =>
-  PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
-alonzoMkScriptIntegrityHash pp langs wits =
-  newScriptIntegrityHash pp langs (wits ^. rdmrsTxWitsL) (wits ^. datsTxWitsL)
-
-instance EraGenericGen AlonzoEra where
-  setValidity = alonzoSetValidity
-  setCollateralInputs = L.set collateralInputsTxBodyL
-  setRedeemers = L.set rdmrsTxWitsL
-  genExUnits = alonzoGenExUnits
-  setNetworkIdTxBody = L.set networkIdTxBodyL
-  ppMaxCollateralInputsT = ppMaxCollateralInputsL
-  ppCollateralPercentageT = ppCollateralPercentageL
-  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
-  ppCostModelsT = ppCostModelsL
-  ppMaxTxExUnitsT = ppMaxTxExUnitsL
-  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
-  ppMaxValSizeT = ppMaxValSizeL
-
-instance EraGenericGen BabbageEra where
-  setValidity = alonzoSetValidity
-  setRefernceInputs = L.set referenceInputsTxBodyL
-  setCollateralInputs = L.set collateralInputsTxBodyL
-  setTotalCollateral = L.set totalCollateralTxBodyL
-  setCollateralReturn = L.set collateralReturnTxBodyL
-  setRedeemers = L.set rdmrsTxWitsL
-  genExUnits = alonzoGenExUnits
-  setNetworkIdTxBody = L.set networkIdTxBodyL
-  ppMaxCollateralInputsT = ppMaxCollateralInputsL
-  ppCollateralPercentageT = ppCollateralPercentageL
-  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
-  ppCostModelsT = ppCostModelsL
-  ppMaxTxExUnitsT = ppMaxTxExUnitsL
-  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
-  ppMaxValSizeT = ppMaxValSizeL
-
-instance EraGenericGen ConwayEra where
-  setValidity = alonzoSetValidity
-  setRefernceInputs = L.set referenceInputsTxBodyL
-  setCollateralInputs = L.set collateralInputsTxBodyL
-  setTotalCollateral = L.set totalCollateralTxBodyL
-  setCollateralReturn = L.set collateralReturnTxBodyL
-  setRedeemers = L.set rdmrsTxWitsL
-  genExUnits = alonzoGenExUnits
-  setNetworkIdTxBody = L.set networkIdTxBodyL
-  ppMaxCollateralInputsT = ppMaxCollateralInputsL
-  ppCollateralPercentageT = ppCollateralPercentageL
-  mkScriptIntegrityHash = alonzoMkScriptIntegrityHash
-  ppCostModelsT = ppCostModelsL
-  ppMaxTxExUnitsT = ppMaxTxExUnitsL
-  ppMaxBlockExUnitsT = ppMaxBlockExUnitsL
-  ppMaxValSizeT = ppMaxValSizeL
 
 genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
 genTxOut val = do

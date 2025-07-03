@@ -272,6 +272,8 @@ adaIsPreservedInEachEpoch ::
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , EraGenericGen era
+  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
   ) =>
   GenSize ->
   TestTree

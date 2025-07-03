@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -37,9 +36,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..))
@@ -166,55 +163,6 @@ applyTxBody count model txbody =
 applyWithdrawals :: Model era -> RewardAccount -> Coin -> Model era
 applyWithdrawals model (RewardAccount _network cred) coin =
   model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
-
-applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
-applyShelleyCert model dcert = case dcert of
-  ShelleyTxCertDelegCert (ShelleyRegCert x) ->
-    model
-      { mRewards = Map.insert x (Coin 0) (mRewards model)
-      , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
-      , mDeposited = mDeposited model <+> pp ^. ppKeyDepositL
-      }
-    where
-      pp = mPParams model
-  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (toExpr x))
-    Just (Coin 0) ->
-      model
-        { mRewards = Map.delete x (mRewards model)
-        , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keyDeposit
-        }
-      where
-        keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
-    Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
-    model {mDelegations = Map.insert cred hash (mDelegations model)}
-  ShelleyTxCertPool (RegPool poolparams) ->
-    model
-      { mPoolParams = Map.insert hk poolparams (mPoolParams model)
-      , mDeposited =
-          if Map.member hk (mPoolDeposits model)
-            then mDeposited model
-            else mDeposited model <+> pp ^. ppPoolDepositL
-      , mPoolDeposits -- Only add if it isn't already there
-        =
-          if Map.member hk (mPoolDeposits model)
-            then mPoolDeposits model
-            else Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
-      }
-    where
-      hk = ppId poolparams
-      pp = mPParams model
-  ShelleyTxCertPool (RetirePool keyhash epoch) ->
-    model
-      { mRetiring = Map.insert keyhash epoch (mRetiring model)
-      , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
-      }
-    where
-      pp = mPParams model
-  ShelleyTxCertGenesisDeleg _ -> model
-  ShelleyTxCertMir _ -> model
 
 -- =========================================================
 -- What to do if the second phase does not validatate.

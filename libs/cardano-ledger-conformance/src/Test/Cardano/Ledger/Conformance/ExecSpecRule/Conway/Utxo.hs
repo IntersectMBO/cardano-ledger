@@ -51,6 +51,7 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
+import Test.Cardano.Ledger.Generic.Instances ()
 
 genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
 genUtxoExecContext = do

@@ -17,7 +17,6 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, eraLanguages)
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), TxDats (..), unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
@@ -60,6 +59,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
  )
 import Test.Cardano.Ledger.Generic.ApplyTx (defaultPPs)
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, Reflect (..))
 import Test.Cardano.Ledger.Generic.TxGen ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
@@ -120,10 +120,10 @@ testEstimateMinFee =
             (mkTxDats (Data (PV1.I 123)))
     redeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 0) (Data (PV1.I 42))
 
-defaultPParams :: forall era. (AlonzoEraPParams era, AlonzoEraScript era) => PParams era
+defaultPParams :: forall era. AlonzoEraPParams era => PParams era
 defaultPParams =
   emptyPParams @era
-    & ppCostModelsL .~ zeroTestingCostModels (eraLanguages @era)
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
     & ppMaxValSizeL .~ 1_000_000_000
     & ppMaxTxExUnitsL .~ ExUnits 1_000_000 1_000_000
     & ppMaxBlockExUnitsL .~ ExUnits 1_000_000 1_000_000

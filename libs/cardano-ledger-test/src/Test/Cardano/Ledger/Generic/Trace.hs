@@ -101,13 +101,14 @@ import Test.Cardano.Ledger.Generic.GenState (
   modifyModel,
   runGenRS,
  )
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (EraGenericGen, genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
-import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
@@ -311,6 +312,9 @@ instance
   ( STS (MOCKCHAIN era)
   , Reflect era
   , EraTest era
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where
@@ -334,7 +338,7 @@ instance
          in Debug.trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               ( error . unlines $
-                  "sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS" : map show (Fold.toList pdfs)
+                  "sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS" : map showExpr (Fold.toList pdfs)
               )
       Right mcs2 -> seq mcs2 (pure mockblock)
 
@@ -430,6 +434,8 @@ forEachEpochTrace ::
   , STS.Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , STS.Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , EraGenericGen era
+  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
+  , ToExpr (PredicateFailure (EraRule "RUPD" era))
   ) =>
   Int ->
   GenSize ->

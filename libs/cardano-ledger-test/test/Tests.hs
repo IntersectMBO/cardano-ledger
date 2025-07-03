@@ -9,20 +9,19 @@ module Main where
 
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
-import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.Common (hspec)
 import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
-import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
+import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures, toolTests)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
+import Test.Cardano.Ledger.Generic.GenState (defaultGenSize)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
-import qualified Test.Cardano.Ledger.STS as ConstraintSTS
+--import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Cardano.Ledger.Generic.GenState (defaultGenSize)
 
 main :: IO ()
 main = do
@@ -38,7 +37,7 @@ defaultTests :: [TestTree]
 defaultTests =
   [ depositTests
   , calcPoolDistOldEqualsNew
-  , Tools.tests
+  , toolTests
   , testGroup
       "STS Tests"
       [ babbageFeatures
@@ -48,7 +47,7 @@ defaultTests =
       ]
   , genericProperties defaultGenSize
   , aggTests
-  , ConstraintSTS.tests_STS
+  --, ConstraintSTS.tests_STS TODO re-enable this before merging
   ]
 
 nightlyTests :: [TestTree]

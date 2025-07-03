@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -24,6 +25,7 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
   txFromTestCaseData,
   utxoFromTestCaseData,
   babbageFeatures,
+  toolTests,
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -50,6 +52,7 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.BaseTypes (
+  ProtVer (..),
   ShelleyBase,
   SlotNo (..),
   StrictMaybe (..),
@@ -89,21 +92,29 @@ import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Tools (
+  exUnitsTranslationRoundTrip,
+  exampleExUnitCalc,
+  exampleInvalidExUnitCalc,
+ )
 import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   genericCont,
   mkGenesisTxIn,
   mkTxDats,
-  testUTXOW, EraModel (..),
+  testUTXOW,
  )
+import Test.Cardano.Ledger.Generic.Instances ()
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Cardano.Ledger.TreeDiff (ToExpr, showExpr)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
+import Test.Tasty.QuickCheck (testProperty)
 
 someKeys :: KeyPair 'Payment
 someKeys = KeyPair vk sk
@@ -206,6 +217,7 @@ inlineDatum ::
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 inlineDatum =
@@ -241,6 +253,7 @@ inlineDatumFailingScript ::
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 inlineDatumFailingScript =
@@ -275,7 +288,13 @@ inlineDatumFailingScript =
 
 referenceScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV2 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 referenceScript =
   TestCaseData
@@ -309,7 +328,13 @@ referenceScript =
 
 commonReferenceScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV2 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 commonReferenceScript =
   TestCaseData
@@ -349,7 +374,7 @@ commonReferenceScript =
 
 inlineDatumAndRefScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) =>
+  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era, BabbageEraPParams era) =>
   TestCaseData era
 inlineDatumAndRefScript =
   TestCaseData
@@ -385,7 +410,13 @@ inlineDatumAndRefScript =
 
 inlineDatumAndRefScriptWithRedundantWitScript ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV2 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 inlineDatumAndRefScriptWithRedundantWitScript =
   TestCaseData
@@ -454,7 +485,7 @@ refInputWithDataHashNoWit =
 
 refInputWithDataHashWithWit ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) =>
+  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era, BabbageEraPParams era) =>
   TestCaseData era
 refInputWithDataHashWithWit =
   TestCaseData
@@ -496,6 +527,7 @@ refscriptForDelegCert ::
   , BabbageEraTxBody era
   , EraPlutusTxInfo PlutusV2 era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 refscriptForDelegCert =
@@ -531,7 +563,13 @@ refscriptForDelegCert =
 
 useCollateralReturn ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV1 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 useCollateralReturn =
   TestCaseData
@@ -568,7 +606,13 @@ useCollateralReturn =
 
 incorrectCollateralTotal ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, AlonzoEraTxWits era, EraModel era) => TestCaseData era
+  ( Reflect era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
+  TestCaseData era
 incorrectCollateralTotal =
   TestCaseData
     { txBody =
@@ -608,6 +652,7 @@ inlineDatumRedundantDatumWit ::
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 inlineDatumRedundantDatumWit =
@@ -617,9 +662,9 @@ inlineDatumRedundantDatumWit =
           & inputsTxBodyL .~ [someTxIn]
           & collateralInputsTxBodyL .~ [anotherTxIn]
           & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
-          & feeTxBodyL .~ (Coin 5)
+          & feeTxBodyL .~ Coin 5
           & scriptIntegrityHashTxBodyL
-            .~ (newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers txDats)
+            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers txDats
     , initOutputs =
         InitOutputs
           { ofInputs =
@@ -651,6 +696,7 @@ inlineDatumWithPlutusV1Script ::
   , BabbageEraTxOut era
   , AlonzoEraTxWits era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 inlineDatumWithPlutusV1Script =
@@ -693,6 +739,7 @@ referenceScriptWithPlutusV1Script ::
   , EraPlutusTxInfo PlutusV1 era
   , AlonzoEraTxWits era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era
 referenceScriptWithPlutusV1Script =
@@ -733,7 +780,13 @@ referenceScriptWithPlutusV1Script =
 
 referenceInputWithPlutusV1Script ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV1 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV1 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 referenceInputWithPlutusV1Script =
   TestCaseData
@@ -743,7 +796,7 @@ referenceInputWithPlutusV1Script =
           & referenceInputsTxBodyL .~ [anotherTxIn]
           & collateralInputsTxBodyL .~ [yetAnotherTxIn]
           & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
-          & feeTxBodyL .~ (Coin 5)
+          & feeTxBodyL .~ Coin 5
           & scriptIntegrityHashTxBodyL
             .~ newScriptIntegrityHash @era defaultPParams [PlutusV1] validatingRedeemers txDats
     , initOutputs =
@@ -868,7 +921,13 @@ largeOutput =
 
 noSuchThingAsReferenceDatum ::
   forall era.
-  (Reflect era, BabbageEraTxBody era, EraPlutusTxInfo PlutusV2 era, AlonzoEraTxWits era, EraModel era) =>
+  ( Reflect era
+  , BabbageEraTxBody era
+  , EraPlutusTxInfo PlutusV2 era
+  , AlonzoEraTxWits era
+  , EraModel era
+  , BabbageEraPParams era
+  ) =>
   TestCaseData era
 noSuchThingAsReferenceDatum =
   TestCaseData
@@ -901,7 +960,7 @@ noSuchThingAsReferenceDatum =
     , keysForAddrWits = [someKeysPaymentKeyRole]
     , otherWitsFields = \x ->
         x
-          & witsTxL . hashScriptTxWitsL .~ [alwaysSucceeds @PlutusV2 1]
+          & witsTxL . hashScriptTxWitsL .~ [alwaysSucceeds @PlutusV2 3]
           & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
     }
 
@@ -1004,6 +1063,7 @@ testExpectSuccessValid ::
   , AlonzoEraTx era
   , STS (EraRule "UTXOW" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , BabbageEraPParams era
   ) =>
   TestCaseData era ->
   Assertion
@@ -1051,6 +1111,7 @@ testExpectSuccessInvalid ::
   , AlonzoEraTx era
   , STS (EraRule "UTXOW" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , BabbageEraPParams era
   ) =>
   TestCaseData era ->
   Assertion
@@ -1078,6 +1139,7 @@ testExpectFailure ::
   , STS (EraRule "UTXOW" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , AlonzoEraTx era
+  , BabbageEraPParams era
   ) =>
   TestCaseData era ->
   PredicateFailure (EraRule "UTXOW" era) ->
@@ -1106,6 +1168,7 @@ genericBabbageFeatures ::
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , EraPlutusTxInfo PlutusV2 era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   TestTree
 genericBabbageFeatures =
@@ -1151,6 +1214,7 @@ plutusV1RefScriptFailures ::
   , AlonzoEraTx era
   , EraPlutusTxInfo PlutusV1 era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   Proof era ->
   TestTree
@@ -1197,6 +1261,7 @@ genericBabbageFailures ::
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   , EraModel era
+  , BabbageEraPParams era
   ) =>
   Proof era ->
   TestTree
@@ -1218,7 +1283,7 @@ genericBabbageFailures pf =
               inlineDatumAndRefScriptWithRedundantWitScript
               ( injectFailure
                   ( Shelley.ExtraneousScriptWitnessesUTXOW
-                      (Set.singleton $ hashScript @era (alwaysSucceeds @PlutusV2 1))
+                      (Set.singleton $ hashScript @era (alwaysSucceeds @PlutusV2 3))
                   )
               )
         , testCase "inline datum with redundant datum witness" $
@@ -1286,6 +1351,7 @@ testExpectUTXOFailure ::
   , Tx era ~ Signal (EraRule "UTXO" era)
   , STS (EraRule "UTXO" era)
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , BabbageEraPParams era
   ) =>
   TestCaseData era ->
   PredicateFailure (EraRule "UTXO" era) ->
@@ -1294,7 +1360,7 @@ testExpectUTXOFailure tc failure =
   let tx' = txFromTestCaseData tc
       InitUtxo inputs' refInputs' collateral' = initUtxoFromTestCaseData @era tc
       initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
-      pparams = emptyPParams
+      pparams = defaultPParams
       env = Shelley.UtxoEnv (SlotNo 0) pparams def
       state = smartUTxOState pparams initUtxo (Coin 0) (Coin 0) def mempty
    in goSTS
@@ -1308,3 +1374,31 @@ testExpectUTXOFailure tc failure =
             Left xs -> assertFailure $ "not exactly one failure" <> showExpr xs
             Right _ -> assertFailure "testExpectUTXOFailure succeeds"
         )
+
+defaultPParams :: forall era. (AlonzoEraScript era, BabbageEraPParams era) => PParams era
+defaultPParams =
+  emptyPParams @era
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
+    & ppMaxValSizeL .~ 1_000_000_000
+    & ppMaxTxExUnitsL .~ ExUnits 1_000_000 1_000_000
+    & ppMaxBlockExUnitsL .~ ExUnits 1_000_000 1_000_000
+    & ppProtocolVersionL .~ ProtVer (eraProtVerLow @era) 0
+    & ppCollateralPercentageL .~ 1
+    & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 5)
+
+toolTests :: TestTree
+toolTests =
+  testGroup
+    "ExUnit tools"
+    [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
+    , testGroup
+        "Alonzo"
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)
+        ]
+    , testGroup
+        "Babbage"
+        [ testCase "calculate ExUnits" (exampleExUnitCalc @BabbageEra)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @BabbageEra)
+        ]
+    ]

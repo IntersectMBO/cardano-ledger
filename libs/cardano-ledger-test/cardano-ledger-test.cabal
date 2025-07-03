@@ -52,6 +52,7 @@ library
     Test.Cardano.Ledger.Generic.Functions
     Test.Cardano.Ledger.Generic.GenState
     Test.Cardano.Ledger.Generic.Indexed
+    Test.Cardano.Ledger.Generic.Instances
     Test.Cardano.Ledger.Generic.MockChain
     Test.Cardano.Ledger.Generic.ModelState
     Test.Cardano.Ledger.Generic.Proof

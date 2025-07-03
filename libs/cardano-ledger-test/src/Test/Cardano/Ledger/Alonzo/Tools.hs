@@ -8,8 +8,12 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Tools (
-  tests,
   EraModel (..),
+  exUnitsTranslationRoundTrip,
+  testSystemStart,
+  testExUnitCalculation,
+  exampleExUnitCalc,
+  exampleInvalidExUnitCalc,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
@@ -60,30 +64,11 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
 import Test.Cardano.Ledger.Generic.TxGen (EraGenericGen (..))
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
-import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
-
-tests :: TestTree
-tests =
-  testGroup
-    "ExUnit tools"
-    [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
-    , testGroup
-        "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)
-        ]
-    , testGroup
-        "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc @BabbageEra)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @BabbageEra)
-        ]
-    ]
+import Test.Tasty.HUnit (assertFailure, (@=?))
+import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample)
 
 -- ExUnits should remain intact when translating to and from the plutus type
 exUnitsTranslationRoundTrip :: Gen Property
