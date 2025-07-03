@@ -39,7 +39,6 @@ packages:
   eras/conway/impl
   eras/conway/test-suite
   eras/dijkstra
-  eras/dijkstra/test-suite
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
