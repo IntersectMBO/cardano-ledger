@@ -20,10 +20,8 @@ source-repository head
 
 library
   exposed-modules:
-    Test.Cardano.Ledger.Allegra.Examples.Consensus
     Test.Cardano.Ledger.AllegraEraGen
     Test.Cardano.Ledger.EraBuffet
-    Test.Cardano.Ledger.Mary.Examples.Consensus
     Test.Cardano.Ledger.Mary.Golden
     Test.Cardano.Ledger.MaryEraGen
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
@@ -48,7 +46,7 @@ library
     bytestring,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib} ^>=1.8,
     cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.7,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-core >=1.17,
     cardano-ledger-mary:{cardano-ledger-mary, testlib} ^>=1.9,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.12,
     cardano-ledger-shelley-test >=1.6,
