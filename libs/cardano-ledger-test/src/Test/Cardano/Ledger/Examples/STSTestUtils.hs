@@ -34,8 +34,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   timelockHash,
   timelockStakeCred,
   genericCont,
-  mkScriptWits,
-  mkDats,
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -89,7 +87,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
-import Data.Map.Strict (Map)
 
 -- =================================================================
 -- =========================  Shared data  =========================
@@ -198,12 +195,6 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era
 mkTxDats d = TxDats $ Map.singleton (hashData d) d
-
-mkScriptWits :: forall era. EraScript era => [Script era] -> Map ScriptHash (Script era)
-mkScriptWits = Map.fromList . fmap (\s -> (hashScript @era s, s))
-
-mkDats :: forall era. Era era => [Data era] -> TxDats era
-mkDats = TxDats . Map.fromList . fmap (\d -> (hashData @era d, d))
 
 mkSingleRedeemer ::
   forall era. AlonzoEraScript era => PlutusPurpose AsIx era -> Data era -> Redeemers era

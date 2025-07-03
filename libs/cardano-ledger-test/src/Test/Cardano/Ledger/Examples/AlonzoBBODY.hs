@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), hashDataTxWitsL)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (
@@ -90,9 +90,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
-import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Tools (always, never)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -100,9 +99,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysSucceedsHash,
   genericCont,
   initUTxO,
-  mkDats,
   mkGenesisTxIn,
-  mkScriptWits,
   mkSingleRedeemer,
   mkTxDats,
   someAddr,
@@ -185,7 +182,7 @@ initialBBodyState ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
   , AlonzoEraPParams era
-  , ShelleyEraScript era
+  , AlonzoEraScript era
   ) =>
   UTxO era ->
   ShelleyBbodyState era
@@ -243,9 +240,6 @@ someDatum = Data (PV1.I 123)
 anotherDatum :: Era era => Data era
 anotherDatum = Data (PV1.I 0)
 
-always :: EraPlutusTxInfo PlutusV1 era => Natural -> Script era
-always = alwaysSucceeds @PlutusV1
-
 validatingTx ::
   forall era.
   ( AlonzoEraTxWits era
@@ -257,17 +251,9 @@ validatingTx ::
 validatingTx =
   mkBasicTx validatingBody
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBody @era) someKeys]
-    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 3, always 3)]
-    & witsTxL . datsTxWitsL .~ TxDats [(hashData @era someDatum, someDatum)]
+    & witsTxL . hashScriptTxWitsL .~ [always 3]
+    & witsTxL . hashDataTxWitsL .~ [someDatum]
     & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
-
--- [ WitnessesI
---    [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
---    , ScriptWits' [always 3 pf]
---    , DataWits' [someDatum]
---    , RdmrWits $ validatingRedeemers pf
---    ]
--- ]
 
 validatingBody ::
   forall era.
@@ -316,8 +302,8 @@ notValidatingTx ::
 notValidatingTx =
   mkBasicTx notValidatingBody
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) someKeys]
-    & witsTxL . scriptTxWitsL .~ mkScriptWits [never 0]
-    & witsTxL . datsTxWitsL .~ mkDats [anotherDatum]
+    & witsTxL . hashScriptTxWitsL .~ [never 0]
+    & witsTxL . hashDataTxWitsL .~ [anotherDatum]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
     notValidatingBody =
@@ -380,9 +366,6 @@ validatingWithWithdrawalRedeemers = mkSingleRedeemer (RewardingPurpose $ AsIx 0)
 validatingTxWithWithdrawalOut :: EraTxOut era => TxOut era
 validatingTxWithWithdrawalOut = mkBasicTxOut someAddr . inject $ Coin 1995
 
-never :: forall era. EraPlutusTxInfo PlutusV1 era => Natural -> Script era
-never = alwaysFails @PlutusV1
-
 notValidatingTxWithWithdrawal ::
   forall era.
   ( AlonzoEraTxWits era
@@ -394,7 +377,7 @@ notValidatingTxWithWithdrawal ::
 notValidatingTxWithWithdrawal =
   mkBasicTx notValidatingBodyWithWithdrawal
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithWithdrawal) someKeys]
-    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ never 1, never 1)]
+    & witsTxL . hashScriptTxWitsL .~ [never 1]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemers
   where
     notValidatingBodyWithWithdrawal =
@@ -421,7 +404,7 @@ validatingTxWithCert ::
 validatingTxWithCert =
   mkBasicTx validatingBodyWithCert
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithCert @era) someKeys]
-    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 2, always 2)]
+    & witsTxL . hashScriptTxWitsL .~ [always 2]
     & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithCert
 
 validatingBodyWithCert ::
@@ -461,7 +444,7 @@ notValidatingTxWithCert ::
 notValidatingTxWithCert =
   mkBasicTx notValidatingBodyWithCert
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithCert) someKeys]
-    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ never 1, never 1)]
+    & witsTxL . hashScriptTxWitsL .~ [never 1]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithCert
   where
     notValidatingBodyWithCert =
@@ -487,7 +470,7 @@ validatingTxWithMint ::
 validatingTxWithMint =
   mkBasicTx validatingBodyWithMint
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated $ validatingBodyWithMint @era) someKeys]
-    & witsTxL . scriptTxWitsL .~ [(hashScript @era $ always 2, always 2)]
+    & witsTxL . hashScriptTxWitsL .~ [always 2]
     & witsTxL . rdmrsTxWitsL .~ validatingRedeemersWithMint
 
 -- newTx
@@ -546,7 +529,7 @@ notValidatingTxWithMint ::
 notValidatingTxWithMint =
   mkBasicTx notValidatingBodyWithMint
     & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBodyWithMint) someKeys]
-    & witsTxL . scriptTxWitsL .~ mkScriptWits [never 1]
+    & witsTxL . hashScriptTxWitsL .~ [never 1]
     & witsTxL . rdmrsTxWitsL .~ notValidatingRedeemersWithMint
   where
     notValidatingBodyWithMint =

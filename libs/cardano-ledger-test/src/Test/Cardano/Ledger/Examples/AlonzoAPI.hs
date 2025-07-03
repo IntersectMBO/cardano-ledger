@@ -17,6 +17,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, eraLanguages)
 import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), TxDats (..), unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
@@ -35,7 +36,8 @@ import Cardano.Ledger.Conway.Core (
   ppMaxBlockExUnitsL,
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
-  pattern SpendingPurpose, ppMinFeeAL,
+  ppMinFeeAL,
+  pattern SpendingPurpose,
  )
 import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
 import Cardano.Ledger.Plutus (ExUnits (..))
@@ -57,7 +59,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
  )
 import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..), defaultPPs)
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..), AlonzoEra)
+import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, Reflect (..))
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -83,8 +85,9 @@ testEstimateMinFee =
     0
     @?= alonzoMinFeeTx pparams validatingTx
   where
-    pparams = defaultPPs emptyPParams
-      & ppMinFeeAL .~ Coin 1
+    pparams =
+      defaultPPs emptyPParams
+        & ppMinFeeAL .~ Coin 1
     dat = Data (PV1.I 123)
     dataMap = Map.singleton (hashData dat) dat
     script = fromNativeScript $ RequireAllOf mempty
@@ -115,10 +118,10 @@ testEstimateMinFee =
             (mkTxDats (Data (PV1.I 123)))
     redeemers = mkSingleRedeemer (SpendingPurpose $ AsIx 0) (Data (PV1.I 42))
 
-defaultPParams :: forall era. AlonzoEraPParams era => PParams era
+defaultPParams :: forall era. (AlonzoEraPParams era, AlonzoEraScript era) => PParams era
 defaultPParams =
   emptyPParams @era
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
+    & ppCostModelsL .~ zeroTestingCostModels (eraLanguages @era)
     & ppMaxValSizeL .~ 1_000_000_000
     & ppMaxTxExUnitsL .~ ExUnits 1_000_000 1_000_000
     & ppMaxBlockExUnitsL .~ ExUnits 1_000_000 1_000_000

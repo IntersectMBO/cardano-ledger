@@ -140,6 +140,10 @@ instance EraModel MaryEra where
 instance EraModel AlonzoEra where
   applyTx = shelleyApplyTx
   applyCert = applyShelleyCert
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
 
 instance EraModel BabbageEra where
   applyTx = babbageApplyTx
@@ -147,10 +151,15 @@ instance EraModel BabbageEra where
   mkRedeemersFromTags = alonzoMkRedeemersFromTags
   mkRedeemers = alonzoMkRedeemers
   newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
 
 instance EraModel ConwayEra where
   applyTx = babbageApplyTx
   applyCert = error "Not yet implemented"
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkConwayPlutusPurposePointer
 
 babbageApplyTx ::
   forall era.
