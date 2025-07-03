@@ -42,7 +42,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
 import GHC.Stack
-import Lens.Micro ((^.))
+import Lens.Micro (lens, (^.))
 
 instance EraTx ConwayEra where
   type Tx ConwayEra = AlonzoTx ConwayEra
@@ -123,6 +123,7 @@ instance AlonzoEraTx ConwayEra where
 
 instance EraBlockBody ConwayEra where
   type BlockBody ConwayEra = AlonzoTxSeq ConwayEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

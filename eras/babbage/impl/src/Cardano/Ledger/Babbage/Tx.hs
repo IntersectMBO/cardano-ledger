@@ -21,6 +21,7 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
+import Lens.Micro (lens)
 
 instance EraTx BabbageEra where
   type Tx BabbageEra = AlonzoTx BabbageEra
@@ -49,6 +50,7 @@ instance AlonzoEraTx BabbageEra where
 
 instance EraBlockBody BabbageEra where
   type BlockBody BabbageEra = AlonzoTxSeq BabbageEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

@@ -592,6 +592,8 @@ class
   default mkBasicBlockBody :: BlockBody era
   mkBasicBlockBody = toTxSeq mempty
 
+  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx era))
+
   fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
   toTxSeq :: StrictSeq (Tx era) -> BlockBody era
 

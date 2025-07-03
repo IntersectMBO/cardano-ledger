@@ -25,6 +25,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Lens.Micro (lens)
 
 instance EraTx DijkstraEra where
   type Tx DijkstraEra = AlonzoTx DijkstraEra
@@ -54,6 +55,7 @@ instance AlonzoEraTx DijkstraEra where
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = AlonzoTxSeq DijkstraEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

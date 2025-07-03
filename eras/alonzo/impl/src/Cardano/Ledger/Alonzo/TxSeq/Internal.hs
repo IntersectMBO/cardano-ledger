@@ -90,6 +90,7 @@ data AlonzoTxSeq era = AlonzoTxSeqRaw
 
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoTxSeq AlonzoEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

@@ -69,7 +69,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro (lens, (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyTxSeq era = TxSeq'
@@ -88,6 +88,7 @@ data ShelleyTxSeq era = TxSeq'
 
 instance EraBlockBody ShelleyEra where
   type BlockBody ShelleyEra = ShelleyTxSeq ShelleyEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = txSeqHash
