@@ -274,7 +274,7 @@ spec = do
               { bhviewID = kh
               , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
               , bhviewHSize = 0
-              , bhviewBHash = hashTxSeq txSeq
+              , bhviewBHash = hashBlockBody blockBody
               , bhviewSlot = slotNo
               }
       tryRunImpRule @"BBODY"

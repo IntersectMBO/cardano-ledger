@@ -235,7 +235,7 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
         , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
         , bsize = 2345
-        , bhash = hashTxSeq @era blockBody
+        , bhash = hashBlockBody @era blockBody
         , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
         , bprotver = ProtVer (natVersion @2) 0
         }

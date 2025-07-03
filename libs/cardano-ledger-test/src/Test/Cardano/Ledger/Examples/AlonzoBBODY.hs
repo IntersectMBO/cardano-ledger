@@ -700,7 +700,7 @@ makeNaiveBlock txs = Block bhView blockBody
         { bhviewID = hashKey (vKey coldKeys)
         , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
         , bhviewHSize = 0
-        , bhviewBHash = hashTxSeq blockBody
+        , bhviewBHash = hashBlockBody blockBody
         , bhviewSlot = SlotNo 0
         }
     blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txs

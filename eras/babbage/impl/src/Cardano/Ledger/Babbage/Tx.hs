@@ -53,5 +53,6 @@ instance EraBlockBody BabbageEra where
   txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
+  hashBlockBody = hashAlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
   numSegComponents = 4

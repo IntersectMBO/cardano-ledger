@@ -20,5 +20,6 @@ instance EraBlockBody AllegraEra where
   txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
+  hashBlockBody = bbHash
   hashTxSeq = bbHash
   numSegComponents = 3

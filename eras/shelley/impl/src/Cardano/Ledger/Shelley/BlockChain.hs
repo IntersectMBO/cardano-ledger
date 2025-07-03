@@ -91,6 +91,7 @@ instance EraBlockBody ShelleyEra where
   txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
+  hashBlockBody = txSeqHash
   hashTxSeq = txSeqHash
   numSegComponents = 3
 

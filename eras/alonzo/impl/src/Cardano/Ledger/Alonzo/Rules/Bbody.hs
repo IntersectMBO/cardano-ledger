@@ -199,7 +199,7 @@ alonzoBbodyTransition =
            ) -> do
         let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+            actualBodyHash = hashBlockBody @era txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
