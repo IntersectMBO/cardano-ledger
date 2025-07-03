@@ -65,9 +65,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
-  someKeys,
+  someKeys, EraModel (..),
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Plutus (
   alwaysSucceedsPlutus,

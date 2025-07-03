@@ -9,17 +9,20 @@
 
 module Test.Cardano.Ledger.Alonzo.Tools (
   tests,
-  always,
-  never,
+  EraModel (..),
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.Api.Tx (RedeemerReport, TransactionScriptFailure (..), evalTxExUnits)
+import Cardano.Ledger.Api.Tx (
+  RedeemerReport,
+  TransactionScriptFailure (..),
+  evalTxExUnits,
+ )
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus (
@@ -44,21 +47,19 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
-import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Common (ToExpr, showExpr)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, BabbageEra)
 import Test.Cardano.Ledger.Generic.TxGen (EraGenericGen (..))
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
@@ -66,12 +67,6 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
-
-always :: EraPlutusTxInfo PlutusV1 era => Natural -> Script era
-always = alwaysSucceeds @PlutusV1
-
-never :: forall era. EraPlutusTxInfo PlutusV1 era => Natural -> Script era
-never = alwaysFails @PlutusV1
 
 tests :: TestTree
 tests =
@@ -199,7 +194,6 @@ exampleTx ::
   ( AlonzoEraTx era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraGenericGen era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   PlutusPurpose AsIx era ->
   Tx era
@@ -218,6 +212,7 @@ validatingBody ::
   forall era.
   ( PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraGenericGen era
+  , AlonzoEraScript era
   ) =>
   TxBody era
 validatingBody =
@@ -235,14 +230,13 @@ validatingBody =
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
-uenv :: EraGenericGen era => UtxoEnv era
+uenv :: (EraGenericGen era, AlonzoEraScript era) => UtxoEnv era
 uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::
-  ( EraStake era
-  , EraGov era
-  , AllegraEraScript era
+  ( AllegraEraScript era
   , AlonzoEraTxOut era
+  , EraModel era
   ) =>
   UTxOState era
 ustate =
@@ -290,10 +284,10 @@ failLeft :: (Monad m, ToExpr e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (showExpr e)
 
-testPParams :: forall era. EraGenericGen era => PParams era
+testPParams :: forall era. (EraGenericGen era, AlonzoEraScript era) => PParams era
 testPParams =
   emptyPParams @era
-    & ppCostModelsT .~ zeroTestingCostModels [PlutusV1]
+    & ppCostModelsT .~ zeroTestingCostModels (eraLanguages @era)
     & ppMaxValSizeT .~ 1000000000
     & ppMaxTxExUnitsT .~ ExUnits 100000000 100000000
     & ppMaxBlockExUnitsT .~ ExUnits 100000000 100000000

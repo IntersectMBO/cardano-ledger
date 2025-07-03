@@ -14,8 +14,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -50,7 +52,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..))
+import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
@@ -82,11 +84,41 @@ import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), runSTS, runSTS')
-import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
+import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest, EraTest)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
+import Test.Cardano.Ledger.Generic.ModelState (Model)
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag)
+import Data.Word (Word32)
+import Cardano.Ledger.Plutus (Language)
+import Numeric.Natural (Natural)
+
+class EraTest era => EraModel era where
+  applyTx :: Int -> SlotNo -> Model era -> Tx era -> Model era
+  applyCert :: Model era -> TxCert era -> Model era
+
+  mkRedeemersFromTags :: [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
+  mkRedeemersFromTags = error $ "No redeemers in " <> eraName @era
+
+  mkRedeemers :: [(PlutusPurpose AsIx era, (Data era, ExUnits))] -> Redeemers era
+  mkRedeemers = error $ "No redeemers in " <> eraName @era
+
+  newScriptIntegrityHash ::
+    PParams era ->
+    [Language] ->
+    Redeemers era ->
+    TxDats era ->
+    StrictMaybe ScriptIntegrityHash
+  newScriptIntegrityHash _ _ _ _ = SNothing
+
+  mkPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> PlutusPurpose AsIx era
+  mkPlutusPurposePointer = error $ "mkPlutusPurposePointer not available in " <> eraName @era
+
+  always :: Natural -> Script era
+
+  never :: Natural -> Script era
 
 -- =================================================================
 -- =========================  Shared data  =========================
@@ -136,7 +168,7 @@ timelockStakeCred = ScriptHashObj (timelockHash @era 2)
 initUTxO ::
   forall era.
   ( AllegraEraScript era
-  , AlonzoEraTxOut era
+  , AlonzoEraTxOut era, EraModel era
   ) =>
   UTxO era
 initUTxO =
@@ -154,7 +186,7 @@ initUTxO =
            ]
   where
     alwaysSucceedsOutput =
-      mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAllOf mempty)) (inject $ Coin 5000)
+      mkBasicTxOut (someScriptAddr @era $ always 3) (inject $ Coin 5000)
         & dataHashTxOutL .~ SJust (hashData $ datumExample1 @era)
     alwaysFailsOutput =
       mkBasicTxOut (someScriptAddr @era $ fromNativeScript (RequireAnyOf mempty)) (inject $ Coin 3000)

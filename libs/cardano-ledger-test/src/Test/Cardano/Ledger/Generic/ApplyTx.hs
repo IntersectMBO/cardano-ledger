@@ -3,26 +3,25 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsIx (..), ExUnits (ExUnits))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, mkTxIxPartial, natVersion)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraPParams,
-  AlonzoEraScript (..),
-  AlonzoEraTx (..),
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
   BabbageEraTxBody (..),
@@ -37,13 +36,13 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..))
 import Control.Iterate.Exp (dom, (∈))
 import Control.Iterate.SetAlgebra (eval)
 import Data.Foldable (Foldable (..), fold)
@@ -56,9 +55,9 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Era (EraTest)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
@@ -74,107 +73,9 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
-
-class EraTest era => EraModel era where
-  applyTx :: Int -> SlotNo -> Model era -> Tx era -> Model era
-  applyCert :: Model era -> TxCert era -> Model era
-
-  mkRedeemersFromTags :: [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
-  mkRedeemersFromTags = error $ "No redeemers in " <> eraName @era
-
-  mkRedeemers :: [(PlutusPurpose AsIx era, (Data era, ExUnits))] -> Redeemers era
-  mkRedeemers = error $ "No redeemers in " <> eraName @era
-
-  newScriptIntegrityHash ::
-    PParams era ->
-    [Language] ->
-    Redeemers era ->
-    TxDats era ->
-    StrictMaybe ScriptIntegrityHash
-  newScriptIntegrityHash _ _ _ _ = SNothing
-
-  mkPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> PlutusPurpose AsIx era
-  mkPlutusPurposePointer = error $ "mkPlutusPurposePointer not available in " <> eraName @era
-
-alonzoMkRedeemersFromTags ::
-  (AlonzoEraScript era, EraModel era) =>
-  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
-alonzoMkRedeemersFromTags redeemerPointers =
-  alonzoMkRedeemers redeemerAssocs
-  where
-    redeemerAssocs =
-      [ (mkPlutusPurposePointer tag i, redeemer)
-      | ((tag, i), redeemer) <- redeemerPointers
-      ]
-
-alonzoMkRedeemers ::
-  forall era.
-  AlonzoEraScript era =>
-  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
-  Redeemers era
-alonzoMkRedeemers = Redeemers . Map.fromList
-
-shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
-shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
-  where
-    modelEpoch = mEL model
-    transactionEpoch = epochFromSlotNo slot
-    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
-
-instance EraModel ShelleyEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-
-instance EraModel AllegraEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-
-instance EraModel MaryEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-
-instance EraModel AlonzoEra where
-  applyTx = shelleyApplyTx
-  applyCert = applyShelleyCert
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-
-instance EraModel BabbageEra where
-  applyTx = babbageApplyTx
-  applyCert = applyShelleyCert
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-
-instance EraModel ConwayEra where
-  applyTx = babbageApplyTx
-  applyCert = error "Not yet implemented"
-  mkRedeemersFromTags = alonzoMkRedeemersFromTags
-  mkRedeemers = alonzoMkRedeemers
-  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
-  mkPlutusPurposePointer = mkConwayPlutusPurposePointer
-
-babbageApplyTx ::
-  forall era.
-  (EraModel era, AlonzoEraTx era, Reflect era, BabbageEraTxBody era) =>
-  Int -> SlotNo -> Model era -> Tx era -> Model era
-babbageApplyTx count slot model tx = case tx ^. isValidTxL of
-  IsValid True -> applyTxSimple count epochAccurateModel tx
-  IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx
-  where
-    transactionEpoch = epochFromSlotNo slot
-    modelEpoch = mEL model
-    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
-    txbody = tx ^. bodyTxL
-    outputs = txbody ^. outputsTxBodyL
-    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
+import Test.Cardano.Ledger.Conway.Era ()
 
 applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx era -> Model era
 applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL

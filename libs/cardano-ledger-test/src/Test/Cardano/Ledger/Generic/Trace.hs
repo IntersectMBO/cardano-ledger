@@ -80,7 +80,7 @@ import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Era
-import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.Functions (
   adaPots,
   totalAda,
@@ -157,7 +157,7 @@ genTxSeq ::
   -- use (pure ()) if you don't want or need initialization
   Gen (Vector (StrictSeq (Tx era), SlotNo), GenState era)
 genTxSeq gensize numTx initialize = do
-  runGenRS gensize (initialize >> genRsTxSeq 0 numTx [] (SlotNo $ 1))
+  runGenRS gensize (initialize >> genRsTxSeq 0 numTx [] (SlotNo 1))
 
 runTest :: IO ()
 runTest = do

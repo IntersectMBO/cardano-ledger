@@ -91,7 +91,6 @@ import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Tools (always, never)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoAPI (defaultPParams)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -104,9 +103,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkTxDats,
   someAddr,
   someKeys,
-  someScriptAddr,
+  someScriptAddr, EraModel (..),
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -245,7 +243,6 @@ validatingTx ::
   ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTx =
@@ -296,7 +293,6 @@ notValidatingTx ::
   ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTx =
@@ -371,7 +367,6 @@ notValidatingTxWithWithdrawal ::
   ( AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTxWithWithdrawal =
@@ -398,7 +393,6 @@ validatingTxWithCert ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 validatingTxWithCert =
@@ -438,7 +432,6 @@ notValidatingTxWithCert ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTxWithCert =
@@ -504,14 +497,13 @@ validatingBodyWithMint =
 validatingRedeemersWithMint :: AlonzoEraScript era => Redeemers era
 validatingRedeemersWithMint = mkSingleRedeemer (MintingPurpose $ AsIx 0) (Data (PV1.I 42))
 
-multiAsset :: forall era. EraPlutusTxInfo PlutusV1 era => MultiAsset
+multiAsset :: forall era. EraModel era => MultiAsset
 multiAsset = forge @era 1 $ always 2
 
 validatingTxWithMintOut ::
   forall era.
   ( Value era ~ MaryValue
-  , EraTxOut era
-  , EraPlutusTxInfo PlutusV1 era
+  , EraModel era
   ) =>
   TxOut era
 validatingTxWithMintOut =
@@ -523,7 +515,6 @@ notValidatingTxWithMint ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era
-  , EraPlutusTxInfo PlutusV1 era
   ) =>
   Tx era
 notValidatingTxWithMint =

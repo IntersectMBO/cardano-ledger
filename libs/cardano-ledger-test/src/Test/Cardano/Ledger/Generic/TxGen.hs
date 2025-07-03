@@ -17,6 +17,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.TxGen (
   EraGenericGen (..),
@@ -42,7 +43,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (
-  Redeemers,
+  Redeemers (..),
   TxDats (..),
  )
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..), BabbageTxOut (..))
@@ -62,7 +63,7 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Plutus (Language)
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
@@ -109,7 +110,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Word (Word16)
+import Data.Word (Word16, Word32)
 import GHC.Stack
 import Lens.Micro (Lens', (%~), (&), (.~), (^.))
 import qualified Lens.Micro as L
@@ -119,7 +120,15 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Era (EraTest)
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..), mkRedeemersFromTags)
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
+import Test.Cardano.Ledger.Generic.ApplyTx (
+  applyShelleyCert,
+  applyTxBody,
+  applyTxFail,
+  applyTxSimple,
+  epochBoundary,
+  mkAlonzoPlutusPurposePointer, mkConwayPlutusPurposePointer,
+ )
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
@@ -156,14 +165,57 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   MUtxo,
+  Model,
   ModelNewEpochState (..),
   UtxoEntry,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
+import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds, alwaysFails)
+
+alonzoMkRedeemersFromTags ::
+  (AlonzoEraScript era, EraModel era) =>
+  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] -> Redeemers era
+alonzoMkRedeemersFromTags redeemerPointers =
+  alonzoMkRedeemers redeemerAssocs
+  where
+    redeemerAssocs =
+      [ (mkPlutusPurposePointer tag i, redeemer)
+      | ((tag, i), redeemer) <- redeemerPointers
+      ]
+
+alonzoMkRedeemers ::
+  forall era.
+  AlonzoEraScript era =>
+  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
+  Redeemers era
+alonzoMkRedeemers = Redeemers . Map.fromList
+
+shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
+shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
+  where
+    modelEpoch = mEL model
+    transactionEpoch = epochFromSlotNo slot
+    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
+
+babbageApplyTx ::
+  forall era.
+  (EraModel era, AlonzoEraTx era, Reflect era, BabbageEraTxBody era) =>
+  Int -> SlotNo -> Model era -> Tx era -> Model era
+babbageApplyTx count slot model tx = case tx ^. isValidTxL of
+  IsValid True -> applyTxSimple count epochAccurateModel tx
+  IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx
+  where
+    transactionEpoch = epochFromSlotNo slot
+    modelEpoch = mEL model
+    epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
+    txbody = tx ^. bodyTxL
+    outputs = txbody ^. outputsTxBodyL
+    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
 
 -- | Create an unlawful "lens" that returns the specified value when used as a
 -- getter and does nothing when used as a setter
@@ -256,7 +308,55 @@ alonzoGenExUnits n = do
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) ([1 .. n] :: [Int])
 
-instance EraGenericGen ShelleyEra where
+instance EraModel ShelleyEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+  always _ = fromNativeScript $ RequireAllOf []
+  never _ = fromNativeScript $ RequireAnyOf []
+
+instance EraModel AllegraEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+  always _ = fromNativeScript $ RequireAllOf []
+  never _ = fromNativeScript $ RequireAnyOf []
+
+instance EraModel MaryEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+  always _ = fromNativeScript $ RequireAllOf []
+  never _ = fromNativeScript $ RequireAnyOf []
+
+instance EraModel AlonzoEra where
+  applyTx = shelleyApplyTx
+  applyCert = applyShelleyCert
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
+  always = alwaysSucceeds @PlutusV1
+  never = alwaysFails @PlutusV1
+
+instance EraModel BabbageEra where
+  applyTx = babbageApplyTx
+  applyCert = applyShelleyCert
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
+  always = alwaysSucceeds @PlutusV2
+  never = alwaysFails @PlutusV1
+
+instance EraModel ConwayEra where
+  applyTx = babbageApplyTx
+  applyCert = error "Not yet implemented"
+  mkRedeemersFromTags = alonzoMkRedeemersFromTags
+  mkRedeemers = alonzoMkRedeemers
+  newScriptIntegrityHash = alonzoNewScriptIntegrityHash
+  mkPlutusPurposePointer = mkConwayPlutusPurposePointer
+  always = alwaysSucceeds @PlutusV2
+  never = alwaysFails @PlutusV1
+
+instance EraModel ShelleyEra => EraGenericGen ShelleyEra where
   setValidity = shelleySetValidity
 
 instance EraGenericGen MaryEra

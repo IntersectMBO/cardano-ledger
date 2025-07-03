@@ -52,14 +52,16 @@ import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
+  EraModel (..),
   mkGenesisTxIn,
   mkSingleRedeemer,
   mkTxDats,
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..), defaultPPs)
+import Test.Cardano.Ledger.Generic.ApplyTx (defaultPPs)
 import Test.Cardano.Ledger.Generic.Proof (AlonzoEra, Reflect (..))
+import Test.Cardano.Ledger.Generic.TxGen ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))

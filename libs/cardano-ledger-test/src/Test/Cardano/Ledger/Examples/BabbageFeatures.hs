@@ -96,9 +96,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   genericCont,
   mkGenesisTxIn,
   mkTxDats,
-  testUTXOW,
+  testUTXOW, EraModel (..),
  )
-import Test.Cardano.Ledger.Generic.ApplyTx (EraModel (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
