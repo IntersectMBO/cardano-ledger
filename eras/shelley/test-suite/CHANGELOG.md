@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Removed `Test.Cardano.Ledger.Shelley.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
+* Remove `EncCBOR` instance for `RawSeed` (moved to `cardano-ledger-shelley` testlib)
 * Remove `Test.Cardano.Ledger.Shelley.LaxBlock` as unused
 
 ## 1.6.0.0

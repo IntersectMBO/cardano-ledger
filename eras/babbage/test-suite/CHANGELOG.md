@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage-test`
 
+## 1.4.0.0
+
+* Removed `Test.Cardano.Ledger.Babbage.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
+
 ## 1.3.1.1
 
 *
