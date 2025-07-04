@@ -20,6 +20,7 @@
 -- | All the things that are necessary for generation and shrinking.
 module Constrained.Generation where
 
+-- import Debug.Trace
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.Conformance (
@@ -97,39 +98,41 @@ import Prelude hiding (cycle, pred)
 -- generators are not flexible enough.
 genFromSpecT ::
   forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
-genFromSpecT (simplifySpec -> spec) = case spec of
-  ExplainSpec [] s -> genFromSpecT s
-  ExplainSpec es s -> push es (genFromSpecT s)
-  MemberSpec as -> explain ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
-  TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
-  SuspendedSpec x p
-    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
-    -- from `p` to make sure `p` is sat and then we can throw it away. A better
-    -- approach would be to only do this in the case where we don't know if `p`
-    -- is sat. The proper way to implement such a sat check is to remove
-    -- sat-but-unnecessary variables in the optimiser.
-    | not $ Name x `appearsIn` p -> do
-        !_ <- genFromPreds mempty p
-        genFromSpecT TrueSpec
-    | otherwise -> do
-        env <- genFromPreds mempty p
-        findEnv env x
-  TypeSpec s cant -> do
-    mode <- getMode
-    explainNE
-      ( NE.fromList
-          [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
-          , "tspec = "
-          , show s
-          , "cant = " ++ show (short cant)
-          , "with mode " ++ show mode
-          ]
-      )
-      $
-      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-      -- starts giving us trouble.
-      genFromTypeSpec s `suchThatT` (`notElem` cant)
-  ErrorSpec e -> genErrorNE e
+genFromSpecT (simplifySpec -> spec) =
+  -- trace ("\n**************\nGenFromSpecT "++showType @a++"\n"++show spec) $
+  case spec of
+    ExplainSpec [] s -> genFromSpecT s
+    ExplainSpec es s -> push es (genFromSpecT s)
+    MemberSpec as -> explain ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
+    TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
+    SuspendedSpec x p
+      -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+      -- from `p` to make sure `p` is sat and then we can throw it away. A better
+      -- approach would be to only do this in the case where we don't know if `p`
+      -- is sat. The proper way to implement such a sat check is to remove
+      -- sat-but-unnecessary variables in the optimiser.
+      | not $ Name x `appearsIn` p -> do
+          !_ <- genFromPreds mempty p
+          genFromSpecT TrueSpec
+      | otherwise -> do
+          env <- genFromPreds mempty p
+          findEnv env x
+    TypeSpec s cant -> do
+      mode <- getMode
+      explainNE
+        ( NE.fromList
+            [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
+            , "tspec = "
+            , show s
+            , "cant = " ++ show (short cant)
+            , "with mode " ++ show mode
+            ]
+        )
+        $
+        -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+        -- starts giving us trouble.
+        genFromTypeSpec s `suchThatT` (`notElem` cant)
+    ErrorSpec e -> genErrorNE e
 
 simplifySpec :: HasSpec a => Specification a -> Specification a
 simplifySpec spec = case regularizeNames spec of
@@ -769,7 +772,7 @@ isEmptyPlan (SolverPlan plan _) = null plan
 
 stepPlan :: MonadGenError m => Env -> SolverPlan -> GenT m (Env, SolverPlan)
 stepPlan env plan@(SolverPlan [] _) = pure (env, plan)
-stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
+stepPlan env (SolverPlan (SolverStage (x :: Var a) ps spec : pl) gr) = do
   (spec', specs) <- runGE
     $ explain
       ( show
@@ -787,6 +790,8 @@ stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
           ( NE.fromList
               ( ( "\nStepPlan for variable: "
                     ++ show x
+                    ++ "::"
+                    ++ showType @a
                     ++ " fails to produce Specification, probably overconstrained."
                     ++ "PS = "
                     ++ unlines (map show ps)
@@ -819,8 +824,10 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
     go :: Env -> SolverPlan -> GenT m Env
     go env plan | isEmptyPlan plan = pure env
     go env plan = do
+      (mess :: String) <- (unlines . map NE.head) <$> getMessages
       (env', plan') <-
-        explain (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan env plan
+        explain (show (fromString (mess ++ "Stepping the plan:") /> vsep [pretty plan, pretty env])) $
+          stepPlan env plan
       go env' plan'
 
 -- | Push as much information we can backwards through the plan.
@@ -1216,9 +1223,12 @@ data SolverStage where
     } ->
     SolverStage
 
+docVar :: Typeable a => Var a -> Doc h
+docVar (v :: Var a) = fromString (show v ++ " :: " ++ showType @a)
+
 instance Pretty SolverStage where
   pretty SolverStage {..} =
-    viaShow stageVar
+    docVar stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]

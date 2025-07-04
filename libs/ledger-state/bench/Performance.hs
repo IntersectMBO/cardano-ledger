@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.Genesis (
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
-import Cardano.Ledger.UMap
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
@@ -51,6 +50,7 @@ import System.Environment (getEnv)
 import System.Exit (die)
 import System.Random.Stateful
 import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
+import Test.Cardano.Ledger.Conway.Era (accountsToUMap)
 import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
@@ -150,19 +150,21 @@ main = do
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
     , env (pure es) $ \newEpochState ->
-        let umap = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-            elems = umElems umap
-            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet elems))
+        let accounts = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+            accountsMap =
+              newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+            umap = accountsToUMap accounts
+            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet accountsMap))
          in bgroup
               ( "GetFilteredDelegationsAndRewardAccounts ("
                   ++ show (Set.size creds)
                   ++ "/"
-                  ++ show (Map.size elems)
+                  ++ show (Map.size accountsMap)
                   ++ ")"
               )
-              [ env (pure creds) $
+              [ env (pure (umap, creds)) $
                   bench "getFilteredDelegationsAndRewardAccounts"
-                    . nf (getFilteredDelegationsAndRewardAccounts umap)
+                    . nf (uncurry getFilteredDelegationsAndRewardAccounts)
               , env (pure creds) $
                   bench "queryStakePoolDelegsAndRewards"
                     . nf (queryStakePoolDelegsAndRewards newEpochState)

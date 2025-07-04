@@ -31,7 +31,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
-import Data.Functor.Identity (Identity)
 import Data.List ((\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -39,9 +38,7 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era
 
 spec :: forall era. ConwayEraTest era => Spec
 spec = do
@@ -79,15 +76,7 @@ acceptedRatioProp =
 
           acceptedRatio `shouldBe` expectedRatioAlt
 
-acceptedProp ::
-  forall era.
-  ( ConwayEraPParams era
-  , Arbitrary (PParamsHKD Identity era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (InstantStake era)
-  , Show (InstantStake era)
-  ) =>
-  Spec
+acceptedProp :: forall era. ConwayEraTest era => Spec
 acceptedProp =
   prop "Only NoConfidence or UpdateCommittee should pass without a committee" $
     forAll (arbitrary @(RatifyState era, RatifyEnv era, GovActionState era)) $ do

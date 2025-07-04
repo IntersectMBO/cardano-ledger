@@ -160,6 +160,7 @@ import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity (Identity)
@@ -186,6 +187,7 @@ import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
+import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
 
 maxDecimalsWord64 :: Int
 maxDecimalsWord64 = 19
@@ -824,13 +826,21 @@ newtype BlocksMade = BlocksMade
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Default)
 
 -- | Transaction index.
 newtype TxIx = TxIx {unTxIx :: Word16}
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype
     (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON, MemPack)
+
+instance Random TxIx
+
+instance Uniform TxIx where
+  uniformM g = TxIx <$> uniformM g
+
+instance UniformRange TxIx where
+  uniformRM r g = TxIx <$> uniformRM (coerce r) g
 
 -- | Construct a `TxIx` from a 16 bit unsigned integer
 mkTxIx :: Word16 -> TxIx
@@ -856,6 +866,14 @@ mkTxIxPartial i =
 newtype CertIx = CertIx {unCertIx :: Word16}
   deriving stock (Eq, Ord, Show)
   deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+
+instance Random CertIx
+
+instance Uniform CertIx where
+  uniformM g = CertIx <$> uniformM g
+
+instance UniformRange CertIx where
+  uniformRM r g = CertIx <$> uniformRM (coerce r) g
 
 -- | Construct a `CertIx` from a 16 bit unsigned integer
 mkCertIx :: Word16 -> CertIx

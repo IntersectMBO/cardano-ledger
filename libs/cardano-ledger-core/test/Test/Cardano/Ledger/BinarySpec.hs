@@ -11,7 +11,6 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UMap (RDPair)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -46,7 +45,6 @@ spec = do
     roundTripCborSpec @GenDelegs
     roundTripCborSpec @DRepState
     roundTripCborSpec @DRep
-    roundTripCborSpec @RDPair
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
 

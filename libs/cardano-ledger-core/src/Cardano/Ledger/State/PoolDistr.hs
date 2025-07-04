@@ -31,6 +31,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
+import Data.Default
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -102,6 +103,9 @@ data PoolDistr = PoolDistr
   }
   deriving stock (Show, Eq, Generic)
   deriving (NFData, NoThunks, ToJSON)
+
+instance Default PoolDistr where
+  def = PoolDistr mempty mempty
 
 poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash 'StakePool) IndividualPoolStake)
 poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}

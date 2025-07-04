@@ -121,11 +121,21 @@ instance
   ToExpr (RatifyState era)
 
 instance
-  (EraStake era, EraPParams era, ToExpr (PParams era), ToExpr (PParamsHKD StrictMaybe era)) =>
+  ( EraStake era
+  , EraPParams era
+  , ConwayEraAccounts era
+  , ToExpr (PParams era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
   ToExpr (ConwayGovState era)
 
 instance
-  (EraStake era, EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParams era)) =>
+  ( EraStake era
+  , EraPParams era
+  , ConwayEraAccounts era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (PParams era)
+  ) =>
   ToExpr (DRepPulsingState era)
   where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
@@ -136,6 +146,7 @@ instance
 instance
   ( EraStake era
   , EraPParams era
+  , ConwayEraAccounts era
   , ToExpr (DRepPulsingState era)
   , ToExpr (RatifyState era)
   , ToExpr (PParamsHKD StrictMaybe era)
@@ -144,7 +155,7 @@ instance
   where
   toExpr = toExpr . finishDRepPulser . DRPulsing
 
-instance ToExpr (InstantStake era) => ToExpr (RatifyEnv era) where
+instance (ToExpr (InstantStake era), ToExpr (Accounts era)) => ToExpr (RatifyEnv era) where
   toExpr (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     App
       "RatifyEnv"
@@ -307,7 +318,11 @@ instance
 
 instance ToExpr (VState era)
 
-instance ConwayEraCertState era => ToExpr (ConwayCertState era)
+instance (ConwayEraCertState era, ToExpr (Accounts era)) => ToExpr (ConwayCertState era)
+
+instance ToExpr (ConwayAccounts era)
+
+instance ToExpr (ConwayAccountState era)
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
