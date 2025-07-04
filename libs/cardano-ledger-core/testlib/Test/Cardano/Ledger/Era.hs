@@ -1,19 +1,50 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Test.Cardano.Ledger.Era (
-  EraTest,
+  EraTest (..),
+  GenSize (..),
 ) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.State
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity
+import Data.Map.Strict (Map)
 import Data.Typeable
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff ()
+import Data.Word (Word64)
+import Numeric.Natural (Natural)
+import GHC.Generics (Generic)
+
+-- | Constants that determine how big a GenState is generated.
+data GenSize = GenSize
+  { treasury :: !Integer
+  , reserves :: !Integer
+  , startSlot :: !Word64
+  , slotDelta :: !(Word64, Word64)
+  , blocksizeMax :: !Integer
+  , collInputsMax :: !Natural
+  , spendInputsMax :: !Int
+  , refInputsMax :: !Int
+  , utxoChoicesMax :: !Int
+  , certificateMax :: !Int
+  , withdrawalMax :: !Int
+  , oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
+  , maxStablePools :: !Int
+  , invalidScriptFreq :: !Int -- percentage
+  , regCertFreq :: !Int
+  , delegCertFreq :: !Int
+  }
+  deriving (Show, Generic)
+
+instance ToExpr GenSize
 
 class
   ( -- Core
@@ -70,3 +101,7 @@ class
   , Arbitrary (TranslationContext era)
   ) =>
   EraTest era
+  where
+  validTxOut :: Map ScriptHash (Script era) -> TxOut era -> Bool
+  zeroCostModels :: CostModels
+  genPParams :: GenSize -> Gen (PParams era)

@@ -250,7 +250,7 @@ isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
 
 newtype AsIx ix it = AsIx {unAsIx :: ix}
   deriving stock (Show)
-  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic, Num)
 
 newtype AsItem ix it = AsItem {unAsItem :: it}
   deriving stock (Show)

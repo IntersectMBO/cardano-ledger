@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (Inject (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   RatifySignal (..),
   VotingProcedures (..),
@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   namePoolCert,
   nameTxCert,
  )
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), goSTS)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 
 -- ====================================================================
@@ -52,10 +52,9 @@ minitraceEither ::
   , ToExpr (Signal (EraRule s e))
   , ToExpr (State (EraRule s e))
   ) =>
-  WitRule s e ->
   Int ->
   Gen (Either [String] [Signal (EraRule s e)])
-minitraceEither witrule n0 = do
+minitraceEither n0 = do
   ctxt <- genExecContext @s @e
   env <- genFromSpec @(ExecEnvironment s e) (environmentSpec @s @e ctxt)
   let env2 :: Environment (EraRule s e)
@@ -68,7 +67,6 @@ minitraceEither witrule n0 = do
         let signal2 :: Signal (EraRule s e)
             signal2 = inject signal
         goSTS @s @e @(Gen (Either [String] [Signal (EraRule s e)]))
-          witrule
           env2
           state
           signal2
@@ -98,11 +96,10 @@ minitrace ::
   , ToExpr (Signal (EraRule s e))
   , ToExpr (State (EraRule s e))
   ) =>
-  WitRule s e ->
   Int ->
   Gen [Signal (EraRule s e)]
-minitrace witrule n0 = do
-  ans <- minitraceEither @s @e witrule n0
+minitrace n0 = do
+  ans <- minitraceEither @s @e n0
   case ans of
     Left zs -> pure $ error (unlines zs)
     Right zs -> pure zs
@@ -114,12 +111,11 @@ minitraceProp ::
   , ToExpr (Signal (EraRule s e))
   , ToExpr (State (EraRule s e))
   ) =>
-  WitRule s e ->
   Int ->
   (Signal (EraRule s e) -> String) ->
   Gen Property
-minitraceProp witrule n0 namef = do
-  ans <- minitraceEither @s @e witrule n0
+minitraceProp n0 namef = do
+  ans <- minitraceEither @s @e n0
   case ans of
     Left zs -> pure $ counterexample (unlines zs) (property False)
     Right sigs -> pure $ classifyFirst namef sigs $ property True
@@ -156,39 +152,39 @@ spec = do
   describe "50 MiniTrace tests with trace length of 50" $ do
     prop
       "POOL"
-      (withMaxSuccess 50 (minitraceProp (POOL Conway) 50 namePoolCert))
+      (withMaxSuccess 50 (minitraceProp @"POOL" @ConwayEra 50 namePoolCert))
     prop
       "DELEG"
-      (withMaxSuccess 50 (minitraceProp (DELEG Conway) 50 nameDelegCert))
+      (withMaxSuccess 50 (minitraceProp @"DELEG" @ConwayEra 50 nameDelegCert))
     prop
       "GOVCERT"
       ( withMaxSuccess
           50
-          (minitraceProp (GOVCERT Conway) 50 nameGovCert)
+          (minitraceProp @"GOVCERT" @ConwayEra 50 nameGovCert)
       )
     prop
       "CERT"
-      (withMaxSuccess 50 (minitraceProp (CERT Conway) 50 nameTxCert))
+      (withMaxSuccess 50 (minitraceProp @"CERT" @ConwayEra 50 nameTxCert))
     prop
       "CERTS"
       ( withMaxSuccess
           50
-          (minitraceProp (CERTS Conway) 50 nameCerts)
+          (minitraceProp @"CERTS" @ConwayEra 50 nameCerts)
       )
     prop
       "RATIFY"
-      (withMaxSuccess 50 (minitraceProp (RATIFY Conway) 50 nameRatify))
+      (withMaxSuccess 50 (minitraceProp @"RATIFY" @ConwayEra 50 nameRatify))
     -- prop "ENACT" (withMaxSuccess 50 (minitraceProp (ENACT Conway) (Proxy @ConwayFn) 50 nameEnact))
     -- These properties do not have working 'signalSpec' Specifications yet.
     xprop
       "GOV"
-      (withMaxSuccess 50 (minitraceProp (GOV Conway) 50 nameGovSignal))
+      (withMaxSuccess 50 (minitraceProp @"GOV" @ConwayEra 50 nameGovSignal))
     xprop
       "UTXO"
-      (withMaxSuccess 50 (minitraceProp (UTXO Conway) 50 nameAlonzoTx))
+      (withMaxSuccess 50 (minitraceProp @"UTXO" @ConwayEra 50 nameAlonzoTx))
     xprop
       "EPOCH"
-      (withMaxSuccess 50 (minitraceProp (EPOCH Conway) 50 nameEpoch))
+      (withMaxSuccess 50 (minitraceProp @"EPOCH" @ConwayEra 50 nameEpoch))
     xprop
       "NEWEPOCH"
-      (withMaxSuccess 50 (minitraceProp (NEWEPOCH Conway) 50 nameEpoch))
+      (withMaxSuccess 50 (minitraceProp @"NEWEPOCH" @ConwayEra 50 nameEpoch))
