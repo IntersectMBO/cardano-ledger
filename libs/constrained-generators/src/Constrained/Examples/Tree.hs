@@ -4,7 +4,7 @@
 module Constrained.Examples.Tree where
 
 import Constrained.API
-import Constrained.Spec.Tree (BinTree (..), rootLabel_)
+import Constrained.Spec.Tree (BinTree (..))
 import Data.Tree
 
 allZeroTree :: Specification (BinTree Int)

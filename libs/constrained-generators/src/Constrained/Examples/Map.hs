@@ -75,7 +75,7 @@ elemSpec = constrained' $ \ [var|key|] [var|val|] [var|mapp|] ->
 lookupSpecific :: Specification (Int, Int, Map Int Int)
 lookupSpecific = constrained' $ \ [var|k|] [var|v|] [var|m|] ->
   [ m `dependsOn` k
-  , assert $ lookup_ k m ==. cJust_ v
+  , assert $ lookup_ k m ==. just_ v
   ]
 
 mapRestrictedValues :: Specification (Map (Either Int ()) Int)
@@ -124,4 +124,4 @@ mapSetSmall = constrained $ \x ->
 -- | this tests the function saturatePred
 mapIsJust :: Specification (Int, Int)
 mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
-  cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
+  just_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])

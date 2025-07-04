@@ -19,6 +19,7 @@ source-repository head
 library
   exposed-modules:
     Constrained.API
+    Constrained.API.Extend
     Constrained.AbstractSyntax
     Constrained.Base
     Constrained.Conformance

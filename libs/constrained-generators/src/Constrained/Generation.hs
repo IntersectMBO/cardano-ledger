@@ -143,7 +143,7 @@ simplifySpec spec = case regularizeNames spec of
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts cant
   TrueSpec -> TrueSpec
-  ExplainSpec es s -> explainSpecOpt es (simplifySpec s)
+  ExplainSpec es s -> explainSpec es (simplifySpec s)
 
 -- ------- Stages of simplifying -------------------------------
 
@@ -377,7 +377,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   And ps -> do
     spec <- fold <$> mapM (computeSpecSimplified x) ps
     case spec of
-      ExplainSpec es (SuspendedSpec y ps') -> pure $ explainSpecOpt es (SuspendedSpec y $ simplifyPred ps')
+      ExplainSpec es (SuspendedSpec y ps') -> pure $ explainSpec es (SuspendedSpec y $ simplifyPred ps')
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   Let t b -> pure $ SuspendedSpec x (Let t b)
@@ -936,10 +936,10 @@ pinnedBy _ _ = Nothing
 
 --    mapIsJust :: Specification BaseFn (Int, Int)
 --    mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
---      assert $ cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
+--      assert $ just_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
 
 -- Without this code the example wouldn't work because `y` is completely unconstrained during
--- generation. With this code we essentially rewrite occurences of `cJust_ A == B` to
+-- generation. With this code we essentially rewrite occurences of `just_ A == B` to
 -- `[cJust A == B, case B of Nothing -> False; Just _ -> True]` to add extra information
 -- about the variables in `B`. Consequently, `y` in the example above is
 -- constrained to `MemberSpec [100 .. 102]` in the plan.

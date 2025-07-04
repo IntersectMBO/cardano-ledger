@@ -142,7 +142,7 @@ mapSpec ::
   t '[a] b ->
   Specification a ->
   Specification b
-mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
+mapSpec f (ExplainSpec es s) = explainSpec es (mapSpec f s)
 mapSpec f TrueSpec = mapTypeSpec f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
 mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
@@ -732,20 +732,38 @@ conformsToFoldSpec :: forall a. [a] -> FoldSpec a -> Bool
 conformsToFoldSpec _ NoFold = True
 conformsToFoldSpec xs (FoldSpec (Fun f) s) = adds (map (semantics f) xs) `conformsToSpec` s
 
-class (HasSpec a, NumLike a, Logic IntW) => Foldy a where
+class (HasSpec a, NumLike a) => Foldy a where
   genList ::
     MonadGenError m => Specification a -> Specification a -> GenT m [a]
+  default genList ::
+    (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a)) =>
+    Specification a -> Specification a -> GenT m [a]
+  genList s s' = map fromSimpleRep <$> genList (toSimpleRepSpec s) (toSimpleRepSpec s')
+
   theAddFn :: IntW '[a, a] a
   theAddFn = AddW
+
   theZero :: a
   theZero = 0
+
   genSizedList ::
     MonadGenError m =>
     Specification Integer ->
     Specification a ->
     Specification a ->
     GenT m [a]
+  default genSizedList ::
+    (MonadGenError m, GenericallyInstantiated a, Foldy (SimpleRep a)) =>
+    Specification Integer ->
+    Specification a ->
+    Specification a ->
+    GenT m [a]
+  genSizedList sz elemSpec foldSpec =
+    map fromSimpleRep
+      <$> genSizedList sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
+
   noNegativeValues :: Bool
+  noNegativeValues = False
 
 -- ================
 -- Sized
@@ -895,32 +913,26 @@ compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 -- =======================================================
 
 instance Foldy Integer where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
 instance Foldy Int where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
 instance Foldy Int8 where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
 instance Foldy Int16 where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
 instance Foldy Int32 where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
 instance Foldy Int64 where
-  noNegativeValues = False
   genList = genNumList
   genSizedList = genListWithSize
 
@@ -1080,7 +1092,7 @@ between lo hi = TypeSpec (NumSpecInterval (Just lo) (Just hi)) []
 
 -- | The widest interval whose largest element is admitted by the original spec
 maxSpec :: Specification Integer -> Specification Integer
-maxSpec (ExplainSpec es s) = explainSpecOpt es (maxSpec s)
+maxSpec (ExplainSpec es s) = explainSpec es (maxSpec s)
 maxSpec TrueSpec = TrueSpec
 maxSpec s@(SuspendedSpec _ _) =
   constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Explain (pure "maxSpec on SuspendedSpec") $ Assert (x <=. y)]

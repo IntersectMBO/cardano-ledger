@@ -6,4 +6,4 @@ import Cardano.Ledger.Shelley.API.Types
 import Constrained.API
 
 newEpochStateSpec :: Specification (NewEpochState ConwayEra)
-newEpochStateSpec = TrueSpec
+newEpochStateSpec = trueSpec

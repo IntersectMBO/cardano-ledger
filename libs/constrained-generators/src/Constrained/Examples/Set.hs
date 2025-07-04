@@ -6,7 +6,6 @@
 module Constrained.Examples.Set where
 
 import Constrained.API
-import Constrained.Base (Forallable)
 import Constrained.Examples.Basic
 import Data.Set (Set)
 import qualified Data.Set as Set

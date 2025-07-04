@@ -18,7 +18,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import Constrained.API hiding (forAll)
-import Constrained.Generation (shrinkWithSpec)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE
@@ -150,44 +149,44 @@ prop_GOV =
 -- prop_NEWEPOCH :: Property
 -- prop_NEWEPOCH =
 --   stsPropertyV2 @"NEWEPOCH"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 prop_EPOCH :: EpochNo -> Property
 prop_EPOCH epochNo =
   stsPropertyV2' @"EPOCH"
-    TrueSpec
+    trueSpec
     (\_env -> epochStateSpec (lit epochNo))
     (\_env _st -> epochSignalSpec epochNo)
-    (\_env _st _newEpoch -> TrueSpec)
+    (\_env _st _newEpoch -> trueSpec)
     -- (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property
 prop_ENACT =
   stsPropertyV2 @"ENACT"
-    TrueSpec
-    (\_env -> TrueSpec)
+    trueSpec
+    (\_env -> trueSpec)
     -- TODO: this is a bit suspect, there are preconditions on these signals in the spec so we
     -- shouldn't expect this to go through so easily.
-    (\_env _st -> TrueSpec)
+    (\_env _st -> trueSpec)
     $ \_env _st _sig _st' -> True
 
 prop_UTXOS :: Property
 prop_UTXOS =
   stsPropertyV2 @"UTXOS"
-    TrueSpec
-    (\_env -> TrueSpec)
-    (\_env _st -> TrueSpec)
+    trueSpec
+    (\_env -> trueSpec)
+    (\_env _st -> trueSpec)
     $ \_env _st _sig _st' -> True
 
 -- prop_LEDGER :: Property
 -- prop_LEDGER = property $ do
 --  pure $ stsPropertyV2 @"LEDGER"
---    TrueSpec
---    (\_env -> TrueSpec)
+--    trueSpec
+--    (\_env -> trueSpec)
 --    -- TODO: the `GenDelegs` don't appear to be used (?!) so we just give an
 --    -- empty map here. One could consider generating them instead
 --    ledgerTxSpec
@@ -196,26 +195,26 @@ prop_UTXOS =
 -- prop_TICKF :: Property
 -- prop_TICKF =
 --   stsPropertyV2 @"TICKF"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 prop_RATIFY :: Property
 prop_RATIFY =
   stsPropertyV2 @"RATIFY"
-    TrueSpec
-    (\_env -> TrueSpec)
-    (\_env _st -> TrueSpec)
+    trueSpec
+    (\_env -> trueSpec)
+    (\_env _st -> trueSpec)
     -- TODO: we should probably check more things here
     $ \_env _st _sig _st' -> True
 
 -- prop_CERTS :: Property
 -- prop_CERTS =
 --   stsPropertyV2 @"CERTS"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     -- TODO: we should probably check more things here
 --     $ \_env _st _sig _st' -> True
 
@@ -271,9 +270,9 @@ prop_GOVCERT =
 prop_UTXOW :: Property
 prop_UTXOW =
   stsPropertyV2 @"UTXOW"
-    TrueSpec
-    (\_env -> TrueSpec)
-    (\_env _st -> TrueSpec)
+    trueSpec
+    (\_env -> trueSpec)
+    (\_env _st -> trueSpec)
     $ \_env _st _sig _st' -> True
 
 -- prop_UTXO :: Property
@@ -288,41 +287,41 @@ prop_UTXOW =
 -- prop_BBODY :: Property
 -- prop_BBODY =
 --   stsPropertyV2 @"BBODY"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 -- prop_LEDGERS :: Property
 -- prop_LEDGERS =
 --   stsPropertyV2 @"LEDGERS"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 -- prop_RUPD :: Property
 -- prop_RUPD =
 --   stsPropertyV2 @"RUPD"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 -- prop_SNAP :: Property
 -- prop_SNAP =
 --   stsPropertyV2 @"SNAP"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 -- prop_TICK :: Property
 -- prop_TICK =
 --   stsPropertyV2 @"TICK"
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
+--     trueSpec
+--     (\_env -> trueSpec)
+--     (\_env _st -> trueSpec)
 --     $ \_env _st _sig _st' -> True
 
 ------------------------------------------------------------------------
