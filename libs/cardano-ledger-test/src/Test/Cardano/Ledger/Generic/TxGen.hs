@@ -106,8 +106,9 @@ import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word16, Word32)
+import Debug.Trace (traceM)
 import GHC.Stack
-import Lens.Micro (Lens', (%~), (&), (.~), (^.))
+import Lens.Micro (Lens', (%~), (&), (.~), (^.), (<>~))
 import qualified Lens.Micro as L
 import qualified Lens.Micro.Extras as L
 import Numeric.Natural (Natural)
@@ -163,9 +164,8 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
+import Test.Cardano.Ledger.TreeDiff (diffExprString, showExpr)
 import Test.QuickCheck
-import Debug.Trace (traceM)
-import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 alonzoMkRedeemersFromTags ::
   (AlonzoEraScript era, EraModel era) =>
@@ -243,9 +243,6 @@ class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
   mkScriptIntegrityHash :: PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
   mkScriptIntegrityHash _ _ _ = SNothing
 
--- \| Some (reify @era) >= Some Allegra = vldtTxBodyL .~ validityInterval
--- \| otherwise = ttlTxBodyL .~ timeToLive validityInterval
-
 genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
 genTxOut val = do
   addr <- genRecipient
@@ -317,12 +314,12 @@ mkWitVKey ::
   GenRS era (SafeHash EraIndependentTxBody -> TxWits era -> TxWits era)
 mkWitVKey _mTag (KeyHashObj keyHash) = do
   keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
-  pure $ \bodyHash -> addrTxWitsL .~ Set.fromList [mkWitnessVKey bodyHash keyPair]
+  pure $ \bodyHash -> addrTxWitsL <>~ Set.fromList [mkWitnessVKey bodyHash keyPair]
 mkWitVKey mTag (ScriptHashObj scriptHash) =
   lookupScript @era scriptHash mTag >>= \case
     Nothing -> error $ "Impossible: Cannot find script with hash " ++ show scriptHash
     Just script -> do
-      let scriptWit = scriptTxWitsL .~ [(hashScript script, script)]
+      let scriptWit = scriptTxWitsL <>~ [(hashScript script, script)]
       otherWit <- genGenericScriptWitness mTag script
       pure (\hash -> scriptWit . otherWit hash)
 
@@ -406,7 +403,7 @@ makeDatumWitness txout =
     mkDatumWit SNothing = pure id
     mkDatumWit (SJust datumHash) = do
       datum <- lookupByKeyM "datum" datumHash gsDatums
-      pure $ datsTxWitsL @era' .~ TxDats [(hashData datum, datum)]
+      pure $ datsTxWitsL @era' <>~ TxDats [(hashData datum, datum)]
 
 -- | Does the current Credential point to a PlutusScript? If so return its IsValid and Hash
 plutusScriptHashFromTag ::
@@ -517,20 +514,6 @@ genDataHashField maybeCoreScript =
             & dataHashTxOutL .~ SJust datahash
       _ -> pure id
     _ -> pure id -- No other Era has any datum in the TxOut
-
--- | Generate the list of TxOutField that constitute a TxOut
--- genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
--- genTxOut val = do
---  addr <- genRecipient
---  cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
---  dataHashFields <-
---    case cred of
---      KeyHashObj _ -> pure []
---      ScriptHashObj scriptHash -> do
---        maybeCoreScript <- lookupScript scriptHash (Just Spending)
---        genDataHashField maybeCoreScript
---  --pure $ [Address addr, Amount val] ++ dataHashFields
---  pure $ mkBasicTxOut addr val
 
 -- ================================================================================
 
@@ -1078,9 +1061,9 @@ genAlonzoTxAndInfo slot = do
           & certsTxBodyL .~ SSeq.fromList dcerts
           & withdrawalsTxBodyL .~ withdrawals
           & feeTxBodyL .~ maxCoin
+          & setValidity validityInterval
           & setScriptIntegrityHash bogusIntegrityHash
           & setNetworkIdTxBody networkId
-          & setValidity validityInterval
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash EraIndependentTxBody -> TxWits era -> TxWits era]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
@@ -1094,7 +1077,7 @@ genAlonzoTxAndInfo slot = do
         applyIsValid isValid $
           mkBasicTx txBodyNoFee & witsTxL .~ noFeeWits
       fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
-  --traceM $ "bogusTxForFeeCalc: " <> showExpr bogusTxForFeeCalc
+  --traceM $ "noFeeWits:\n" <> showExpr noFeeWits
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
   let deposits = depositsAndRefunds gePParams dcerts keyDeposits
@@ -1135,6 +1118,7 @@ genAlonzoTxAndInfo slot = do
         applyIsValid isValid $
           mkBasicTx txBody
             & witsTxL .~ wits
+  traceM $ diffExprString bogusTxForFeeCalc validTx
   count <- gets (mCount . gsModel)
   modifyGenStateInitialRewards (`Map.union` newRewards)
   modifyGenStateInitialUtxo (`Map.union` minus utxo maybeoldpair)
