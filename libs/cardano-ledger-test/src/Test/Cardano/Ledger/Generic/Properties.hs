@@ -44,7 +44,7 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
-import Test.Cardano.Ledger.Common (ToExpr (..))
+import Test.Cardano.Ledger.Common (ToExpr (..), showExpr)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState (
@@ -144,11 +144,11 @@ testTxValidForLEDGER (trc@(TRC (_, ledgerState, vtx)), _genstate) =
         totalAda ledgerState' === totalAda ledgerState
     Left errs ->
       counterexample
-        ( show (toExpr ledgerState)
+        ( showExpr ledgerState
             ++ "\n\n"
-            ++ show (toExpr vtx)
+            ++ showExpr vtx
             ++ "\n\n"
-            ++ show (toExpr errs)
+            ++ showExpr errs
         )
         (property False)
 
@@ -163,7 +163,7 @@ txPreserveAda :: GenSize -> TestTree
 txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
-    [ testPropMax 30 "Shelley Tx preservers Ada" $
+    [ testPropMax 30 "Shelley Tx preserves Ada" $
         forAll (genTxAndLEDGERState @ShelleyEra genSize) testTxValidForLEDGER
     , testPropMax 30 "Allegra Tx preserves ADA" $
         forAll (genTxAndLEDGERState @AllegraEra genSize) testTxValidForLEDGER

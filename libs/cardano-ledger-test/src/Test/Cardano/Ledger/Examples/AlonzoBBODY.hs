@@ -77,7 +77,6 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
   pattern RequireAllOf,
-  pattern RequireAnyOf,
   pattern RequireSignature,
  )
 import Cardano.Ledger.State
@@ -96,7 +95,6 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.TreeDiff (ToExpr)
-import Debug.Trace (trace)
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
@@ -125,7 +123,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
   mkVRFKeyPair,
   standardHashSize,
  )
-import Test.Cardano.Ledger.TreeDiff (showExpr)
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -225,15 +222,11 @@ testAlonzoBlock =
     ]
 
 testAlonzoBadPMDHBlock ::
-  ( EraSegWits era
-  , AlonzoEraTx era
-  , ToExpr (Tx era)
+  ( AlonzoEraTx era
   , EraModel era
   ) =>
   Block BHeaderView era
-testAlonzoBadPMDHBlock = makeNaiveBlock [trace (showExpr tx) tx]
-  where
-    tx = poolMDHTooBigTx & isValidTxL .~ IsValid True
+testAlonzoBadPMDHBlock = makeNaiveBlock [poolMDHTooBigTx & isValidTxL .~ IsValid True]
 
 -- ============================== DATA ===============================
 
@@ -512,7 +505,7 @@ notValidatingTxWithMint =
 
 poolMDHTooBigTx ::
   forall era.
-  (EraTx era, ShelleyEraScript era, EraModel era) =>
+  (ShelleyEraScript era, EraModel era) =>
   Tx era
 poolMDHTooBigTx =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,

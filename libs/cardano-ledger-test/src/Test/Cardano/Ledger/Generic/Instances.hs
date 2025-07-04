@@ -171,8 +171,8 @@ instance EraModel BabbageEra where
   mkRedeemers = alonzoMkRedeemers
   newScriptIntegrityHash = alonzoNewScriptIntegrityHash
   mkPlutusPurposePointer = mkAlonzoPlutusPurposePointer
-  always = alwaysSucceeds @PlutusV2
-  never = alwaysFails @PlutusV2
+  always = alwaysSucceeds @PlutusV1
+  never = alwaysFails @PlutusV1
 
 instance EraModel ConwayEra where
   applyTx = babbageApplyTx
@@ -181,8 +181,8 @@ instance EraModel ConwayEra where
   mkRedeemers = alonzoMkRedeemers
   newScriptIntegrityHash = alonzoNewScriptIntegrityHash
   mkPlutusPurposePointer = mkConwayPlutusPurposePointer
-  always = alwaysSucceeds @PlutusV2
-  never = alwaysFails @PlutusV2
+  always = alwaysSucceeds @PlutusV1
+  never = alwaysFails @PlutusV1
 
 instance EraGenericGen ShelleyEra where
   setValidity = shelleySetValidity

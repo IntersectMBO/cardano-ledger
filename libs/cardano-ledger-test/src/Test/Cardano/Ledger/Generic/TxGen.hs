@@ -164,6 +164,8 @@ import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
+import Debug.Trace (traceM)
+import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 alonzoMkRedeemersFromTags ::
   (AlonzoEraScript era, EraModel era) =>
@@ -1092,6 +1094,7 @@ genAlonzoTxAndInfo slot = do
         applyIsValid isValid $
           mkBasicTx txBodyNoFee & witsTxL .~ noFeeWits
       fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
+  --traceM $ "bogusTxForFeeCalc: " <> showExpr bogusTxForFeeCalc
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
   let deposits = depositsAndRefunds gePParams dcerts keyDeposits
