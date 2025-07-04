@@ -45,7 +45,7 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
+import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)

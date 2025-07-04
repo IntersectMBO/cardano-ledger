@@ -28,7 +28,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
+import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

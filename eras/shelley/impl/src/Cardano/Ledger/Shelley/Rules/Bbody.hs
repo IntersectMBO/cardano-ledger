@@ -33,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)

@@ -1,4 +1,4 @@
-module Cardano.Ledger.Shelley.BlockChain (
+module Cardano.Ledger.Shelley.BlockBody (
   ShelleyTxSeq (ShelleyTxSeq, txSeqTxns'),
   auxDataSeqDecoder,
   txSeqTxns,
@@ -10,4 +10,4 @@ module Cardano.Ledger.Shelley.BlockChain (
   coreAuxDataBytes,
 ) where
 
-import Cardano.Ledger.Shelley.BlockChain.Internal
+import Cardano.Ledger.Shelley.BlockBody.Internal

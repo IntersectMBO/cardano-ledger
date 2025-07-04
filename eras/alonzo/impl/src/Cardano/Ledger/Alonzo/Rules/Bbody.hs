@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),

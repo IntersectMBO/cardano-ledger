@@ -24,7 +24,7 @@
 --
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
-module Cardano.Ledger.Shelley.BlockChain.Internal (
+module Cardano.Ledger.Shelley.BlockBody.Internal (
   ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
   auxDataSeqDecoder,
   txSeqTxns,

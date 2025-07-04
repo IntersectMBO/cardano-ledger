@@ -12,7 +12,7 @@ module Cardano.Ledger.Mary.TxSeq () where
 import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyTxSeq (..), bbHash, txSeqTxns)
 import Lens.Micro (lens)
 
 instance EraBlockBody MaryEra where

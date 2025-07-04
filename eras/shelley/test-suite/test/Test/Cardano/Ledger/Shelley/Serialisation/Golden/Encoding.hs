@@ -77,7 +77,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyTxSeq (..), bbHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),

@@ -26,7 +26,7 @@ import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
-import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
+import Cardano.Ledger.Shelley.BlockBody (slotToNonce)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
