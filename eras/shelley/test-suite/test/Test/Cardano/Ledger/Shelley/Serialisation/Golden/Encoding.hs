@@ -138,13 +138,13 @@ import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
 import qualified Prettyprinter as Pretty
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (
+import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as Ex (
   ledgerExamplesShelley,
   sleNewEpochState,
  )
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), PreAlonzo, VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (

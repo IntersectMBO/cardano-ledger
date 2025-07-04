@@ -23,7 +23,6 @@ library
     Test.Cardano.Ledger.Shelley.ByronTranslation
     Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
     Test.Cardano.Ledger.Shelley.Examples.Cast
-    Test.Cardano.Ledger.Shelley.Examples.Consensus
     Test.Cardano.Ledger.Shelley.Examples.Federation
     Test.Cardano.Ledger.Shelley.Generator.Block
     Test.Cardano.Ledger.Shelley.Generator.Constants
@@ -102,7 +101,6 @@ library
     tasty-hunit,
     tasty-quickcheck,
     text,
-    time,
     transformers,
     tree-diff,
     vector,
@@ -160,6 +158,7 @@ test-suite cardano-ledger-shelley-test
     bytestring,
     cardano-crypto-class,
     cardano-data,
+    cardano-ledger-api:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, testlib},

@@ -85,7 +85,6 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
@@ -136,10 +135,6 @@ instance Split Coin where
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
 type GenesisKeyPair c = KeyPair 'Genesis
-
-instance EncCBOR RawSeed where
-  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
-  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
 
 -- | Construct a seed from a bunch of Word64s
 --

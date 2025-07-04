@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,6 +9,14 @@ module Cardano.Ledger.Dijkstra.Genesis (
 ) where
 
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+ )
+import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Data.Aeson (FromJSON (..), ToJSON, withObject)
@@ -31,3 +40,18 @@ instance EraGenesis DijkstraEra where
 -- TODO: Implement this and use for ToJSON instance
 instance ToKeyValuePairs DijkstraGenesis where
   toKeyValuePairs DijkstraGenesis = []
+
+instance FromCBOR DijkstraGenesis where
+  fromCBOR =
+    eraDecoder @DijkstraEra $
+      decode $
+        RecD DijkstraGenesis
+
+instance ToCBOR DijkstraGenesis where
+  toCBOR DijkstraGenesis =
+    toEraCBOR @DijkstraEra . encode $
+      Rec DijkstraGenesis
+
+instance DecCBOR DijkstraGenesis
+
+instance EncCBOR DijkstraGenesis

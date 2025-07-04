@@ -3,7 +3,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
+module Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo (
+  ledgerExamplesAlonzo,
+  exampleTxBodyAlonzo,
+  datumExample,
+  redeemerExample,
+  exampleTx,
+  exampleTransactionInBlock,
+  exampleAlonzoNewEpochState,
+  exampleAlonzoGenesis,
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -48,11 +57,11 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
+import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Mary as SLE
+import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as SLE
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV1)
-import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
 -- | ShelleyLedgerExamples for Alonzo era
 ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples AlonzoEra

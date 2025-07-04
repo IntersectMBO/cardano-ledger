@@ -1,22 +1,44 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Babbage.Examples.Consensus where
+module Test.Cardano.Ledger.Api.Examples.Consensus.Conway (
+  ledgerExamplesConway,
+  collateralOutput,
+  exampleConwayCerts,
+  exampleTxBodyConway,
+  datumExample,
+  redeemerExample,
+  exampleTx,
+  exampleTransactionInBlock,
+  exampleConwayNewEpochState,
+  exampleConwayGenesis,
+) where
 
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.Translation ()
+import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
+import Cardano.Ledger.Conway.TxBody (TxBody (..))
+import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -28,34 +50,37 @@ import Cardano.Ledger.Plutus.Data (
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
-  Credential (..),
-  Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
   RewardAccount (..),
   TxId (..),
-  Update (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
-import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+ )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.Default (def)
+import Control.State.Transition.Extended (Embed (..))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
+import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Mary as MarySLE
+import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as SLE
+import Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
-import qualified Test.Cardano.Ledger.Core.Utils as SLE
-import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
-import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 
--- | ShelleyLedgerExamples for Babbage era
-ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples BabbageEra
-ledgerExamplesBabbage =
+-- ==============================================================
+
+-- | ShelleyLedgerExamples for Conway era
+ledgerExamplesConway ::
+  SLE.ShelleyLedgerExamples ConwayEra
+ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
     , SLE.sleHashHeader = SLE.exampleHashHeader
@@ -63,8 +88,8 @@ ledgerExamplesBabbage =
     , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
-            DelegsFailure $
-              DelegateeNotRegisteredDELEG @BabbageEra (SLE.mkKeyHash 1)
+            wrapFailed @(ConwayDELEG ConwayEra) @(ConwayLEDGER ConwayEra) $
+              DelegateeStakePoolNotRegisteredDELEG @ConwayEra (SLE.mkKeyHash 1)
     , SLE.sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100)
@@ -72,9 +97,9 @@ ledgerExamplesBabbage =
           , Right (KeyHashObj (SLE.mkKeyHash 2))
           ]
     , SLE.sleResultExamples = resultExamples
-    , SLE.sleNewEpochState = exampleBabbageNewEpochState
+    , SLE.sleNewEpochState = exampleConwayNewEpochState
     , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
-    , SLE.sleTranslationContext = NoGenesis
+    , SLE.sleTranslationContext = exampleConwayGenesis
     }
   where
     resultExamples =
@@ -91,7 +116,7 @@ ledgerExamplesBabbage =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate & ppuCollateralPercentageL .~ SJust 150)
 
-collateralOutput :: BabbageTxOut BabbageEra
+collateralOutput :: BabbageTxOut ConwayEra
 collateralOutput =
   BabbageTxOut
     (mkAddr SLE.examplePayKey SLE.exampleStakeKey)
@@ -99,14 +124,20 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleTxBodyBabbage :: TxBody BabbageEra
-exampleTxBodyBabbage =
-  BabbageTxBody
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash 1)) 0]) -- spending inputs
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash 2)) 1]) -- collateral inputs
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash 1)) 3]) -- reference inputs
+exampleConwayCerts :: OSet.OSet (ConwayTxCert era)
+exampleConwayCerts =
+  OSet.fromList -- TODO should I add the new certs here?
+    [ ConwayTxCertPool (RegPool SLE.examplePoolParams)
+    ]
+
+exampleTxBodyConway :: TxBody ConwayEra
+exampleTxBodyConway =
+  ConwayTxBody
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- spending inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]) -- collateral inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
-        [ mkSized (eraProtVerHigh @BabbageEra) $
+        [ mkSized (eraProtVerHigh @ConwayEra) $
             BabbageTxOut
               (mkAddr SLE.examplePayKey SLE.exampleStakeKey)
               (MarySLE.exampleMultiAssetValue 2)
@@ -114,9 +145,9 @@ exampleTxBodyBabbage =
               (SJust $ alwaysSucceeds @'PlutusV2 3) -- reference script
         ]
     )
-    (SJust $ mkSized (eraProtVerHigh @BabbageEra) collateralOutput) -- collateral return
+    (SJust $ mkSized (eraProtVerHigh @ConwayEra) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    SLE.exampleCerts -- txcerts
+    exampleConwayCerts -- txcerts
     ( Withdrawals $
         Map.singleton
           (RewardAccount Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -124,43 +155,38 @@ exampleTxBodyBabbage =
     )
     (Coin 999) -- txfee
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    ( SJust $
-        Update
-          ( ProposedPPUpdates $
-              Map.singleton
-                (SLE.mkKeyHash 1)
-                (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
-          )
-          (EpochNo 0)
-    ) -- txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
-    (SJust $ SLE.mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . TxAuxDataHash $ SLE.mkDummySafeHash 42) -- adHash
+    (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
+    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
     (SJust Mainnet) -- txnetworkid
+    (VotingProcedures mempty)
+    mempty
+    (SJust $ Coin 867530900000) -- current treasury value
+    mempty
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
-datumExample :: Data BabbageEra
+datumExample :: Data ConwayEra
 datumExample = Data (P.I 191)
 
-redeemerExample :: Data BabbageEra
+redeemerExample :: Data ConwayEra
 redeemerExample = Data (P.I 919)
 
-exampleTx :: ShelleyTx BabbageEra
+exampleTx :: ShelleyTx ConwayEra
 exampleTx =
   ShelleyTx
-    exampleTxBodyBabbage
+    exampleTxBodyConway
     ( AlonzoTxWits
-        (mkWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
+        (mkWitnessesVKey (hashAnnotated exampleTxBodyConway) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @BabbageEra $ alwaysSucceeds @'PlutusV1 3)
+            (hashScript @ConwayEra $ alwaysSucceeds @'PlutusV1 3)
             (alwaysSucceeds @'PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
-            Map.singleton (AlonzoSpending $ AsIx 0) (redeemerExample, ExUnits 5000 5000)
+            Map.singleton (ConwaySpending $ AsIx 0) (redeemerExample, ExUnits 5000 5000)
         ) -- redeemers
     )
     ( SJust $
@@ -169,14 +195,17 @@ exampleTx =
           [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
-exampleTransactionInBlock :: AlonzoTx BabbageEra
+exampleTransactionInBlock :: AlonzoTx ConwayEra
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 
-exampleBabbageNewEpochState :: NewEpochState BabbageEra
-exampleBabbageNewEpochState =
+exampleConwayNewEpochState :: NewEpochState ConwayEra
+exampleConwayNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
+
+exampleConwayGenesis :: ConwayGenesis
+exampleConwayGenesis = expectedConwayGenesis

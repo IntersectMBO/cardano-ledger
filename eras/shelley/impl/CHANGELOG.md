@@ -52,6 +52,7 @@
 
 ### `testlib`
 
+* Move `EncCBOR` instance for `RawSeed` from `cardano-ledger-shelley-test`
 * Added `Arbitrary` instance for `TransitionConfig ShelleyEra`
 * Rename `poolParams` to `freshPoolParams`
 * Added `ToExpr` instances for:

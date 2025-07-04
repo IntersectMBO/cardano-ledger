@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-conway-test`
 
+## 1.4.0.0
+
+* Removed `Test.Cardano.Ledger.Conway.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
+
+
 ## 1.3.1.1
 
 *

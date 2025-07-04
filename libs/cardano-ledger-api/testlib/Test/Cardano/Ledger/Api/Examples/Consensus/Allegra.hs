@@ -5,7 +5,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Allegra.Examples.Consensus where
+module Test.Cardano.Ledger.Api.Examples.Consensus.Allegra (
+  ledgerExamplesAllegra,
+  exampleAllegraTxBody,
+  exampleTimelock,
+  exampleAllegraTxAuxData,
+) where
 
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
@@ -20,9 +25,9 @@ import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
+import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
 -- | ShelleyLedgerExamples for Allegra era
 ledgerExamplesAllegra :: ShelleyLedgerExamples AllegraEra

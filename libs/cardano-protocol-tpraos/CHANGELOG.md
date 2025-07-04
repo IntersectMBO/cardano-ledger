@@ -2,7 +2,7 @@
 
 ## 1.4.0.1
 
-*
+* Add `GetLedgerView` instance for `DijkstraEra`
 
 ## 1.4.0.0
 

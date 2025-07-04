@@ -14,7 +14,7 @@
 -- >>> :set -XTypeApplications
 -- >>> import Cardano.Ledger.Api.Era (BabbageEra)
 -- >>> import Lens.Micro
--- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators () -- Needed for doctests only
+-- >>> import Test.Cardano.Ledger.Babbage.Arbitrary() -- Needed for doctests only
 -- >>> import Test.QuickCheck -- Needed for doctests only
 --
 -- Here's an example on how to build a very basic Babbage era transaction output with a random
