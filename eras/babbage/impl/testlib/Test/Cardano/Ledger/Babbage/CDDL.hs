@@ -23,7 +23,6 @@ import Test.Cardano.Ledger.Alonzo.CDDL hiding (
   header,
   header_body,
   language,
-  multiasset,
   operational_cert,
   plutus_data,
   plutus_script,
