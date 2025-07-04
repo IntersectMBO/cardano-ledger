@@ -1,0 +1,1398 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Examples.Set</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Base.html"><span class="hs-identifier">Constrained.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#Forallable"><span class="hs-identifier">Forallable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Examples.Basic.html"><span class="hs-identifier">Constrained.Examples.Basic</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- =============================================================</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Constrained.Examples.Set.html#setPairSpec"><span class="hs-identifier hs-type">setPairSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span id="setPairSpec"><span class="annot"><span class="annottext">setPairSpec :: Specification (Set Int, Set Int)
+</span><a href="Constrained.Examples.Set.html#setPairSpec"><span class="hs-identifier hs-var hs-var">setPairSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (SimpleRep (Set Int, Set Int)))) Pred
+-&gt; Specification (Set Int, Set Int)
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (SimpleRep (Set Int, Set Int)))) Pred
+ -&gt; Specification (Set Int, Set Int))
+-&gt; FunTy (MapList Term (Args (SimpleRep (Set Int, Set Int)))) Pred
+-&gt; Specification (Set Int, Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863680"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863680"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679863681"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863681"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863680"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Pred) -&gt; Pred) -&gt; (Term Int -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863683"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863683"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863681"><span class="hs-identifier hs-var">s'</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863684"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863684"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-22"></span><span>      </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863683"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863684"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Constrained.Examples.Set.html#fixedSetSpec"><span class="hs-identifier hs-type">fixedSetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span id="fixedSetSpec"><span class="annot"><span class="annottext">fixedSetSpec :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#fixedSetSpec"><span class="hs-identifier hs-var hs-var">fixedSetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863688"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863688"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; [Term Bool]) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863688"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; [Term Bool]) -&gt; Pred)
+-&gt; (Term Int -&gt; [Term Bool]) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863689"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863689"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863689"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Term Int
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679863691"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679863691"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679863691"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Constrained.Examples.Set.html#setOfPairLetSpec"><span class="hs-identifier hs-type">setOfPairLetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span id="setOfPairLetSpec"><span class="annot"><span class="annottext">setOfPairLetSpec :: Specification (Set (Int, Int))
+</span><a href="Constrained.Examples.Set.html#setOfPairLetSpec"><span class="hs-identifier hs-var hs-var">setOfPairLetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Int, Int)) -&gt; Pred) -&gt; Specification (Set (Int, Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Int, Int)) -&gt; Pred) -&gt; Specification (Set (Int, Int)))
+-&gt; (Term (Set (Int, Int)) -&gt; Pred)
+-&gt; Specification (Set (Int, Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863693"><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863693"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Int, Int))
+-&gt; FunTy (MapList Term (Args (SimpleRep (Int, Int)))) (Term Bool)
+-&gt; Pred
+forall t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec t,
+ HasSpec (SimpleRep a), HasSimpleRep a,
+ All HasSpec (Args (SimpleRep a)), IsPred p, IsProd (SimpleRep a),
+ IsProductType a, HasSpec a, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term t -&gt; FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863693"><span class="hs-identifier hs-var">ps</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (SimpleRep (Int, Int)))) (Term Bool)
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (Args (SimpleRep (Int, Int)))) (Term Bool)
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863695"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863695"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679863696"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863696"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863695"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863696"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Constrained.Examples.Set.html#setSingletonSpec"><span class="hs-identifier hs-type">setSingletonSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="setSingletonSpec"><span class="annot"><span class="annottext">setSingletonSpec :: Specification (Set (Int, Int))
+</span><a href="Constrained.Examples.Set.html#setSingletonSpec"><span class="hs-identifier hs-var hs-var">setSingletonSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Int, Int)) -&gt; Pred) -&gt; Specification (Set (Int, Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Int, Int)) -&gt; Pred) -&gt; Specification (Set (Int, Int)))
+-&gt; (Term (Set (Int, Int)) -&gt; Pred)
+-&gt; Specification (Set (Int, Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863698"><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863698"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Int, Int)) -&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863698"><span class="hs-identifier hs-var">ps</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Int, Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863699"><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863699"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int)
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a)
+</span><a href="Constrained.Spec.Set.html#singleton_"><span class="hs-identifier hs-var">singleton_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Int, Int) -&gt; Term Int
+forall x y. (HasSpec x, HasSpec y) =&gt; Term (x, y) -&gt; Term x
+</span><a href="Constrained.Spec.SumProd.html#fst_"><span class="hs-identifier hs-var">fst_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863699"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863702"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863702"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863702"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Constrained.Examples.Set.html#eitherSimpleSetSpec"><span class="hs-identifier hs-type">eitherSimpleSetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="eitherSimpleSetSpec"><span class="annot"><span class="annottext">eitherSimpleSetSpec :: Specification (Set (Either Int Int))
+</span><a href="Constrained.Examples.Set.html#eitherSimpleSetSpec"><span class="hs-identifier hs-var hs-var">eitherSimpleSetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Either Int Int)) -&gt; Pred)
+ -&gt; Specification (Set (Either Int Int)))
+-&gt; (Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863704"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863704"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863704"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863705"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863705"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863705"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863708"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863708"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863708"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863709"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863709"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863709"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Constrained.Examples.Set.html#forAllAnySpec"><span class="hs-identifier hs-type">forAllAnySpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span id="forAllAnySpec"><span class="annot"><span class="annottext">forAllAnySpec :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#forAllAnySpec"><span class="hs-identifier hs-var hs-var">forAllAnySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863711"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863711"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863711"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Bool) -&gt; Pred) -&gt; (Term Int -&gt; Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Constrained.Examples.Set.html#maybeJustSetSpec"><span class="hs-identifier hs-type">maybeJustSetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span id="maybeJustSetSpec"><span class="annot"><span class="annottext">maybeJustSetSpec :: Specification (Set (Maybe Int))
+</span><a href="Constrained.Examples.Set.html#maybeJustSetSpec"><span class="hs-identifier hs-var hs-var">maybeJustSetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Maybe Int)) -&gt; Pred) -&gt; Specification (Set (Maybe Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Maybe Int)) -&gt; Pred)
+ -&gt; Specification (Set (Maybe Int)))
+-&gt; (Term (Set (Maybe Int)) -&gt; Pred)
+-&gt; Specification (Set (Maybe Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863713"><span class="annot"><span class="annottext">Term (Set (Maybe Int))
+</span><a href="#local-6989586621679863713"><span class="hs-identifier hs-var">ms</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Maybe Int)) -&gt; (Term (Maybe Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Maybe Int))
+</span><a href="#local-6989586621679863713"><span class="hs-identifier hs-var">ms</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Maybe Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Maybe Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863714"><span class="annot"><span class="annottext">Term (Maybe Int)
+</span><a href="#local-6989586621679863714"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Maybe Int)
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep (Maybe Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Maybe Int)
+</span><a href="#local-6989586621679863714"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ()
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ())
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863715"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863715"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863715"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Constrained.Examples.Set.html#notSubsetSpec"><span class="hs-identifier hs-type">notSubsetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span id="notSubsetSpec"><span class="annot"><span class="annottext">notSubsetSpec :: Specification (Set Int, Set Int)
+</span><a href="Constrained.Examples.Set.html#notSubsetSpec"><span class="hs-identifier hs-var hs-var">notSubsetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList Term (Args (SimpleRep (Set Int, Set Int)))) (Term Bool)
+-&gt; Specification (Set Int, Set Int)
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (SimpleRep (Set Int, Set Int)))) (Term Bool)
+ -&gt; Specification (Set Int, Set Int))
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep (Set Int, Set Int)))) (Term Bool)
+-&gt; Specification (Set Int, Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863717"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863717"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679863718"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863718"><span class="hs-identifier hs-var">s'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term Bool
+forall a.
+(Ord a, HasSpec a) =&gt;
+Term (Set a) -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#subset_"><span class="hs-identifier hs-var">subset_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863717"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863718"><span class="hs-identifier hs-var">s'</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Constrained.Examples.Set.html#emptyEitherMemberSpec"><span class="hs-identifier hs-type">emptyEitherMemberSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span id="emptyEitherMemberSpec"><span class="annot"><span class="annottext">emptyEitherMemberSpec :: Specification (Set (Either Int Int))
+</span><a href="Constrained.Examples.Set.html#emptyEitherMemberSpec"><span class="hs-identifier hs-var hs-var">emptyEitherMemberSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Either Int Int)) -&gt; Pred)
+ -&gt; Specification (Set (Either Int Int)))
+-&gt; (Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863722"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863722"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863722"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863723"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863723"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863723"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863724"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863724"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863724"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863726"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863726"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863726"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Constrained.Examples.Set.html#emptyEitherSpec"><span class="hs-identifier hs-type">emptyEitherSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span id="emptyEitherSpec"><span class="annot"><span class="annottext">emptyEitherSpec :: Specification (Set (Either Int Int))
+</span><a href="Constrained.Examples.Set.html#emptyEitherSpec"><span class="hs-identifier hs-var hs-var">emptyEitherSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Either Int Int)) -&gt; Pred)
+ -&gt; Specification (Set (Either Int Int)))
+-&gt; (Term (Set (Either Int Int)) -&gt; Pred)
+-&gt; Specification (Set (Either Int Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863728"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863728"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863728"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863729"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863729"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863729"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Constrained.Examples.Set.html#notSubset"><span class="hs-identifier hs-type">notSubset</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span id="notSubset"><span class="annot"><span class="annottext">notSubset :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#notSubset"><span class="hs-identifier hs-var hs-var">notSubset</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863731"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863731"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863731"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term Bool
+forall a.
+(Ord a, HasSpec a) =&gt;
+Term (Set a) -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#subset_"><span class="hs-operator hs-var">`subset_`</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; Term (Set Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Constrained.Examples.Set.html#unionSized"><span class="hs-identifier hs-type">unionSized</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span id="unionSized"><span class="annot"><span class="annottext">unionSized :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#unionSized"><span class="hs-identifier hs-var hs-var">unionSized</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863734"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863734"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863734"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term (Set Int)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; Term (Set Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Constrained.Examples.Set.html#maybeSpec"><span class="hs-identifier hs-type">maybeSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span id="maybeSpec"><span class="annot"><span class="annottext">maybeSpec :: Specification (Set (Maybe Int))
+</span><a href="Constrained.Examples.Set.html#maybeSpec"><span class="hs-identifier hs-var hs-var">maybeSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Maybe Int)) -&gt; Pred) -&gt; Specification (Set (Maybe Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Maybe Int)) -&gt; Pred)
+ -&gt; Specification (Set (Maybe Int)))
+-&gt; (Term (Set (Maybe Int)) -&gt; Pred)
+-&gt; Specification (Set (Maybe Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863738"><span class="annot"><span class="annottext">Term (Set (Maybe Int))
+</span><a href="#local-6989586621679863738"><span class="hs-identifier hs-var">ms</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="annottext">Term (Set (Maybe Int)) -&gt; (Term (Maybe Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Maybe Int))
+</span><a href="#local-6989586621679863738"><span class="hs-identifier hs-var">ms</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Maybe Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Maybe Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863739"><span class="annot"><span class="annottext">Term (Maybe Int)
+</span><a href="#local-6989586621679863739"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Maybe Int)
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep (Maybe Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Maybe Int)
+</span><a href="#local-6989586621679863739"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ()
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ())
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863740"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863740"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863740"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Constrained.Examples.Set.html#eitherSetSpec"><span class="hs-identifier hs-type">eitherSetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span id="eitherSetSpec"><span class="annot"><span class="annottext">eitherSetSpec :: Specification
+  (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
+</span><a href="Constrained.Examples.Set.html#eitherSetSpec"><span class="hs-identifier hs-var hs-var">eitherSetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term
+     (Args
+        (SimpleRep
+           (Set (Either Int Int), Set (Either Int Int),
+            Set (Either Int Int)))))
+  [Pred]
+-&gt; Specification
+     (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args
+         (SimpleRep
+            (Set (Either Int Int), Set (Either Int Int),
+             Set (Either Int Int)))))
+   [Pred]
+ -&gt; Specification
+      (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args
+           (SimpleRep
+              (Set (Either Int Int), Set (Either Int Int),
+               Set (Either Int Int)))))
+     [Pred]
+-&gt; Specification
+     (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863742"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863742"><span class="hs-identifier hs-var">es</span></a></span></span><span> </span><span id="local-6989586621679863743"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863743"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span id="local-6989586621679863744"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863744"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863742"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; Term (Set (Either Int Int)) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863743"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; Term (Set (Either Int Int)) -&gt; Term (Set (Either Int Int))
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863744"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863743"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863746"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863746"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863746"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863747"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863747"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863747"><span class="hs-identifier hs-var">a'</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863748"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863748"><span class="hs-identifier hs-var">b'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863748"><span class="hs-identifier hs-var">b'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863744"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863749"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863749"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863749"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863750"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863750"><span class="hs-identifier hs-var">b'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863750"><span class="hs-identifier hs-var">b'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Constrained.Examples.Set.html#weirdSetPairSpec"><span class="hs-identifier hs-type">weirdSetPairSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span id="weirdSetPairSpec"><span class="annot"><span class="annottext">weirdSetPairSpec :: Specification ([Int], Set (Either Int Int))
+</span><a href="Constrained.Examples.Set.html#weirdSetPairSpec"><span class="hs-identifier hs-var hs-var">weirdSetPairSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList Term (Args (SimpleRep ([Int], Set (Either Int Int)))))
+  [Pred]
+-&gt; Specification ([Int], Set (Either Int Int))
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (SimpleRep ([Int], Set (Either Int Int)))))
+   [Pred]
+ -&gt; Specification ([Int], Set (Either Int Int)))
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep ([Int], Set (Either Int Int)))))
+     [Pred]
+-&gt; Specification ([Int], Set (Either Int Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863752"><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863752"><span class="hs-keyword hs-var">as</span></a></span></span><span> </span><span id="local-6989586621679863753"><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863753"><span class="hs-identifier hs-var">as'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863753"><span class="hs-identifier hs-var">as'</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int)) -&gt; Term [Int] -&gt; Pred
+forall a b. (HasSpec a, HasSpec b) =&gt; Term a -&gt; Term b -&gt; Pred
+</span><a href="Constrained.Syntax.html#dependsOn"><span class="hs-operator hs-var">`dependsOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863752"><span class="hs-keyword hs-var">as</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [Int] -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863752"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863755"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863755"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">Term (Either Int Int) -&gt; Term (Set (Either Int Int)) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Int -&gt; Term (Either Int Int)
+forall a b.
+(HasSpec a, HasSpec b, IsNormalType a, IsNormalType b) =&gt;
+Term a -&gt; Term (Either a b)
+</span><a href="Constrained.Spec.SumProd.html#left_"><span class="hs-identifier hs-var">left_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863755"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863753"><span class="hs-identifier hs-var">as'</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Either Int Int))
+</span><a href="#local-6989586621679863753"><span class="hs-identifier hs-var">as'</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Either Int Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Either Int Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863757"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863757"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863757"><span class="hs-identifier hs-var">a'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) (Term Bool)
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) (Term Bool)
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863758"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863758"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term [Int] -&gt; Term Bool
+forall a. (Sized [a], HasSpec a) =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#elem_"><span class="hs-identifier hs-var">elem_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863758"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863752"><span class="hs-keyword hs-var">as</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Constrained.Examples.Set.html#setPair"><span class="hs-identifier hs-type">setPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span id="setPair"><span class="annot"><span class="annottext">setPair :: Specification (Set (Int, Int))
+</span><a href="Constrained.Examples.Set.html#setPair"><span class="hs-identifier hs-var hs-var">setPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set (Int, Int)) -&gt; [Pred]) -&gt; Specification (Set (Int, Int))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set (Int, Int)) -&gt; [Pred])
+ -&gt; Specification (Set (Int, Int)))
+-&gt; (Term (Set (Int, Int)) -&gt; [Pred])
+-&gt; Specification (Set (Int, Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863761"><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863761"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set (Int, Int)) -&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863761"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Int, Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863762"><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863762"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863762"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Int, Int) -&gt; Specification (Int, Int) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (Int, Int)
+</span><a href="Constrained.Examples.Basic.html#leqPair"><span class="hs-identifier hs-var">leqPair</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Term (Int, Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term (Int, Int) -&gt; Term (Set (Int, Int)) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-operator hs-var">`member_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Int, Int))
+</span><a href="#local-6989586621679863761"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Constrained.Examples.Set.html#setSpec"><span class="hs-identifier hs-type">setSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span id="setSpec"><span class="annot"><span class="annottext">setSpec :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#setSpec"><span class="hs-identifier hs-var hs-var">setSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863766"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863766"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863766"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863767"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863767"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863767"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Constrained.Examples.Set.html#compositionalSpec"><span class="hs-identifier hs-type">compositionalSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span id="compositionalSpec"><span class="annot"><span class="annottext">compositionalSpec :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#compositionalSpec"><span class="hs-identifier hs-var hs-var">compositionalSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; [Pred]) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; [Pred]) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; [Pred]) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863769"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863769"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Specification (Set Int) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863769"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#setSpec"><span class="hs-identifier hs-var">setSpec</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-operator hs-var">`member_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863769"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Constrained.Examples.Set.html#emptySetSpec"><span class="hs-identifier hs-type">emptySetSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span id="emptySetSpec"><span class="annot"><span class="annottext">emptySetSpec :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#emptySetSpec"><span class="hs-identifier hs-var hs-var">emptySetSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Pred) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863771"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863771"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863771"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863772"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863772"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863772"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Constrained.Examples.Set.html#setSubSize"><span class="hs-identifier hs-type">setSubSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span id="setSubSize"><span class="annot"><span class="annottext">setSubSize :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#setSubSize"><span class="hs-identifier hs-var hs-var">setSubSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; Term Bool) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863774"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863774"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">12</span></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863774"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">newtype</span><span> </span><span id="NotASet"><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-var">NotASet</span></a></span></span><span> </span><span id="local-6989586621679862953"><span class="annot"><a href="#local-6989586621679862953"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NotASet"><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-var">NotASet</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679862953"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679863777"><span id="local-6989586621679863779"><span class="annot"><span class="annottext">(forall x. NotASet a -&gt; Rep (NotASet a) x)
+-&gt; (forall x. Rep (NotASet a) x -&gt; NotASet a)
+-&gt; Generic (NotASet a)
+forall x. Rep (NotASet a) x -&gt; NotASet a
+forall x. NotASet a -&gt; Rep (NotASet a) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall a x. Rep (NotASet a) x -&gt; NotASet a
+forall a x. NotASet a -&gt; Rep (NotASet a) x
+$cfrom :: forall a x. NotASet a -&gt; Rep (NotASet a) x
+from :: forall x. NotASet a -&gt; Rep (NotASet a) x
+$cto :: forall a x. Rep (NotASet a) x -&gt; NotASet a
+to :: forall x. Rep (NotASet a) x -&gt; NotASet a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679863784"><span id="local-6989586621679863789"><span id="local-6989586621679863793"><span class="annot"><span class="annottext">Int -&gt; NotASet a -&gt; ShowS
+[NotASet a] -&gt; ShowS
+NotASet a -&gt; String
+(Int -&gt; NotASet a -&gt; ShowS)
+-&gt; (NotASet a -&gt; String)
+-&gt; ([NotASet a] -&gt; ShowS)
+-&gt; Show (NotASet a)
+forall a. Show a =&gt; Int -&gt; NotASet a -&gt; ShowS
+forall a. Show a =&gt; [NotASet a] -&gt; ShowS
+forall a. Show a =&gt; NotASet a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; NotASet a -&gt; ShowS
+showsPrec :: Int -&gt; NotASet a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; NotASet a -&gt; String
+show :: NotASet a -&gt; String
+$cshowList :: forall a. Show a =&gt; [NotASet a] -&gt; ShowS
+showList :: [NotASet a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679863798"><span id="local-6989586621679863803"><span class="annot"><span class="annottext">NotASet a -&gt; NotASet a -&gt; Bool
+(NotASet a -&gt; NotASet a -&gt; Bool)
+-&gt; (NotASet a -&gt; NotASet a -&gt; Bool) -&gt; Eq (NotASet a)
+forall a. Eq a =&gt; NotASet a -&gt; NotASet a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; NotASet a -&gt; NotASet a -&gt; Bool
+== :: NotASet a -&gt; NotASet a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; NotASet a -&gt; NotASet a -&gt; Bool
+/= :: NotASet a -&gt; NotASet a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679862952"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679862952"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679862952"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Generic.html#HasSimpleRep"><span class="hs-identifier hs-type">HasSimpleRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679862952"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SimpleRep"><span class="annot"><a href="Constrained.Generic.html#SimpleRep"><span class="hs-identifier hs-var">SimpleRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679862952"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679862952"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621679863818"><span class="annot"><span class="annottext">fromSimpleRep :: SimpleRep (NotASet a) -&gt; NotASet a
+</span><a href="#local-6989586621679863818"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromSimpleRep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; NotASet a
+forall a. Set a -&gt; NotASet a
+</span><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-var">NotASet</span></a></span><span> </span><span class="annot"><span class="annottext">(Set a -&gt; NotASet a) -&gt; ([a] -&gt; Set a) -&gt; [a] -&gt; NotASet a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Set a
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span>
+</span><span id="line-147"></span><span>  </span><span id="local-6989586621679863821"><span class="annot"><span class="annottext">toSimpleRep :: NotASet a -&gt; SimpleRep (NotASet a)
+</span><a href="#local-6989586621679863821"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSimpleRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span id="local-6989586621679863823"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679863823"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; [a]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.toList</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679863823"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679862892"><span id="local-6989586621679863840"><span id="local-6989586621679863845"><span id="local-6989586621679863850"><span id="local-6989586621679863860"><span id="local-6989586621679863868"><span id="local-6989586621679863873"><span id="local-6989586621679863878"><span id="local-6989586621679863883"><span id="local-6989586621679863886"><span id="local-6989586621679863889"><span id="local-6989586621679863892"><span id="local-6989586621679863895"><span id="local-6989586621679863898"><span id="local-6989586621679863901"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679862892"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679862892"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679862892"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679862891"><span id="local-6989586621679863943"><span id="local-6989586621679863953"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679862891"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679862891"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Forallable"><span class="hs-identifier hs-type">Forallable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679862891"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679862891"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Constrained.Examples.Set.html#emptyListSpec"><span class="hs-identifier hs-type">emptyListSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Examples.Set.html#NotASet"><span class="hs-identifier hs-type">NotASet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span id="emptyListSpec"><span class="annot"><span class="annottext">emptyListSpec :: Specification ([Int], NotASet (Either Int Int, Int))
+</span><a href="Constrained.Examples.Set.html#emptyListSpec"><span class="hs-identifier hs-var hs-var">emptyListSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term (Args (SimpleRep ([Int], NotASet (Either Int Int, Int)))))
+  [Pred]
+-&gt; Specification ([Int], NotASet (Either Int Int, Int))
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term (Args (SimpleRep ([Int], NotASet (Either Int Int, Int)))))
+   [Pred]
+ -&gt; Specification ([Int], NotASet (Either Int Int, Int)))
+-&gt; FunTy
+     (MapList
+        Term (Args (SimpleRep ([Int], NotASet (Either Int Int, Int)))))
+     [Pred]
+-&gt; Specification ([Int], NotASet (Either Int Int, Int))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863965"><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863965"><span class="hs-identifier hs-var">is</span></a></span></span><span> </span><span id="local-6989586621679863966"><span class="annot"><span class="annottext">Term (NotASet (Either Int Int, Int))
+</span><a href="#local-6989586621679863966"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term [Int] -&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [Int]
+</span><a href="#local-6989586621679863965"><span class="hs-identifier hs-var">is</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term Int -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863967"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863967"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863967"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (NotASet (Either Int Int, Int))
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep (Either Int Int, Int)))) Pred
+-&gt; Pred
+forall t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec t,
+ HasSpec (SimpleRep a), HasSimpleRep a,
+ All HasSpec (Args (SimpleRep a)), IsPred p, IsProd (SimpleRep a),
+ IsProductType a, HasSpec a, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term t -&gt; FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="annot"><span class="annottext">Term (NotASet (Either Int Int, Int))
+</span><a href="#local-6989586621679863966"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (SimpleRep (Either Int Int, Int)))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep (Either Int Int, Int)))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863968"><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863968"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>      </span><span class="annot"><span class="annottext">Term (Either Int Int)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep (Either Int Int))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Either Int Int)
+</span><a href="#local-6989586621679863968"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Int)) Bool -&gt; Weighted (BinderD Deps) Int
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Int)) Bool
+ -&gt; Weighted (BinderD Deps) Int)
+-&gt; FunTy (MapList Term (Args Int)) Bool
+-&gt; Weighted (BinderD Deps) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Constrained.Examples.Set.html#foldSingleCase"><span class="hs-identifier hs-type">foldSingleCase</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-161"></span><span id="foldSingleCase"><span class="annot"><span class="annottext">foldSingleCase :: Specification Int
+</span><a href="Constrained.Examples.Set.html#foldSingleCase"><span class="hs-identifier hs-var hs-var">foldSingleCase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term Int -&gt; [Pred]) -&gt; Specification Int
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term Int -&gt; [Pred]) -&gt; Specification Int)
+-&gt; (Term Int -&gt; [Pred]) -&gt; Specification Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863970"><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863970"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term (Set Int) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863970"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int -&gt; Term (Set Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Int, [(Int, Int)])
+-&gt; (Term (Int, [(Int, Int)]) -&gt; Pred) -&gt; Pred
+forall a p.
+(HasSpec a, IsPred p) =&gt;
+Term a -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#letBind"><span class="hs-identifier hs-var">letBind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Int -&gt; Term [(Int, Int)] -&gt; Term (Int, [(Int, Int)])
+forall a b.
+(HasSpec a, HasSpec b, IsNormalType a, IsNormalType b) =&gt;
+Term a -&gt; Term b -&gt; Term (a, b)
+</span><a href="Constrained.Spec.SumProd.html#pair_"><span class="hs-identifier hs-var">pair_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int
+</span><a href="#local-6989586621679863970"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">(Term [(Int, Int)] -&gt; Term (Int, [(Int, Int)]))
+-&gt; Term [(Int, Int)] -&gt; Term (Int, [(Int, Int)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[(Int, Int)] -&gt; Term [(Int, Int)]
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Term (Int, [(Int, Int)]) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Int, [(Int, Int)]) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863973"><span class="annot"><span class="annottext">Term (Int, [(Int, Int)])
+</span><a href="#local-6989586621679863973"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><span class="annottext">Term (Int, [(Int, Int)])
+-&gt; FunTy (MapList Term (ProductAsList (Int, [(Int, Int)]))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Int, [(Int, Int)])
+</span><a href="#local-6989586621679863973"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (Int, [(Int, Int)]))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (Int, [(Int, Int)]))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679863975"><span class="annot"><span class="annottext">Term [(Int, Int)]
+</span><a href="#local-6989586621679863975"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term [(Int, Int)] -&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [(Int, Int)]
+</span><a href="#local-6989586621679863975"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Int, Int) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Int, Int) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863976"><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863976"><span class="hs-identifier hs-var">p2</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-165"></span><span>        </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Int, Int) -&gt; Term Int
+forall x y. (HasSpec x, HasSpec y) =&gt; Term (x, y) -&gt; Term y
+</span><a href="Constrained.Spec.SumProd.html#snd_"><span class="hs-identifier hs-var">snd_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Int, Int)
+</span><a href="#local-6989586621679863976"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="annot"><a href="Constrained.Examples.Set.html#complexUnion"><span class="hs-identifier hs-type">complexUnion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span id="complexUnion"><span class="annot"><span class="annottext">complexUnion :: Specification (Set Int, Set Int)
+</span><a href="Constrained.Examples.Set.html#complexUnion"><span class="hs-identifier hs-var hs-var">complexUnion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList Term (Args (SimpleRep (Set Int, Set Int)))) [Term Bool]
+-&gt; Specification (Set Int, Set Int)
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (SimpleRep (Set Int, Set Int)))) [Term Bool]
+ -&gt; Specification (Set Int, Set Int))
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep (Set Int, Set Int)))) [Term Bool]
+-&gt; Specification (Set Int, Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863979"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863979"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span id="local-6989586621679863980"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863980"><span class="hs-identifier hs-var">zs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863979"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863979"><span class="hs-identifier hs-var">ys</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term (Set Int)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863980"><span class="hs-identifier hs-var">zs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Constrained.Examples.Set.html#unionBounded"><span class="hs-identifier hs-type">unionBounded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span id="unionBounded"><span class="annot"><span class="annottext">unionBounded :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#unionBounded"><span class="hs-identifier hs-var hs-var">unionBounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863983"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863983"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863983"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term (Set Int)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; Term (Set Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- Only possible value is {4}</span><span>
+</span><span id="line-180"></span><span class="annot"><a href="Constrained.Examples.Set.html#powersetPickOne"><span class="hs-identifier hs-type">powersetPickOne</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span id="powersetPickOne"><span class="annot"><span class="annottext">powersetPickOne :: Specification (Set Int)
+</span><a href="Constrained.Examples.Set.html#powersetPickOne"><span class="hs-identifier hs-var hs-var">powersetPickOne</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-182"></span><span>  </span><span class="annot"><span class="annottext">(Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int))
+-&gt; (Term (Set Int) -&gt; [Term Bool]) -&gt; Specification (Set Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679863985"><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863985"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863985"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term (Set Int) -&gt; Term Bool
+forall a.
+(Ord a, HasSpec a) =&gt;
+Term (Set a) -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="Constrained.Spec.Set.html#subset_"><span class="hs-operator hs-var">`subset_`</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; Term (Set Int)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Set Int)
+</span><a href="#local-6989586621679863985"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set Int) -&gt; Term [Set Int] -&gt; Term Bool
+forall a. (Sized [a], HasSpec a) =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="Constrained.TheKnot.html#elem_"><span class="hs-operator hs-var">`elem_`</span></a></span><span> </span><span class="annot"><span class="annottext">[Set Int] -&gt; Term [Set Int]
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Set Int
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Set Int
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-186"></span></pre></body></html>
