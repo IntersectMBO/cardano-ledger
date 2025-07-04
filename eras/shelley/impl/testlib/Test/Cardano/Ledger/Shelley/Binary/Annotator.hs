@@ -22,6 +22,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain
+import Cardano.Ledger.Shelley.BlockChain.Internal
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData
