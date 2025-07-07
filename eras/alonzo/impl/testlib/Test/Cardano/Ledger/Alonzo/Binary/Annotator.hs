@@ -50,7 +50,7 @@ instance
   , DecCBOR (TxWits era)
   , DecCBOR (NativeScript era)
   ) =>
-  DecCBOR (AlonzoTxSeq era)
+  DecCBOR (AlonzoBlockBody era)
   where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
@@ -85,7 +85,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith4 mkTx bodies wits validFlags auxData
     pure $
-      AlonzoTxSeqRaw
+      AlonzoBlockBodyRaw
         txs
         (hashAlonzoSegWits bodiesBytes witsBytes auxDataBytes isValidBytes)
         bodiesBytes

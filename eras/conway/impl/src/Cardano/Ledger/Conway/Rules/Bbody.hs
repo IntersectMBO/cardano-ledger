@@ -26,7 +26,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoTxSeq, txSeqTxns)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyEvent (..),
@@ -98,7 +98,7 @@ import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq (..))
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | In the next era this will become a proper protocol parameter.
@@ -251,7 +251,7 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , BlockBody era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoBlockBody era
   , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
@@ -283,7 +283,8 @@ conwayBbodyTransition ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , BlockBody era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoBlockBody era
+  , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , AlonzoEraTx era
@@ -299,7 +300,7 @@ conwayBbodyTransition = do
                )
            ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txSeqTxns txsSeq
+            txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
         totalRefScriptSize
           <= maxRefScriptSizePerBlock

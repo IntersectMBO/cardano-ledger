@@ -5,7 +5,7 @@
 module Cardano.Ledger.Dijkstra.Tx () where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoTxSeq (..), hashAlonzoTxSeq)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (..),
@@ -25,7 +25,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxWits ()
-import Lens.Micro (lens)
+import Lens.Micro
 
 instance EraTx DijkstraEra where
   type Tx DijkstraEra = AlonzoTx DijkstraEra
@@ -54,10 +54,10 @@ instance AlonzoEraTx DijkstraEra where
   {-# INLINE isValidTxL #-}
 
 instance EraBlockBody DijkstraEra where
-  type BlockBody DijkstraEra = AlonzoTxSeq DijkstraEra
-  txSeqBlockBodyL = lens txSeqTxns (\_ s -> AlonzoTxSeq s)
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashBlockBody = hashAlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
+  type BlockBody DijkstraEra = AlonzoBlockBody DijkstraEra
+  txSeqBlockBodyL = txSeqBlockBodyL
+  fromTxSeq = (^. txSeqBlockBodyL)
+  toTxSeq = AlonzoBlockBody
+  hashBlockBody = abbHash
+  hashTxSeq = abbHash
   numSegComponents = 4
