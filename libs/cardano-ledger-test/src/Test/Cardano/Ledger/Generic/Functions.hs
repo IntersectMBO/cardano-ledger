@@ -59,7 +59,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro
+import Lens.Micro ((^.), (&), (%~))
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFailsLang, alwaysSucceedsLang)
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))

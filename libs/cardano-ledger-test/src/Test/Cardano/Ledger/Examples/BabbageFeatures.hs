@@ -78,7 +78,7 @@ import Data.Maybe (maybeToList)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack
-import Lens.Micro
+import Lens.Micro ((^.), (&), (.~), (%~), (<>~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common (showExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
