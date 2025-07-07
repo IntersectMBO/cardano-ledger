@@ -5,6 +5,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | This module implementes this very neat little trick for observing when
+-- type families are stuck https://blog.csongor.co.uk/report-stuck-families/
+-- which allows us to report much better type errors when our generics tricks
+-- fail.
 module Constrained.TypeErrors (
   Computes,
   AssertComputes,
@@ -15,11 +19,7 @@ module Constrained.TypeErrors (
 import Data.Kind
 import GHC.TypeError as X
 
--- NOTE: this module implementes this very neat little trick for observing when type
--- families are stuck https://blog.csongor.co.uk/report-stuck-families/ which allows
--- us to report much better type errors when our generics tricks fail.
---
--- The idea of this type family is that if `ty` evaluates to a type (other than Dummy which
+-- | The idea of this type family is that if `ty` evaluates to a type (other than Dummy which
 -- we haven't exported) then `Computes ty (TE err)` will evaluate to `()` without
 -- getting stuck and without expanding `TE` to `TypeError err`.
 --
@@ -43,12 +43,14 @@ type family Computes (ty :: k0) (err :: Constraint) (a :: k) :: k where
 -- This is intentionally hidden in here to avoid any funny business
 data Dummy
 
+-- | Assert that type @ty` computes
 type AssertComputes ty em = Computes ty (TypeError em) (() :: Constraint)
 
 type family AssertSpineComputesF (help :: ErrorMessage) (xs :: [k]) (err :: ()) :: Constraint where
   AssertSpineComputesF _ '[] _ = ()
   AssertSpineComputesF help (_ : xs) err = AssertSpineComputes help xs
 
+-- | Assert that the entire spine of a type-level list computes
 type AssertSpineComputes help (xs :: [k]) =
   AssertSpineComputesF
     help

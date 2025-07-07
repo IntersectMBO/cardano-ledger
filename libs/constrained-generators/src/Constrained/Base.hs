@@ -26,46 +26,69 @@
 --   because many functions require these instances. It exports functions that define the
 --   user interface to the domain embedded language (constrained, forall, exists etc.).
 --   And, by design, nothing more.
-module Constrained.Base where
+module Constrained.Base (
+  -- * Implementing logic propagation
+  Logic (..),
+  pattern (:<:),
+  pattern (:>:),
+  pattern Unary,
+
+  -- * Useful function symbols
+  fromGeneric_,
+  toGeneric_,
+
+  -- * TODO: documentme
+  HasSpec (..),
+  propagateSpec,
+  pattern ToGeneric,
+  pattern FromGeneric,
+  constrained,
+  appFun,
+  errorLikeMessage,
+  isErrorLike,
+  notMemberSpec,
+  notEqualSpec,
+  addToErrorSpec,
+  memberSpecList,
+  toCtx,
+  flipCtx,
+  BinaryShow (..),
+  name,
+  fromSimpleRepSpec,
+  toSimpleRepSpec,
+  toPred,
+  forAllToList,
+  explainSpec,
+  bind,
+  Term,
+  Specification,
+  Pred,
+  IsPred,
+  HintF (..),
+  Binder,
+  HasGenHint (..),
+  Forallable,
+  pattern TypeSpec,
+  typeSpec,
+  equalSpec,
+  appTerm,
+  GenericRequires,
+  HOLE (..),
+  AppRequires,
+  fromForAllSpec,
+  Fun (..),
+  GenericallyInstantiated,
+  BaseW (..),
+  fromListCtx,
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Core (
-  Evidence (..),
-  Value (..),
-  Var (..),
-  eqVar,
- )
+import Constrained.Core
 import Constrained.DependencyInjection
 import Constrained.FunctionSymbol
-import Constrained.GenT (
-  GE (..),
-  GenT,
-  MonadGenError (..),
-  catMessageList,
-  catMessages,
-  fatalError,
-  pureGen,
- )
-import Constrained.Generic (
-  HasSimpleRep,
-  SimpleRep,
-  fromSimpleRep,
-  toSimpleRep,
- )
-import Constrained.List (
-  All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  MapList,
-  TypeList,
-  curryList,
-  fillListCtx,
-  foldMapList,
-  mapListCtxC,
-  pattern ListCtx,
-  pattern NilCtx,
- )
+import Constrained.GenT
+import Constrained.Generic
+import Constrained.List hiding (toList)
 import Constrained.PrettyUtils
 import Constrained.TypeErrors
 import Control.Monad.Writer (
@@ -76,7 +99,6 @@ import Data.Foldable (
   toList,
  )
 import Data.Kind (Constraint, Type)
-import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
@@ -679,26 +701,6 @@ data BinaryShow where
 -- =================================================
 -- Term
 
--- | Recall function symbols are objects that you can use to build applications
---   They carry information about both its semantic and logical properties.
---   Usually the Haskel name ends in '_', for example consider: not_, subset_ ,lookup_, toGeneric_
---   Infix function symbols names end in '.', for example: ==. , <=.
---   E.g  appTerm ToGenericW  :: Term a -> Term(SimpleRep a)
---        (appTerm ToGenericW  (lit True)) builds the Term  (toGeneric_ True)
---   Note the witness (ToGenericW ) must have a Logic instance like:
---   instance Logic      BaseW          '[a]           (SimpleRep a) where ...
---        type of ToGenericW ^    arg types^            result type^
---   The Logic instance does not demand any of these things have any properties at all.
---   It is here, where we actually build the App node, that we demand the properties App terms require.
---   App :: AppRequires s t ds r => t s ds r -> List Term dom -> Term rng
-appSym ::
-  forall t as b.
-  AppRequires t as b =>
-  t as b ->
-  List Term as ->
-  Term b
-appSym w xs = App w xs
-
 -- Like 'appSym' but builds functions over terms, rather that just one App term.
 appTerm ::
   forall t ds r.
@@ -710,12 +712,6 @@ appTerm sym = curryList @ds (App @Deps @t @ds @r sym)
 name :: String -> Term a -> Term a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
-
--- | Give a Term a nameHint, if its a Var, and doesn't already have one,
---  otherwise return the Term unchanged.
-named :: String -> Term a -> Term a
-named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
-named _ t = t
 
 bind :: (HasSpec a, IsPred p) => (Term a -> p) -> Binder a
 bind bodyf = newv :-> bodyPred
@@ -844,12 +840,6 @@ errorLikeMessage (TypeSpec x _) =
     Just xs -> xs
 errorLikeMessage _ = pure ("Bad call to errorLikeMessage, case 2, not guarded by isErrorLike")
 
-fromGESpec :: HasCallStack => GE (Specification a) -> Specification a
-fromGESpec ge = case ge of
-  Result s -> s
-  GenError xs -> ErrorSpec (catMessageList xs)
-  FatalError es -> error $ catMessages es
-
 -- | Add the explanations, if it's an ErrorSpec, else drop them
 addToErrorSpec :: NE.NonEmpty String -> Specification a -> Specification a
 addToErrorSpec es (ExplainSpec [] x) = addToErrorSpec es x
@@ -857,9 +847,9 @@ addToErrorSpec es (ExplainSpec es2 x) = ExplainSpec es2 (addToErrorSpec es x)
 addToErrorSpec es (ErrorSpec es') = ErrorSpec (es <> es')
 addToErrorSpec _ s = s
 
--- ==========================================================================
+------------------------------------------------------------------------
 -- Pretty and Show instances
--- ==========================================================================
+------------------------------------------------------------------------
 
 -- ====================================================
 -- The Fun type encapuslates a Logic instance to hide
@@ -876,9 +866,6 @@ data Fun dom rng where
 
 instance Show (Fun dom r) where
   show (Fun (f :: t dom rng)) = "(Fun " ++ show f ++ ")"
-
-extractf :: Typeable t => Fun d r -> Maybe (t d r)
-extractf (Fun f) = cast f
 
 appFun :: Fun '[x] b -> Term x -> Term b
 appFun (Fun f) x = App f (x :> Nil)

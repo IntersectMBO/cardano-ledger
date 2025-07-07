@@ -1,5 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
+-- | This module provides an API for extending the library with new function
+-- symbols.
 module Constrained.API.Extend (
   -- * Abstract syntax
   SpecificationD (..),
@@ -27,6 +29,12 @@ module Constrained.API.Extend (
   NumSpec (..),
   TreeSpec (..),
 
+  -- * Generics
+  (:::),
+  SOP,
+  algebra,
+  inject,
+
   -- * Re-export of `Constrained.API`
   module Constrained.API,
 ) where
@@ -35,6 +43,7 @@ import Constrained.API
 import Constrained.AbstractSyntax
 import Constrained.Base
 import Constrained.FunctionSymbol
+import Constrained.Generic
 import Constrained.NumOrd
 import Constrained.Spec.Map
 import Constrained.Spec.Set

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,11 +29,8 @@ import Constrained.Core (
   NonEmpty ((:|)),
   Rename (rename),
  )
-import Constrained.Env (
-  Env,
-  extendEnv,
-  singletonEnv,
- )
+import Constrained.Env
+import Constrained.Env qualified as Env
 import Constrained.GenT (
   GE (..),
   MonadGenError (..),
@@ -51,7 +49,7 @@ import Constrained.Syntax (
   substitutePred,
  )
 import Data.List (intersect, nub)
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
@@ -84,11 +82,11 @@ checkPred env = \case
       <$> sequence
         [ checkPred env' p
         | v <- forAllToList set
-        , let env' = extendEnv x v env
+        , let env' = Env.extend x v env
         ]
   Case t bs -> do
     v <- runTerm env t
-    runCaseOn v (mapList thing bs) (\x val ps -> checkPred (extendEnv x val env) ps)
+    runCaseOn v (mapList thing bs) (\x val ps -> checkPred (Env.extend x val env) ps)
   When bt p -> do
     b <- runTerm env bt
     if b then checkPred env p else pure True
@@ -98,10 +96,10 @@ checkPred env = \case
   And ps -> checkPreds env ps
   Let t (x :-> p) -> do
     val <- runTerm env t
-    checkPred (extendEnv x val env) p
+    checkPred (Env.extend x val env) p
   Exists k (x :-> p) -> do
     a <- runGE $ k (errorGE . explain "checkPred: Exists" . runTerm env)
-    checkPred (extendEnv x a env) p
+    checkPred (Env.extend x a env) p
   Explain es p -> explainNE es $ checkPred env p
 
 checkPreds :: (MonadGenError m, Traversable t) => Env -> t Pred -> m Bool
@@ -172,13 +170,13 @@ checkPredE env msgs = \case
             catMaybes
               [ checkPredE env' (pure "Some items in ForAll fail") p
               | v <- forAllToList set
-              , let env' = extendEnv x v env
+              , let env' = Env.extend x v env
               ]
        in case answers of
             [] -> Nothing
             (y : ys) -> Just (NE.nub (sconcat (y NE.:| ys)))
   Case t bs -> case runTermE env t of
-    Right v -> runCaseOn v (mapList thing bs) (\x val ps -> checkPredE (extendEnv x val env) msgs ps)
+    Right v -> runCaseOn v (mapList thing bs) (\x val ps -> checkPredE (Env.extend x val env) msgs ps)
     Left es -> Just (msgs <> pure "checkPredE: Case fails" <> es)
   When bt p -> case runTermE env bt of
     Right b -> if b then checkPredE env msgs p else Nothing
@@ -191,7 +189,7 @@ checkPredE env msgs = \case
       [] -> Nothing
       (x : xs) -> Just (msgs <> NE.nub (sconcat (x NE.:| xs)))
   Let t (x :-> p) -> case runTermE env t of
-    Right val -> checkPredE (extendEnv x val env) msgs p
+    Right val -> checkPredE (Env.extend x val env) msgs p
     Left es -> Just (msgs <> pure "checkPredE: Let fails" <> es)
   Exists k (x :-> p) ->
     let eval :: forall b. Term b -> b
@@ -199,7 +197,7 @@ checkPredE env msgs = \case
           Right v -> v
           Left es -> error $ unlines $ NE.toList (msgs <> es)
      in case k eval of
-          Result a -> checkPredE (extendEnv x a env) msgs p
+          Result a -> checkPredE (Env.extend x a env) msgs p
           FatalError es -> Just (msgs <> catMessageList es)
           GenError es -> Just (msgs <> catMessageList es)
   Explain es p -> checkPredE env (msgs <> es) p
@@ -235,7 +233,7 @@ conformsToSpecE a spec@(TypeSpec s cant) msgs =
               ["conformsToSpecE TypeSpec case", "  " ++ show a, "  (" ++ show spec ++ ")", "fails", ""]
         )
 conformsToSpecE a (SuspendedSpec v ps) msgs =
-  case checkPredE (singletonEnv v a) msgs ps of
+  case checkPredE (Env.singleton v a) msgs ps of
     Nothing -> Nothing
     Just es -> Just (pure ("conformsToSpecE SuspendedSpec case on var " ++ show v ++ " fails") <> es)
 conformsToSpecE _ (ErrorSpec es) msgs = Just (msgs <> pure "conformsToSpecE ErrorSpec case" <> es)
@@ -309,7 +307,7 @@ instance HasSpec a => Monoid (Specification a) where
 --   > quickCheck $ forAll (genFromSpec spec) $ \ x -> monitorSpec spec x $ ...
 monitorSpec :: Testable p => Specification a -> a -> p -> Property
 monitorSpec (SuspendedSpec x p) a =
-  errorGE (monitorPred (singletonEnv x a) p) . property
+  errorGE (monitorPred (Env.singleton x a) p) . property
 monitorSpec _ _ = property
 
 monitorPred ::
@@ -327,11 +325,11 @@ monitorPred env = \case
       <$> sequence
         [ monitorPred env' p
         | v <- forAllToList set
-        , let env' = extendEnv x v env
+        , let env' = Env.extend x v env
         ]
   Case t bs -> do
     v <- runTerm env t
-    runCaseOn v (mapList thing bs) (\x val ps -> monitorPred (extendEnv x val env) ps)
+    runCaseOn v (mapList thing bs) (\x val ps -> monitorPred (Env.extend x val env) ps)
   When b p -> do
     v <- runTerm env b
     if v then monitorPred env p else pure id
@@ -341,9 +339,9 @@ monitorPred env = \case
   And ps -> foldr (.) id <$> mapM (monitorPred env) ps
   Let t (x :-> p) -> do
     val <- runTerm env t
-    monitorPred (extendEnv x val env) p
+    monitorPred (Env.extend x val env) p
   Exists k (x :-> p) -> do
     case k (errorGE . explain "monitorPred: Exists" . runTerm env) of
-      Result a -> monitorPred (extendEnv x a env) p
+      Result a -> monitorPred (Env.extend x a env) p
       _ -> pure id
   Explain es p -> explainNE es $ monitorPred env p

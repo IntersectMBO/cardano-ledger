@@ -5,7 +5,6 @@ module Constrained.API (
   Specification,
   Pred,
   Term,
-  NonEmpty ((:|)),
 
   -- * Type classes and constraints
   HasSpec (..),
@@ -139,11 +138,17 @@ module Constrained.API (
 
   -- * Generation, Shrinking, and Testing
 
+  -- ** Types
+  GE (..),
+  GenT,
+
   -- ** Generating
   genFromSpec,
   genFromSpecT,
   genFromSpecWithSeed,
   genFromSizeSpec,
+  looseGen,
+  strictGen,
 
   -- ** Shrinking
   shrinkWithSpec,
@@ -162,6 +167,19 @@ module Constrained.API (
   forAllSpec,
   forAllSpecShow,
   forAllSpecDiscard,
+
+  -- ** Building generators
+  pureGen,
+  listOfT,
+  oneofT,
+  frequencyT,
+  vectorOfT,
+
+  -- * Utilities
+  unionWithMaybe,
+
+  -- * Re-exports
+  NonEmpty ((:|)),
 ) where
 
 import Constrained.AbstractSyntax
@@ -169,10 +187,12 @@ import Constrained.Base
 import Constrained.Conformance
 import Constrained.Core
 import Constrained.FunctionSymbol
+import Constrained.GenT
 import Constrained.Generation
 import Constrained.Generic
 import Constrained.NumOrd
 import Constrained.Properties
+import Constrained.Spec.List
 import Constrained.Spec.Map
 import Constrained.Spec.Set
 import Constrained.Spec.SumProd

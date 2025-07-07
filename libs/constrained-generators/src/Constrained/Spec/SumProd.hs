@@ -63,7 +63,6 @@ import Constrained.Base (
   Pred,
   Specification,
   Term,
-  appTerm,
   bind,
   constrained,
   fromGeneric_,
@@ -99,6 +98,7 @@ import Constrained.List (
   listShape,
   mapListC,
  )
+import Constrained.Spec.List
 import Constrained.Syntax (
   exists,
   forAll,
@@ -106,16 +106,7 @@ import Constrained.Syntax (
   mkCase,
   reify,
  )
-import Constrained.TheKnot (
-  FoldSpec (..),
-  FunW (..),
-  PairSpec (..),
-  ProdW (..),
-  preMapFoldSpec,
-  prodFst_,
-  prodSnd_,
-  prod_,
- )
+import Constrained.TheKnot
 import Constrained.TypeErrors
 import Data.Typeable (Typeable)
 import GHC.Generics
@@ -371,10 +362,10 @@ instance
 ------------------------------------------------------------------------
 
 fst_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term x
-fst_ = appTerm (ComposeW ProdFstW ToGenericW)
+fst_ = prodFst_ . toGeneric_
 
 snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
-snd_ = appTerm (ComposeW ProdSndW ToGenericW)
+snd_ = prodSnd_ . toGeneric_
 
 fstW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] a
 fstW = ComposeW ProdFstW ToGenericW
