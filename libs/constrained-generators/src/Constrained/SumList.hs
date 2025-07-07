@@ -19,7 +19,21 @@
 --   The helper functions do not need to know about the Foldy class, and are not dependent upon any of
 --   the mutually recursive operations defined in TheKnot, except the operations defined in the Complete class.
 --   That class is defined in this module, but the instance for that class is made in TheKnot.
-module Constrained.SumList where
+module Constrained.SumList (
+  genNumList,
+  pickAll,
+  knownUpperBound,
+  knownLowerBound,
+  genListWithSize,
+  Complete (..),
+  maxFromSpec,
+  Solution (..),
+  logRange,
+  logish,
+  Cost (..),
+  predSpecPair,
+  narrowByFuelAndSize,
+) where
 
 import Constrained.AbstractSyntax
 import Constrained.Base
@@ -52,12 +66,10 @@ import Constrained.NumOrd (
 import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
 import Control.Monad (guard)
-import Data.Either (partitionEithers)
 import Data.List ((\\))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe, isNothing, listToMaybe)
-import Data.Semigroup (sconcat)
 import qualified Data.Set as Set
 import GHC.Stack
 import Prettyprinter hiding (cat)
@@ -68,6 +80,7 @@ import Test.QuickCheck (Arbitrary, Gen, choose, shuffle, vectorOf)
 -- What we need to know, that can only be defined in TheKnot module, is
 -- abstracted into this class, which will be a precondition on the `Foldy` class
 
+-- | Dependency-trick
 class HasSpec a => Complete a where
   -- method standing for `simplifySpec`
   simplifyA :: Specification a -> Specification a
@@ -84,9 +97,7 @@ class HasSpec a => Complete a where
 
 -- ===================================================================
 
-noNegativeValues :: forall a. (Num a, Eq a, MaybeBounded a) => Bool
-noNegativeValues = lowerBound @a == Just 0
-
+-- | Try to find an upper-bound for the values admitted by a `Specification`
 knownUpperBound ::
   (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) =>
   Specification a ->
@@ -104,6 +115,7 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
       | a == b = a <$ guard (a `notElem` cant)
       | otherwise = listToMaybe $ [b, b - 1 .. a] \\ cant
 
+-- | Try to find a lower-bound for the values admitted by a `Specification`
 knownLowerBound ::
   (TypeSpec a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) =>
   Specification a ->
@@ -147,6 +159,8 @@ enumerateInterval (NumSpecInterval lo hi) =
 -- ========================================================================
 -- Operations to complete the Foldy instances genNumList, genListWithSize
 
+-- | Generate a list of values subject to a constraint on both the elements and
+-- the result
 genNumList ::
   forall a m.
   ( MonadGenError m
@@ -195,7 +209,7 @@ genNumList elemSIn foldSIn = do
 
     buildMemberSpec _ 0 es _ =
       pure
-        ( memberSpecList
+        ( memberSpec
             (Set.toList es)
             (pure "In genNumList, in buildMemberSpec 'es' is the empty list, can't make a MemberSpec from that")
         )
@@ -322,6 +336,7 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
               )
       _ -> Nothing
 
+-- | Try to narrow down a specification for the elems and fold of a list
 narrowByFuelAndSize ::
   forall a.
   ( TypeSpec a ~ NumSpec a
@@ -409,7 +424,7 @@ narrowByFuelAndSize fuel size specpair =
             possible x = x == u || xMinP <= u - x
             xs' = filter possible xs
       , xs' /= xs =
-          Just (memberSpecList (nubOrd xs') (pure ("None of " ++ show xs ++ " are possible")), foldS)
+          Just (memberSpec (nubOrd xs') (pure ("None of " ++ show xs ++ " are possible")), foldS)
       -- The lower bound on the number of elements is too low
       | Just e <- knownLowerBound elemS
       , e > 0
@@ -557,6 +572,7 @@ specName :: forall a. HasSpec a => Specification a -> String
 specName (ExplainSpec [x] _) = x
 specName x = show x
 
+-- | Name (?!) and semantics of a spec
 predSpecPair :: forall a. HasSpec a => Specification a -> (String, a -> Bool)
 predSpecPair spec = (specName spec, (`conformsToSpec` spec))
 
@@ -599,6 +615,8 @@ maxFromSpec dv (TypeSpec (NumSpecInterval _ hi) _) = maybe dv id hi
 -- =======================================================
 -- Helper functions for genSizedList
 
+-- | Either a list of possible answers of an explanation of why there is no
+-- solution
 data Solution t = Yes (NonEmpty [t]) | No [String]
   deriving (Eq)
 
@@ -606,29 +624,7 @@ instance Show t => Show (Solution t) where
   show (No xs) = "No" ++ "\n" ++ unlines xs
   show (Yes xs) = "Yes " ++ show xs
 
--- | The basic idea is to concat all the Yes's and skip over the No's.
---   The one wrinkle is if everything is No, then in that case return an arbitrary one of the No's.
---   This can be done in linear time in the length of the list. Call that length n.
---   Check for all No. This takes time proportional to n. If it is true return one of them.
---   If it is not all No, then concat all the Yes, and skip all the No.
---   We find the first No (if it exist), and all the Yes by partitioning the list
---   This is similar in spirit to Constrained.GenT.catGEs, but doesn't require a
---   a Monad to escape on the first No.
-concatSolution :: Show t => t -> t -> String -> t -> Int -> [Solution t] -> Solution t
-concatSolution smallest largest pName total count sols =
-  case partitionEithers (map (\case Yes x -> Left x; No x -> Right x) sols) of
-    ([], n : _) -> No n -- All No, arbitrarily return the first.
-    (y : ys, _) -> Yes $ sconcat (y :| ys) -- At least one Yes, and all No's skipped ('ys')
-    ([], []) ->
-      No -- The list is empty
-        [ "\nThe sample in pickAll was empty"
-        , "  smallest = " ++ show smallest
-        , "  largest = " ++ show largest
-        , "  pred = " ++ pName
-        , "  total = " ++ show total
-        , "  count = " ++ show count
-        ]
-
+-- | Special case Int for keeping track of "fuel" to find solutions
 newtype Cost = Cost Int deriving (Eq, Show, Num, Ord)
 
 firstYesG ::
@@ -897,6 +893,7 @@ fair smallest largest size precision isLarge =
     smallPrecision = take precision ranges
     oneRange (x, y) = vectorOf count (choose (x, y))
 
+-- | Get the bucket a number is in, i.e. @0-9, 10-99@, etc.
 logRange :: Integral a => a -> (a, a)
 logRange 1 = (10, 99)
 logRange (-1) = (-9, -1)

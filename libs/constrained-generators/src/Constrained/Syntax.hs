@@ -21,53 +21,64 @@
 --    3) Renaming
 --    4) internal helper functions
 --    5) Syntacic only transformations
-module Constrained.Syntax where
+module Constrained.Syntax (
+  -- * Surface syntax
+  lit,
+  genHint,
+  dependsOn,
+  reifies,
+  monitor,
+  explanation,
+  assertReified,
+  reify,
+  letBind,
+  unsafeExists,
+  forAll,
+  assertExplain,
+  exists,
+  assert,
+
+  -- * Free variable computations
+  FreeVars,
+  HasVariables (..),
+  freeVarNames,
+  count,
+  singleton,
+  without,
+
+  -- * TODO: documentme
+  computeDependencies,
+  solvableFrom,
+  respecting,
+  dependency,
+  applyNameHints,
+  envFromPred,
+  isLit,
+  mkCase,
+  unBind,
+  substituteTerm',
+  var,
+  runCaseOn,
+  substitutePred,
+  Name (..),
+  DependGraph,
+  Hints,
+  Subst,
+  SubstEntry (..),
+  irreflexiveDependencyOn,
+  substPred,
+  fromLits,
+  backwardsSubstitution,
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  Binder,
-  Forallable,
-  HasGenHint,
-  HasSpec,
-  Hint,
-  HintF (..),
-  IsPred,
-  Pred,
-  Specification,
-  Term,
-  bind,
-  explainSpec,
-  forAllToList,
-  name,
-  toPred,
- )
-import Constrained.Core (
-  Rename (rename),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
- )
-import Constrained.Env (
-  Env,
-  extendEnv,
-  lookupEnv,
-  removeVar,
-  singletonEnv,
- )
+import Constrained.Base
+import Constrained.Core
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
-import Constrained.GenT (
-  GE (..),
-  MonadGenError (..),
-  errorGE,
-  explain,
-  fatalError,
- )
-import Constrained.Generic (
-  Sum (..),
-  SumOver,
- )
+import Constrained.GenT
+import Constrained.Generic
 import Constrained.Graph (
   deleteNode,
   dependencies,
@@ -76,20 +87,13 @@ import Constrained.Graph (
   subtractGraph,
  )
 import Constrained.Graph qualified as Graph
-import Constrained.List (
-  List (..),
-  foldMapList,
-  mapList,
-  mapListC,
-  mapMList,
-  uncurryList_,
- )
+import Constrained.List hiding (toList)
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
 import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid qualified as Monoid
 import Data.Orphans ()
 import Data.Semigroup (Any (..))
@@ -103,6 +107,147 @@ import Language.Haskell.TH.Quote qualified as TH
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Prelude hiding (pred)
+
+------------------------------------------------------------------------
+-- Surface Syntax
+------------------------------------------------------------------------
+
+-- | Attach an explanation (a list of lines) to a `Pred` to get a better
+-- error-message when things go wrong
+assertExplain ::
+  IsPred p =>
+  [String] ->
+  p ->
+  Pred
+assertExplain [] p = toPred p
+assertExplain (s : es) p = Explain (s :| es) (toPred p)
+
+-- | Assert something, most commonly a @`Term` `Bool`@
+assert ::
+  IsPred p =>
+  p ->
+  Pred
+assert p = toPred p
+
+-- | Quantify over all the elements of a collection
+forAll ::
+  forall p t a.
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  , IsPred p
+  ) =>
+  Term t ->
+  (Term a -> p) ->
+  Pred
+forAll tm = mkForAll tm . bind
+
+mkForAll ::
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  ) =>
+  Term t ->
+  Binder a ->
+  Pred
+mkForAll (Lit (forAllToList -> [])) _ = TruePred
+mkForAll _ (_ :-> TruePred) = TruePred
+mkForAll tm binder = ForAll tm binder
+
+-- | Existentially quanitfy a value, the first argument is a recovery-function
+-- to recover the value from a semantics for all the outer-bound variables during
+-- constraint-checking
+exists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  ((forall b. Term b -> b) -> GE a) ->
+  (Term a -> p) ->
+  Pred
+exists sem k =
+  Exists sem $ bind k
+
+-- | Existentially quantify a variable without the ability to check the constraint
+unsafeExists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  (Term a -> p) ->
+  Pred
+unsafeExists = exists (\_ -> fatalError "unsafeExists")
+
+-- | Create a fresh variable to be able to talk about the same `Term` mutliple times
+-- without introducing circular dependencies. The following would work:
+-- > letBind (fst_ p) $ \ x ->
+-- > letBind (snd_ p) $ \ y ->
+-- >   assert $ x <=. y
+-- While this does not:
+-- > assert $ fst_ p <=. snd_ p
+-- Although you'd most likely prefer to use `match` in practise:
+-- > match p $ \ x y -> assert $ x <=. y
+letBind ::
+  ( HasSpec a
+  , IsPred p
+  ) =>
+  Term a ->
+  (Term a -> p) ->
+  Pred
+letBind tm@V {} body = toPred (body tm)
+letBind tm body = Let tm (bind body)
+
+-- | Bind a @`Term` b@ obtained via a haskell-level function @reification :: a -> b@
+-- from a @`Term` a@, the inner `Term` depends strictly on the outer one
+reify ::
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
+  ) =>
+  Term a ->
+  (a -> b) ->
+  (Term b -> p) ->
+  Pred
+reify t f body =
+  exists (\eval -> pure $ f (eval t)) $ \(name "reify_variable" -> x) ->
+    [ reifies x t f
+    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
+    ]
+
+-- | Like `suchThat` for constraints
+assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred
+-- Note, it is necessary to introduce the extra variable from the `exists` here
+-- to make things like `assertRealMultiple` work, if you don't have it then the
+-- `reifies` isn't a defining constraint for anything any more.
+assertReified t f =
+  reify t f assert
+
+-- | Wrap an 'Explain' around a Pred, unless there is a simpler form.
+explanation :: NE.NonEmpty String -> Pred -> Pred
+explanation _ p@DependsOn {} = p
+explanation _ TruePred = TruePred
+explanation es (FalsePred es') = FalsePred (es <> es')
+explanation es (Assert t) = Explain es $ Assert t
+explanation es p = Explain es p
+
+-- | Add QuickCheck monitoring (e.g. 'Test.QuickCheck.collect' or 'Test.QuickCheck.counterexample')
+--   to a predicate. To use the monitoring in a property call 'monitorSpec' on the 'Specification'
+--   containing the monitoring and a value generated from the specification.
+monitor :: ((forall a. Term a -> a) -> Property -> Property) -> Pred
+monitor = Monitor
+
+-- | Fix the first argument to be the haskell-"reification" of the second via
+-- the third, "reification-function", argument
+reifies :: (HasSpec a, HasSpec b) => Term b -> Term a -> (a -> b) -> Pred
+reifies = Reifies
+
+-- | Fix the solver order of the variables in two terms
+dependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
+dependsOn = DependsOn
+
+-- | Embed a literal as a `Term`
+lit :: HasSpec a => a -> Term a
+lit = Lit
+
+-- | Add a generation-hint (e.g. a soft size constraint) to a `Term`
+genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
+genHint = GenHint
 
 -- ==========================================================
 -- Variables
@@ -118,6 +263,10 @@ mkNamedExpr x =
   pure $
     TH.AppE (TH.AppE (TH.VarE $ TH.mkName "name") (TH.LitE $ TH.StringL x)) (TH.VarE $ TH.mkName x)
 
+-- | A quasi-quoter for giving variables readable names:
+-- > match p $ \ [var| x |] [var| y |] -> ...
+-- will give you better error messages than:
+-- > match p $ \ x y -> ...
 var :: TH.QuasiQuoter
 var =
   TH.QuasiQuoter
@@ -138,18 +287,15 @@ var =
 -- 1) Free variables and variable names
 -- ============================================================
 
+-- | Get all the free variable names of a thing
 freeVarNames :: forall t. HasVariables t => t -> Set Int
 freeVarNames = Set.mapMonotonic (\(Name v) -> nameOf v) . freeVarSet
 
+-- | A multi-set of free variables
 newtype FreeVars = FreeVars {unFreeVars :: Map Name Int}
   deriving (Show)
 
-restrictedTo :: FreeVars -> Set Name -> FreeVars
-restrictedTo (FreeVars m) nms = FreeVars $ Map.restrictKeys m nms
-
-memberOf :: Name -> FreeVars -> Bool
-memberOf n (FreeVars m) = Map.member n m
-
+-- | How many times does a name appear in a t`FreeVars` set?
 count :: Name -> FreeVars -> Int
 count n (FreeVars m) = fromMaybe 0 $ Map.lookup n m
 
@@ -159,15 +305,19 @@ instance Semigroup FreeVars where
 instance Monoid FreeVars where
   mempty = FreeVars mempty
 
+-- | A name appears once
 freeVar :: Name -> FreeVars
 freeVar n = singleton n 1
 
+-- | A name appears this many times, no more information than that
 singleton :: Name -> Int -> FreeVars
 singleton n k = FreeVars $ Map.singleton n k
 
+-- | Remove some names
 without :: Foldable t => FreeVars -> t Name -> FreeVars
 without (FreeVars m) remove = FreeVars $ foldr Map.delete m (toList remove)
 
+-- | Something for which we can do free-variable-check operations
 class HasVariables a where
   freeVars :: a -> FreeVars
   freeVarSet :: a -> Set Name
@@ -335,11 +485,14 @@ instance HasVariables a => HasVariables (Set a) where
 -- 2) Substitutions
 -- ============================================================
 
+-- | A substitution
 type Subst = [SubstEntry]
 
+-- | Individual substitution entry
 data SubstEntry where
   (:=) :: HasSpec a => Var a -> Term a -> SubstEntry
 
+-- | Try to run a substitution backwards to abstract
 backwardsSubstitution :: forall a. HasSpec a => Subst -> Term a -> Term a
 backwardsSubstitution sub0 t =
   case findMatch sub0 t of
@@ -376,6 +529,7 @@ substituteTerm sub = \case
       | Just Refl <- eqVar x y = t
       | otherwise = substVar sub1 x
 
+-- | Apply substitution and check if we did anything
 substituteTerm' :: forall a. Subst -> Term a -> Writer Any (Term a)
 substituteTerm' sub = \case
   Lit a -> pure $ Lit a
@@ -395,6 +549,7 @@ substituteBinder x tm (y :-> p) = y' :-> substitutePred x tm p'
     (y', p') =
       freshen y p (Set.singleton (nameOf x) <> freeVarNames tm <> Set.delete (nameOf y) (freeVarNames p))
 
+-- | Apply a single-variable substitution
 substitutePred :: HasSpec a => Var a -> Term a -> Pred -> Pred
 substitutePred x tm = \case
   ElemPred bool t xs -> ElemPred bool (substituteTerm [x := tm] t) xs
@@ -422,7 +577,7 @@ substTerm :: Env -> Term a -> Term a
 substTerm env = \case
   Lit a -> Lit a
   V v
-    | Just a <- lookupEnv env v -> Lit a
+    | Just a <- Env.lookup env v -> Lit a
     | otherwise -> V v
   App f (mapList (substTerm env) -> ts) ->
     case fromLits ts of
@@ -430,8 +585,9 @@ substTerm env = \case
       _ -> App f ts
 
 substBinder :: Env -> Binder a -> Binder a
-substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
+substBinder env (x :-> p) = x :-> substPred (Env.remove x env) p
 
+-- | Apply a variable-to-value substitution to a `Pred`
 substPred :: Env -> Pred -> Pred
 substPred env = \case
   ElemPred bool t xs -> ElemPred bool (substTerm env t) xs
@@ -451,8 +607,9 @@ substPred env = \case
   Monitor m -> Monitor m
   Explain es p -> Explain es $ substPred env p
 
+-- | Substitute a value for a `Binder`
 unBind :: a -> Binder a -> Pred
-unBind a (x :-> p) = substPred (singletonEnv x a) p
+unBind a (x :-> p) = substPred (Env.singleton x a) p
 
 -- ==========================================================
 -- Renaming
@@ -460,6 +617,7 @@ unBind a (x :-> p) = substPred (singletonEnv x a) p
 
 -- Name
 
+-- | Wrap a `Var` and hide the type
 data Name where
   Name :: HasSpec a => Var a -> Name
 
@@ -523,6 +681,7 @@ instance Rename (f a) => Rename (Weighted f a) where
 -- 4) Internals
 -- ============================================================================
 
+-- | Try to extract literals from a list of Term, if anything isn't a literal, give up
 fromLits :: List Term as -> Maybe (List Value as)
 fromLits = mapMList fromLit
 
@@ -532,9 +691,11 @@ fromLit (Lit l) = pure $ Value l
 -- fromLit (From x) = (Value . fromSimpleRep . unValue) <$> fromLit x -- Why not apply unary functions to Lit ?
 fromLit _ = Nothing
 
+-- | Is a term a literl?
 isLit :: Term a -> Bool
 isLit = isJust . fromLit
 
+-- | Build a `caseOn`
 mkCase ::
   HasSpec (SumOver as) => Term (SumOver as) -> List (Weighted Binder) as -> Pred
 mkCase tm cs
@@ -542,7 +703,7 @@ mkCase tm cs
   -- TODO: all equal maybe?
   | Semigroup.getAll $ foldMapList isTrueBinder cs = TruePred
   | Semigroup.getAll $ foldMapList (isFalseBinder . thing) cs = FalsePred (pure "mkCase on all False")
-  | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (singletonEnv x val) p)
+  | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (Env.singleton x val) p)
   | otherwise = Case tm cs
   where
     isTrueBinder (Weighted Nothing (_ :-> TruePred)) = Semigroup.All True
@@ -551,6 +712,7 @@ mkCase tm cs
     isFalseBinder (_ :-> FalsePred {}) = Semigroup.All True
     isFalseBinder _ = Semigroup.All False
 
+-- | Run a `caseOn`
 runCaseOn ::
   SumOver as ->
   List Binder as ->
@@ -562,260 +724,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
   SumLeft a -> f x a ps
   SumRight a -> runCaseOn a bs f
 
--- ================================================
--- 5) Simple Syntax only transformation of terms.
--- There are other transformation that involve simplifying
--- but they are in module TheKnot
--- ==================================================
-
--- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: Pred -> Pred
-letSubexpressionElimination = go []
-  where
-    adjustSub :: HasSpec a => Var a -> Subst -> Subst
-    adjustSub x sub =
-      [ x' := t
-      | x' := t <- sub
-      , isNothing $ eqVar x x'
-      , -- TODO: possibly freshen the binder where
-      -- `x` appears instead?
-      not $ Name x `appearsIn` t
-      ]
-
-    goBinder :: Subst -> Binder a -> Binder a
-    goBinder sub (x :-> p) = x :-> go (adjustSub x sub) p
-
-    go sub = \case
-      ElemPred bool t xs -> ElemPred bool (backwardsSubstitution sub t) xs
-      GenHint h t -> GenHint h (backwardsSubstitution sub t)
-      And ps -> And (go sub <$> ps)
-      Let t (x :-> p) -> Let t' (x :-> go (x := t' : sub') p)
-        where
-          t' = backwardsSubstitution sub t
-          sub' = adjustSub x sub
-      Exists k b -> Exists k (goBinder sub b)
-      Subst x t p -> go sub (substitutePred x t p)
-      Assert t -> Assert (backwardsSubstitution sub t)
-      Reifies t' t f -> Reifies (backwardsSubstitution sub t') (backwardsSubstitution sub t) f
-      -- NOTE: this is a tricky case. One possible thing to do here is to keep the old `DependsOn t t'`
-      -- and have the new DependsOn if `backwardsSubstitution` changed something. With this semantics you
-      -- risk running into unintuitive behaviour if you have something like:
-      -- ```
-      -- let x = y + z in
-      --  {y + z `dependsOn` w
-      --   assert $ w <. y + 2
-      --   ...}
-      -- ```
-      -- This will be rewritten as:
-      -- ```
-      -- let x = y + z in
-      --  {z `dependsOn` w
-      --   assert $ w <. y + 2
-      --   ...}
-      -- ```
-      -- which changes the dependency order of `w` and `y`. However, fixing
-      -- this behaviour in turn makes it more difficult to detect when
-      -- variables are no longer used after being substituted away - which
-      -- blocks some other optimizations. As we strongly encourage users not to
-      -- use `letBind` in their own code most users will never encounter this issue
-      -- so the tradeoff is probably worth it.
-      DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
-      ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
-      Case t bs -> Case (backwardsSubstitution sub t) (mapList (mapWeighted $ goBinder sub) bs)
-      When b p -> When (backwardsSubstitution sub b) (go sub p)
-      TruePred -> TruePred
-      FalsePred es -> FalsePred es
-      Monitor m -> Monitor m
-      Explain es p -> Explain es $ go sub p
-
--- TODO: this can probably be cleaned up and generalized along with generalizing
--- to make sure we float lets in some missing cases.
-letFloating :: Pred -> Pred
-letFloating = fold . go []
-  where
-    goBlock ctx ps = goBlock' (freeVarNames ctx <> freeVarNames ps) ctx ps
-
-    goBlock' :: Set Int -> [Pred] -> [Pred] -> [Pred]
-    goBlock' _ ctx [] = ctx
-    goBlock' fvs ctx (Let t (x :-> p) : ps) =
-      -- We can do `goBlock'` here because we've already done let floating
-      -- on the inner `p`
-      [Let t (x' :-> fold (goBlock' (Set.insert (nameOf x') fvs) ctx (p' : ps)))]
-      where
-        (x', p') = freshen x p fvs
-    goBlock' fvs ctx (And ps : ps') = goBlock' fvs ctx (ps ++ ps')
-    goBlock' fvs ctx (p : ps) = goBlock' fvs (p : ctx) ps
-
-    goExists ::
-      HasSpec a =>
-      [Pred] ->
-      (Binder a -> Pred) ->
-      Var a ->
-      Pred ->
-      [Pred]
-    goExists ctx ex x (Let t (y :-> p))
-      | not $ Name x `appearsIn` t =
-          let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
-           in go ctx (Let t (y' :-> ex (x :-> p')))
-    goExists ctx ex x p = ex (x :-> p) : ctx
-
-    pushExplain es (Let t (x :-> p)) = Let t (x :-> pushExplain es p)
-    pushExplain es (And ps) = And (pushExplain es <$> ps)
-    pushExplain es (Exists k (x :-> p)) =
-      Exists (explainSemantics k) (x :-> pushExplain es p)
-      where
-        -- TODO: Unfortunately this is necessary on ghc 8.10.7
-        explainSemantics ::
-          forall a.
-          ((forall b. Term b -> b) -> GE a) ->
-          (forall b. Term b -> b) ->
-          GE a
-        explainSemantics k2 env = explainNE es $ k2 env
-    -- TODO: possibly one wants to have a `Term` level explanation in case
-    -- the `b` propagates to ErrorSpec for some reason?
-    pushExplain es (When b p) = When b (pushExplain es p)
-    pushExplain es p = explanation es p
-
-    go ctx = \case
-      ElemPred bool t xs -> ElemPred bool t xs : ctx
-      And ps0 -> goBlock ctx (map letFloating ps0)
-      Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
-      Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
-      Subst x t p -> go ctx (substitutePred x t p)
-      Reifies t' t f -> Reifies t' t f : ctx
-      Explain es p -> pushExplain es p : ctx
-      -- TODO: float let through forall if possible
-      ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
-      -- TODO: float let through the cases if possible
-      Case t bs -> Case t (mapList (mapWeighted (\(x :-> p) -> x :-> letFloating p)) bs) : ctx
-      -- TODO: float let through if possible
-      When b p -> When b (letFloating p) : ctx
-      -- Boring cases
-      Assert t -> Assert t : ctx
-      GenHint h t -> GenHint h t : ctx
-      DependsOn t t' -> DependsOn t t' : ctx
-      TruePred -> TruePred : ctx
-      FalsePred es -> FalsePred es : ctx
-      Monitor m -> Monitor m : ctx
-
--- ========================================================================
--- For the API
-
-assertExplain ::
-  IsPred p =>
-  NE.NonEmpty String ->
-  p ->
-  Pred
-assertExplain nes p = Explain nes (toPred p)
-
-assert ::
-  IsPred p =>
-  p ->
-  Pred
-assert p = toPred p
-
-forAll ::
-  forall p t a.
-  ( Forallable t a
-  , HasSpec t
-  , HasSpec a
-  , IsPred p
-  ) =>
-  Term t ->
-  (Term a -> p) ->
-  Pred
-forAll tm = mkForAll tm . bind
-
-mkForAll ::
-  ( Forallable t a
-  , HasSpec t
-  , HasSpec a
-  ) =>
-  Term t ->
-  Binder a ->
-  Pred
-mkForAll (Lit (forAllToList -> [])) _ = TruePred
-mkForAll _ (_ :-> TruePred) = TruePred
-mkForAll tm binder = ForAll tm binder
-
-exists ::
-  forall a p.
-  (HasSpec a, IsPred p) =>
-  ((forall b. Term b -> b) -> GE a) ->
-  (Term a -> p) ->
-  Pred
-exists sem k =
-  Exists sem $ bind k
-
-unsafeExists ::
-  forall a p.
-  (HasSpec a, IsPred p) =>
-  (Term a -> p) ->
-  Pred
-unsafeExists = exists (\_ -> fatalError "unsafeExists")
-
-letBind ::
-  ( HasSpec a
-  , IsPred p
-  ) =>
-  Term a ->
-  (Term a -> p) ->
-  Pred
-letBind tm@V {} body = toPred (body tm)
-letBind tm body = Let tm (bind body)
-
-reify ::
-  ( HasSpec a
-  , HasSpec b
-  , IsPred p
-  ) =>
-  Term a ->
-  (a -> b) ->
-  (Term b -> p) ->
-  Pred
-reify t f body =
-  exists (\eval -> pure $ f (eval t)) $ \(name "reify_variable" -> x) ->
-    [ reifies x t f
-    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
-    ]
-
-assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred
--- Note, it is necessary to introduce the extra variable from the `exists` here
--- to make things like `assertRealMultiple` work, if you don't have it then the
--- `reifies` isn't a defining constraint for anything any more.
-assertReified t f =
-  reify t f assert
-
--- | Wrap an 'Explain' around a Pred, unless there is a simpler form.
-explanation :: NE.NonEmpty String -> Pred -> Pred
-explanation _ p@DependsOn {} = p
-explanation _ TruePred = TruePred
-explanation es (FalsePred es') = FalsePred (es <> es')
-explanation es (Assert t) = Explain es $ Assert t
-explanation es p = Explain es p
-
--- | Add QuickCheck monitoring (e.g. 'Test.QuickCheck.collect' or 'Test.QuickCheck.counterexample')
---   to a predicate. To use the monitoring in a property call 'monitorSpec' on the 'Specification'
---   containing the monitoring and a value generated from the specification.
-monitor :: ((forall a. Term a -> a) -> Property -> Property) -> Pred
-monitor = Monitor
-
-reifies :: (HasSpec a, HasSpec b) => Term b -> Term a -> (a -> b) -> Pred
-reifies = Reifies
-
-dependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
-dependsOn = DependsOn
-
--- lit :: (Typeable a, Eq a, Show a) => a -> Term a
-lit :: HasSpec a => a -> Term a
-lit = Lit
-
-genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
-genHint = GenHint . HintF
-
--- ==============================================================================
-
--- Construct an environment for all variables that show up on the top level
+-- | Construct an environment for all variables that show up on the top level
 -- (i.e. ones bound in `let` and `exists`) from an environment for all the free
 -- variables in the pred. The environment you get out of this function is
 -- _bigger_ than the environment you put in. From
@@ -845,83 +754,95 @@ envFromPred env p = case p of
   Subst x a pp -> envFromPred env (substitutePred x a pp)
   Let t (x :-> pp) -> do
     v <- runTerm env t
-    envFromPred (extendEnv x v env) pp
+    envFromPred (Env.extend x v env) pp
   Explain _ pp -> envFromPred env pp
   Exists c (x :-> pp) -> do
     v <- c (errorGE . explain "envFromPred: Exists" . runTerm env)
-    envFromPred (extendEnv x v env) pp
+    envFromPred (Env.extend x v env) pp
   And [] -> pure env
   And (pp : ps) -> do
     env' <- envFromPred env pp
     envFromPred env' (And ps)
 
--- ==========================================
--- Regularizing
+------------------------------------------------------------------------
+-- Lifting name hints to binders
+------------------------------------------------------------------------
 
-regularize :: HasVariables t => Var a -> t -> Var a
-regularize v t =
+findNameHint :: HasVariables t => Var a -> t -> Var a
+findNameHint v t =
   case [nameHint v' | Name v' <- Set.toList $ freeVarSet t, nameOf v' == nameOf v, nameHint v' /= "v"] of
     [] -> v
     nh : _ -> v {nameHint = nh}
 
-regularizeBinder :: Binder a -> Binder a
-regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred p)
+liftNameHintToBinder :: Binder a -> Binder a
+liftNameHintToBinder (x :-> p) = x' :-> substitutePred x (V x') (applyNameHintsPred p)
   where
-    x' = regularize x p
+    x' = findNameHint x p
 
-regularizeNamesPred :: Pred -> Pred
-regularizeNamesPred pred = case pred of
+applyNameHintsPred :: Pred -> Pred
+applyNameHintsPred pred = case pred of
   ElemPred {} -> pred
   Monitor {} -> pred
-  And ps -> And $ map regularizeNamesPred ps
-  Exists k b -> Exists k (regularizeBinder b)
-  Subst v t p -> regularizeNamesPred (substitutePred v t p)
-  Let t b -> Let t (regularizeBinder b)
+  And ps -> And $ map applyNameHintsPred ps
+  Exists k b -> Exists k (liftNameHintToBinder b)
+  Subst v t p -> applyNameHintsPred (substitutePred v t p)
+  Let t b -> Let t (liftNameHintToBinder b)
   Assert {} -> pred
   Reifies {} -> pred
   DependsOn {} -> pred
-  ForAll t b -> ForAll t (regularizeBinder b)
-  Case t bs -> Case t (mapList (mapWeighted regularizeBinder) bs)
-  When b p' -> When b (regularizeNamesPred p')
+  ForAll t b -> ForAll t (liftNameHintToBinder b)
+  Case t bs -> Case t (mapList (mapWeighted liftNameHintToBinder) bs)
+  When b p' -> When b (applyNameHintsPred p')
   GenHint {} -> pred
   TruePred {} -> pred
   FalsePred {} -> pred
-  Explain es p' -> Explain es (regularizeNamesPred p')
+  Explain es p' -> Explain es (applyNameHintsPred p')
 
-regularizeNames :: Specification a -> Specification a
-regularizeNames (ExplainSpec es x) = explainSpec es (regularizeNames x)
-regularizeNames (SuspendedSpec x p) =
+-- | Makes sure that uses of the @[var| |]@ quasi-quoter are correctly
+-- propagated to the binding site of the variable. This is done as a separate
+-- pass to make sure we don't traverse the `Specification` too many times
+applyNameHints :: Specification a -> Specification a
+applyNameHints (ExplainSpec es x) = explainSpec es (applyNameHints x)
+applyNameHints (SuspendedSpec x p) =
   SuspendedSpec x' p'
   where
-    x' :-> p' = regularizeBinder (x :-> p)
-regularizeNames spec = spec
+    x' :-> p' = liftNameHintToBinder (x :-> p)
+applyNameHints spec = spec
 
 ------------------------------------------------------------------------
 -- Dependency Graphs
 ------------------------------------------------------------------------
 
+-- | `Graph` specialized to dependencies for variables
 type DependGraph = Graph.Graph Name
 
+-- | A variable depends on a thing witha buch of other variables
 dependency :: HasVariables t => Name -> t -> DependGraph
 dependency x (freeVarSet -> xs) = Graph.dependency x xs
 
+-- | Everything to the left depends on everything from the right, except themselves
 irreflexiveDependencyOn ::
   forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
 irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
 
+-- | These variables are free
 noDependencies :: HasVariables t => t -> DependGraph
 noDependencies (freeVarSet -> xs) = Graph.noDependencies xs
 
+-- | Hints from `dependsOn`
 type Hints = DependGraph
 
+-- | Adjust a `DependGraph` to some `Hints`
 respecting :: Hints -> DependGraph -> DependGraph
 respecting hints g = g `subtractGraph` opGraph hints
 
+-- | Given a dependency graph, are all the presrequisites of a variable covered by the set?
 solvableFrom :: Name -> Set Name -> DependGraph -> Bool
 solvableFrom x s g =
   let less = dependencies x g
    in s `Set.isSubsetOf` less && not (x `Set.member` less)
 
+-- | Get the dependencies that appear in a `Pred`
 computeDependencies :: Pred -> DependGraph
 computeDependencies = \case
   ElemPred _bool term _xs -> computeTermDependencies term

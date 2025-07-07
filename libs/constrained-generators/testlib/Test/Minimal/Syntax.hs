@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -30,24 +31,25 @@ import Constrained.Core (
   freshen,
   unValue,
  )
-import Constrained.Env
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.GenT
 import Constrained.Graph
 import Constrained.List hiding (ListCtx)
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
-import qualified Data.Foldable as Foldable (fold, toList)
+import Data.Foldable qualified as Foldable (fold, toList)
 import Data.Kind
 import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust, isNothing, listToMaybe)
-import qualified Data.Monoid as Monoid
+import Data.Monoid qualified as Monoid
 import Data.Semigroup (Any (..), sconcat)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter
@@ -117,8 +119,8 @@ addToErrorSpec es (ErrorSpec es') = ErrorSpec (es <> es')
 addToErrorSpec _ s = s
 
 -- | return a MemberSpec or ans ErrorSpec depending on if 'xs' the null list or not
-memberSpecList :: [a] -> NE.NonEmpty String -> Spec a
-memberSpecList xs messages =
+memberSpec :: [a] -> NE.NonEmpty String -> Spec a
+memberSpec xs messages =
   case NE.nonEmpty xs of
     Nothing -> ErrorSpec messages
     Just ys -> MemberSpec ys
@@ -135,7 +137,7 @@ satisfies _ (ErrorSpec e) = FalsePred e
 runTermE :: forall a. Env -> Term a -> Either (NE.NonEmpty String) a
 runTermE env = \case
   Lit a -> Right a
-  V v -> case lookupEnv env v of
+  V v -> case Env.lookup env v of
     Just a -> Right a
     Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
   App f (ts :: List Term dom) -> do
@@ -151,7 +153,7 @@ conformsToSpec :: forall a. HasSpec a => a -> Spec a -> Bool
 conformsToSpec _ TrueSpec = True
 conformsToSpec a (MemberSpec as) = elem a as
 conformsToSpec a (TypeSpec s cant) = notElem a cant && conformsTo a s
-conformsToSpec a (SuspendedSpec v ps) = case checkPredE (singletonEnv v a) (pure "checkPredE") ps of
+conformsToSpec a (SuspendedSpec v ps) = case checkPredE (Env.singleton v a) (pure "checkPredE") ps of
   Nothing -> True
   Just _ -> False
 conformsToSpec _ (ErrorSpec _) = False
@@ -180,16 +182,16 @@ checkPredE env msgs = \case
             catMaybes
               [ checkPredE env' (pure "Some items in ForAll fail") p
               | v <- forAllToList set
-              , let env' = extendEnv x v env
+              , let env' = Env.extend x v env
               ]
        in case answers of
             [] -> Nothing
             (y : ys) -> Just (NE.nub (sconcat (y NE.:| ys)))
   Case t a b -> case runTermE env t of
-    Right v -> runCaseOn v a b (\x val ps -> checkPredE (extendEnv x val env) msgs ps)
+    Right v -> runCaseOn v a b (\x val ps -> checkPredE (Env.extend x val env) msgs ps)
     Left es -> Just (msgs <> pure "checkPredE: Case fails" <> es)
   Let t (x :-> p) -> case runTermE env t of
-    Right val -> checkPredE (extendEnv x val env) msgs p
+    Right val -> checkPredE (Env.extend x val env) msgs p
     Left es -> Just (msgs <> pure "checkPredE: Let fails" <> es)
   DependsOn {} -> Nothing
   TruePred -> Nothing
@@ -204,7 +206,7 @@ checkPredE env msgs = \case
           Right v -> v
           Left es -> error $ unlines $ NE.toList (msgs <> es)
      in case k eval of
-          Result a -> checkPredE (extendEnv x a env) msgs p
+          Result a -> checkPredE (Env.extend x a env) msgs p
           FatalError es -> Just (msgs <> catMessageList es)
           GenError es -> Just (msgs <> catMessageList es)
 
@@ -263,12 +265,12 @@ instance HasSpec a => Semigroup (Spec a) where
       ( NE.fromList
           ["Intersecting: ", "  MemberSpec " ++ show (NE.toList as), "  MemberSpec " ++ show (NE.toList as')]
       )
-      ( memberSpecList
+      ( memberSpec
           (nub $ intersect (NE.toList as) (NE.toList as'))
           (pure "Empty intersection")
       )
   ms@(MemberSpec as) <> ts@TypeSpec {} =
-    memberSpecList
+    memberSpec
       (nub $ NE.filter (`conformsToSpec` ts) as)
       ( NE.fromList
           [ "The two " ++ showType @a ++ " Specs are inconsistent."
@@ -652,7 +654,7 @@ substTerm :: Env -> Term a -> Term a
 substTerm env = \case
   Lit a -> Lit a
   V v
-    | Just a <- lookupEnv env v -> Lit a
+    | Just a <- Env.lookup env v -> Lit a
     | otherwise -> V v
   App f (mapList (substTerm env) -> ts) ->
     case fromLits ts of
@@ -660,7 +662,7 @@ substTerm env = \case
       _ -> App f ts
 
 substBinder :: Env -> Binder a -> Binder a
-substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
+substBinder env (x :-> p) = x :-> substPred (Env.remove x env) p
 
 substPred :: Env -> Pred -> Pred
 substPred env = \case
@@ -693,44 +695,44 @@ substPlan env (SolverPlan stages deps) = SolverPlan (map (substSolverStage env) 
 -- Explain es p -> Explain es $ substPred env p
 
 unBind :: a -> Binder a -> Pred
-unBind a (x :-> p) = substPred (singletonEnv x a) p
+unBind a (x :-> p) = substPred (Env.singleton x a) p
 
 -- ==================================================
 -- Syntactic operation Regularizing
 -- ==================================================
 
-regularize :: HasVariables t => Var a -> t -> Var a
-regularize v t =
+liftNameHintToBinder :: HasVariables t => Var a -> t -> Var a
+liftNameHintToBinder v t =
   case [nameHint v' | Name v' <- Set.toList $ freeVarSet t, nameOf v' == nameOf v, nameHint v' /= "v"] of
     [] -> v
     nh : _ -> v {nameHint = nh}
 
-regularizeBinder :: Binder a -> Binder a
-regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred p)
+liftNameHintToBinderBinder :: Binder a -> Binder a
+liftNameHintToBinderBinder (x :-> p) = x' :-> substitutePred x (V x') (applyNameHintsPred p)
   where
-    x' = regularize x p
+    x' = liftNameHintToBinder x p
 
-regularizeNamesPred :: Pred -> Pred
-regularizeNamesPred pred0 = case pred0 of
+applyNameHintsPred :: Pred -> Pred
+applyNameHintsPred pred0 = case pred0 of
   ElemPred {} -> pred0
-  And ps -> And $ map regularizeNamesPred ps
-  Exists k b -> Exists k (regularizeBinder b)
-  Subst v t p -> regularizeNamesPred (substitutePred v t p)
-  Let t b -> Let t (regularizeBinder b)
+  And ps -> And $ map applyNameHintsPred ps
+  Exists k b -> Exists k (liftNameHintToBinderBinder b)
+  Subst v t p -> applyNameHintsPred (substitutePred v t p)
+  Let t b -> Let t (liftNameHintToBinderBinder b)
   Assert {} -> pred0
-  ForAll t b -> ForAll t (regularizeBinder b)
-  Case t as bs -> Case t (regularizeBinder as) (regularizeBinder bs)
+  ForAll t b -> ForAll t (liftNameHintToBinderBinder b)
+  Case t as bs -> Case t (liftNameHintToBinderBinder as) (liftNameHintToBinderBinder bs)
   TruePred {} -> pred0
   FalsePred {} -> pred0
   DependsOn {} -> pred0
 
--- Explain es p' -> Explain es (regularizeNamesPred p')
+-- Explain es p' -> Explain es (applyNameHintsPred p')
 
-regularizeNames :: Spec a -> Spec a
-regularizeNames (SuspendedSpec x p) = SuspendedSpec x' p'
+applyNameHints :: Spec a -> Spec a
+applyNameHints (SuspendedSpec x p) = SuspendedSpec x' p'
   where
-    x' :-> p' = regularizeBinder (x :-> p)
-regularizeNames spec = spec
+    x' :-> p' = liftNameHintToBinderBinder (x :-> p)
+applyNameHints spec = spec
 
 -- ======================================================
 -- Simplify
@@ -798,7 +800,7 @@ mkCase tm as bs
   -- TODO: all equal maybe?
   | isTrueBinder as && isTrueBinder bs = TruePred
   | isFalseBinder as && isFalseBinder bs = FalsePred (pure "mkCase on all False")
-  | Lit a <- tm = runCaseOn a as bs (\x val p -> substPred (singletonEnv x val) p)
+  | Lit a <- tm = runCaseOn a as bs (\x val p -> substPred (Env.singleton x val) p)
   | otherwise = Case tm as bs
   where
     isTrueBinder (_ :-> TruePred) = True

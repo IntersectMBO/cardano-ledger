@@ -19,45 +19,43 @@
 -- Random Natural, Arbitrary Natural, Uniform Natural
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.NumOrd where
+-- | Everything we need to deal with numbers and comparisons between them
+module Constrained.NumOrd (
+  NumSpec (..),
+  (>.),
+  (<.),
+  (-.),
+  (>=.),
+  (<=.),
+  (+.),
+  negate_,
+  cardinality,
+  caseBoolSpec,
+  addSpecInt,
+  emptyNumSpec,
+  cardinalNumSpec,
+  combineNumSpec,
+  genFromNumSpec,
+  shrinkWithNumSpec,
+  conformsToNumSpec,
+  toPredsNumSpec,
+  OrdLike (..),
+  MaybeBounded (..),
+  NumLike (..),
+  Numeric,
+  nubOrd,
+  IntW (..),
+  OrdW (..),
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  GenericRequires,
-  HOLE (..),
-  HasSpec (..),
-  Logic (..),
-  Pred,
-  Specification,
-  Term,
-  appTerm,
-  constrained,
-  equalSpec,
-  explainSpec,
-  flipCtx,
-  fromSimpleRepSpec,
-  memberSpecList,
-  notMemberSpec,
-  typeSpec,
-  pattern TypeSpec,
-  pattern Unary,
-  pattern (:<:),
- )
+import Constrained.Base
 import Constrained.Conformance
 import Constrained.Conformance ()
 import Constrained.Core (Value (..), unionWithMaybe)
 import Constrained.FunctionSymbol
-import Constrained.GenT (
-  GenT,
-  MonadGenError (..),
-  genError,
-  pureGen,
-  sizeT,
- )
-import Constrained.Generic (
-  HasSimpleRep (..),
-  SimpleRep,
- )
+import Constrained.GenT
+import Constrained.Generic
 import Constrained.List
 import Constrained.PrettyUtils
 import Control.Applicative ((<|>))
@@ -77,12 +75,8 @@ import GHC.Real
 import System.Random.Stateful (Random (..), Uniform (..))
 import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
--- ====================================================================
--- OrdW  witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
--- The other operations are defined in terms of these. These things
--- will eventually get Logic instances
--- =====================================================================
-
+-- | Witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
+-- The other operations are defined in terms of these.
 data OrdW (dom :: [Type]) (rng :: Type) where
   LessOrEqualW :: OrdLike a => OrdW '[a, a] Bool
   LessW :: OrdLike a => OrdW '[a, a] Bool
@@ -110,6 +104,8 @@ instance Syntax OrdW where
 -- OrdLike. Ord for Numbers in the Logic
 -- =============================================
 
+-- | Ancillary things we need to be able to implement `Logic` instances for
+-- `OrdW` that make sense for a given type we are comparing things on.
 class (Ord a, HasSpec a) => OrdLike a where
   leqSpec :: a -> Specification a
   default leqSpec ::
@@ -166,6 +162,7 @@ instance {-# OVERLAPPABLE #-} (Ord a, HasSpec a, MaybeBounded a, Num a, TypeSpec
 -- helper functions for the TypeSpec for Numbers
 -- ========================================================================
 
+-- | Helper class for talking about things that _might_ be `Bounded`
 class MaybeBounded a where
   lowerBound :: Maybe a
   upperBound :: Maybe a
@@ -214,6 +211,7 @@ instance MaybeBounded Natural where
 -- The TypeSpec for numbers
 -- ===================================================================
 
+-- | t`TypeSpec` for numbers - represented as a single interval
 data NumSpec n = NumSpecInterval (Maybe n) (Maybe n)
 
 instance Ord n => Eq (NumSpec n) where
@@ -278,6 +276,7 @@ instance Random (Ratio Integer) where
 -- Operations on NumSpec, that give it the required properties of a TypeSpec
 -- ==============================================================================
 
+-- | Admits anything
 emptyNumSpec :: Ord a => NumSpec a
 emptyNumSpec = mempty
 
@@ -291,6 +290,7 @@ guardNumSpec msg s@(NumSpecInterval (Just a) (Just b))
   | a == b = equalSpec a
 guardNumSpec _ s = typeSpec s
 
+-- | Conjunction
 combineNumSpec ::
   (HasSpec n, Ord n, TypeSpec n ~ NumSpec n) =>
   NumSpec n ->
@@ -298,6 +298,7 @@ combineNumSpec ::
   Specification n
 combineNumSpec s s' = guardNumSpec ["when combining two NumSpecs", "   " ++ show s, "   " ++ show s'] (s <> s')
 
+-- | Generate a value that satisfies the spec
 genFromNumSpec ::
   (MonadGenError m, Show n, Random n, Ord n, Num n, MaybeBounded n) =>
   NumSpec n ->
@@ -306,7 +307,9 @@ genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
   pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
 
--- TODO: fixme (?)
+-- TODO: fixme
+
+-- | Try to shrink using a `NumSpec`
 shrinkWithNumSpec :: Arbitrary n => NumSpec n -> n -> [n]
 shrinkWithNumSpec _ = shrink
 
@@ -336,6 +339,7 @@ constrainInterval ml mu r =
       | a + b < a = u
       | otherwise = min u (a + b)
 
+-- | Check that a value is in the spec
 conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool
 conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
@@ -359,7 +363,7 @@ nubOrd =
 -- | Builds a MemberSpec, but returns an Error spec if the list is empty
 nubOrdMemberSpec :: Ord a => String -> [a] -> Specification a
 nubOrdMemberSpec message xs =
-  memberSpecList
+  memberSpec
     (nubOrd xs)
     ( NE.fromList
         [ "In call to nubOrdMemberSpec"
@@ -525,6 +529,7 @@ multT PosInf (Ok _) = PosInf
 --   Constrained.TheKnot.
 type Number n = (Num n, Enum n, TypeSpec n ~ NumSpec n, Num (NumSpec n), HasSpec n, Ord n)
 
+-- | Addition on `Specification` for `Number`
 addSpecInt ::
   Number n =>
   Specification n ->
@@ -646,6 +651,7 @@ cardinalNumSpec (NumSpecInterval Nothing Nothing) = cardinalTrueSpec @n
 -- ====================================================================
 -- Now the operations on Numbers
 
+-- | Everything we need to make the number operations make sense on a given type
 class (Num a, HasSpec a) => NumLike a where
   subtractSpec :: a -> TypeSpec a -> Specification a
   default subtractSpec ::
@@ -674,6 +680,7 @@ class (Num a, HasSpec a) => NumLike a where
     Maybe a
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
+-- | Operations on numbers
 data IntW (as :: [Type]) b where
   AddW :: NumLike a => IntW '[a, a] a
   NegateW :: NumLike a => IntW '[a] a
@@ -692,6 +699,7 @@ instance Syntax IntW where
   isInfix AddW = True
   isInfix NegateW = False
 
+-- | A type that we can reason numerically about in constraints
 type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a)
 
 instance {-# OVERLAPPABLE #-} Numeric a => NumLike a where
@@ -751,7 +759,7 @@ instance Logic IntW where
   propagateTypeSpec NegateW (Unary HOLE) ts cant = negateSpec ts <> notMemberSpec (map negate cant)
 
   propagateMemberSpec AddW (HOLE :<: i) es =
-    memberSpecList
+    memberSpec
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
           [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
@@ -770,17 +778,46 @@ negateFn = appTerm NegateW
 
 infix 4 +.
 
+-- | `Term`-level `(+)`
 (+.) :: NumLike a => Term a -> Term a -> Term a
 (+.) = addFn
 
+-- | `Term`-level `negate`
 negate_ :: NumLike a => Term a -> Term a
 negate_ = negateFn
 
 infix 4 -.
 
+-- | `Term`-level `(-)`
 (-.) :: Numeric n => Term n -> Term n -> Term n
 (-.) x y = addFn x (negateFn y)
 
+infixr 4 <=.
+
+-- | `Term`-level `(<=)`
+(<=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(<=.) = appTerm LessOrEqualW
+
+infixr 4 <.
+
+-- | `Term`-level `(<)`
+(<.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(<.) = appTerm LessW
+
+infixr 4 >=.
+
+-- | `Term`-level `(>=)`
+(>=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(>=.) = appTerm GreaterOrEqualW
+
+infixr 4 >.
+
+-- | `Term`-level `(>)`
+(>.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
+(>.) = appTerm GreaterW
+
+-- | t`TypeSpec`-level `satisfies` to implement `toPreds` in
+-- `HasSpec` instance
 toPredsNumSpec ::
   OrdLike n =>
   Term n ->
@@ -790,26 +827,6 @@ toPredsNumSpec v (NumSpecInterval ml mu) =
   fold $
     [Assert $ Lit l <=. v | l <- maybeToList ml]
       ++ [Assert $ v <=. Lit u | u <- maybeToList mu]
-
-infixr 4 <=.
-
-(<=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(<=.) = appTerm LessOrEqualW
-
-infixr 4 <.
-
-(<.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(<.) = appTerm LessW
-
-infixr 4 >=.
-
-(>=.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(>=.) = appTerm GreaterOrEqualW
-
-infixr 4 >.
-
-(>.) :: forall a. OrdLike a => Term a -> Term a -> Term Bool
-(>.) = appTerm GreaterW
 
 instance Logic OrdW where
   propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
@@ -841,6 +858,10 @@ instance Logic OrdW where
   propagate LessW (Value l :! Unary HOLE) spec =
     caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
 
+-- | @if-then-else@ on a specification, useful for writing `propagate` implementations
+-- of predicates, e.g.:
+-- > propagate LessW (Value l :! Unary HOLE) spec =
+-- >   caseBoolSpec spec $ \case True -> gtSpec l; False -> leqSpec l
 caseBoolSpec ::
   HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
 caseBoolSpec spec cont = case possibleValues spec of

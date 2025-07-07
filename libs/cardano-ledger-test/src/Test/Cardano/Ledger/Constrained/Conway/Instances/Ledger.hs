@@ -115,8 +115,6 @@ import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
 import Constrained.API.Extend hiding (Sized)
 import Constrained.API.Extend qualified as C
-import Constrained.GenT (pureGen, vectorOfT)
-import Constrained.Generic
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS

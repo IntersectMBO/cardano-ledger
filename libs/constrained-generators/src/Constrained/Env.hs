@@ -5,21 +5,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Constrained.Env where
+-- | Environments that map types variables to values
+module Constrained.Env (
+  Env,
+  singleton,
+  extend,
+  lookup,
+  find,
+  remove,
+) where
 
-import Constrained.Core (
-  Var (..),
- )
-import Constrained.GenT (
-  MonadGenError,
-  genError,
- )
+import Constrained.Core
+import Constrained.GenT
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
 import Prettyprinter
+import Prelude hiding (lookup)
 
--- | Typed environments for mapping `Var a` to `a`
+-- | Typed environments for mapping @t`Var` a@ to @a@
 newtype Env = Env {unEnv :: Map EnvKey EnvValue}
   deriving newtype (Semigroup, Monoid)
   deriving stock (Show)
@@ -41,23 +45,28 @@ instance Ord EnvKey where
 instance Show EnvKey where
   show (EnvKey var) = show var
 
-extendEnv :: (Typeable a, Show a) => Var a -> a -> Env -> Env
-extendEnv v a (Env m) = Env $ Map.insert (EnvKey v) (EnvValue a) m
+-- | Extend an environment with a new variable value pair
+extend :: (Typeable a, Show a) => Var a -> a -> Env -> Env
+extend v a (Env m) = Env $ Map.insert (EnvKey v) (EnvValue a) m
 
-removeVar :: Var a -> Env -> Env
-removeVar v (Env m) = Env $ Map.delete (EnvKey v) m
+-- | Remove a variable from an environment if it exists
+remove :: Var a -> Env -> Env
+remove v (Env m) = Env $ Map.delete (EnvKey v) m
 
-singletonEnv :: (Typeable a, Show a) => Var a -> a -> Env
-singletonEnv v a = Env $ Map.singleton (EnvKey v) (EnvValue a)
+-- | Create a singleton environment
+singleton :: (Typeable a, Show a) => Var a -> a -> Env
+singleton v a = Env $ Map.singleton (EnvKey v) (EnvValue a)
 
-lookupEnv :: Typeable a => Env -> Var a -> Maybe a
-lookupEnv (Env m) v = do
+-- | Lookup a avariable in the environment
+lookup :: Typeable a => Env -> Var a -> Maybe a
+lookup (Env m) v = do
   EnvValue val <- Map.lookup (EnvKey v) m
   cast val
 
-findEnv :: (Typeable a, MonadGenError m) => Env -> Var a -> m a
-findEnv env var = do
-  case lookupEnv env var of
+-- | `lookup` generalized to any `MonadGenError` monad @m@
+find :: (Typeable a, MonadGenError m) => Env -> Var a -> m a
+find env var = do
+  case lookup env var of
     Just a -> pure a
     Nothing -> genError ("Couldn't find " ++ show var ++ " in " ++ show env)
 

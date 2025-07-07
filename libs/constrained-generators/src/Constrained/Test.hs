@@ -11,7 +11,20 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Useful properties for debugging HasSpec instances and this library itself
-module Constrained.Test where
+module Constrained.Test (
+  prop_sound,
+  prop_constrained_satisfies_sound,
+  prop_constrained_explained,
+  prop_complete,
+  prop_constrained_satisfies_complete,
+  prop_shrink_sound,
+  prop_conformEmpty,
+  prop_univSound,
+  prop_mapSpec,
+  prop_propagateSpecSound,
+  prop_gen_sound,
+  specType,
+) where
 
 import Constrained.API.Extend
 import Constrained.Base
@@ -22,6 +35,7 @@ import Constrained.Generation
 import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
+import Constrained.Spec.List
 import Constrained.Spec.Map
 import Constrained.Spec.Set
 import Constrained.TheKnot
@@ -34,6 +48,8 @@ import Prettyprinter
 import Test.QuickCheck hiding (Fun)
 import qualified Test.QuickCheck as QC
 
+-- | Check that a generator from a given `Specification` is sound, it never
+-- generates a bad value that doesn't satisfy the constraint
 prop_sound ::
   HasSpec a =>
   Specification a ->
@@ -48,15 +64,17 @@ prop_sound spec =
               conformsToSpecProp a spec
       _ -> QC.cover 80 False "successful" True
 
+-- | Modify the `Specification` in `prop_sound` to test re-use
 prop_constrained_satisfies_sound :: HasSpec a => Specification a -> QC.Property
 prop_constrained_satisfies_sound spec = prop_sound (constrained $ \a -> satisfies a spec)
 
+-- | Check that explanations don't immediately ruin soundness
 prop_constrained_explained :: HasSpec a => Specification a -> QC.Property
 prop_constrained_explained spec =
   QC.forAll QC.arbitrary $ \es ->
     prop_sound $ constrained $ \x -> Explain es $ x `satisfies` spec
 
--- | `prop_complete ps` assumes that `ps` is satisfiable
+-- | `prop_complete ps` assumes that `ps` is satisfiable and checks that it doesn't crash
 prop_complete :: HasSpec a => Specification a -> QC.Property
 prop_complete s =
   QC.forAllBlind (strictGen $ genFromSpecT s) $ \ma -> fromGEProp $ do
@@ -65,9 +83,11 @@ prop_complete s =
     -- or fall into an inifinite loop
     pure $ length (show a) > 0
 
+-- | Like `prop_constrained_satisfies_sound` for completeness
 prop_constrained_satisfies_complete :: HasSpec a => Specification a -> QC.Property
 prop_constrained_satisfies_complete spec = prop_complete (constrained $ \a -> satisfies a spec)
 
+-- | Check that shrinking preserves constraint adherence
 prop_shrink_sound :: HasSpec a => Specification a -> QC.Property
 prop_shrink_sound s =
   QC.forAll (strictGen $ genFromSpecT s) $ \ma -> fromGEDiscard $ do
@@ -80,6 +100,7 @@ prop_shrink_sound s =
           else QC.forAll (QC.elements shrinks) $ \a' ->
             conformsToSpecProp a' s
 
+-- | Check that anything conforms to the trivial specification
 prop_conformEmpty ::
   forall a.
   HasSpec a =>
@@ -87,6 +108,7 @@ prop_conformEmpty ::
   QC.Property
 prop_conformEmpty a = QC.property $ conformsTo a (emptySpec @a)
 
+-- | Check that propagation works properly
 prop_univSound :: TestableFn -> QC.Property
 prop_univSound (TestableFn (fn :: t as b)) =
   QC.label (show fn) $
@@ -107,9 +129,7 @@ prop_univSound (TestableFn (fn :: t as b)) =
                               QC.counterexample ("\nfn ctx[a] = " ++ show res) $
                                 conformsToSpecProp res spec
 
-main :: IO ()
-main = QC.quickCheck (QC.withMaxSuccess 10000 prop_univSound)
-
+-- | Similar to `prop_sound`
 prop_gen_sound :: forall a. HasSpec a => Specification a -> QC.Property
 prop_gen_sound spec =
   let sspec = simplifySpec spec
@@ -123,6 +143,7 @@ prop_gen_sound spec =
                   QC.counterexample ("\ngenerated value: a = " ++ show a) $
                     conformsToSpecProp a spec
 
+-- | Pretty-print the type of a spec for test statistics, @"SuspendedSpec"@, @"MemberSpec"@, etc.
 specType :: Specification a -> String
 specType (ExplainSpec [] s) = specType s
 specType (ExplainSpec _ s) = "(ExplainSpec " ++ specType s ++ ")"
@@ -163,6 +184,7 @@ instance Show TestableFn where
   show (TestableFn (fn :: t as b)) =
     show fn ++ " :: " ++ show (typeOf (undefined :: FunTy as b))
 
+-- | Check that `mapSpec` is correct
 prop_mapSpec ::
   ( HasSpec a
   , AppRequires t '[a] b
@@ -175,6 +197,7 @@ prop_mapSpec funsym spec =
     a <- ma
     pure $ conformsToSpec (semantics funsym a) (mapSpec funsym spec)
 
+-- | Check that propagation is correct via `genInverse`
 prop_propagateSpecSound ::
   ( HasSpec a
   , AppRequires t '[a] b
@@ -243,7 +266,7 @@ instance (HasSpec a, Arbitrary (TypeSpec a)) => Arbitrary (Specification a) wher
           , do
               zs <- nub <$> listOf1 (genFromSpec TrueSpec)
               pure
-                ( memberSpecList
+                ( memberSpec
                     zs
                     ( NE.fromList
                         [ "In (Arbitrary Specification) this should never happen"
@@ -359,9 +382,6 @@ instance forall as. (All HasSpec as, TypeList as) => QC.Arbitrary (TestableCtx a
       go :: forall as'. All HasSpec as' => List Value as' -> [List Value as']
       go Nil = []
       go (Value a :> as) = map ((:> as) . Value) (shrinkWithSpec TrueSpec a) ++ map (Value a :>) (go as)
-
-genTestableFn :: QC.Gen TestableFn
-genTestableFn = QC.arbitrary
 
 instance QC.Arbitrary TestableFn where
   arbitrary =

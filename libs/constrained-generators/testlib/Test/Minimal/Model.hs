@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -30,22 +31,23 @@ import Constrained.Core (
   freshen,
   unionWithMaybe,
  )
-import Constrained.Env
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.GenT
-import qualified Constrained.Graph as Graph
+import Constrained.Graph qualified as Graph
 import Constrained.List hiding (ListCtx)
 import Control.Monad (guard)
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable (fold)
-import qualified Data.Foldable as Foldable (fold)
+import Data.Foldable qualified as Foldable (fold)
 import Data.Kind
 import Data.List (nub, partition, (\\))
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (isNothing, listToMaybe, maybeToList)
 import Data.Semigroup (Any (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Typeable
 import GHC.Stack
 import Prettyprinter
@@ -308,7 +310,7 @@ instance Logic SetSym where
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
     (MemberW, HOLE :<| (s :: Set a), spec1) ->
       caseBoolSpec spec1 $ \case
-        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
+        True -> memberSpec (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
         False -> notMemberSpec s
     (MemberW, e :|> HOLE, spec2) ->
       caseBoolSpec spec2 $ \case
@@ -706,7 +708,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
         genFromSpecT TrueSpec
     | otherwise -> do
         env <- genFromPreds mempty p
-        findEnv env x
+        Env.find env x
   TypeSpec s cant -> do
     mode <- getMode
     explainNE
@@ -767,7 +769,7 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
 -- =============================================================
 
 simplifySpec :: HasSpec a => Spec a -> Spec a
-simplifySpec spec = case regularizeNames spec of
+simplifySpec spec = case applyNameHints spec of
   SuspendedSpec x p ->
     let optP = optimisePred p
      in fromGESpec $
@@ -847,7 +849,7 @@ aggressiveInlining pred0
         | not (isLit t)
         , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
-            pure $ runCaseOn a as bs $ \x v p -> substPred (singletonEnv x v) p
+            pure $ runCaseOn a as bs $ \x v p -> substPred (Env.singleton x v) p
         | otherwise -> Case t <$> (goBinder fvs sub as) <*> (goBinder fvs sub bs)
       Let t (x :-> p)
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
@@ -920,7 +922,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
     propagateSpecM (fromForAllSpec bSpec) (toCtx x t)
-  Case (Lit val) as bs -> runCaseOn val as bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case (Lit val) as bs -> runCaseOn val as bs $ \va vaVal psa -> computeSpec x (substPred (Env.singleton va vaVal) psa)
   Case t as bs -> do
     simpAs <- computeSpecBinderSimplified as
     simpBs <- computeSpecBinderSimplified bs
@@ -1155,7 +1157,7 @@ stepPlan env p@(SolverPlan (SolverStage x ps spec : pl) gr) = do
           )
           (spec <> spec')
       )
-  let env1 = extendEnv x val env
+  let env1 = Env.extend x val env
   pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (Graph.deleteNode (Name x) gr))
 
 computeDependencies :: Pred -> DependGraph
@@ -1214,7 +1216,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
         termVarEqCases :: HasSpec b => Spec a -> Var b -> Term b -> [SolverStage]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (singletonEnv x v) t) vs))]
+              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))]
         termVarEqCases specx x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t

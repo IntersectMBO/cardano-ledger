@@ -30,10 +30,15 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 import Cardano.Ledger.BaseTypes (Globals, Inject (..), ShelleyBase)
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core (Era, EraRule, eraProtVerLow)
-import qualified Constrained.API as CV2 (HasSpec, Specification, genFromSpec, genFromSpecT)
-import Constrained.GenT (GE (..), GenMode (..))
-import qualified Constrained.GenT as CV1 (runGenT)
-import Constrained.Generation (shrinkWithSpec, simplifySpec)
+import Constrained.API (GE (..))
+import qualified Constrained.API as CV2 (
+  HasSpec,
+  Specification,
+  genFromSpec,
+  genFromSpecT,
+  looseGen,
+  shrinkWithSpec,
+ )
 import Control.Monad.Cont (ContT (..))
 import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..))
@@ -428,9 +433,8 @@ conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
   let
     forAllSpec spec = do
       let
-        simplifiedSpec = simplifySpec spec
-        generator = CV1.runGenT (CV2.genFromSpecT simplifiedSpec) Loose []
-        shrinker (Result x) = pure <$> shrinkWithSpec simplifiedSpec x
+        generator = CV2.looseGen (CV2.genFromSpecT spec)
+        shrinker (Result x) = pure <$> CV2.shrinkWithSpec spec x
         shrinker _ = []
       res :: GE a <- ContT $ \c ->
         pure $ forAllShrinkBlind generator shrinker c

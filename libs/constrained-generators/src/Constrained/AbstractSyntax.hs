@@ -14,11 +14,26 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Constrained.AbstractSyntax where
+-- | This module contains the abstract syntax of terms, predicates, and specifications
+module Constrained.AbstractSyntax (
+  TermD (..),
+  runTermE,
+  runTerm,
+  fastInequality,
+  PredD (..),
+  SpecificationD (..),
+  BinderD (..),
+  Weighted (..),
+  mapWeighted,
+  traverseWeighted,
+  AppRequiresD,
+  Syntax (..),
+) where
 
 import Constrained.Core
 import Constrained.DependencyInjection
-import Constrained.Env
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
@@ -36,8 +51,11 @@ import Test.QuickCheck
 -- The first-order term language
 ------------------------------------------------------------------------
 
--- See `Constrained.DependencyInjection` to better understand `deps` - it's a
--- pointer to postpone having to define `HasSpec` and friends here.
+-- $depsExplanation
+-- See `Constrained.DependencyInjection` to better understand @deps@ - it's a
+-- pointer to postpone having to define `Constrained.Base.HasSpec` and friends here.
+
+-- | First-order terms, application, literals, variables. $depsExplanation
 data TermD deps a where
   App ::
     AppRequiresD deps t dom rng =>
@@ -47,6 +65,8 @@ data TermD deps a where
   Lit :: (Typeable a, Eq a, Show a) => a -> TermD deps a
   V :: (HasSpecD deps a, Typeable a) => Var a -> TermD deps a
 
+-- | Everything required to deal with applications of a function to arguments
+-- of type @dom@
 type AppRequiresD deps (t :: [Type] -> Type -> Type) dom rng =
   ( LogicD deps t
   , Syntax t
@@ -77,16 +97,18 @@ instance Eq (TermD deps a) where
 
 -- Semantics --------------------------------------------------------------
 
+-- | Run a term in an environment, with an error if it fails
 runTermE :: forall a deps. Env -> TermD deps a -> Either (NE.NonEmpty String) a
 runTermE env = \case
   Lit a -> Right a
-  V v -> case lookupEnv env v of
+  V v -> case Env.lookup env v of
     Just a -> Right a
     Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
   App f ts -> do
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
 
+-- | Generalized `runTermE` to `MonadGenError`
 runTerm :: MonadGenError m => Env -> TermD deps a -> m a
 runTerm env x = case runTermE env x of
   Left msgs -> fatalErrorNE msgs
@@ -108,9 +130,7 @@ fastInequality _ _ = True
 
 -- Pretty-printing --------------------------------------------------------
 
--- | Syntactic operations are ones that have to do with the structure and appearence of the type.
--- See `Constrained.DependencyInjection` to better understand `deps` - it's a
--- pointer to postpone having to define `HasSpec` and friends here.
+-- | Syntactic operations are ones that have to do with the structure and appearence of the type. $depsExplanation
 class Syntax (t :: [Type] -> Type -> Type) where
   isInfix :: t dom rng -> Bool
   isInfix _ = False
@@ -133,7 +153,7 @@ instance Show a => Pretty (WithPrec (TermD deps a)) where
       | isInfix f
       , a :> b :> Nil <- as ->
           parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
-      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppListShow (prettyPrec 11) as))
+      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppListC @Show (prettyPrec 11) as))
 
 instance Show a => Pretty (TermD deps a) where
   pretty = prettyPrec 0
@@ -145,13 +165,10 @@ instance Show a => Show (TermD deps a) where
 -- The language for predicates
 ------------------------------------------------------------------------
 
--- This is _essentially_ a first-order logic with some extra spicyness thrown
+-- | This is _essentially_ a first-order logic with some extra spicyness thrown
 -- in to handle things like sum types and the specific problems you get into
 -- when generating from constraints (mostly to do with choosing the order in
--- which to generate things).
-
--- See `Constrained.DependencyInjection` to better understand `deps` - it's a
--- pointer to postpone having to define `HasSpec` and friends here.
+-- which to generate things). $depsExplanation
 data PredD deps where
   ElemPred ::
     (HasSpecD deps a, Show a) =>
@@ -189,10 +206,10 @@ data PredD deps where
     , Show a
     , Show b
     ) =>
-    -- | This depends on the `a` term
+    -- | This depends on the @a@ term
     TermD deps b ->
     TermD deps a ->
-    -- | Recover a useable value from the `a` term.
+    -- | Recover a useable @b@ value from the @a@ term in normal Haskell land
     (a -> b) ->
     PredD deps
   DependsOn ::
@@ -231,7 +248,7 @@ data PredD deps where
     TermD deps Bool ->
     PredD deps ->
     PredD deps
-  GenHint ::
+  GenHintD ::
     ( HasGenHintD deps a
     , Show a
     , Show (HintD deps a)
@@ -243,6 +260,7 @@ data PredD deps where
   FalsePred :: NE.NonEmpty String -> PredD deps
   Explain :: NE.NonEmpty String -> PredD deps -> PredD deps
 
+-- | Binders, a t`Var` is bound in a `PredD`, never anywhere else
 data BinderD deps a where
   (:->) ::
     (HasSpecD deps a, Show a) =>
@@ -252,12 +270,15 @@ data BinderD deps a where
 
 deriving instance Show (BinderD deps a)
 
+-- | A thing, wrapped in a functor, with a weight
 data Weighted f a = Weighted {weight :: Maybe Int, thing :: f a}
   deriving (Functor, Traversable, Foldable)
 
+-- | Apply a natural transformation to the weighted value
 mapWeighted :: (f a -> g b) -> Weighted f a -> Weighted g b
 mapWeighted f (Weighted w t) = Weighted w (f t)
 
+-- | Like `mapWeighted` but `Applicative`
 traverseWeighted :: Applicative m => (f a -> m (g a)) -> Weighted f a -> m (Weighted g a)
 traverseWeighted f (Weighted w t) = Weighted w <$> f t
 
@@ -295,10 +316,10 @@ instance Pretty (PredD deps) where
     Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
     DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
-    Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)
+    Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList pretty bs)
     When b p -> "whenTrue" <+> pretty (WithPrec 11 b) <+> "$" /> pretty p
     Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
-    GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
+    GenHintD h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
     Monitor {} -> "monitor"
@@ -318,13 +339,13 @@ instance Pretty (BinderD deps a) where
 -- The language of specifications
 ------------------------------------------------------------------------
 
--- | A `Specification a` denotes a set of `a`s
+-- | A @`SpecificationD` deps a@ denotes a set of @a@s. $depsExplanation
 data SpecificationD deps a where
   -- | Explain a Specification
   ExplainSpec :: [String] -> SpecificationD deps a -> SpecificationD deps a
   -- | Elements of a known set
   MemberSpec ::
-    -- | It must be an element of this OrdSet (List). Try hard not to put duplicates in the List.
+    -- | It must be an element of this list. Try hard not to put duplicates in the List.
     NE.NonEmpty a ->
     SpecificationD deps a
   -- | The empty set

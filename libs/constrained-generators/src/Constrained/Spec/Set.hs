@@ -13,33 +13,22 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Spec.Set where
+-- | `HasSpec` instance for `Set`s and functions for writing
+-- constraints about sets
+module Constrained.Spec.Set (
+  SetSpec (..),
+  SetW (..),
+  singleton_,
+  subset_,
+  member_,
+  union_,
+  disjoint_,
+  fromList_,
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  Forallable (..),
-  HOLE (..),
-  HasSpec (..),
-  Logic (..),
-  Specification,
-  Term,
-  appTerm,
-  constrained,
-  equalSpec,
-  explainSpec,
-  fromListCtx,
-  isErrorLike,
-  memberSpecList,
-  notEqualSpec,
-  notMemberSpec,
-  typeSpec,
-  pattern TypeSpec,
-  pattern Unary,
- )
-import Constrained.Conformance (
-  conformsToSpec,
-  satisfies,
- )
+import Constrained.Base
+import Constrained.Conformance
 import Constrained.Core
 import Constrained.FunctionSymbol
 import Constrained.GenT
@@ -47,7 +36,8 @@ import Constrained.Generation
 import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
-import Constrained.SumList (knownUpperBound, maxFromSpec)
+import Constrained.Spec.List
+import Constrained.SumList
 import Constrained.Syntax
 import Constrained.TheKnot
 import Data.Foldable
@@ -59,10 +49,19 @@ import qualified Data.Set as Set
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (shrinkList, shuffle)
 
--- ===============================================================================
--- Sets and their Specifications
+------------------------------------------------------------------------
+-- HasSpec instance for Set
+------------------------------------------------------------------------
 
-data SetSpec a = SetSpec (Set a) (Specification a) (Specification Integer)
+-- | `TypeSpec` for `Set`
+data SetSpec a
+  = SetSpec
+      -- | Required elements
+      (Set a)
+      -- | Specification for elements
+      (Specification a)
+      -- | Specification for size
+      (Specification Integer)
 
 instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size
@@ -217,6 +216,11 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
   guardTypeSpec = guardSetSpec
 
+------------------------------------------------------------------------
+-- Functions that deal with sets
+------------------------------------------------------------------------
+
+-- | Symbols for working on sets
 data SetW (d :: [Type]) (r :: Type) where
   SingletonW :: (HasSpec a, Ord a) => SetW '[a] (Set a)
   UnionW :: (HasSpec a, Ord a) => SetW '[Set a, Set a] (Set a)
@@ -262,9 +266,7 @@ instance (Ord a, HasSpec a, HasSpec (Set a)) => Semigroup (Term (Set a)) where
 instance (Ord a, HasSpec a, HasSpec (Set a)) => Monoid (Term (Set a)) where
   mempty = Lit mempty
 
--- ================= Logic instances ================
-
--- ==== SingletonW
+-- Logic instance for SetW ------------------------------------------------
 
 singletons :: [Set a] -> [Set a] -- Every Set in the filterd output has size 1 (if there are any)
 singletons = filter ((1 ==) . Set.size)
@@ -323,7 +325,7 @@ instance Logic SetW where
                 typeSpec
                   ( SetSpec
                       (Set.difference e s)
-                      ( memberSpecList
+                      ( memberSpec
                           (Set.toList e)
                           (pure "propagateSpec (union_ s HOLE) on (MemberSpec [e]) where e is the empty set")
                       )
@@ -362,7 +364,7 @@ instance Logic SetW where
             ]
   propagate MemberW ctx spec
     | (HOLE :? Value s :> Nil) <- ctx = caseBoolSpec spec $ \case
-        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
+        True -> memberSpec (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
         False -> notMemberSpec s
     | (Value e :! Unary HOLE) <- ctx = caseBoolSpec spec $ \case
         True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
@@ -387,7 +389,7 @@ instance Logic SetW where
             Nothing
             (Set.toList xs)
             TrueSpec
-            ( memberSpecList
+            ( memberSpec
                 (Set.toList xs)
                 (pure "propagateSpec (fromList_ HOLE) on (MemberSpec xs) where the set 'xs' is empty")
             )
@@ -431,28 +433,28 @@ instance Logic SetW where
   rewriteRules DisjointW (_ :> Lit s :> Nil) Evidence | null s = Just $ Lit True
   rewriteRules _ _ _ = Nothing
 
+-- Functions for writing constraints on sets ------------------------------
+
+-- | Create a set with a single element
 singleton_ :: (Ord a, HasSpec a) => Term a -> Term (Set a)
 singleton_ = appTerm SingletonW
 
+-- | Check if the first argument is a subset of the second
 subset_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
 subset_ = appTerm SubsetW
 
--- ==== MemberW =====
-
+-- | Check if an element is a member of the set
 member_ :: (Ord a, HasSpec a) => Term a -> Term (Set a) -> Term Bool
 member_ = appTerm MemberW
 
--- ==== UnionW =====
-
+-- | Take the union of two sets
 union_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term (Set a)
 union_ = appTerm UnionW
 
--- ==== DisjointW =====
-
+-- | Check if two sets have no elements in common
 disjoint_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
 disjoint_ = appTerm DisjointW
 
--- ==== FromListW =====
-
+-- | Convert a list to a set
 fromList_ :: forall a. (Ord a, HasSpec a) => Term [a] -> Term (Set a)
 fromList_ = appTerm FromListW

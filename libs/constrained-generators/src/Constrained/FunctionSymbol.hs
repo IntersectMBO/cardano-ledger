@@ -5,15 +5,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Constrained.FunctionSymbol where
+-- | Utility functions and key concepts for talking about typed function
+-- symbols, i.e. witness type formers @W :: (as :: [Type]) -> (r :: Type) ->
+-- Type@ whose constructors stand in for functions of type @`FunTy` as r@.
+module Constrained.FunctionSymbol (sameFunSym, getWitness, Semantics (..)) where
 
 import Constrained.List
 import Data.Kind
 import Data.Typeable
 
--- ========================================================================
--- Useful for testing if two function symbols are `the same` for some notion of `the same`
-
+-- | Check if two function symbols of different type are the same
 sameFunSym ::
   forall (t1 :: [Type] -> Type -> Type) d1 r1 (t2 :: [Type] -> Type -> Type) d2 r2.
   ( Typeable t1
@@ -35,8 +36,8 @@ sameFunSym x y = do
     then Just (Refl, Refl, Refl)
     else Nothing
 
--- | Here we only care about the Type 't', the dom, and the rng can be
--- anything. Useful for defining patterns.
+-- | Try to cast from an unknown function symbol universe @t@ to a known
+-- universe @t'@
 getWitness ::
   forall t t' d r.
   ( Typeable t
@@ -47,7 +48,8 @@ getWitness ::
   t d r -> Maybe (t' d r)
 getWitness = cast
 
--- | Semantic operations are ones that give the function symbol, meaning as a function.
---   I.e. how to apply the function to a list of arguments and return a value.
+-- | Semantic operations are ones that give the function symbol, meaning as a
+-- function. I.e. how to apply the function to a list of arguments and return
+-- a value.
 class Semantics (t :: [Type] -> Type -> Type) where
   semantics :: t d r -> FunTy d r -- e.g. FunTy '[a, Int] Bool ~ a -> Int -> Bool

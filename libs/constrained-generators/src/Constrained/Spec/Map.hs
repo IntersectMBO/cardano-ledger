@@ -14,7 +14,16 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Spec.Map where
+-- | `HasSpec` instance for `Map` and functions for working with `Map`s
+module Constrained.Spec.Map (
+  MapSpec (..),
+  defaultMapSpec,
+  MapW (..),
+  lookup_,
+  mapMember_,
+  dom_,
+  rng_,
+) where
 
 import Constrained.AbstractSyntax
 import Constrained.Base
@@ -27,6 +36,7 @@ import Constrained.Generic (Prod (..))
 import Constrained.List
 import Constrained.NumOrd (cardinality, geqSpec, leqSpec, nubOrd)
 import Constrained.PrettyUtils
+import Constrained.Spec.List
 import Constrained.Spec.Set
 import Constrained.Spec.SumProd
 import Constrained.Syntax
@@ -59,6 +69,7 @@ instance Ord a => Sized (Map.Map a b) where
       <> geqSpec (sizeOf mustv)
       <> size
 
+-- | Custom `TypeSpec` for `Map`
 data MapSpec k v = MapSpec
   { mapSpecHint :: Maybe Integer
   , mapSpecMustKeys :: Set k
@@ -276,6 +287,7 @@ instance
 -- Logic instances for
 ------------------------------------------------------------------------
 
+-- | Function symbols for talking about maps
 data MapW (dom :: [Type]) (rng :: Type) where
   DomW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] (Set k)
   RngW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] [v]
@@ -284,13 +296,10 @@ data MapW (dom :: [Type]) (rng :: Type) where
 
 deriving instance Eq (MapW dom rng)
 
-mapSem :: MapW d r -> FunTy d r
-mapSem DomW = Map.keysSet
-mapSem RngW = Map.elems
-mapSem LookupW = Map.lookup
-
 instance Semantics MapW where
-  semantics = mapSem
+  semantics DomW = Map.keysSet
+  semantics RngW = Map.elems
+  semantics LookupW = Map.lookup
 
 instance Syntax MapW
 
@@ -298,8 +307,6 @@ instance Show (MapW d r) where
   show DomW = "dom_"
   show RngW = "rng_"
   show LookupW = "lookup_"
-
--- ============ DomW
 
 instance Logic MapW where
   propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
@@ -357,7 +364,7 @@ instance Logic MapW where
     if Nothing `conformsToSpec` spec
       then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
       else
-        memberSpecList
+        memberSpec
           (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
           ( NE.fromList
               [ "propagate (lookup HOLE ms) on (MemberSpec ms)"
@@ -373,18 +380,21 @@ instance Logic MapW where
 -- Syntax
 ------------------------------------------------------------------------
 
+-- | Take the domain of a `Map` as a `Set`
 dom_ ::
   (HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k, IsNormalType v) =>
   Term (Map k v) ->
   Term (Set k)
 dom_ = appTerm DomW
 
+-- | Take the range of a `Map` as a list
 rng_ ::
   (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
   Term (Map k v) ->
   Term [v]
 rng_ = appTerm RngW
 
+-- | Lookup a key in the `Map`
 lookup_ ::
   (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
   Term k ->
@@ -392,6 +402,7 @@ lookup_ ::
   Term (Maybe v)
 lookup_ = appTerm LookupW
 
+-- | Check if a key is a member of the map
 mapMember_ ::
   (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
   Term k ->
