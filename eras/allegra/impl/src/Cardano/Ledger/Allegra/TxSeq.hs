@@ -12,14 +12,14 @@ module Cardano.Ledger.Allegra.TxSeq () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Core (EraBlockBody (..))
-import Cardano.Ledger.Shelley.BlockBody (ShelleyTxSeq (..), bbHash, txSeqTxns)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..), bbHash, txSeqTxns)
 import Lens.Micro (lens)
 
 instance EraBlockBody AllegraEra where
-  type BlockBody AllegraEra = ShelleyTxSeq AllegraEra
-  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
+  type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyBlockBody s)
   fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
+  toTxSeq = ShelleyBlockBody
   hashBlockBody = bbHash
   hashTxSeq = bbHash
   numSegComponents = 3

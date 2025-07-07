@@ -25,7 +25,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Shelley.BlockBody.Internal (
-  ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
+  ShelleyBlockBody (ShelleyBlockBody, txSeqTxns', TxSeq'),
   auxDataSeqDecoder,
   txSeqTxns,
   bbHash,
@@ -80,7 +80,7 @@ import GHC.Generics (Generic)
 import Lens.Micro (lens, (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
-data ShelleyTxSeq era = TxSeq'
+data ShelleyBlockBody era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (ShelleyTx era))
   , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
@@ -95,10 +95,10 @@ data ShelleyTxSeq era = TxSeq'
   deriving (Generic)
 
 instance EraBlockBody ShelleyEra where
-  type BlockBody ShelleyEra = ShelleyTxSeq ShelleyEra
-  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
+  type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyBlockBody s)
   fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
+  toTxSeq = ShelleyBlockBody
   hashBlockBody = txSeqHash
   hashTxSeq = txSeqHash
   numSegComponents = 3
@@ -110,17 +110,17 @@ deriving via
      , "txSeqWitsBytes"
      , "txSeqMetadataBytes"
      ]
-    (ShelleyTxSeq era)
+    (ShelleyBlockBody era)
   instance
-    (Typeable era, NoThunks (ShelleyTx era)) => NoThunks (ShelleyTxSeq era)
+    (Typeable era, NoThunks (ShelleyTx era)) => NoThunks (ShelleyBlockBody era)
 
 deriving stock instance
   Show (ShelleyTx era) =>
-  Show (ShelleyTxSeq era)
+  Show (ShelleyBlockBody era)
 
 deriving stock instance
   Eq (ShelleyTx era) =>
-  Eq (ShelleyTxSeq era)
+  Eq (ShelleyBlockBody era)
 
 -- ===========================
 -- Getting bytes from pieces of a Tx
@@ -140,18 +140,18 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 -- ===========================
 
 -- | Constuct a BlockBody (with all it bytes) from just Tx's
-pattern ShelleyTxSeq ::
+pattern ShelleyBlockBody ::
   forall era.
   ( EraTx era
   , Tx era ~ ShelleyTx era
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
-  ShelleyTxSeq era
-pattern ShelleyTxSeq xs <-
+  ShelleyBlockBody era
+pattern ShelleyBlockBody xs <-
   TxSeq' xs _ _ _ _
   where
-    ShelleyTxSeq txns =
+    ShelleyBlockBody txns =
       let version = eraProtVerLow @era
           serializeFoldable x =
             serialize version $
@@ -174,15 +174,15 @@ pattern ShelleyTxSeq xs <-
               txSeqMetadataBytes = txSeqAuxDatas
             }
 
-{-# COMPLETE ShelleyTxSeq #-}
+{-# COMPLETE ShelleyBlockBody #-}
 
-txSeqTxns :: ShelleyTxSeq era -> StrictSeq (ShelleyTx era)
+txSeqTxns :: ShelleyBlockBody era -> StrictSeq (ShelleyTx era)
 txSeqTxns (TxSeq' ts _ _ _ _) = ts
 
 instance
   forall era.
   Era era =>
-  EncCBORGroup (ShelleyTxSeq era)
+  EncCBORGroup (ShelleyBlockBody era)
   where
   encCBORGroup (TxSeq' _ _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
@@ -196,7 +196,7 @@ instance
   listLenBound _ = 3
 
 -- | Hash a given block body
-bbHash :: ShelleyTxSeq era -> Hash HASH EraIndependentBlockBody
+bbHash :: ShelleyBlockBody era -> Hash HASH EraIndependentBlockBody
 bbHash = txSeqHash
 
 hashShelleySegWits ::
@@ -240,7 +240,7 @@ instance
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
-  DecCBOR (Annotator (ShelleyTxSeq era))
+  DecCBOR (Annotator (ShelleyBlockBody era))
   where
   -- \| The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
   --   These are exactly the parts that are SafeToHash.

@@ -12,14 +12,14 @@ module Cardano.Ledger.Mary.TxSeq () where
 import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
-import Cardano.Ledger.Shelley.BlockBody (ShelleyTxSeq (..), bbHash, txSeqTxns)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..), bbHash, txSeqTxns)
 import Lens.Micro (lens)
 
 instance EraBlockBody MaryEra where
-  type BlockBody MaryEra = ShelleyTxSeq MaryEra
-  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyTxSeq s)
+  type BlockBody MaryEra = ShelleyBlockBody MaryEra
+  txSeqBlockBodyL = lens txSeqTxns (\_ s -> ShelleyBlockBody s)
   fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
+  toTxSeq = ShelleyBlockBody
   hashBlockBody = bbHash
   hashTxSeq = bbHash
   numSegComponents = 3

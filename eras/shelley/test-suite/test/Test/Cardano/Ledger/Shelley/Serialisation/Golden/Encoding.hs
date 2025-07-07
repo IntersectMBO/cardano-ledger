@@ -77,7 +77,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
-import Cardano.Ledger.Shelley.BlockBody (ShelleyTxSeq (..), bbHash)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..), bbHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
@@ -333,7 +333,7 @@ testBHB =
           )
           (vrfSignKey testVRF)
     , bsize = 0
-    , bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty
+    , bhash = bbHash @era $ ShelleyBlockBody @era StrictSeq.empty
     , bheaderOCert =
         OCert
           (kesVerKey testKESKeys)
@@ -900,7 +900,7 @@ tests =
               (vrfSignKey testVRF)
           size = 0
           blockNo = BlockNo 44
-          bbhash = bbHash @C $ ShelleyTxSeq StrictSeq.empty
+          bbhash = bbHash @C $ ShelleyBlockBody StrictSeq.empty
           ocert :: OCert MockCrypto
           ocert =
             OCert
@@ -978,7 +978,7 @@ tests =
       let sig :: (SignedKES (KES MockCrypto) (BHBody MockCrypto))
           sig = unsoundPureSignedKES () 0 (testBHB @C) (kesSignKey testKESKeys)
           bh = BHeader (testBHB @C) sig
-          txns = ShelleyTxSeq StrictSeq.Empty
+          txns = ShelleyBlockBody StrictSeq.Empty
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
@@ -1039,7 +1039,7 @@ tests =
             mkBasicTx txb5
               & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
               & auxDataTxL @C .~ SJust tx5MD
-          txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
+          txns = ShelleyBlockBody $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"

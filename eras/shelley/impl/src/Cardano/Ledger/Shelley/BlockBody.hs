@@ -1,5 +1,5 @@
 module Cardano.Ledger.Shelley.BlockBody (
-  ShelleyTxSeq (ShelleyTxSeq, txSeqTxns'),
+  ShelleyBlockBody (ShelleyBlockBody, txSeqTxns'),
   auxDataSeqDecoder,
   txSeqTxns,
   bbHash,

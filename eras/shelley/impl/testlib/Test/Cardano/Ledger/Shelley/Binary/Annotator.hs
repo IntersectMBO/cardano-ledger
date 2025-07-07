@@ -42,7 +42,7 @@ instance
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   ) =>
-  DecCBOR (ShelleyTxSeq era)
+  DecCBOR (ShelleyBlockBody era)
   where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
