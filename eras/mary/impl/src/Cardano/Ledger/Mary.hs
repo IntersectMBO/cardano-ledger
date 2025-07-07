@@ -14,6 +14,7 @@ module Cardano.Ledger.Mary (
   TxBody (..),
 ) where
 
+import Cardano.Ledger.Mary.BlockBody ()
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.Rules ()
@@ -23,7 +24,6 @@ import Cardano.Ledger.Mary.Transition ()
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody (TxBody (..))
-import Cardano.Ledger.Mary.TxSeq ()
 import Cardano.Ledger.Mary.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API
