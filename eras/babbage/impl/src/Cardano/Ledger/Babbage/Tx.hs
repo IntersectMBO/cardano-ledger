@@ -9,11 +9,11 @@ module Cardano.Ledger.Babbage.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.Tx as X
-import Cardano.Ledger.Alonzo.TxSeq (
+import Cardano.Ledger.Alonzo.BlockBody (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
  )
+import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (

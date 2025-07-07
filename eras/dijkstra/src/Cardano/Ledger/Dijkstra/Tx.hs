@@ -5,6 +5,7 @@
 module Cardano.Ledger.Dijkstra.Tx () where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoTxSeq (..), hashAlonzoTxSeq)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (..),
@@ -15,7 +16,6 @@ import Cardano.Ledger.Alonzo.Tx (
   sizeAlonzoTxF,
   witsAlonzoTxL,
  )
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..), hashAlonzoTxSeq)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core (
   EraBlockBody (..),

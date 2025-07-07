@@ -22,7 +22,7 @@
 --
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
-module Cardano.Ledger.Alonzo.TxSeq.Internal (
+module Cardano.Ledger.Alonzo.BlockBody.Internal (
   AlonzoTxSeq (.., AlonzoTxSeq),
   hashAlonzoTxSeq,
   hashAlonzoSegWits,

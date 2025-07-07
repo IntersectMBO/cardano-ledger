@@ -14,6 +14,10 @@ module Cardano.Ledger.Conway.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Alonzo.BlockBody (
+  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
+  hashAlonzoTxSeq,
+ )
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
@@ -23,10 +27,6 @@ import Cardano.Ledger.Alonzo.Tx (
   mkBasicAlonzoTx,
   sizeAlonzoTxF,
   witsAlonzoTxL,
- )
-import Cardano.Ledger.Alonzo.TxSeq (
-  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  hashAlonzoTxSeq,
  )
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),

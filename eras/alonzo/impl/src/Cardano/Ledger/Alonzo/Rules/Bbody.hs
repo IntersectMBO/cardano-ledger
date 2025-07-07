@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY, AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
@@ -30,7 +31,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)

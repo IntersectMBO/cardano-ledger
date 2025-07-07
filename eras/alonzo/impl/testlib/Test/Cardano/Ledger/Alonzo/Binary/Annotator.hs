@@ -18,11 +18,11 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.BlockBody.Internal
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
-import Cardano.Ledger.Alonzo.TxSeq.Internal
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
