@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -18,53 +19,49 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | All the things that are necessary for generation and shrinking.
-module Constrained.Generation where
+module Constrained.Generation (
+  -- * Generation and shrinking
+  genFromSpec,
+  genFromSpecT,
+  genFromSpecWithSeed,
+  shrinkWithSpec,
+  simplifySpec,
+
+  -- ** Debuggin
+  printPlan,
+  debugSpec,
+  prettyPlan,
+
+  -- * Function Symbols
+  or_,
+  not_,
+  injRight_,
+  injLeft_,
+  (==.),
+
+  -- * Other syntax
+  whenTrue,
+
+  -- * Internals
+  CountCases,
+  SumW (..),
+  BoolW (..),
+  EqW (..),
+  SumSpec (..),
+  pattern SumSpec,
+) where
 
 import Constrained.AbstractSyntax
 import Constrained.Base
-import Constrained.Conformance (
-  checkPred,
-  checkPredsE,
-  conformsToSpec,
-  satisfies,
- )
-import Constrained.Core (
-  Evidence (..),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
-  unionWithMaybe,
- )
-import Constrained.Env (
-  Env,
-  extendEnv,
-  findEnv,
-  lookupEnv,
-  singletonEnv,
- )
+import Constrained.Conformance
+import Constrained.Core
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
-import Constrained.Graph (
-  Graph (..),
-  deleteNode,
-  topsort,
-  transitiveClosure,
- )
-import Constrained.List (
-  -- All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  -- TypeList,
-  foldMapList,
-  lengthList,
-  mapList,
-  mapMList,
-  uncurryList_,
- )
+import Constrained.Graph hiding (irreflexiveDependencyOn)
+import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
 import Constrained.Syntax
@@ -75,13 +72,12 @@ import Data.Foldable
 import Data.Int
 import Data.Kind
 import Data.List (partition)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe
 import Data.Semigroup (Any (..), getSum)
-import qualified Data.Semigroup as Semigroup
+import Data.Semigroup qualified as Semigroup
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String
 import Data.Typeable
 import GHC.Stack
@@ -91,6 +87,10 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random hiding (left, right)
 import Prelude hiding (cycle, pred)
+
+------------------------------------------------------------------------
+-- Generation, shrinking, and debugging
+------------------------------------------------------------------------
 
 -- | Generate a value that satisfies the spec. This function can fail if the
 -- spec is inconsistent, there is a dependency error, or if the underlying
@@ -113,7 +113,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
         genFromSpecT TrueSpec
     | otherwise -> do
         env <- genFromPreds mempty p
-        findEnv env x
+        Env.find env x
   TypeSpec s cant -> do
     mode <- getMode
     explainNE
@@ -131,8 +131,183 @@ genFromSpecT (simplifySpec -> spec) = case spec of
       genFromTypeSpec s `suchThatT` (`notElem` cant)
   ErrorSpec e -> genErrorNE e
 
+-- | A version of `genFromSpecT` that simply errors if the generator fails
+genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a
+genFromSpec spec = do
+  res <- catchGen $ genFromSpecT @a @GE spec
+  either (error . ('\n' :) . catMessages) pure res
+
+-- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
+genFromSpecWithSeed ::
+  forall a. (HasCallStack, HasSpec a) => Int -> Int -> Specification a -> a
+genFromSpecWithSeed seed size spec = unGen (genFromSpec spec) (mkQCGen seed) size
+
+-- ----------------------- Shrinking -------------------------------
+
+-- | Shrink a value while preserving adherence to a `Specification`
+shrinkWithSpec :: forall a. HasSpec a => Specification a -> a -> [a]
+-- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
+-- case when you know what you're doing
+shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
+  ExplainSpec _ s -> shrinkWithSpec s a
+  -- TODO: filter on can't if we have a known to be sound shrinker
+  TypeSpec s _ -> shrinkWithTypeSpec s a
+  -- TODO: The better way of doing this is to compute the dependency graph,
+  -- shrink one variable at a time, and fixup the rest of the variables
+  SuspendedSpec {} -> shr a
+  MemberSpec {} -> shr a
+  TrueSpec -> shr a
+  ErrorSpec {} -> []
+  where
+    shr = shrinkWithTypeSpec (emptySpec @a)
+
+-- Debugging --------------------------------------------------------------
+
+-- | A version of `genFromSpecT` that runs in the IO monad. Good for debugging.
+debugSpec :: forall a. HasSpec a => Specification a -> IO ()
+debugSpec spec = do
+  ans <- generate $ genFromGenT $ inspect (genFromSpecT spec)
+  let f x = putStrLn (unlines (NE.toList x))
+      ok x =
+        if conformsToSpec x spec
+          then putStrLn "True"
+          else putStrLn "False, perhaps there is an unsafeExists in the spec?"
+  case ans of
+    FatalError xs -> mapM_ f xs
+    GenError xs -> mapM_ f xs
+    Result x -> print spec >> print x >> ok x
+
+-- | Pretty-print the plan for a `Specifcation` in the terminal for debugging
+printPlan :: HasSpec a => Specification a -> IO ()
+printPlan = print . prettyPlan
+
+-- | Plan pretty-printer for debugging
+prettyPlan :: HasSpec a => Specification a -> Doc ann
+prettyPlan (simplifySpec -> spec)
+  | SuspendedSpec _ p <- spec
+  , Result plan <- prepareLinearization p =
+      vsep'
+        [ "Simplified spec:" /> pretty spec
+        , pretty plan
+        ]
+  | otherwise = "Simplfied spec:" /> pretty spec
+
+-- ---------------------- Building a plan -----------------------------------
+
+substStage :: Env -> SolverStage -> SolverStage
+substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec
+
+normalizeSolverStage :: SolverStage -> SolverStage
+normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec')
+  where
+    (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
+    spec' = fromGESpec $ computeSpec x (And ps')
+
+-- TODO: here we can compute both the explicit hints (i.e. constraints that
+-- define the order of two variables) and any whole-program smarts.
+computeHints :: [Pred] -> Hints
+computeHints ps =
+  transitiveClosure $ fold [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
+
+-- | Linearize a predicate, turning it into a list of variables to solve and
+-- their defining constraints such that each variable can be solved independently.
+prepareLinearization :: Pred -> GE SolverPlan
+prepareLinearization p = do
+  let preds = concatMap saturatePred $ flattenPred p
+      hints = computeHints preds
+      graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
+  plan <-
+    explainNE
+      ( NE.fromList
+          [ "Linearizing"
+          , show $ "  preds: " <> pretty preds
+          , show $ "  graph: " <> pretty graph
+          ]
+      )
+      $ linearize preds graph
+  pure $ backPropagation $ SolverPlan plan graph
+
+-- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
+-- `Exists` bound variables become free in the result.
+flattenPred :: Pred -> [Pred]
+flattenPred pIn = go (freeVarNames pIn) [pIn]
+  where
+    go _ [] = []
+    go fvs (p : ps) = case p of
+      And ps' -> go fvs (ps' ++ ps)
+      -- NOTE: the order of the arguments to `==.` here are important.
+      -- The whole point of `Let` is that it allows us to solve all of `t`
+      -- before we solve the variables in `t`.
+      Let t b -> goBinder fvs b ps (\x -> (assert (t ==. (V x)) :))
+      Exists _ b -> goBinder fvs b ps (const id)
+      When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
+      Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
+      _ -> p : go fvs ps
+
+    goBinder ::
+      Set Int ->
+      Binder a ->
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
+    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
+      where
+        (x', p') = freshen x p fvs
+
+-- Consider: A + B = C + D
+-- We want to fail if A and B are independent.
+-- Consider: A + B = A + C, A <- B
+-- Here we want to consider this constraint defining for A
+linearize ::
+  MonadGenError m => [Pred] -> DependGraph -> m [SolverStage]
+linearize preds graph = do
+  sorted <- case topsort graph of
+    Left cycle ->
+      fatalError
+        ( show $
+            "linearize: Dependency cycle in graph:"
+              /> vsep'
+                [ "cycle:" /> pretty cycle
+                , "graph:" /> pretty graph
+                ]
+        )
+    Right sorted -> pure sorted
+  go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
+  where
+    isRelevantPred TruePred = False
+    isRelevantPred DependsOn {} = False
+    isRelevantPred (Assert (Lit True)) = False
+    isRelevantPred _ = True
+
+    go [] [] = pure []
+    go [] ps
+      | null $ foldMap fst ps =
+          case checkPredsE (pure "Linearizing fails") mempty (map snd ps) of
+            Nothing -> pure []
+            Just msgs -> genErrorNE msgs
+      | otherwise =
+          fatalErrorNE $
+            NE.fromList
+              [ "Dependency error in `linearize`: "
+              , show $ indent 2 $ "graph: " /> pretty graph
+              , show $
+                  indent 2 $
+                    "the following left-over constraints are not defining constraints for a unique variable:"
+                      /> vsep' (map (pretty . snd) ps)
+              ]
+    go (n@(Name x) : ns) ps = do
+      let (nps, ops) = partition (isLastVariable n . fst) ps
+      (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
+
+    isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
+
+------------------------------------------------------------------------
+-- Simplification of Specifications
+------------------------------------------------------------------------
+
+-- | Spec simplification, use with care and don't modify the spec after using this!
 simplifySpec :: HasSpec a => Specification a -> Specification a
-simplifySpec spec = case regularizeNames spec of
+simplifySpec spec = case applyNameHints spec of
   SuspendedSpec x p ->
     let optP = optimisePred p
      in fromGESpec $
@@ -213,7 +388,7 @@ aggressiveInlining pred
         | not (isLit t)
         , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
-            pure $ runCaseOn a (mapList thing bs) $ \x v p -> substPred (singletonEnv x v) p
+            pure $ runCaseOn a (mapList thing bs) $ \x v p -> substPred (Env.singleton x v) p
         | (Weighted w (x :-> p) :> Nil) <- bs -> do
             let t' = substituteAndSimplifyTerm sub t
             p' <- go (underBinder fvs x p) (x := t' : sub) p
@@ -359,8 +534,137 @@ simplifyPreds = go [] . map simplifyPred
 simplifyBinder :: Binder a -> Binder a
 simplifyBinder (x :-> p) = x :-> simplifyPred p
 
--- --------------------------------------------------------------------
--- Turning Preds into Specifications. Here is where Propagation occurs
+-- TODO: this can probably be cleaned up and generalized along with generalizing
+-- to make sure we float lets in some missing cases.
+letFloating :: Pred -> Pred
+letFloating = fold . go []
+  where
+    goBlock ctx ps = goBlock' (freeVarNames ctx <> freeVarNames ps) ctx ps
+
+    goBlock' :: Set Int -> [Pred] -> [Pred] -> [Pred]
+    goBlock' _ ctx [] = ctx
+    goBlock' fvs ctx (Let t (x :-> p) : ps) =
+      -- We can do `goBlock'` here because we've already done let floating
+      -- on the inner `p`
+      [Let t (x' :-> fold (goBlock' (Set.insert (nameOf x') fvs) ctx (p' : ps)))]
+      where
+        (x', p') = freshen x p fvs
+    goBlock' fvs ctx (And ps : ps') = goBlock' fvs ctx (ps ++ ps')
+    goBlock' fvs ctx (p : ps) = goBlock' fvs (p : ctx) ps
+
+    goExists ::
+      HasSpec a =>
+      [Pred] ->
+      (Binder a -> Pred) ->
+      Var a ->
+      Pred ->
+      [Pred]
+    goExists ctx ex x (Let t (y :-> p))
+      | not $ Name x `appearsIn` t =
+          let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
+           in go ctx (Let t (y' :-> ex (x :-> p')))
+    goExists ctx ex x p = ex (x :-> p) : ctx
+
+    pushExplain es (Let t (x :-> p)) = Let t (x :-> pushExplain es p)
+    pushExplain es (And ps) = And (pushExplain es <$> ps)
+    pushExplain es (Exists k (x :-> p)) =
+      Exists (explainSemantics k) (x :-> pushExplain es p)
+      where
+        -- TODO: Unfortunately this is necessary on ghc 8.10.7
+        explainSemantics ::
+          forall a.
+          ((forall b. Term b -> b) -> GE a) ->
+          (forall b. Term b -> b) ->
+          GE a
+        explainSemantics k2 env = explainNE es $ k2 env
+    -- TODO: possibly one wants to have a `Term` level explanation in case
+    -- the `b` propagates to ErrorSpec for some reason?
+    pushExplain es (When b p) = When b (pushExplain es p)
+    pushExplain es p = explanation es p
+
+    go ctx = \case
+      ElemPred bool t xs -> ElemPred bool t xs : ctx
+      And ps0 -> goBlock ctx (map letFloating ps0)
+      Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
+      Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
+      Subst x t p -> go ctx (substitutePred x t p)
+      Reifies t' t f -> Reifies t' t f : ctx
+      Explain es p -> pushExplain es p : ctx
+      -- TODO: float let through forall if possible
+      ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
+      -- TODO: float let through the cases if possible
+      Case t bs -> Case t (mapList (mapWeighted (\(x :-> p) -> x :-> letFloating p)) bs) : ctx
+      -- TODO: float let through if possible
+      When b p -> When b (letFloating p) : ctx
+      -- Boring cases
+      Assert t -> Assert t : ctx
+      GenHint h t -> GenHint h t : ctx
+      DependsOn t t' -> DependsOn t t' : ctx
+      TruePred -> TruePred : ctx
+      FalsePred es -> FalsePred es : ctx
+      Monitor m -> Monitor m : ctx
+
+-- Common subexpression elimination but only on terms that are already let-bound.
+letSubexpressionElimination :: Pred -> Pred
+letSubexpressionElimination = go []
+  where
+    adjustSub :: HasSpec a => Var a -> Subst -> Subst
+    adjustSub x sub =
+      [ x' := t
+      | x' := t <- sub
+      , isNothing $ eqVar x x'
+      , -- TODO: possibly freshen the binder where
+      -- `x` appears instead?
+      not $ Name x `appearsIn` t
+      ]
+
+    goBinder :: Subst -> Binder a -> Binder a
+    goBinder sub (x :-> p) = x :-> go (adjustSub x sub) p
+
+    go sub = \case
+      ElemPred bool t xs -> ElemPred bool (backwardsSubstitution sub t) xs
+      GenHint h t -> GenHint h (backwardsSubstitution sub t)
+      And ps -> And (go sub <$> ps)
+      Let t (x :-> p) -> Let t' (x :-> go (x := t' : sub') p)
+        where
+          t' = backwardsSubstitution sub t
+          sub' = adjustSub x sub
+      Exists k b -> Exists k (goBinder sub b)
+      Subst x t p -> go sub (substitutePred x t p)
+      Assert t -> Assert (backwardsSubstitution sub t)
+      Reifies t' t f -> Reifies (backwardsSubstitution sub t') (backwardsSubstitution sub t) f
+      -- NOTE: this is a tricky case. One possible thing to do here is to keep the old `DependsOn t t'`
+      -- and have the new DependsOn if `backwardsSubstitution` changed something. With this semantics you
+      -- risk running into unintuitive behaviour if you have something like:
+      -- ```
+      -- let x = y + z in
+      --  {y + z `dependsOn` w
+      --   assert $ w <. y + 2
+      --   ...}
+      -- ```
+      -- This will be rewritten as:
+      -- ```
+      -- let x = y + z in
+      --  {z `dependsOn` w
+      --   assert $ w <. y + 2
+      --   ...}
+      -- ```
+      -- which changes the dependency order of `w` and `y`. However, fixing
+      -- this behaviour in turn makes it more difficult to detect when
+      -- variables are no longer used after being substituted away - which
+      -- blocks some other optimizations. As we strongly encourage users not to
+      -- use `letBind` in their own code most users will never encounter this issue
+      -- so the tradeoff is probably worth it.
+      DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
+      ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
+      Case t bs -> Case (backwardsSubstitution sub t) (mapList (mapWeighted $ goBinder sub) bs)
+      When b p -> When (backwardsSubstitution sub b) (go sub p)
+      TruePred -> TruePred
+      FalsePred es -> FalsePred es
+      Monitor m -> Monitor m
+      Explain es p -> Explain es $ go sub p
+
+-- Turning Preds into Specifications. Here is where Propagation occurs ----
 
 -- | Precondition: the `Pred` defines the `Var a`
 -- Runs in `GE` in order for us to have detailed context on failure.
@@ -370,7 +674,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
   ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
   Monitor {} -> pure mempty
-  GenHint (HintF h) t -> propagateSpec (giveHint h) <$> toCtx x t
+  GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genErrorNE es
@@ -389,7 +693,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
-  Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (Env.singleton va vaVal) psa)
   Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec (Just (showType @a)) branchSpecs) <$> toCtx x t
@@ -438,9 +742,6 @@ computeSpec ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
 computeSpec x p = computeSpecSimplified x (simplifyPred p)
 
-computeSpecBinder :: Binder a -> GE (Specification a)
-computeSpecBinder (x :-> p) = computeSpec x p
-
 computeSpecBinderSimplified :: Binder a -> GE (Specification a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
@@ -486,6 +787,10 @@ caseSpec tString ss
             (Nothing, Nothing) -> Nothing
             (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss1) b)
 
+------------------------------------------------------------------------
+-- SumSpec et al
+------------------------------------------------------------------------
+
 -- | The Specification for Sums.
 data SumSpec a b
   = SumSpecRaw
@@ -494,6 +799,7 @@ data SumSpec a b
       (Specification a)
       (Specification b)
 
+-- | The "normal" view of t`SumSpec` that doesn't take weights into account
 pattern SumSpec ::
   (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
 pattern SumSpec a b c <- SumSpecRaw _ a b c
@@ -508,222 +814,6 @@ sumType (Just x) = " type=" ++ x
 
 totalWeight :: List (Weighted f) as -> Maybe Int
 totalWeight = fmap getSum . foldMapList (fmap Semigroup.Sum . weight)
-
--- =======================================================================================
--- Generating from Specifications
--- 1) Simplify
--- 2) Compute a dependency ordering
--- 3) Then generate for each variable in turn, then substituting into the remaining vars
--- =======================================================================================
-
--- | A version of `genFromSpecT` that simply errors if the generator fails
-genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a
-genFromSpec spec = do
-  res <- catchGen $ genFromSpecT @a @GE spec
-  either (error . ('\n' :) . catMessages) pure res
-
--- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
-genFromSpecWithSeed ::
-  forall a. (HasCallStack, HasSpec a) => Int -> Int -> Specification a -> a
-genFromSpecWithSeed seed size spec = unGen (genFromSpec spec) (mkQCGen seed) size
-
--- | A version of `genFromSpecT` that runs in the IO monad. Good for debugging.
-debugSpec :: forall a. HasSpec a => Specification a -> IO ()
-debugSpec spec = do
-  ans <- generate $ genFromGenT $ inspect (genFromSpecT spec)
-  let f x = putStrLn (unlines (NE.toList x))
-      ok x =
-        if conformsToSpec x spec
-          then putStrLn "True"
-          else putStrLn "False, perhaps there is an unsafeExists in the spec?"
-  case ans of
-    FatalError xs -> mapM_ f xs
-    GenError xs -> mapM_ f xs
-    Result x -> print spec >> print x >> ok x
-
--- ----------------------- Shrinking -------------------------------
-
-shrinkWithSpec :: forall a. HasSpec a => Specification a -> a -> [a]
--- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
--- case when you know what you're doing
-shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
-  ExplainSpec _ s -> shrinkWithSpec s a
-  -- TODO: filter on can't if we have a known to be sound shrinker
-  TypeSpec s _ -> shrinkWithTypeSpec s a
-  -- TODO: The better way of doing this is to compute the dependency graph,
-  -- shrink one variable at a time, and fixup the rest of the variables
-  SuspendedSpec {} -> shr a
-  MemberSpec {} -> shr a
-  TrueSpec -> shr a
-  ErrorSpec {} -> []
-  where
-    shr = shrinkWithTypeSpec (emptySpec @a)
-
-shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
-shrinkFromPreds p
-  | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
-      -- NOTE: we do this to e.g. guard against bad construction functions in Exists
-      xaGood <- checkPred (singletonEnv x a) p
-      unless xaGood $
-        fatalError "Trying to shrink a bad value, don't do that!"
-      -- Get an `env` for the original value
-      initialEnv <- envFromPred (singletonEnv x a) p
-      return
-        [ a'
-        | -- Shrink the initialEnv
-        env' <- shrinkEnvFromPlan initialEnv plan
-        , -- Get the value of the constrained variable `x` in the shrunk env
-        Just a' <- [lookupEnv env' x]
-        , -- NOTE: this is necessary because it's possible that changing
-        -- a particular value in the env during shrinking might not result
-        -- in the value of `x` changing and there is no better way to know than
-        -- to do this.
-        a' /= a
-        ]
-  | otherwise = error "Bad pred"
-
--- Start with a valid Env for the plan and try to shrink it
-shrinkEnvFromPlan :: Env -> SolverPlan -> [Env]
-shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
-  where
-    go :: Env -> [SolverStage] -> [Env]
-    go _ [] = [] -- In this case we decided to keep every variable the same so nothing to return
-    go env ((substStage env -> SolverStage {..}) : plan) = do
-      Just a <- [lookupEnv initialEnv stageVar]
-      -- Two cases:
-      --  - either we shrink this value and try to fixup every value later on in the plan or
-      [ env' <> fixedEnv
-        | a' <- shrinkWithSpec stageSpec a
-        , let env' = extendEnv stageVar a' env
-        , Just fixedEnv <- [fixupPlan env' plan]
-        ]
-        --  - we keep this value the way it is and try to shrink some later value
-        ++ go (extendEnv stageVar a env) plan
-
-    -- Fix the rest of the plan given an environment `env` for the plan so far
-    fixupPlan :: Env -> [SolverStage] -> Maybe Env
-    fixupPlan env [] = pure env
-    fixupPlan env ((substStage env -> SolverStage {..}) : plan) =
-      case lookupEnv initialEnv stageVar >>= fixupWithSpec stageSpec of
-        Nothing -> Nothing
-        Just a -> fixupPlan (extendEnv stageVar a env) plan
-
--- ---------------------- Building a plan -----------------------------------
-
-substStage :: Env -> SolverStage -> SolverStage
-substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec
-
-normalizeSolverStage :: SolverStage -> SolverStage
-normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec')
-  where
-    (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
-    spec' = fromGESpec $ computeSpec x (And ps')
-
--- Try to fix a value w.r.t a specification
-fixupWithSpec :: forall a. HasSpec a => Specification a -> a -> Maybe a
-fixupWithSpec spec a
-  | a `conformsToSpec` spec = Just a
-  | otherwise = case spec of
-      MemberSpec (x :| _) -> Just x
-      _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec TrueSpec a)
-
--- TODO: here we can compute both the explicit hints (i.e. constraints that
--- define the order of two variables) and any whole-program smarts.
-computeHints :: [Pred] -> Hints
-computeHints ps =
-  transitiveClosure $ fold [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
-
--- | Linearize a predicate, turning it into a list of variables to solve and
--- their defining constraints such that each variable can be solved independently.
-prepareLinearization :: Pred -> GE SolverPlan
-prepareLinearization p = do
-  let preds = concatMap saturatePred $ flattenPred p
-      hints = computeHints preds
-      graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-  plan <-
-    explainNE
-      ( NE.fromList
-          [ "Linearizing"
-          , show $ "  preds: " <> pretty preds
-          , show $ "  graph: " <> pretty graph
-          ]
-      )
-      $ linearize preds graph
-  pure $ backPropagation $ SolverPlan plan graph
-
--- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
--- `Exists` bound variables become free in the result.
-flattenPred :: Pred -> [Pred]
-flattenPred pIn = go (freeVarNames pIn) [pIn]
-  where
-    go _ [] = []
-    go fvs (p : ps) = case p of
-      And ps' -> go fvs (ps' ++ ps)
-      -- NOTE: the order of the arguments to `==.` here are important.
-      -- The whole point of `Let` is that it allows us to solve all of `t`
-      -- before we solve the variables in `t`.
-      Let t b -> goBinder fvs b ps (\x -> (assert (t ==. (V x)) :))
-      Exists _ b -> goBinder fvs b ps (const id)
-      When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
-      Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
-      _ -> p : go fvs ps
-
-    goBinder ::
-      Set Int ->
-      Binder a ->
-      [Pred] ->
-      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
-      [Pred]
-    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
-      where
-        (x', p') = freshen x p fvs
-
--- Consider: A + B = C + D
--- We want to fail if A and B are independent.
--- Consider: A + B = A + C, A <- B
--- Here we want to consider this constraint defining for A
-linearize ::
-  MonadGenError m => [Pred] -> DependGraph -> m [SolverStage]
-linearize preds graph = do
-  sorted <- case topsort graph of
-    Left cycle ->
-      fatalError
-        ( show $
-            "linearize: Dependency cycle in graph:"
-              /> vsep'
-                [ "cycle:" /> pretty cycle
-                , "graph:" /> pretty graph
-                ]
-        )
-    Right sorted -> pure sorted
-  go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
-  where
-    isRelevantPred TruePred = False
-    isRelevantPred DependsOn {} = False
-    isRelevantPred (Assert (Lit True)) = False
-    isRelevantPred _ = True
-
-    go [] [] = pure []
-    go [] ps
-      | null $ foldMap fst ps =
-          case checkPredsE (pure "Linearizing fails") mempty (map snd ps) of
-            Nothing -> pure []
-            Just msgs -> genErrorNE msgs
-      | otherwise =
-          fatalErrorNE $
-            NE.fromList
-              [ "Dependency error in `linearize`: "
-              , show $ indent 2 $ "graph: " /> pretty graph
-              , show $
-                  indent 2 $
-                    "the following left-over constraints are not defining constraints for a unique variable:"
-                      /> vsep' (map (pretty . snd) ps)
-              ]
-    go (n@(Name x) : ns) ps = do
-      let (nps, ops) = partition (isLastVariable n . fst) ps
-      (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
-
-    isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
 
 -- =================================
 -- Operations on Stages and Plans
@@ -750,19 +840,6 @@ mergeSolverStage (SolverStage x ps spec) plan =
       Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
-
-prettyPlan :: HasSpec a => Specification a -> Doc ann
-prettyPlan (simplifySpec -> spec)
-  | SuspendedSpec _ p <- spec
-  , Result plan <- prepareLinearization p =
-      vsep'
-        [ "Simplified spec:" /> pretty spec
-        , pretty plan
-        ]
-  | otherwise = "Simplfied spec:" /> pretty spec
-
-printPlan :: HasSpec a => Specification a -> IO ()
-printPlan = print . prettyPlan
 
 isEmptyPlan :: SolverPlan -> Bool
 isEmptyPlan (SolverPlan plan _) = null plan
@@ -801,7 +878,7 @@ stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
           )
           (spec <> spec')
       )
-  let env1 = extendEnv x val env
+  let env1 = Env.extend x val env
   pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (deleteNode (Name x) gr))
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
@@ -844,7 +921,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
         termVarEqCases :: HasSpec b => Specification a -> Var b -> Term b -> [SolverStage]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (singletonEnv x v) t) vs))]
+              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))]
         termVarEqCases specx x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
@@ -852,6 +929,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
               [SolverStage y [] (propagateSpec specx ctx)]
         termVarEqCases _ _ _ = []
 
+-- | Function symbols for `(==.)`
 data EqW :: [Type] -> Type -> Type where
   EqualW :: (Eq a, HasSpec a) => EqW '[a, a] Bool
 
@@ -893,9 +971,11 @@ instance Logic EqW where
 
 infix 4 ==.
 
+-- | Equality on the constraint-level
 (==.) :: HasSpec a => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
 
+-- | Pattern version of `(==.)` for rewrite rules
 pattern Equal ::
   forall b.
   () =>
@@ -910,6 +990,7 @@ pattern Equal x y <-
       (x :> y :> Nil)
     )
 
+-- | Like @if b then p else assert True@ in constraint-land
 whenTrue :: forall p. IsPred p => Term Bool -> p -> Pred
 whenTrue (Lit True) (toPred -> p) = p
 whenTrue (Lit False) _ = TruePred
@@ -1007,6 +1088,7 @@ instance (HasSpec a, HasSpec b) => Semigroup (SumSpec a b) where
 instance forall a b. (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Monoid (SumSpec a b) where
   mempty = SumSpec Nothing mempty mempty
 
+-- | How many constructors are there in this type?
 type family CountCases a where
   CountCases (Sum a b) = 1 + CountCases b
   CountCases _ = 1
@@ -1073,6 +1155,7 @@ instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => HasSpec (Sum a b) wh
 -- ======================================
 -- Here are the Logic Instances for Sum
 
+-- | Function symbols for `injLeft_` and `injRight_`
 data SumW dom rng where
   InjLeftW :: SumW '[a] (Sum a b)
   InjRightW :: SumW '[b] (Sum a b)
@@ -1111,12 +1194,15 @@ instance Logic SumW where
   mapTypeSpec InjLeftW ts = typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
   mapTypeSpec InjRightW ts = typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
 
+-- | Constructor for `Sum`
 injLeft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
 injLeft_ = appTerm InjLeftW
 
+-- | Constructor for `Sum`
 injRight_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
 injRight_ = appTerm InjRightW
 
+-- | Pattern for building custom rewrite rules
 pattern InjRight ::
   forall c.
   () =>
@@ -1128,6 +1214,7 @@ pattern InjRight ::
   Term c
 pattern InjRight x <- (App (getWitness -> Just InjRightW) (x :> Nil))
 
+-- | Pattern for building custom rewrite rules
 pattern InjLeft ::
   forall c.
   () =>
@@ -1187,9 +1274,6 @@ instance Logic BoolW where
 
   mapTypeSpec NotW () = typeSpec ()
 
-not_ :: Term Bool -> Term Bool
-not_ = appTerm NotW
-
 -- | We have something like ('constant' ||. HOLE) must evaluate to 'need'.
 --   Return a (Specification Bool) for HOLE, that makes that True.
 okOr :: Bool -> Bool -> Specification Bool
@@ -1201,8 +1285,13 @@ okOr constant need = case (constant, need) of
   (False, False) -> MemberSpec (pure False)
   (False, True) -> MemberSpec (pure True)
 
+-- | Disjunction on @`Term` `Bool`@, note that this will not cause backtracking during generation
 or_ :: Term Bool -> Term Bool -> Term Bool
 or_ = appTerm OrW
+
+-- | Negation of booleans
+not_ :: Term Bool -> Term Bool
+not_ = appTerm NotW
 
 -- ===============================================================================
 -- Syntax for Solving : stages and plans
@@ -1245,3 +1334,9 @@ isTrueSpec _ = False
 
 prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
+
+fromGESpec :: HasCallStack => GE (Specification a) -> Specification a
+fromGESpec ge = case ge of
+  Result s -> s
+  GenError xs -> ErrorSpec (catMessageList xs)
+  FatalError es -> error $ catMessages es

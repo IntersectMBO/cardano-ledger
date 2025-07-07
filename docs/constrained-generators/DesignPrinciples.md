@@ -1,28 +1,28 @@
 # Design Principles of the Constrained Generators System
 
 This document describes the design of the internals of the Constrained Generators System.
-It attempts to explain how the system works. 
+It attempts to explain how the system works.
 
 There is another document
-*Constrained Generators Manual* that can be found in the file 
+*Constrained Generators Manual* that can be found in the file
 "cardano-ledger/docs/constrained-generators/manual.md" in the Cardano Ledger repository.
 This explains the user facing API, and teaches users to write specifications. It is
-deliberately silent about the internals of the system. 
+deliberately silent about the internals of the system.
 
 In this document we explore the principles that make the system work. To do that we deliberately omit some of the advanced
-features having to do with explanations, interfacing with advanced features of Test.QuickCheck, existentials, reifications, 
-hints, and Generics. We expect another document to deal with those features, which add considerable complexity to the code base. 
-So we use a much simplified system to describe just the basic principles of how one can add logical properties to 
+features having to do with explanations, interfacing with advanced features of Test.QuickCheck, existentials, reifications,
+hints, and Generics. We expect another document to deal with those features, which add considerable complexity to the code base.
+So we use a much simplified system to describe just the basic principles of how one can add logical properties to
 a simple typed lambda calculus, to build a first order logic with typed functions.
 
 ## Constrained Generators is a First-Order Logic
 
 A First-order typed logic (FOTL) has 4 components, where each component uses types to ensure well-formedness.
 
-1. **Terms** consisting of 
-   - Variables: `x`, `y` . 
-   - Constants: `5`, `"abc"`, `True` . 
-   - Applications: `elem_ "abc" xs`, `x ==. y`.  
+1. **Terms** consisting of
+   - Variables: `x`, `y` .
+   - Constants: `5`, `"abc"`, `True` .
+   - Applications: `elem_ "abc" xs`, `x ==. y`.
        - Applications apply a function symbol (i.e. `elem_`) to a list of Terms,
 	   - In an infix application the function symbol lies between its two Term arguments .(i.e. `abc ==. y`)
 2. **Predicates**   (Assert (x ==. 5)). Predicates are the assertions of boolean typed terms.
@@ -37,7 +37,7 @@ based testing where a completely random set of values may not be useful.
 ## Overview of the Design Principles
 
 We list the set of Design Principles here. In the rest of the paper we will go over these in much
-more detail. 
+more detail.
 
 1. Every function symbol has `Syntax`, `Semantics`, and `Logic` capabilities. While the concepts of
    `Syntax` and `Semantics` are familiar ones, `Logic` capabilities, include the the notion of property
@@ -55,7 +55,7 @@ more detail.
 4. A set of constraints about a single variable of type `t` is collected into a `Spec t`. The type `Spec t`
    is a type with several constructors, one of which embeds the type-specific `TypeSpec t`. The other constructors
    embed non type-specific constraint properties. The type `(Spec t)` is how we encode properties for type `t`.
-  
+
 5. The type `Spec t` has a Monoid instance. So two `Spec t` values can be combined `(spec1 <> spec2)`, which
    describes a new `Spec t` where all the properties of `spec1` and `spec2` hold.
 
@@ -63,16 +63,16 @@ more detail.
    a `SolverPlan`. We can generate a random set of values that meet all the constraints, by picking the first variable
    from the plan. Then choosing a random value for that variable that meets the constraints on it. Then
    adding that value to an `Env`. Then the extended `Env` is substituted into the rest of the plan. This now has
-   one less variable. We then solve the next variable in the plan, until the plan is empty, in which case the Env, 
+   one less variable. We then solve the next variable in the plan, until the plan is empty, in which case the Env,
    contains a solution for every variable.
-   
+
 7. Given a term `t :: Term T` and 1 or more `Pred` that only mention `t`, compute a `(Spec T)` from the `Pred`s.
    This works by computing a `Spec` for each `Pred`, and then use the `Monoid` operation `(<>)` on `(Spec T)` to combine
    them all into 1 comprehensive  `(Spec T)`. This step is how we relate the type `Pred` to the type `Spec`
-   
+
 8. We can extract a random value from a `Spec t`, by using the function `genFromSpec :: Spec t -> QuickCheck.Gen t`
 
-## What is the Constrained Generators System good for? 
+## What is the Constrained Generators System good for?
 
 Once we have written a `Specification` what can we do with it? Specifications have two interpretations.
 
@@ -87,10 +87,10 @@ The first interpretation of the specification is the function `genFromSpec`
 genFromSpec:: (HasCallStack, HasSpec a) => Specification a -> QuickCheck.Gen a
 ```
 
-This function is very useful when writing QuickCheck properties. With it we can write 
+This function is very useful when writing QuickCheck properties. With it we can write
 `Gen` instances that are not completely random, but instead meet a set of constraints.
 This is the actual purpose of the system. Construct mostly random values, that meet some constraints
-that inter-relate many different objects. 
+that inter-relate many different objects.
 
 Consider a system of 4 objects, named by the variables,  _w,x,y,z_ where we want to test the QuickCheck *implication* property
 
@@ -144,7 +144,7 @@ generate a mix, where the precedent is True most of the time, but sometimes Fals
 prop3:: Gen Property
 prop3 = do
    (w,x,y,z) <- frequency [(9,genFromSpec spec1),(1,arbitrary)]
-   pure $ (w < x && x < y && y < z) ==> property (w < z)   
+   pure $ (w < x && x < y && y < z) ==> property (w < z)
 ```
 
 Observe the result:
@@ -154,7 +154,7 @@ ghci> quickCheck prop3
 +++ OK, passed 100 tests; 7 discarded.
 ```
 This makes it possible to write conditional 'implication' properties that have a high
-probability of not being vacuously true. 
+probability of not being vacuously true.
 
 ## The FOTL is embedded in the Haskell datatypes `Term a` and `Pred`
 
@@ -165,7 +165,7 @@ spec4 :: Spec (Integer, Integer, Integer, Integer)
 spec4 = constrained $ \x ->
   match x $ \a b c d -> And [Assert $ a <=. b, Assert $ b <=. c, Assert $ c <=. d]
 ```
-1. `constrained` says we are writing a `Spec` and the Haskell lambda expression introduces the the variable `x` that 
+1. `constrained` says we are writing a `Spec` and the Haskell lambda expression introduces the the variable `x` that
     names the tuple of 4 integers.
 2. `match` says we are decomposing the 4-tuple, and naming each of its components `a`, `b`, `c`, `d`.
 3. `And` is a connective, saying we are making 1 big predicate out of 3 smaller ones.
@@ -187,7 +187,7 @@ data Term a where
   Lit :: (Typeable a, Eq a, Show a) => a -> Term a
   -- ^ A variable
   V :: HasSpec a => Var a -> Term a
-  
+
 data Pred where
   ElemPred :: forall a. HasSpec a => Bool -> Term a -> NonEmpty a -> Pred
   And :: [Pred] -> Pred
@@ -199,7 +199,7 @@ data Pred where
   FalsePred :: NonEmpty String -> Pred
   Case :: HasSpec (Either a b) => Term (Either a b) -> Binder a -> Binder b -> Pred
   Let :: Term a -> Binder a -> Pred
-  Subst :: HasSpec a => Var a -> Term a -> Pred -> Pred  
+  Subst :: HasSpec a => Var a -> Term a -> Pred -> Pred
 ```
 
 ##  Every function symbol has `Syntax`, `Semantics`, and `Logic` properties.
@@ -208,13 +208,13 @@ A function symbol can have three kinds of operations.
 
 1. Syntax. Used, if we want to display the symbol.
 2. Semantics. Used, if we want to evaluate a `Term` with that symbol, i.e. `5 <=. 1`  evalutes to `False`.
-3. Logic. Used, if we want to reason about a `Term` with that symbol, 
+3. Logic. Used, if we want to reason about a `Term` with that symbol,
       - i.e.  if Term `(x +. 2)` has property `elem_ (x +. 2) [3..6]`
       - what does that say about variable `x`.  It says that `elem_ x [1..4]`
       - This logic operation is called propagation.  For any function symbol `f` and any property `p`,
         if `(f x) has p`, then what property `q` makes `x has q` true? Propagation computes properties about
         the variable in an application, from the property about the application itself.
-   
+
 Note that if a Term is not inside an `Assert` all we need are the `Syntax` and `Semantic` properties.
 Every function symbol inside an `Assert` must have `Logic` properties. Here is how we capture this
 in the Constrained Generators System. Constructors of a type with kind `([Type] -> Type -> Type)`
@@ -243,7 +243,7 @@ class (Typeable t, Syntax t, Semantics t) => Logic (t :: [Type] -> Type -> Type)
   propagate ::
     (AppRequires t as b, HasSpec a) =>
     t as b -> ListCtx as (HOLE a) -> Spec b -> Spec a
-```	
+```
 
 Here is an example of a type whose constructors are candidates for function symbols. Note that
 `IntegerSym` has kind `([Type] -> Type -> Type)`
@@ -261,7 +261,7 @@ data IntegerSym (dom :: [Type]) rng where
 Consider the Term `((size_ x +. Lit 3) <=. Lit 12)` with a bunch of nested function symbols, with just 1 variable `x`
 To solve this, we will have to use `propagate` for each of the nested function symbols `size_`, `(+.)`, and `(<=.)`.
 We do this by working our way from the outermost function symbol `(<=.)`, to the middle function symbol `(+.)`, to the
-innermost function symbol `size_`. This is the role of the function `propagateSpec` 
+innermost function symbol `size_`. This is the role of the function `propagateSpec`
 
 Given a `Term` with just 1 variable `x`, we can build a context with exactly one `CtxHole`, replacing the variable `x`
 Applied to  `((size_ x +. Lit 3) <=. Lit 12)` we get the context
@@ -319,7 +319,7 @@ args = Lit 5 :> Lit True :> Lit "abc" :> Nil
 Is an inductive representation of the tuple `(Lit 5, Lit True,Lit "abc") :: (Term Int, Term Bool, Term String)`
 
 `List`s and the constraints listed above make it possible to write Haskell functions that can manipulate
-typed `Term t`, and other type indexed datatypes. 
+typed `Term t`, and other type indexed datatypes.
 
 The `TypeList ds` class constraint, says that `ds` has kind `[Type]`
 (just like the second type parameter of `(List Term '[Int,Bool,String])`
@@ -369,18 +369,18 @@ ex2 = uncurryList_ unLit getsize args2
 ```
 
 Construct a function over `Terms` from a function over `(List Term '[a,b,c])`
- 
+
 ```
 ex3 :: Term a -> Term b -> Term c -> String
 ex3 = curryList crush
-  where crush :: (List Term '[a,b,c] -> String) 
+  where crush :: (List Term '[a,b,c] -> String)
         crush (a :> b :> c :> Nil) = show a ++ show b ++ show c
 ```
 
 Construct a function `FunTy '[a,b,c] r` from a function over `(List T '[a,b,c] -> r)`
 and a function from `(a -> T a)`
 
-``` 
+```
 ex4 ::Int -> Bool -> String -> Int
 ex4 = curryList_ one totalLength
   where totalLength :: List [] '[Int,Bool,String] -> Int
@@ -401,7 +401,7 @@ So `All HasSpec '[ a, b, c]` reduces to `(HasSpec a, HasSpec b, HasSpec c)`
 The `HasSpec` class is at the heart of the system. It does two things
 
 1. Identifies the operations necessary to generate random values for a type.
-2. Provides the interface to QuickCheck (`genFromSpecT`) that supports writing impliication properties. 
+2. Provides the interface to QuickCheck (`genFromSpecT`) that supports writing impliication properties.
 
 ```
 class HasSpec a where
@@ -410,7 +410,7 @@ class HasSpec a where
 
   -- | The `TypeSpec a` that has no constraints.
   anySpec :: TypeSpec a
-  
+
   -- | A function, akin to `Semigroup(<>)`,  that combines two `TypeSpec`. It is different
   --   in that it returns a general `Spec` rather than a type specific `TypeSpec`
   combineSpec :: TypeSpec a -> TypeSpec a -> Spec a
@@ -435,7 +435,7 @@ class HasSpec a where
 ```
 
 In a later sections we present `HasSpec` instances for several
-types: [Bool](#HasSpecBool), [Integer](#HasSpecInteger), [Set a](#HasSpecSet), 
+types: [Bool](#HasSpecBool), [Integer](#HasSpecInteger), [Set a](#HasSpecSet),
 [Pair(a,b)](HasSpecPair) and [Either a b](HasSpecEither)
 
 ## The Spec datatype
@@ -446,8 +446,8 @@ It has 5 construtors.
  ```
   data Spec a where
     -- | There are no constraints at all.
-    TrueSpec :: Spec a  
-    
+    TrueSpec :: Spec a
+
     -- | The `Spec` is inconsistent
     ErrorSpec :: NonEmpty String -> Spec a
 
@@ -464,7 +464,7 @@ It has 5 construtors.
 <a id="HasSpecBool"></a>
 ## HasSpec Bool instance
 
-The `HasSpec Bool` instance is relatively simple, since the type `Bool` has only two elements. 
+The `HasSpec Bool` instance is relatively simple, since the type `Bool` has only two elements.
 
 ```
 instance HasSpec Bool where
@@ -492,13 +492,13 @@ instance HasSpec Bool where
 1. The `TypeSpec` for `Bool` is just a set of boolean values. There are only 4 distinct values
    in this set. `{}`, `{True}`, `{False}`, and `{False,True}`  Of these four the empty set `{}` is
    not self consistent, so we will have to handle this carefully.
-   
+
 2. The method `anySpec` is the `TypeSpec` which makes no constraints. That means every `Bool` value must
    be in the set. Since `Bool` has only two values, the `anySpec` must be the set `{False,True}`
 
 3. The method `guardTypeSpec` returns an `ErrorSpec` if the `TypeSpec` is inconsistent. There is only
    one inconsistent set of `Bool`, so return `ErrorSpec` if the set is null.
-   
+
 4. The method `consformsTo` just tests if the input `i :: Bool` is in the set of booleans.
 
 5. The method `toPreds` returns `FalsePred` if the `TypeSpec` is the null set, and if not
@@ -506,7 +506,7 @@ instance HasSpec Bool where
 
 ### Function symbols for Bool
 
-There is only one function symbol for `Bool` , the negation operation on `Bool`, `not`. 
+There is only one function symbol for `Bool` , the negation operation on `Bool`, `not`.
 
 ```
 data BoolSym (dom :: [Type]) rng where
@@ -531,9 +531,9 @@ The type of the method `propagate` is
 propagate :: (Logic t, AppRequires t as b, HasSpec a) =>
      t as b -> ListCtx as (HOLE a) -> Spec b -> Spec a
 ```
-A `ListCtx` is a `Term` with a single `HOLE` and no variables (i.e. everything else is a literal constant). 
+A `ListCtx` is a `Term` with a single `HOLE` and no variables (i.e. everything else is a literal constant).
 For a unary function there is only one context `(Unary HOLE)` because a unary function has only one input,
-it can only have a `HOLE`, no literal constants are possible. 
+it can only have a `HOLE`, no literal constants are possible.
 
 ```
 instance Logic BoolSym where
@@ -548,16 +548,16 @@ The only interesting case is the last one. The first 3 only rely on the properti
 propagating over `TrueSpec`, `ErrorSpec` or `SuspendedSpec` rely on their special properties.
 
 The last case boils down to the following. if `(not x) conformsTo spec` what does that say about `x`
-To make this concrete we will name the hole `x`, consider the 3 cases for `Spec`. 
+To make this concrete we will name the hole `x`, consider the 3 cases for `Spec`.
 
 1. `(not x) conformsTo {False}`       what does that say about `x` ? `x` must be True
 2. `(not x) conformsTo {True}`        what does that say about `x` ? `x` must be False
 3. `(not x) conformsTo {False,True}` what does that say about `x` ? `x` can be either True or False (`anySpec`)
 
 The function `caseBoolSpec` formalizes this. We build a list of values that the `spec` conforms to.
-There are only two values (True and False), so we try them all. If the list is empty, 
+There are only two values (True and False), so we try them all. If the list is empty,
 there is no solution so return an `ErrorSpec` , if the list has more than 1 element, and since Bool has
-only two elements, the solution is the Spec with no constraints, i.e. the Monoid value, `mempty` for 
+only two elements, the solution is the Spec with no constraints, i.e. the Monoid value, `mempty` for
 `Spec Bool` which is defined to be `(TypeSpec anySpec [])`
 which using the definition of `anySpec` is `(TypeSpec (Set.fromList [False,True]) [])`
 If the list has exactly 1 element, we apply the continuation to that element, and let the caller
@@ -617,7 +617,7 @@ the operation `<>` leads to an inconsistent Range where lower bound is greater t
                            \---------------------min
                                                   10
 ```
-     											 						  
+
 The `HasSpec` instance requires an instance for the type family `TypeSpec Integer` and five other methods.
 
 ```
@@ -646,7 +646,7 @@ instance HasSpec Integer where
 ```
 
 1. The method `anySpec` is the TypeSpec that has no constraints, so we make it the `Range` from -∞ to +∞ .
-2. The method `combineSpec` combines two `TypeSpec` so that the result has the constraints of both. We use the 
+2. The method `combineSpec` combines two `TypeSpec` so that the result has the constraints of both. We use the
    `Semigroup` instance on `Range`, which does exactly that.
 3. The method `guardTypeSpec` returns an `ErrorSpec` if its input of type `Range` is inconsistent.
    This happens only when a `(Just lo)` bound is greater than a `(Just hi)` bound. Which usually arises
@@ -656,7 +656,7 @@ instance HasSpec Integer where
    `Gen` monad that has mechanisom for handling errors, which the `Gen` monad does not). We extract the `QuickCheck.Gen`
     size parameter to scale the random values according to magnitude of the bounds stored in the `Range`. The Haskell
 	functions `sizeT` and `chooseT` are the `GenT` version of the QuickCheck operations `getSize` and `choose`.
-5. The method `conformsTo` checks that `i` is in the given `Range`. 
+5. The method `conformsTo` checks that `i` is in the given `Range`.
 6. The method `toPreds` translates a `Range` into a pair of assertions. Note that if either of the
    bounds of `ml` or `mu` is `Nothing` the function `maybeToList` returns the null list, so the list
    containing the `Assert` term for that bound is also empty. So Nothing ends up not adding anything
@@ -676,7 +676,7 @@ data IntegerSym (dom :: [Type]) rng where
   MinusW :: IntegerSym '[Integer, Integer] Integer
   NegateW  :: IntegerSym  '[Integer] Integer
   LessOrEqW :: IntegerSym '[Integer, Integer] Bool
-  GreaterOrEqW :: IntegerSym '[Integer, Integer] Bool  
+  GreaterOrEqW :: IntegerSym '[Integer, Integer] Bool
 ```
 
 One we have `(Syntax IntegerSym)`, `(Semantics IntegerSym)` and `(Logic IntegerSym)` instances
@@ -729,11 +729,11 @@ ltSpec n = typeSpec (Interval Nothing (Just (n - 1)))
 ```
 
 1. The function `minus` is just `(-)` with its arguments flipped. Partially applied as `(minus n)` this is quite usefull.
-2. If we have a range that includes [-1,0,1,2,3] `(Interval (Just (-1)) (Just 3))`, then the negation of that 
+2. If we have a range that includes [-1,0,1,2,3] `(Interval (Just (-1)) (Just 3))`, then the negation of that
    range would include [1,0,-1,-2,-3] `(Interval (Just (-3)) (Just 1))` We can compute that by negating
    and switching the bounds.
-   
-3. The `(geqSpec 6)` means  `x` such that `x >= 6`. We encode that as `(Interval (Just 6) Nothing)` 
+
+3. The `(geqSpec 6)` means  `x` such that `x >= 6`. We encode that as `(Interval (Just 6) Nothing)`
 4. The Haskell functions `leqSpec`, `gtSpec`, and `ltSpec` use similar reasoning
 
 
@@ -742,34 +742,34 @@ instance Logic IntegerSym where
   propagate tag ctx spec = case (tag, ctx, spec) of
     (_, _, TrueSpec) -> TrueSpec
     (_, _, ErrorSpec xs) -> ErrorSpec xs
-    (f, context, SuspendedSpec v ps) -> 
+    (f, context, SuspendedSpec v ps) ->
        constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
-    (LessOrEqW, HOLE :<| l, bspec) -> 
+    (LessOrEqW, HOLE :<| l, bspec) ->
        caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
-    (LessOrEqW, l :|> HOLE, bspec) -> 
+    (LessOrEqW, l :|> HOLE, bspec) ->
        caseBoolSpec bspec $ \case True -> geqSpec l; False -> ltSpec l
-    (GreaterOrEqW, HOLE :<| x, spec1) -> 
+    (GreaterOrEqW, HOLE :<| x, spec1) ->
        propagate LessOrEqW (x :|> HOLE) spec1
-    (GreaterOrEqW, x :|> HOLE, spec2) -> 
+    (GreaterOrEqW, x :|> HOLE, spec2) ->
        propagate LessOrEqW (HOLE :<| x) spec2
     (NegateW, Unary HOLE, TypeSpec interval cant) -> typeSpec (negateRange interval) <> notMemberSpec (map negate cant)
     (NegateW, Unary HOLE, MemberSpec xs) -> MemberSpec $ NE.nub $ fmap negate xs
-    (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> 
+    (PlusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
        TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
-    (PlusW, HOLE :<| n, MemberSpec xs) -> 
+    (PlusW, HOLE :<| n, MemberSpec xs) ->
        MemberSpec (fmap (minus n) xs)
-    (PlusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> 
+    (PlusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) ->
        TypeSpec (Interval ((minus n) <$> lo) ((minus n) <$> hi)) (map (minus n) bad)
     (PlusW, n :|> HOLE, MemberSpec xs) -> MemberSpec (fmap (minus n) xs)
-    (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> 
+    (MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
        TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
-    (MinusW, HOLE :<| n, MemberSpec xs) -> 
+    (MinusW, HOLE :<| n, MemberSpec xs) ->
        MemberSpec (fmap (+ n) xs)
-    (MinusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) -> 
+    (MinusW, n :|> HOLE, TypeSpec (Interval lo hi) bad) ->
        TypeSpec (negateRange (Interval ((minus n) <$> lo) ((minus n) <$> hi))) (map (minus n) bad)
-    (MinusW, n :|> HOLE, MemberSpec xs) -> 
+    (MinusW, n :|> HOLE, MemberSpec xs) ->
        MemberSpec (fmap (minus n) xs)
-```	   
+```
 
 The type of the method `propagate` is
 ```
@@ -778,7 +778,7 @@ propagate :: (Logic t, AppRequires t as b, HasSpec a) =>
 ```
 
 Notice that `t as b` is a function symbol, for example `LessOrEqW :: IntegerSym '[Integer,Integer] Bool`.
-A `ListCtx` is a `Term` with a single `HOLE` and no variables (i.e. everything else is a literal constant). 
+A `ListCtx` is a `Term` with a single `HOLE` and no variables (i.e. everything else is a literal constant).
 For a binary function there are exactly two contexts `(HOLE :<| n)` and `(n :|> HOLE)`. Here `n` is a constant,
 so for `LessOrEqW` there are two cases to consider, one for each type of
 context (`HOLE` on the right, and `HOLE` on the left). Lets consider the case where the `HOLE` is on the left.
@@ -792,25 +792,25 @@ Recall the things an the left of the `=` are known, and we are trying to compute
 	 -  `(x <=. 7) = False`, so what do we know about `x` ?  We know `(x > 7)`
 
 Given a property about a function call, how do we translate that property to one about the variable that is an input to the function call.
-   
+
 This is the code that implements this case branch above. Note `caseBoolSpec` allows us to consider
 the two cases separately.
 
-```  (LessOrEqW, HOLE :<| l, bspec) ->  
+```  (LessOrEqW, HOLE :<| l, bspec) ->
           caseBoolSpec bspec $ \case True -> leqSpec l; False -> gtSpec l
 ```
 
 All the cases follow similar reasoning. In the cases for `PlusW` and `MinusW` and `NegateW`, the known `Spec` will have type
 `(Spec Integer)`  rather than `(Spec Bool)` because unlike `LessOrEqW` whose range is `Bool`, the range of
 `MinusW` is `Integer`.  One other difference is that we must consider that the `(Spec Integer)` can be one of
-the two `Spec` constructors `MemberSpec` or `TypeSpec`.  For `LessOrEqW` we didn't need to handle both cases 
+the two `Spec` constructors `MemberSpec` or `TypeSpec`.  For `LessOrEqW` we didn't need to handle both cases
 since the function `caseBoolSpec` does that analysis internally.  Lets consider the cases for `MinusW` where the
 `HOLE` is on the left.
 
-When the output spec is a `TypeSpec` we have something like this. 
+When the output spec is a `TypeSpec` we have something like this.
 
 ```
-(MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) -> 
+(MinusW, HOLE :<| n, TypeSpec (Interval lo hi) bad) ->
        TypeSpec (Interval ((+ n) <$> lo) ((+ n) <$> hi)) (map (+ n) bad)
 ```
 Lets use the same trick we did earlier by naming the hole `x`, and concretizing the constants.
@@ -998,7 +998,7 @@ knownUpperBound (TypeSpec (Interval lo hi) cant) = upper lo hi
 1. `setSize` computes the size of a Haskell Set as an Integer (not an Int).
 2. `knownUpperBound` computes a concrete upperbound from a Spec if one can be found.
 3. `guardSetSpec` looks for inconsistencies in a `SetSpec`
-      - We can compute an upperbound from the `setCount` field, and that 
+      - We can compute an upperbound from the `setCount` field, and that
 	    upperbound is not positive, all set sizes are positive.
 	  - Some element that must be in the set, does not meet the `setAll` field `Spec`
 	  - The `setCount` field `Spec` is inconsistent
@@ -1088,7 +1088,7 @@ instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
     - `setMust :: Set a`. Elements that must be in the Set. Captures `memberW` function symbol information.
     - `setAll :: Spec a`. Property that must be True about all elements in the set.
           Captures `forAll` information from the `Container` class.
-    - `setCount :: Spec Integer`. The size of the set. Captures `sizeW` function symbol information. 
+    - `setCount :: Spec Integer`. The size of the set. Captures `sizeW` function symbol information.
 2. The method `anySpec`.  All three componets are set to `TrueSpec`
 3. The method `combineSpec`. Guard the result of using the `Monoid (SetSpec t)` instance to combine the two inputs.
 4. The method `conformsTo`. Individually test all three parts of the `SetSpec` against the input.
@@ -1109,7 +1109,7 @@ instance (Container (Set a) a, Ord a, HasSpec a) => HasSpec (Set a) where
 	   no special information. So we start by picking a satisfying size `sizeCount`. Compute `targetSize` that
 	   accounts for the `must` set, Then loop using `(go 100 targetSize must)`. This starts with the set `must`
 	   then tries to add `targetSize` additional elements to `must` each of which meets the `setAll` spec `elemS`.
-	   For each of the `targetSize` iterations, we get `100` tries to find an element that 
+	   For each of the `targetSize` iterations, we get `100` tries to find an element that
 	   meets `elemS` and is not already in the set `s` we have accumulated so far.
 
 
@@ -1123,7 +1123,7 @@ instance Logic SetSym where
     (f, context, SuspendedSpec v ps) -> constrained $ \v' -> Let (App f (fromListCtx context v')) (v :-> ps)
     (MemberW, HOLE :<| (s :: Set a), spec1) ->
       caseBoolSpec spec1 $ \case
-        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
+        True -> memberSpec (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
         False -> notMemberSpec s
     (MemberW, e :|> HOLE, spec2) ->
       caseBoolSpec spec2 $ \case
@@ -1170,7 +1170,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
   SuspendedSpec x preds -> do
         env <- genFromPreds mempty preds              -- Somehow solve all the `preds`
         findEnv env x
-  TypeSpec s cant -> do                               -- Use the type specific `genFromSpecT, 
+  TypeSpec s cant -> do                               -- Use the type specific `genFromSpecT,
     mode <- getMode
     genFromTypeSpec s `suchThatT` (`notElem` cant)
   ErrorSpec e -> genErrorNE e                         -- raise an error.
@@ -1178,7 +1178,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
 
 
 The key to `genFromPreds` is to turn `preds` into a `SolverPlan` which consists of choosing an order
-to solve all the variables in `preds`. For each variable, we create a `SolverStep` which includes that variable, 
+to solve all the variables in `preds`. For each variable, we create a `SolverStep` which includes that variable,
 and the subset of `preds` that mention it. Then we solve each `SolverStep` in the order they appear in the plan.
 
 Let's step throught the process on a the simple `SuspendedSpec` **spec3** given below.
@@ -1194,7 +1194,7 @@ In the code block below, each `SolverStep` includes the variable name, followed 
 ```
  SolverPlan
     Linearization:
-    v_0 <- 
+    v_0 <-
 	  ---
     v_1 <-
       assert $ v_1 <=. v_0
@@ -1218,7 +1218,7 @@ the plan, chooses the first variable and a conforming random value, adds it to t
 the rest of the plan, and then solving that shorter plan, until no variables are left.  Let's step through the example.
 
 Choosing `v_0` and a random conforming value `19`, note how the the `Pred` for `v_1` after substitution
-`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []` . 
+`(assert $ v_1 <=. 19)` simplifies to the  `TypeSpec (Interval Nothing (Just 19)) []` .
 Every substitution may enable further simplifcation, and replaces that variable with something without any variables
 in the succeeding `SolverSteps`.
 
@@ -1274,7 +1274,7 @@ Step v_2
     v_4 <-
       TypeSpec (MemberSpec [ -29 ],TrueSpec @((Integer,Integer))) []
       assert $ tail_ v_4 ==. v_2
-```	
+```
 
 Choosing `v_2`, note how the there is only one conforming solution `(-2,19)`, after substituting we get
 
@@ -1285,7 +1285,7 @@ Step v_4
   Linearization:
     v_4 <-
       MemberSpec [ (-29,-2,19) ]
-```	
+```
 
 Finally there is only one variable left to choose `v_4`, and one conforming value, which completes the final environment for every variable
 in the original `SuspendedSpec`.
@@ -1294,12 +1294,12 @@ in the original `SuspendedSpec`.
 Env { v_0 -> 19, v_1 -> -2, v_2 -> (-2,19), v_3 -> -29 , v_4 -> (-29,-2,19) }
 ```
 
-Since the `constrained` library function defining the original `spec3`, binds the variable `v_4`, 
+Since the `constrained` library function defining the original `spec3`, binds the variable `v_4`,
 the solution to the `Spec` can be found in the final environment bound by `v_4` which is `(-29,-2,19)`, the other
 variables are intermediate, and are used only to build the final solution.
 
 ```
-spec3 = constrained $ \ v_4 -> 
+spec3 = constrained $ \ v_4 ->
         match v_4 $ \ v_3 v_1 v_0 -> And [Assert $ v_3 <=. v_1, Assert $ v_1 <=. v_0]
 ```
 
@@ -1308,7 +1308,7 @@ spec3 = constrained $ \ v_4 ->
 For each SolverStep. in the process above, we have a variable `v` and a `Pred`. We need to convert that `Pred` into a `Spec`
 for `v`. The strategy for generating things from `Pred`s is relatively straightforward
 and relies on one key fact: any constraint that has only one free variable `v`
-and where `v` occurs only once can be turned into a `Specification` for `v`.  To way we do that, is to use the 
+and where `v` occurs only once can be turned into a `Specification` for `v`.  To way we do that, is to use the
 function `computeSpecSimplified` which runs in the `GE` monad which can collect errors
 if they occur. The function `localGESpec` catches `GenError`s and turns them into `ErrorSpec` , and re-raises
 `FatalSpec` if that occurs.
@@ -1319,7 +1319,7 @@ localGESpec ge = case ge of
    (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
    (FatalError es) -> FatalError es
    (Result v) -> Result v
-``` 
+```
 
 Here is a partial definition for  `computeSpecSimplified` that illustrates the important operation of handling
 multiple `Pred` embedded in the FOTL connective `And`
@@ -1333,7 +1333,7 @@ computeSpecSimplified x preds = localGESpec $ case simplifyPred preds of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   ...
-``` 
+```
 
 The function works as follows
 1. Guard the `GE` computation with `localGESpec`. This may: return a valid `Result`, return a `ErrorSpec`, or raise a Haskell Error.
@@ -1345,13 +1345,13 @@ The function works as follows
 	- Each application of `(<>)` either builds a richer `Spec` for `x`, encompassing all the constraints, or
 	  returns an `ErrorSpec` if they are inconsistent.
 5. If the final resulting `Spec` is a `SuspendedSpec`, simplify it's `Pred` and return
-6. If it is any other `Spec` just return the `Spec` 
+6. If it is any other `Spec` just return the `Spec`
 
 The complete definition follows. The other (non-And) rules fall into two cases.
 1. A literal constant occurs, and we can compute the final `Spec` using the properties of constants.
 3. A non literal `Term` occurs. Which must mention the single variable `x` and some (possibly nested) function symbols.
      -  We use `toCtx` to build a 1-Hole context, and then use `propagateSpecM`
-	    (which calls `propagateSpec`,  which makes one or more calls to `propagate`), 
+	    (which calls `propagateSpec`,  which makes one or more calls to `propagate`),
 		to compute the result.
 
 ```
@@ -1411,7 +1411,7 @@ guardSum s s' = typeSpec $ SumSpec s s'
 ```
 
 The `HasSpec (Either a b)` instance is quite simple, essentially carrying around two different
-`Specs` in `SumSpec a b`.  One for values `(Left a)` and a different one for values `(Right b)`. 
+`Specs` in `SumSpec a b`.  One for values `(Left a)` and a different one for values `(Right b)`.
 Note the special construtor `Case` of `Pred` specially designed for the type `Either`.
 
 ```
@@ -1488,7 +1488,7 @@ right_ x = App RightW (x :> Nil)
 
 Pairs are the dual of `Either` having two components for a single constructor. They suggest a method for making `HasSpec` instances
 for datatypes where a single constructor has multiple components.  We will look at binary pairs first. Then look at how to generalize that
-by nesting binary pairs. The `TypeSpec` for binary pairs is the type `PairSpec`.  Which simply pairs two `Spec`. Since 
+by nesting binary pairs. The `TypeSpec` for binary pairs is the type `PairSpec`.  Which simply pairs two `Spec`. Since
 `Spec` has a `Monoid` instance, it is trival to make a `Monoid` instance for `PairSpec`.
 
 ```
@@ -1503,7 +1503,7 @@ instance (HasSpec a, HasSpec b) => Semigroup (PairSpec a b) where
 instance (HasSpec a, HasSpec b) => Monoid (PairSpec a b) where mempty = Cartesian mempty mempty
 
 ```
-Grouping together two `Spec` is a common occurence. It happens in `SumSpec` (the `TypeSpec` for `Either`) above, 
+Grouping together two `Spec` is a common occurence. It happens in `SumSpec` (the `TypeSpec` for `Either`) above,
 and `PairSpec` (the `TypeSpec` for `(a,b)`) here. So combining two `Spec` where one of them may be an `ErrorSpec`
 deserves a few helper functions. In a sense `hasError` lifts the `HasSpec` method `guardTypeSpec` from type specific `TypeSpec` to
 the more general type `Spec`.
@@ -1520,7 +1520,7 @@ hasError _ = Nothing
 
 
 -- | Given two 'Spec', return an 'ErrorSpec' if one or more is an 'ErrorSpec'
---   If neither is an 'ErrorSpec' apply the continuation 'f'  
+--   If neither is an 'ErrorSpec' apply the continuation 'f'
 
 guardPair :: forall a b. (HasSpec a, HasSpec b) => Spec a -> Spec b -> Spec (a, b)
 guardPair specA specB = handleErrors specA specB (\s t -> typeSpec (Cartesian s t))
@@ -1592,7 +1592,7 @@ instance Semantics PairSym where
 ```
 
 The `Syntax` and `Semantics` instances are very simple, except for the `rewriteRules` which tell
-how `FstW` and `SndW` project over a `PairW` application. The pattern matching over 
+how `FstW` and `SndW` project over a `PairW` application. The pattern matching over
 the over the application of the `PairW` application uses the Haskell Pattern synonym `Pair`
 
 ```
@@ -1664,7 +1664,7 @@ pair_ a b = App PairW (a :> b :> Nil)
 
 ## Generalizing to N-ary Products and Sums
 
-Here we explain how we can write `HasSpec` instances for tuples. The idea is 
+Here we explain how we can write `HasSpec` instances for tuples. The idea is
 to write a series of `HasSpec` instances, that taken together, build arbitrary tuples inductively.
 The base case is the binary tuple instance we defined above, and the inductive case
 adds one more component to instance that is one component smaller in size. Here is
@@ -1705,7 +1705,7 @@ instance (HasSpec a, HasSpec b, HasSpec c) => HasSpec (a, b, c) where
 ```
 The other interesting parts to notice is how we put the two pieces (an `a` with a `(b,c)`) together or take them apart,
 to build and deconstruct the ternary tuple. This can be found in the definition of  `guardTypeSpec` , which is called
-inside of `combineSpec`, to merge the simple sub-cases on smaller tuples. 
+inside of `combineSpec`, to merge the simple sub-cases on smaller tuples.
 Deconstructing the ternary tuple happens in `anySpec`, `conformsTo`, `toPreds` and `genFromTypeSpec`.
 
 The last interesting part is the function symbols `head3_` and `tail3_`, which we will come back to in a moment.
@@ -1741,7 +1741,7 @@ instance (HasSpec a, HasSpec b, HasSpec c, HasSpec d) => HasSpec (a, b, c, d) wh
 
   genFromTypeSpec (a, bcd) = f <$> genFromSpecT a <*> genFromSpecT bcd
     where
-      f a' (b, c, d) = (a', b, c, d)  
+      f a' (b, c, d) = (a', b, c, d)
   toPreds x (a, bcd) = satisfies (head4_ x) a <> satisfies (tail4_ x) bcd
 ```
 
@@ -1815,7 +1815,7 @@ of complexity to the system.
 
 1. It needs to handle definitions using Derive-Generics
 2. It needs to understand how to handle arbitrary Sum-of-Products
-3. It needs to provide default method instances that use 
+3. It needs to provide default method instances that use
     [Default method signatures](https://downloads.haskell.org/ghc/9.0.1/docs/html/users_guide/exts/default_signatures.html) for every method of `HasSpec`.
 
 The amount of extra code is very large, and actually hides the the important ideas behind
@@ -1824,7 +1824,7 @@ this minimal implementation.
 
 ### Inductive N-ary Sums (generalization of `Either`)
 
-Note how we could use the same technique for Sum types (generalizing `Either`) with arbitrary number 
+Note how we could use the same technique for Sum types (generalizing `Either`) with arbitrary number
 of constructors by nesting `Case`.
 
 
@@ -1843,7 +1843,7 @@ localGESpec ge = case ge of
    (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
    (FatalError es) -> FatalError es
    (Result v) -> Result v
-``` 
+```
 
 Here is a partial definition for  `computeSpecSimplified` that illustrates the important operation of handling
 multiple `Pred` embedded in the FOTL connective `And`
@@ -1857,7 +1857,7 @@ computeSpecSimplified x preds = localGESpec $ case simplifyPred preds of
       SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
       s -> pure s
   ...
-``` 
+```
 
 The function works as follows
 1. Guard the `GE` computation with `localGESpec`. This may: return a valid `Result`, return a `ErrorSpec`, or raise a Haskell Error.
@@ -1869,13 +1869,13 @@ The function works as follows
 	- Each application of `(<>)` either builds a richer `Spec` for `x`, encompassing all the constraints, or
 	  returns an `ErrorSpec` if they are inconsistent.
 5. If the final resulting `Spec` is a `SuspendedSpec`, simplify it's `Pred` and return
-6. If it is any other `Spec` just return the `Spec` 
+6. If it is any other `Spec` just return the `Spec`
 
 The complete definition follows. The other (non-And) rules fall into two cases.
 1. A literal constant occurs, and we can compute the final `Spec` using the properties of constants.
 3. A non literal `Term` occurs. Which must mention the single variable `x` and some (possibly nested) function symbols.
      -  We use `toCtx` to build a 1-Hole context, and then use `propagateSpecM`
-	    (which calls `propagateSpec`,  which makes one or more calls to `propagate`), 
+	    (which calls `propagateSpec`,  which makes one or more calls to `propagate`),
 		to compute the result.
 
 ```
@@ -1936,7 +1936,7 @@ guardSum s s' = typeSpec $ SumSpec s s'
 ```
 
 The `HasSpec (Either a b)` instance is quite simple, essentially carrying around two different
-`Specs` in `SumSpec a b`.  One for values `(Left a)` and a different one for values `(Right b)`. 
+`Specs` in `SumSpec a b`.  One for values `(Left a)` and a different one for values `(Right b)`.
 Note the special construtor `Case` of `Pred` specially designed for the type `Either`.
 
 ```
@@ -2014,7 +2014,7 @@ right_ x = App RightW (x :> Nil)
 
 Pairs are the dual of `Either` having two components for a single constructor. They suggest a method for making `HasSpec` instances
 for datatypes where a single constructor has multiple components.  We will look at binary pairs first. Then look at how to generalize that
-by nesting binary pairs. The `TypeSpec` for binary pairs is the type `PairSpec`.  Which simply pairs two `Spec`. Since 
+by nesting binary pairs. The `TypeSpec` for binary pairs is the type `PairSpec`.  Which simply pairs two `Spec`. Since
 `Spec` has a `Monoid` instance, it is trival to make a `Monoid` instance for `PairSpec`.
 
 ```
@@ -2028,7 +2028,7 @@ instance (HasSpec a, HasSpec b) => Semigroup (PairSpec a b) where
 
 instance (HasSpec a, HasSpec b) => Monoid (PairSpec a b) where mempty = Cartesian mempty mempty
 ```
-Grouping together two `Spec` is a common occurence. It happens in `SumSpec` (the `TypeSpec` for `Either`) above, 
+Grouping together two `Spec` is a common occurence. It happens in `SumSpec` (the `TypeSpec` for `Either`) above,
 and `PairSpec` (the `TypeSpec` for `(a,b)`) here. So combining two `Spec` where one of them may be an `ErrorSpec`
 deserves a few helper functions. In a sense `hasError` lifts the `HasSpec` method `guardTypeSpec` from type specific `TypeSpec` to
 the more general type `Spec`.
@@ -2045,7 +2045,7 @@ hasError _ = Nothing
 
 
 -- | Given two 'Spec', return an 'ErrorSpec' if one or more is an 'ErrorSpec'
---   If neither is an 'ErrorSpec' apply the continuation 'f'  
+--   If neither is an 'ErrorSpec' apply the continuation 'f'
 handleErrors :: Spec a -> Spec b -> (Spec a -> Spec b -> Spec c) -> Spec c
 handleErrors spec1 spec2 f = case (hasError spec1, hasError spec2) of
   (Just m1, Just m2) -> ErrorSpec (m1 <> m2)
@@ -2168,7 +2168,7 @@ pair_ a b = App PairW (a :> b :> Nil)
 
 ## Generalizing to N-ary Products and Sums
 
-Here we explain how we can write `HasSpec` instances for tuples. The idea is 
+Here we explain how we can write `HasSpec` instances for tuples. The idea is
 to write a series of `HasSpec` instances, that taken together, build arbitrary tuples inductively.
 The base case is the binary tuple instance we defined above, and the inductive case
 adds one more component to instance that is one component smaller in size. Here is
@@ -2210,7 +2210,7 @@ instance (HasSpec a, HasSpec b, HasSpec c) => HasSpec (a, b, c) where
 ```
 The other interesting parts to notice is how we put the two pieces (an `a` with a `(b,c)`) together or take them apart,
 to build and deconstruct the ternary tuple. This can be found in the definition of  `guardTypeSpec` , which is called
-inside of `combineSpec`, to merge the simple sub-cases on smaller tuples. 
+inside of `combineSpec`, to merge the simple sub-cases on smaller tuples.
 Deconstructing the ternary tuple happens in `anySpec`, `conformsTo`, `toPreds` and `genFromTypeSpec`.
 
 The last interesting part is the function symbols `head3_` and `tail3_`, which we will come back to in a moment.
@@ -2321,7 +2321,7 @@ of complexity to the system.
 
 1. It needs to handle definitions using Derive-Generics
 2. It needs to understand how to handle arbitrary Sum-of-Products
-3. It needs to provide default method instances that use 
+3. It needs to provide default method instances that use
     [Default method signatures](https://downloads.haskell.org/ghc/9.0.1/docs/html/users_guide/exts/default_signatures.html) for every method of `HasSpec`.
 
 The amount of extra code is very large, and actually hides the the important ideas behind
@@ -2331,6 +2331,6 @@ this minimal implementation.
 
 ### Inductive N-ary Sums (generalization of `Either`)
 
-Note how we could use the same technique for Sum types (generalizing `Either`) with arbitrary number 
+Note how we could use the same technique for Sum types (generalizing `Either`) with arbitrary number
 of constructors by nesting `Case`.
 >>>>>>> 7926a4360b (Added a second document docs/constrained_generators/manual.md)

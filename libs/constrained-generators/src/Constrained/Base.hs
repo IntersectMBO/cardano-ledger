@@ -26,46 +26,77 @@
 --   because many functions require these instances. It exports functions that define the
 --   user interface to the domain embedded language (constrained, forall, exists etc.).
 --   And, by design, nothing more.
-module Constrained.Base where
+module Constrained.Base (
+  -- * Implementing logic propagation
+  Logic (..),
+  pattern (:<:),
+  pattern (:>:),
+  pattern Unary,
+  toCtx,
+  flipCtx,
+  fromListCtx,
+
+  -- * Useful function symbols and patterns for building custom rewrite rules
+  fromGeneric_,
+  toGeneric_,
+  pattern ToGeneric,
+  pattern FromGeneric,
+
+  -- * Syntax for building specifications
+  constrained,
+  notMemberSpec,
+  notEqualSpec,
+  typeSpec,
+  addToErrorSpec,
+  memberSpec,
+  fromSimpleRepSpec,
+  toSimpleRepSpec,
+  explainSpec,
+
+  -- * Instantiated types and helper patterns
+  Term,
+  Specification,
+  Pred,
+  Binder,
+  pattern TypeSpec,
+  pattern GenHint,
+
+  -- * Constraints and classes
+  HasSpec (..),
+  HasGenHint (..),
+  Forallable,
+  AppRequires,
+  GenericallyInstantiated,
+  GenericRequires,
+
+  -- * Building `Pred`, `Specification`, `Term` etc.
+  bind,
+  name,
+
+  -- * TODO: documentme
+  propagateSpec,
+  appFun,
+  errorLikeMessage,
+  isErrorLike,
+  BinaryShow (..),
+  toPred,
+  forAllToList,
+  IsPred,
+  equalSpec,
+  appTerm,
+  HOLE (..),
+  fromForAllSpec,
+  Fun (..),
+  BaseW (..),
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Core (
-  Evidence (..),
-  Value (..),
-  Var (..),
-  eqVar,
- )
+import Constrained.Core
 import Constrained.DependencyInjection
 import Constrained.FunctionSymbol
-import Constrained.GenT (
-  GE (..),
-  GenT,
-  MonadGenError (..),
-  catMessageList,
-  catMessages,
-  fatalError,
-  pureGen,
- )
-import Constrained.Generic (
-  HasSimpleRep,
-  SimpleRep,
-  fromSimpleRep,
-  toSimpleRep,
- )
-import Constrained.List (
-  All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  MapList,
-  TypeList,
-  curryList,
-  fillListCtx,
-  foldMapList,
-  mapListCtxC,
-  pattern ListCtx,
-  pattern NilCtx,
- )
+import Constrained.GenT
+import Constrained.Generic
+import Constrained.List hiding (toList)
 import Constrained.PrettyUtils
 import Constrained.TypeErrors
 import Control.Monad.Writer (
@@ -76,7 +107,6 @@ import Data.Foldable (
   toList,
  )
 import Data.Kind (Constraint, Type)
-import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
@@ -105,27 +135,61 @@ instance Dependencies Deps where
   type HasGenHintD Deps = HasGenHint
   type HintD Deps = HintF
 
+-- | Binders instantiated with the correct `HasSpec` etc. classes
 type Binder = BinderD Deps
 
+-- | All the constraints needed for application in the first order term languge
 type AppRequires t as b = AppRequiresD Deps t as b
 
+-- | Predicates over `Term`s
 type Pred = PredD Deps
 
+-- | First-order language of variables, literals, and application
 type Term = TermD Deps
 
+-- | Specifications for generators instantiated with the `HasSpec` et al actual
+-- classes
 type Specification = SpecificationD Deps
 
+-- | Pattern match out a `TypeSpec` and the can't-"set" - avoids some tedious
+-- pitfalls related to the `Deps` and `Dependencies` trick
 pattern TypeSpec :: () => HasSpec a => TypeSpec a -> [a] -> Specification a
 pattern TypeSpec ts cant = TypeSpecD (TypeSpecF ts) cant
 
 {-# COMPLETE ExplainSpec, MemberSpec, ErrorSpec, SuspendedSpec, TypeSpec, TrueSpec #-}
 
+-- | Build a specifiation from just a `TypeSpec`, useful internal function when
+-- writing `Logic` instances
 typeSpec :: HasSpec a => TypeSpec a -> Specification a
 typeSpec ts = TypeSpec ts mempty
 
+-- | Pattern match out a `Hint` and the `Term` it applies to - avoids some
+-- tedious pitfalls related to the `Deps` and `Dependencies` trick
+pattern GenHint :: () => HasGenHint a => Hint a -> Term a -> Pred
+pattern GenHint h t = GenHintD (HintF h) t
+
+{-# COMPLETE
+  ElemPred
+  , Monitor
+  , And
+  , Exists
+  , Subst
+  , Let
+  , Assert
+  , Reifies
+  , DependsOn
+  , ForAll
+  , Case
+  , When
+  , GenHint
+  , TruePred
+  , FalsePred
+  , Explain
+  #-}
+
 -- ====================================================================
 
--- | A First-order typed logic has 4 components
+-- A First-order typed logic has 4 components
 --     1. Terms        (Variables (x), Constants (5), and Applications (F x 5)
 --        Applications, apply a function symbol to a list of arguments: (FunctionSymbol term1 .. termN)
 --     2. Predicates   (Ordered, Odd, ...)
@@ -192,7 +256,7 @@ class (Typeable t, Semantics t, Syntax t) => Logic t where
   saturate :: t dom Bool -> List Term dom -> [Pred]
   saturate _symbol _ = []
 
--- This is where the logical properties of a function symbol are applied to transform one spec into another
+-- | This is where the logical properties of a function symbol are applied to transform one spec into another
 -- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
 -- we propagate each of those nested function symbols over the current spec, one at a time.
 -- The result of this propagation is then made the current spec in the recusive calls to 'propagateSpec'
@@ -243,6 +307,8 @@ data Ctx v a where
 data HOLE a b where
   HOLE :: HOLE a a
 
+-- | Try to convert a `Term` to a single-hole context - works only if the `Var`
+-- is the _only_ variable in the term _and_ it appears only once in the `Term`.
 toCtx ::
   forall m v a.
   ( Typeable v
@@ -273,6 +339,7 @@ toCtx v = go
               , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
               ]
 
+-- | `toCtx` lifted to a `List` of `Term`s
 toCtxList ::
   forall m v as.
   (Show v, Typeable v, MonadGenError m, HasCallStack) =>
@@ -312,6 +379,7 @@ pattern a :>: h = Value a :! NilCtx h
 
 {-# COMPLETE (:<:), (:>:) #-}
 
+-- | Flip a binary context around
 flipCtx ::
   (Typeable a, Show a, Typeable b, Show b) =>
   ListCtx Value '[a, b] (HOLE c) -> ListCtx Value '[b, a] (HOLE c)
@@ -329,6 +397,8 @@ fromListCtx ctx t = fillListCtx (mapListCtxC @HasSpec (\(Value a) -> Lit a) ctx)
 -- Don't be afraid of all the methods. Most have default implementations.
 -- =================================================================
 
+-- | A type where the `HasSpec` instance has been instantiated via the `SimpleRep` with
+-- constraints that give good type errors
 type GenericallyInstantiated a =
   ( AssertComputes
       (SimpleRep a)
@@ -343,6 +413,7 @@ type GenericallyInstantiated a =
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   )
 
+-- | `Eq` and `Show` for `TypeSpec` with additional constraints to ensure good type errors
 type TypeSpecEqShow a =
   ( AssertComputes
       (TypeSpec a)
@@ -381,6 +452,7 @@ type TypeSpecEqShow a =
           |          ^^^^^^^^^^^
 -}
 
+-- | Class for talking about types that we can write `Specification`s about
 class
   ( Typeable a
   , Eq a
@@ -401,7 +473,10 @@ class
   -- avoids e.g. having to have a separate implementation of `ErrorSpec`
   -- and `MemberSpec` in `TypeSpec`.
 
+  -- | Trivial `TypeSpec` that admits anything
   emptySpec :: TypeSpec a
+
+  -- | Conjunction of two `TypeSpec`s
   combineSpec :: TypeSpec a -> TypeSpec a -> Specification a
 
   -- | Generate a value that satisfies the `TypeSpec`.
@@ -572,14 +647,14 @@ instance HasSpec () where
 -- That means they can be used inside (Term a)
 -- ===================================================================
 
--- The things you need to know to work with the generics which translates things
+-- | The things you need to know to work with the generics which translates things
 -- into their SimpleRep, made of Sum and Prod
 type GenericRequires a =
   ( HasSpec a -- This gives Show, Eq, and Typeable instances
   , GenericallyInstantiated a
   )
 
--- The constructors of BaseW, are first order data (i.e Function Symbols) that describe functions.
+-- | The constructors of BaseW, are first order data (i.e Function Symbols) that describe functions.
 -- The Base functions are just the functions neccessary to define Specification, and the classes
 -- HasSimpleRep, HasSpec, Syntax, Semantics, and Logic. We call BaseW a 'witness type', and use
 -- the convention that all witness types (and their constructors) have "W" as thrit last character.
@@ -618,6 +693,7 @@ instance Logic BaseW where
     | Just Refl <- eqT @rng @a = Just x
   rewriteRules _ _ _ = Nothing
 
+-- | Convert an @a@ to a @`SimpleRep` a@
 toGeneric_ ::
   forall a.
   GenericRequires a =>
@@ -625,6 +701,7 @@ toGeneric_ ::
   Term (SimpleRep a)
 toGeneric_ = appTerm ToGenericW
 
+-- | Convert an @`SimpleRep` a@ to an @a@
 fromGeneric_ ::
   forall a.
   (GenericRequires a, AppRequires BaseW '[SimpleRep a] a) =>
@@ -638,6 +715,7 @@ fromGeneric_ = appTerm FromGenericW
 -- Specifications over 'a's SimpleRep (Specification (SimpleRep a))
 -- ====================================================================
 
+-- | Convert a `Specification` for a @`SimpleRep` a@ to one for @a@
 fromSimpleRepSpec ::
   GenericRequires a =>
   Specification (SimpleRep a) ->
@@ -652,6 +730,7 @@ fromSimpleRepSpec = \case
     constrained $ \x' ->
       Let (toGeneric_ x') (x :-> p) :: Pred
 
+-- | Convert a @`Specification` a@ to one for @`SimpleRep` a@
 toSimpleRepSpec ::
   forall a.
   GenericRequires a =>
@@ -671,7 +750,7 @@ toSimpleRepSpec = \case
 -- Now the supporting operations and types.
 -- =====================================================================
 
--- Used to show binary operators like SumSpec and PairSpec
+-- | Used to show binary operators like SumSpec and PairSpec
 data BinaryShow where
   BinaryShow :: forall a. String -> [Doc a] -> BinaryShow
   NonBinary :: BinaryShow
@@ -679,27 +758,7 @@ data BinaryShow where
 -- =================================================
 -- Term
 
--- | Recall function symbols are objects that you can use to build applications
---   They carry information about both its semantic and logical properties.
---   Usually the Haskel name ends in '_', for example consider: not_, subset_ ,lookup_, toGeneric_
---   Infix function symbols names end in '.', for example: ==. , <=.
---   E.g  appTerm ToGenericW  :: Term a -> Term(SimpleRep a)
---        (appTerm ToGenericW  (lit True)) builds the Term  (toGeneric_ True)
---   Note the witness (ToGenericW ) must have a Logic instance like:
---   instance Logic      BaseW          '[a]           (SimpleRep a) where ...
---        type of ToGenericW ^    arg types^            result type^
---   The Logic instance does not demand any of these things have any properties at all.
---   It is here, where we actually build the App node, that we demand the properties App terms require.
---   App :: AppRequires s t ds r => t s ds r -> List Term dom -> Term rng
-appSym ::
-  forall t as b.
-  AppRequires t as b =>
-  t as b ->
-  List Term as ->
-  Term b
-appSym w xs = App w xs
-
--- Like 'appSym' but builds functions over terms, rather that just one App term.
+-- | Like 'appSym' but builds functions over terms, rather that just one App term.
 appTerm ::
   forall t ds r.
   AppRequires t ds r =>
@@ -707,16 +766,12 @@ appTerm ::
   FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @Deps @t @ds @r sym)
 
+-- | Give a `Term` a `String` name-hint _if_ the `Term` is a variable
 name :: String -> Term a -> Term a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
 
--- | Give a Term a nameHint, if its a Var, and doesn't already have one,
---  otherwise return the Term unchanged.
-named :: String -> Term a -> Term a
-named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
-named _ t = t
-
+-- | Create a `Binder` with a fresh variable, used in e.g. `constrained`
 bind :: (HasSpec a, IsPred p) => (Term a -> p) -> Binder a
 bind bodyf = newv :-> bodyPred
   where
@@ -739,7 +794,7 @@ bind bodyf = newv :-> bodyPred
     bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder . thing) cs
     bound (When _ p) = bound p
     bound Reifies {} = -1
-    bound GenHint {} = -1
+    bound GenHintD {} = -1
     bound Assert {} = -1
     bound DependsOn {} = -1
     bound TruePred = -1
@@ -749,7 +804,10 @@ bind bodyf = newv :-> bodyPred
 -- ==================================================
 -- Pred
 
+-- | A collection @t@ with elements of type @e@ where the `forAll` syntax will
+-- work
 class Forallable t e | t -> e where
+  -- | Lift the `Specification` for the elements to the collection
   fromForAllSpec ::
     (HasSpec t, HasSpec e) => Specification e -> Specification t
   default fromForAllSpec ::
@@ -761,6 +819,7 @@ class Forallable t e | t -> e where
     Specification t
   fromForAllSpec es = fromSimpleRepSpec $ fromForAllSpec @(SimpleRep t) @e es
 
+  -- | Get the underlying items in the collection
   forAllToList :: t -> [e]
   default forAllToList ::
     ( HasSimpleRep t
@@ -773,7 +832,10 @@ class Forallable t e | t -> e where
 -- ===========================================
 -- IsPred
 
+-- | Something from which we can construct a `Pred`, useful for providing
+-- flexible syntax for `constrained` and friends.
 class Show p => IsPred p where
+  -- | Convert to a `Pred`
   toPred :: p -> Pred
 
 instance IsPred Pred where
@@ -797,27 +859,33 @@ instance IsPred (Term Bool) where
 -- ============================================================
 -- Simple Widely used operations on Specification
 
--- | return a MemberSpec or ans ErrorSpec depending on if 'xs' the null list or not
-memberSpecList :: [a] -> NE.NonEmpty String -> Specification a
-memberSpecList xs messages =
+-- | return a MemberSpec or ans ErrorSpec depending on if 'xs' is null or not
+memberSpec :: Foldable f => f a -> NE.NonEmpty String -> Specification a
+memberSpec (toList -> xs) messages =
   case NE.nonEmpty xs of
     Nothing -> ErrorSpec messages
     Just ys -> MemberSpec ys
 
+-- | Attach an explanation to a specification in order to track issues with satisfiability
 explainSpec :: [String] -> Specification a -> Specification a
 explainSpec [] x = x
 explainSpec es (ExplainSpec es' spec) = ExplainSpec (es ++ es') spec
 explainSpec es spec = ExplainSpec es spec
 
+-- | A "discrete" specification satisfied by exactly one element
 equalSpec :: a -> Specification a
 equalSpec = MemberSpec . pure
 
+-- | Anything but this
 notEqualSpec :: forall a. HasSpec a => a -> Specification a
 notEqualSpec = TypeSpec (emptySpec @a) . pure
 
+-- | Anything but these
 notMemberSpec :: forall a f. (HasSpec a, Foldable f) => f a -> Specification a
 notMemberSpec = typeSpecOpt (emptySpec @a) . toList
 
+-- | Build a `Specification` using predicates, e.g.
+-- > constrained $ \ x -> assert $ x `elem_` lit [1..10 :: Int]
 constrained ::
   forall a p.
   (IsPred p, HasSpec a) =>
@@ -827,6 +895,7 @@ constrained body =
   let x :-> p = bind body
    in SuspendedSpec x p
 
+-- | Sound but not complete check for empty `Specification`s
 isErrorLike :: forall a. Specification a -> Bool
 isErrorLike (ExplainSpec _ s) = isErrorLike s
 isErrorLike ErrorSpec {} = True
@@ -836,6 +905,7 @@ isErrorLike (TypeSpec x _) =
     Just _ -> True
 isErrorLike _ = False
 
+-- | Get the error message of an `isErrorLike` `Specification`
 errorLikeMessage :: forall a. Specification a -> NE.NonEmpty String
 errorLikeMessage (ErrorSpec es) = es
 errorLikeMessage (TypeSpec x _) =
@@ -844,12 +914,6 @@ errorLikeMessage (TypeSpec x _) =
     Just xs -> xs
 errorLikeMessage _ = pure ("Bad call to errorLikeMessage, case 2, not guarded by isErrorLike")
 
-fromGESpec :: HasCallStack => GE (Specification a) -> Specification a
-fromGESpec ge = case ge of
-  Result s -> s
-  GenError xs -> ErrorSpec (catMessageList xs)
-  FatalError es -> error $ catMessages es
-
 -- | Add the explanations, if it's an ErrorSpec, else drop them
 addToErrorSpec :: NE.NonEmpty String -> Specification a -> Specification a
 addToErrorSpec es (ExplainSpec [] x) = addToErrorSpec es x
@@ -857,16 +921,14 @@ addToErrorSpec es (ExplainSpec es2 x) = ExplainSpec es2 (addToErrorSpec es x)
 addToErrorSpec es (ErrorSpec es') = ErrorSpec (es <> es')
 addToErrorSpec _ s = s
 
--- ==========================================================================
+------------------------------------------------------------------------
 -- Pretty and Show instances
--- ==========================================================================
+------------------------------------------------------------------------
 
--- ====================================================
--- The Fun type encapuslates a Logic instance to hide
--- everything but the domain and range. This is a way
--- to pass around functions without pain. Usefull in the
--- ListFoldy implementaion that deals with higher order functions.
-
+-- | The Fun type encapuslates a Logic instance and symbol universe type to
+-- hide everything but the domain and range. This is a way to pass around
+-- functions without pain. Usefull in the ListFoldy implementaion that deals
+-- with higher order functions.
 data Fun dom rng where
   Fun ::
     forall t dom rng.
@@ -877,9 +939,7 @@ data Fun dom rng where
 instance Show (Fun dom r) where
   show (Fun (f :: t dom rng)) = "(Fun " ++ show f ++ ")"
 
-extractf :: Typeable t => Fun d r -> Maybe (t d r)
-extractf (Fun f) = cast f
-
+-- | Apply a single-argument `Fun` to a `Term`
 appFun :: Fun '[x] b -> Term x -> Term b
 appFun (Fun f) x = App f (x :> Nil)
 
@@ -891,10 +951,8 @@ sameFun (Fun f) (Fun g) = case cast f of
 instance Eq (Fun d r) where
   (==) = sameFun
 
--- ========================================================================
--- Uni-directional, Match only patterns, for the Function Symbols in BaseW.
--- We do not defined Constructor patterns. Use the xxx_ functions instead.
-
+-- | Pattern-match on an application of `fromGeneric_`, useful for writing
+-- custom rewrite rules to help the solver
 pattern FromGeneric ::
   forall rng.
   () =>
@@ -905,6 +963,8 @@ pattern FromGeneric ::
 pattern FromGeneric x <-
   (App (getWitness -> Just FromGenericW) (x :> Nil))
 
+-- | Pattern-match on an application of `toGeneric_`, useful for writing custom
+-- rewrite rules to help the solver
 pattern ToGeneric ::
   forall rng.
   () =>

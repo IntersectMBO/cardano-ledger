@@ -10,41 +10,51 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | How can we automatically inject normal Haskell types into the logic, using GHC.Generics
-module Constrained.Generic where
+-- | How we automatically inject normal Haskell types into the logic, using
+-- `GHC.Generics`
+module Constrained.Generic (
+  -- * Generic representation
 
-import Constrained.List (
-  Append,
-  FunTy,
-  List (..),
-  TypeList,
-  appendList,
-  curryList_,
-  listShape,
-  uncurryList_,
- )
+  -- `HasSimpleRep` is the reason we have this module. It's going to allow us
+  -- to define `Constrained.Base.HasSpec` instances generically via instances
+  -- for the underlying `Sum` and t`Prod` types.
+  HasSimpleRep (..),
+
+  -- * Underlying representation
+  Prod (..),
+  Sum (..),
+  (:::),
+  SOP,
+  ProdOver,
+  ConstrOf,
+  inject,
+  algebra,
+  SumOver,
+) where
+
+import Constrained.List
 import Data.Functor.Const
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import GHC.Generics
-import GHC.TypeLits (Symbol)
+import GHC.TypeLits
 
--- Sum and Prod and their operations came from Constrained.Univ
--- Since that file is basically about Fn, which is going to disappear
--- this seems like the appropriate place for them. We will need FunctionSymbol's
--- for fst_ snd_ pair_ injectLeft_  and injectRight_ defined someplace else
 ------------------------------------------------------------------------
 -- Pairs
 ------------------------------------------------------------------------
 
+-- | Pairs; this is a separate type from `(,)` to avoid confusion between internal
+-- representation of generic types and user-facing use of `(,)`
 data Prod a b = Prod {prodFst :: a, prodSnd :: b}
   deriving (Eq, Ord)
 
 instance (Show a, Show b) => Show (Prod a b) where
   show (Prod x y) = "(Prod " ++ show x ++ " " ++ show y ++ ")"
 
-type family ProdOver as where
+-- | Turn a type-level list into either, t`()`, a singleton type, or
+-- nested uses of t`Prod`
+type family ProdOver (as :: [Type]) where
   ProdOver '[] = ()
   ProdOver '[a] = a
   ProdOver (a : as) = Prod a (ProdOver as)
@@ -97,28 +107,26 @@ splitProd = go (listShape @xs) (listShape @ys)
 -- Sums
 ------------------------------------------------------------------------
 
--- | Generic way to represent Sums
+-- | Sum types; different from `Either` for the same reason t`Prod` is different
+-- from `(,)`
 data Sum a b
   = SumLeft a
   | SumRight b
   deriving (Ord, Eq, Show)
 
+-- | Convert a list of types to a nested `Sum`
 type family SumOver as where
   SumOver '[a] = a
   SumOver (a : as) = Sum a (SumOver as)
 
--- =========================================================================
--- The idea is for each type, we define a type family (HasSimpleRep) the maps
+-- | The idea is for each type, we define a type family `HasSimpleRep` the maps
 -- that type to another type we already know how to deal with. The methods
--- 'toSimpleRep' and 'fromSimpleRep' cature that knowledge. The strategy
--- we want to use most of the time, is to use GHC.Generics, to construct
--- the SimpleRep out of Sum and Prod, and to write the 'toSimpleRep' and
--- 'fromSimpleRep' methods automatically. If we can do that, then
--- every thing else will come for free. Note that it is not REQUIRED to make
--- the (SimpleRep t) out of Sum and Prod, but it helps. Note the default
--- method instances use Sum and Prod, but that is not required.
--- ==========================================================================
-
+-- `toSimpleRep` and `fromSimpleRep` cature that knowledge. The strategy we
+-- want to use most of the time, is to use `GHC.Generics`, to construct the
+-- `SimpleRep` out of `Sum` and t`Prod`, and to write the `toSimpleRep` and
+-- `fromSimpleRep` methods automatically. If we can do that, then every thing
+-- else will come for free. Note that it is not REQUIRED to make the
+-- @`SimpleRep` t@ out of `Sum` and t`Prod`, but it helps and it is the default.
 class Typeable (SimpleRep a) => HasSimpleRep a where
   type SimpleRep a
   type TheSop a :: [Type]
@@ -221,9 +229,9 @@ data (c :: Symbol) ::: (ts :: [Type])
 
 -- | Turn a `Rep` into a list that flattens the sum
 -- structre and gives the constructors names:
---   Maybe Int -> '["Nothing" ::: '[()], "Just" ::: '[Int]]
---   Either Int Bool -> '["Left" ::: '[Int], "Right" ::: '[Bool]]
---   data Foo = Foo Int Bool | Bar Double -> '["Foo" ::: '[Int, Bool], "Bar" ::: '[Double]]
+-- > Maybe Int -> '["Nothing" ::: '[()], "Just" ::: '[Int]]
+-- > Either Int Bool -> '["Left" ::: '[Int], "Right" ::: '[Bool]]
+-- > data Foo = Foo Int Bool | Bar Double -> '["Foo" ::: '[Int, Bool], "Bar" ::: '[Double]]
 type family SOPOf f where
   SOPOf (D1 _ f) = SOPOf f
   SOPOf (f :+: g) = Append (SOPOf f) (SOPOf g)
@@ -241,14 +249,14 @@ type family Constr f where
   Constr (f :*: g) = Append (Constr f) (Constr g)
 
 -- | Turn a list from `SOPOf` into a `Sum` over
--- `Prod` representation.
+-- t`Prod` representation.
 type family SOP constrs where
   SOP '[c ::: prod] = ProdOver prod
   SOP ((c ::: prod) : constrs) = Sum (ProdOver prod) (SOP constrs)
 
--- =====================================================
--- Constructing a SOP ----------------------------------
+-- Constructing an SOP ----------------------------------------------------
 
+-- | Get the type of a specific constructor in an `SOP`
 type family ConstrOf c sop where
   ConstrOf c (c ::: constr : sop) = constr
   ConstrOf c (_ : sop) = ConstrOf c sop
@@ -272,15 +280,15 @@ instance
   where
   inject' k = inject' @c @(con : constrs) (k . SumRight)
 
+-- | Inject a single constructor into an SOP
 inject ::
   forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
 inject = inject' @c @constrs id
 
--- =====================================================
--- Deconstructing a SOP --------------------------------
+-- Deconstructing an SOP --------------------------------------------------
 
 -- | An `ALG constrs r` is a function that takes a way to turn every
--- constructor into an `r`:
+-- constructor into an @r@:
 -- ```
 -- ALG (SOPOf (Rep (Either Int Bool))) r = (Int -> r) -> (Bool -> r) -> r
 -- ```
@@ -296,7 +304,7 @@ class SOPLike constrs r where
   consts :: r -> ALG constrs r
 
 instance TypeList prod => SOPLike '[c ::: prod] r where
-  algebra prod f = uncurryList_ @prod runIdentity f $ prodToList prod
+  algebra prod f = uncurryList_ @_ @prod runIdentity f $ prodToList prod
   consts r _ = r
 
 instance (TypeList prod, SOPLike (con : cases) r) => SOPLike ((c ::: prod) : con : cases) r where

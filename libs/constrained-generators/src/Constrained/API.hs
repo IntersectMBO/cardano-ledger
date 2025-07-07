@@ -1,11 +1,12 @@
 {-# LANGUAGE PatternSynonyms #-}
 
+-- | This is the main user-facing API of the library for when you just want to
+-- write constraints and simple `HasSpec` instances.
 module Constrained.API (
   -- * Types
   Specification,
   Pred,
   Term,
-  NonEmpty ((:|)),
 
   -- * Type classes and constraints
   HasSpec (..),
@@ -88,11 +89,6 @@ module Constrained.API (
   just_,
   nothing_,
 
-  -- ** Higher-order functions
-  id_,
-  flip_,
-  compose_,
-
   -- ** List
   foldMap_,
   sum_,
@@ -139,11 +135,17 @@ module Constrained.API (
 
   -- * Generation, Shrinking, and Testing
 
+  -- ** Types
+  GE (..),
+  GenT,
+
   -- ** Generating
   genFromSpec,
   genFromSpecT,
   genFromSpecWithSeed,
   genFromSizeSpec,
+  looseGen,
+  strictGen,
 
   -- ** Shrinking
   shrinkWithSpec,
@@ -162,6 +164,19 @@ module Constrained.API (
   forAllSpec,
   forAllSpecShow,
   forAllSpecDiscard,
+
+  -- ** Building generators
+  pureGen,
+  listOfT,
+  oneofT,
+  frequencyT,
+  vectorOfT,
+
+  -- * Utilities
+  unionWithMaybe,
+
+  -- * Re-exports
+  NonEmpty ((:|)),
 ) where
 
 import Constrained.AbstractSyntax
@@ -169,10 +184,12 @@ import Constrained.Base
 import Constrained.Conformance
 import Constrained.Core
 import Constrained.FunctionSymbol
+import Constrained.GenT
 import Constrained.Generation
 import Constrained.Generic
 import Constrained.NumOrd
 import Constrained.Properties
+import Constrained.Spec.List
 import Constrained.Spec.Map
 import Constrained.Spec.Set
 import Constrained.Spec.SumProd
@@ -182,14 +199,17 @@ import Constrained.TheKnot
 
 infix 4 /=.
 
+-- | Inequality as a constraint
 (/=.) :: HasSpec a => Term a -> Term a -> Term Bool
 a /=. b = not_ (a ==. b)
 
+-- | Specialized `sizeOf_`
 length_ :: HasSpec a => Term [a] -> Term Integer
 length_ = sizeOf_
 
 infixr 2 ||.
 
+-- | Another name for `or_`
 (||.) ::
   Term Bool ->
   Term Bool ->
@@ -198,11 +218,14 @@ infixr 2 ||.
 
 infixr 5 ++.
 
+-- | Another name for `append_`
 (++.) :: HasSpec a => Term [a] -> Term [a] -> Term [a]
 (++.) = append_
 
+-- | Like `null` on `Term`
 null_ :: (HasSpec a, Sized a) => Term a -> Term Bool
 null_ xs = sizeOf_ xs ==. 0
 
+-- | `mempty` for `Specification` without the extra constraints
 trueSpec :: Specification a
 trueSpec = TrueSpec

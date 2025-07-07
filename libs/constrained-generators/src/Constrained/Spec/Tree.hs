@@ -11,138 +11,33 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
+-- | `HasSpec` instance for `Tree`
+module Constrained.Spec.Tree (
+  TreeSpec (..),
+  rootLabel_,
+  TreeW (..),
+) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  Forallable (..),
-  HOLE (..),
-  HasGenHint (..),
-  HasSpec (..),
-  Logic (..),
-  Specification,
-  Term,
-  appTerm,
-  constrained,
-  errorLikeMessage,
-  explainSpec,
-  isErrorLike,
-  typeSpec,
-  pattern TypeSpec,
-  pattern Unary,
- )
-import Constrained.Conformance (
-  conformsToSpec,
-  satisfies,
- )
-import Constrained.Core (
-  unionWithMaybe,
- )
+import Constrained.Base
+import Constrained.Conformance
+import Constrained.Core
 import Constrained.FunctionSymbol
-import Constrained.GenT (
-  oneofT,
- )
 import Constrained.Generation
-import Constrained.List (
-  List (..),
- )
-import Constrained.Spec.SumProd (
-  match,
- )
-import Constrained.Syntax (
-  forAll,
-  genHint,
- )
-import Constrained.TheKnot (
-  FoldSpec (..),
-  ListSpec (..),
-  PairSpec (..),
- )
+import Constrained.List
+import Constrained.Spec.List
+import Constrained.Spec.SumProd ()
+import Constrained.Syntax
+import Constrained.TheKnot
 import Data.Kind
 import Data.Tree
-import GHC.Generics
 import Test.QuickCheck (shrinkList)
-
-------------------------------------------------------------------------
--- The types
-------------------------------------------------------------------------
-
-data BinTree a
-  = BinTip
-  | BinNode (BinTree a) a (BinTree a)
-  deriving (Ord, Eq, Show, Generic)
-
-------------------------------------------------------------------------
--- HasSpec for BinTree
-------------------------------------------------------------------------
-
-data BinTreeSpec a = BinTreeSpec (Maybe Integer) (Specification (BinTree a, a, BinTree a))
-  deriving (Show)
-
-instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
-  fromForAllSpec = typeSpec . BinTreeSpec Nothing
-  forAllToList BinTip = []
-  forAllToList (BinNode left a right) = (left, a, right) : forAllToList left ++ forAllToList right
-
-instance HasSpec a => HasSpec (BinTree a) where
-  type TypeSpec (BinTree a) = BinTreeSpec a
-
-  emptySpec = BinTreeSpec Nothing TrueSpec
-
-  combineSpec (BinTreeSpec sz s) (BinTreeSpec sz' s') =
-    typeSpec $ BinTreeSpec (unionWithMaybe min sz sz') (s <> s')
-
-  conformsTo BinTip _ = True
-  conformsTo (BinNode left a right) s@(BinTreeSpec _ es) =
-    and
-      [ (left, a, right) `conformsToSpec` es
-      , left `conformsTo` s
-      , right `conformsTo` s
-      ]
-
-  genFromTypeSpec (BinTreeSpec msz s)
-    | Just sz <- msz, sz <= 0 = pure BinTip
-    | otherwise = do
-        let sz = maybe 20 id msz
-            sz' = sz `div` 2
-        oneofT
-          [ do
-              (left, a, right) <- genFromSpecT @(BinTree a, a, BinTree a) $
-                constrained $ \ctx ->
-                  [ match ctx $ \left _ right ->
-                      [ forAll left (`satisfies` s)
-                      , genHint sz' left
-                      , forAll right (`satisfies` s)
-                      , genHint sz' right
-                      ]
-                  , ctx `satisfies` s
-                  ]
-              pure $ BinNode left a right
-          , pure BinTip
-          ]
-
-  shrinkWithTypeSpec _ BinTip = []
-  shrinkWithTypeSpec s (BinNode left a right) =
-    BinTip
-      : left
-      : right
-      : (BinNode left a <$> shrinkWithTypeSpec s right)
-      ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
-
-  cardinalTypeSpec _ = TrueSpec
-
-  toPreds t (BinTreeSpec msz s) =
-    (forAll t $ \n -> n `satisfies` s)
-      <> maybe TruePred (flip genHint t) msz
-
-instance HasSpec a => HasGenHint (BinTree a) where
-  type Hint (BinTree a) = Integer
-  giveHint h = typeSpec $ BinTreeSpec (Just h) TrueSpec
 
 ------------------------------------------------------------------------
 -- HasSpec for Tree
 ------------------------------------------------------------------------
 
+-- | t`TypeSpec` for `Tree`
 data TreeSpec a = TreeSpec
   { roseTreeAvgLength :: Maybe Integer
   , roseTreeMaxSize :: Maybe Integer
@@ -214,7 +109,7 @@ instance HasSpec a => HasSpec (Tree a) where
          | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing Nothing TrueSpec ctxSpec)) ts
          ]
 
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = mempty
 
   toPreds t (TreeSpec mal msz rs s) =
     (forAll t $ \n -> n `satisfies` s)
@@ -226,6 +121,7 @@ instance HasSpec a => HasGenHint (Tree a) where
   type Hint (Tree a) = (Maybe Integer, Integer)
   giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen (Just sz) TrueSpec TrueSpec
 
+-- | Function symbols for talking about trees
 data TreeW (dom :: [Type]) (rng :: Type) where
   RootLabelW :: HasSpec a => TreeW '[Tree a] a
 
@@ -248,6 +144,7 @@ instance Logic TreeW where
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec RootLabelW (TreeSpec _ _ rs _) = rs
 
+-- | Get the label of the root of the `Tree`
 rootLabel_ ::
   forall a.
   HasSpec a =>

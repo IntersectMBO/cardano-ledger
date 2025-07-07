@@ -26,16 +26,6 @@ library
     Constrained.Core
     Constrained.DependencyInjection
     Constrained.Env
-    Constrained.Examples
-    Constrained.Examples.Basic
-    Constrained.Examples.CheatSheet
-    Constrained.Examples.Either
-    Constrained.Examples.Fold
-    Constrained.Examples.List
-    Constrained.Examples.ManualExamples
-    Constrained.Examples.Map
-    Constrained.Examples.Set
-    Constrained.Examples.Tree
     Constrained.FunctionSymbol
     Constrained.GenT
     Constrained.Generation
@@ -45,6 +35,7 @@ library
     Constrained.NumOrd
     Constrained.PrettyUtils
     Constrained.Properties
+    Constrained.Spec.List
     Constrained.Spec.Map
     Constrained.Spec.Set
     Constrained.Spec.SumProd
@@ -75,6 +66,39 @@ library
     prettyprinter,
     random,
     template-haskell,
+
+library examples
+  exposed-modules:
+    Constrained.Examples
+    Constrained.Examples.Basic
+    Constrained.Examples.BinTree
+    Constrained.Examples.CheatSheet
+    Constrained.Examples.Either
+    Constrained.Examples.Fold
+    Constrained.Examples.List
+    Constrained.Examples.ManualExamples
+    Constrained.Examples.Map
+    Constrained.Examples.Set
+    Constrained.Examples.Tree
+
+  hs-source-dirs: examples
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+  build-depends:
+    QuickCheck >=2.14,
+    base >=4.18 && <5,
+    constrained-generators,
+    containers,
+    prettyprinter,
+    random,
 
 library testlib
   exposed-modules:
@@ -122,6 +146,7 @@ test-suite constrained
     QuickCheck,
     base,
     constrained-generators,
+    constrained-generators:examples,
     containers,
     hspec,
 
