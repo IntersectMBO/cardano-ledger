@@ -37,7 +37,7 @@ multiasset :: IsType0 a => a -> GRuleCall
 multiasset =
   binding $ \x ->
     "multiasset"
-      =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
+      =:= mp [0 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
 
 policy_id :: Rule
 policy_id = "policy_id" =:= script_hash

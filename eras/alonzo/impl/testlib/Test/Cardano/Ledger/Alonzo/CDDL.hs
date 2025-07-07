@@ -23,7 +23,6 @@ import Test.Cardano.Ledger.Mary.CDDL hiding (
   header,
   header_body,
   mint,
-  multiasset,
   native_script,
   proposed_protocol_parameter_updates,
   protocol_param_update,
@@ -436,12 +435,6 @@ network_id = "network_id" =:= int 0 / int 1
 
 auxiliary_data_hash :: Rule
 auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
-
-multiasset :: IsType0 a => a -> GRuleCall
-multiasset =
-  binding $ \x ->
-    "multiasset"
-      =:= mp [0 <+ asKey policy_id ==> mp [0 <+ asKey asset_name ==> x]]
 
 mint :: Rule
 mint = "mint" =:= multiasset int64

@@ -36,6 +36,7 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   metadata,
   mint,
   multi_host_name,
+  multiasset,
   native_script,
   nonempty_set,
   plutus_v1_script,
