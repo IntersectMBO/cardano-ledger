@@ -119,6 +119,7 @@ instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure ShelleyEra where
 
 newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
+  deriving (Generic)
 
 deriving stock instance
   ( Era era

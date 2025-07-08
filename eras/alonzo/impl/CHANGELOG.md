@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `Generic` instance for `AlonzoBbodyEvent`
 * Fix `AlonzoPlutusPurpose` CBOR(Group) instances. #5135
   * Reset shuffled serialization indexes for `AlonzoPlutusPurpose AsItem`.
 * Deprecated `toAlonzoTransitionConfigPairs`

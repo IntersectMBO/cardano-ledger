@@ -60,7 +60,7 @@ spec = describe "UTXO" $ do
           burnTooMuchProducedMultiAsset = MultiAsset (Map.map (Map.map negate) burnTooMuch)
           txBody =
             mkBasicTxBody
-              & inputsTxBodyL .~ [txInAt (0 :: Int) txMinted]
+              & inputsTxBodyL .~ [txInAt 0 txMinted]
               & mintTxBodyL .~ burnTooMuchMultiAsset
       (_, rootTxOut) <- getImpRootTxOut
       let rootTxOutValue = rootTxOut ^. valueTxOutL
