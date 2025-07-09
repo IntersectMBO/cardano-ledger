@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
+module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec, shelleyCertsSpec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (ContextError))
 import Cardano.Ledger.Alonzo.Rules (
@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Control.State.Transition.Extended
 import Data.Typeable (Typeable)
+import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
@@ -140,3 +141,41 @@ conwaySpec = do
   describe "UTXO" Utxo.spec
   describe "UTXOS" Utxos.spec
   describe "UTXOW" Utxow.spec
+
+shelleyCertsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , ApplyTx era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  ) =>
+  Spec
+shelleyCertsSpec = do
+  AlonzoImp.shelleyCertsSpec @era
+  withImpInit @(LedgerSpec era) $
+    forM_ (eraProtVersions @era) $ \protVer ->
+      describe ("Certificates without deposits - " <> show protVer) $
+        modifyImpInitProtVer protVer $ do
+          describe "DELEG" Deleg.shelleyCertsSpec
+          describe "UTXO" Utxo.shelleyCertsSpec
