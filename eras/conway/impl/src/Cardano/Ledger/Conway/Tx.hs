@@ -14,6 +14,7 @@ module Cardano.Ledger.Conway.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
@@ -23,10 +24,6 @@ import Cardano.Ledger.Alonzo.Tx (
   mkBasicAlonzoTx,
   sizeAlonzoTxF,
   witsAlonzoTxL,
- )
-import Cardano.Ledger.Alonzo.TxSeq (
-  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  hashAlonzoTxSeq,
  )
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
@@ -42,7 +39,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
 import GHC.Stack
-import Lens.Micro ((^.))
+import Lens.Micro
 
 instance EraTx ConwayEra where
   type Tx ConwayEra = AlonzoTx ConwayEra
@@ -121,9 +118,9 @@ instance AlonzoEraTx ConwayEra where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance EraSegWits ConwayEra where
-  type TxSeq ConwayEra = AlonzoTxSeq ConwayEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
+instance EraBlockBody ConwayEra where
+  type BlockBody ConwayEra = AlonzoBlockBody ConwayEra
+  mkBasicBlockBody = mkBasicBlockBody
+  txSeqBlockBodyL = txSeqBlockBodyL
+  hashBlockBody = hashBlockBody
   numSegComponents = 4

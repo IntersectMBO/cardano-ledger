@@ -3,21 +3,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.TxSeq () where
+module Cardano.Ledger.Mary.BlockBody () where
 
-import Cardano.Ledger.Core (EraSegWits (..))
+import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 
-instance EraSegWits MaryEra where
-  type TxSeq MaryEra = ShelleyTxSeq MaryEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
-  hashTxSeq = bbHash
+instance EraBlockBody MaryEra where
+  type BlockBody MaryEra = ShelleyBlockBody MaryEra
+  mkBasicBlockBody = mkBasicBlockBody
+  txSeqBlockBodyL = txSeqBlockBodyL
+  hashBlockBody = hashBlockBody
   numSegComponents = 3

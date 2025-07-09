@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY, AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
@@ -30,7 +31,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -182,9 +182,9 @@ alonzoBbodyTransition ::
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraTxWits era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoBlockBody era
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
@@ -197,9 +197,9 @@ alonzoBbodyTransition =
                , Block bh txsSeq
                )
            ) -> do
-        let txs = txSeqTxns txsSeq
+        let txs = txsSeq ^. txSeqBlockBodyL
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+            actualBodyHash = hashBlockBody @era txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
@@ -269,9 +269,9 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoBlockBody era
   , Tx era ~ AlonzoTx era
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)

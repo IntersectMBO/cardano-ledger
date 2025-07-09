@@ -38,6 +38,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
 import Data.Proxy (Proxy (Proxy))
 import Generic.Random (genericArbitraryU)
+import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -149,26 +150,31 @@ deriving newtype instance Arbitrary KESPeriod
 
 instance
   ( Crypto c
-  , EraSegWits era
+  , EraBlockBody era
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
   , Arbitrary (Tx era)
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
+  arbitrary =
+    Block
+      <$> arbitrary
+      <*> ((\x -> mkBasicBlockBody & txSeqBlockBodyL .~ x) <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
-  , EraSegWits era
-  , Arbitrary (Tx era)
+  , Arbitrary (BlockBody era)
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
-genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
+genBlock aiks =
+  Block
+    <$> genBHeader aiks
+    <*> arbitrary
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that
@@ -180,7 +186,7 @@ genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era r c.
-  ( EraSegWits era
+  ( EraBlockBody era
   , Arbitrary (Tx era)
   , KES.Signable (KES c) ~ SignableRepresentation
   , PraosCrypto c

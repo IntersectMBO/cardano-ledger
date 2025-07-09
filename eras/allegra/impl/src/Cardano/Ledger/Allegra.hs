@@ -10,6 +10,7 @@ module Cardano.Ledger.Allegra (
   AllegraEra,
 ) where
 
+import Cardano.Ledger.Allegra.BlockBody ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
@@ -18,7 +19,6 @@ import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Allegra.Transition ()
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
-import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Shelley.API
 

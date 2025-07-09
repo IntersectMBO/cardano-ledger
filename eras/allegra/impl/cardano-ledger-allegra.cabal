@@ -34,6 +34,7 @@ library
 
   hs-source-dirs: src
   other-modules:
+    Cardano.Ledger.Allegra.BlockBody
     Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.Rules.Bbody
@@ -50,7 +51,6 @@ library
     Cardano.Ledger.Allegra.State.Stake
     Cardano.Ledger.Allegra.TxCert
     Cardano.Ledger.Allegra.TxOut
-    Cardano.Ledger.Allegra.TxSeq
     Cardano.Ledger.Allegra.TxWits
     Cardano.Ledger.Allegra.UTxO
 

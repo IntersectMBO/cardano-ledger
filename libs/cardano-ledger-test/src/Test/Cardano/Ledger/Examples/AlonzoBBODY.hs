@@ -192,7 +192,7 @@ initialBBodyState pf utxo =
 testAlonzoBlock ::
   ( HasTokens era
   , Scriptic era
-  , EraSegWits era
+  , EraBlockBody era
   , Value era ~ MaryValue
   , ShelleyEraTxCert era
   , AlonzoEraTxWits era
@@ -692,18 +692,18 @@ coldKeys = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
-makeNaiveBlock txs = Block bhView txSeq
+  forall era. EraBlockBody era => [Tx era] -> Block BHeaderView era
+makeNaiveBlock txs = Block bhView blockBody
   where
     bhView =
       BHeaderView
         { bhviewID = hashKey (vKey coldKeys)
-        , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
+        , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
         , bhviewHSize = 0
-        , bhviewBHash = hashTxSeq txSeq
+        , bhviewBHash = hashBlockBody blockBody
         , bhviewSlot = SlotNo 0
         }
-    txSeq = toTxSeq $ StrictSeq.fromList txs
+    blockBody = mkBasicBlockBody & txSeqBlockBodyL .~ StrictSeq.fromList txs
 
 scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)

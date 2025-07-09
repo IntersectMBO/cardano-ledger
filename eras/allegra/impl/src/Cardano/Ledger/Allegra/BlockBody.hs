@@ -3,21 +3,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Allegra.TxSeq () where
+module Cardano.Ledger.Allegra.BlockBody () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
-import Cardano.Ledger.Core (EraSegWits (..))
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
+import Cardano.Ledger.Core (EraBlockBody (..))
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 
-instance EraSegWits AllegraEra where
-  type TxSeq AllegraEra = ShelleyTxSeq AllegraEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
-  hashTxSeq = bbHash
+instance EraBlockBody AllegraEra where
+  type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
+  mkBasicBlockBody = mkBasicBlockBody
+  txSeqBlockBodyL = txSeqBlockBodyL
+  hashBlockBody = hashBlockBody
   numSegComponents = 3

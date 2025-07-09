@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Deprecate `Alonzo.TxSeq` in favour of `Alonzo.BlockBody`. #5156
+  * Rename `AlonzoTxSeq` to `AlonzoBlockBody`
 * Add `Generic` instance for `AlonzoBbodyEvent`
 * Fix `AlonzoPlutusPurpose` CBOR(Group) instances. #5135
   * Reset shuffled serialization indexes for `AlonzoPlutusPurpose AsItem`.

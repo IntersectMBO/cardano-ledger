@@ -85,7 +85,7 @@ import Test.QuickCheck (Gen)
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
   ( EraGen era
-  , EraSegWits era
+  , EraBlockBody era
   , ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era

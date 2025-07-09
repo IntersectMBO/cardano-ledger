@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Deprecate `Shelley.BlockChain` in favour of `Shelley.BlockBody`. #5156
+  * Rename `ShelleyTxSeq` to `ShelleyBlockBody`
 * Add `Generic` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
   * `aggregateRewards` to `hardforkAllegraAggregateRewards`.
