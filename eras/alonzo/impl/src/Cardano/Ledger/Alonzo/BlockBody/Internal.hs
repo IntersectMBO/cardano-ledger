@@ -23,7 +23,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Alonzo.BlockBody.Internal (
-  AlonzoBlockBody (AlonzoBlockBody, AlonzoBlockBodyInternal),
+  AlonzoBlockBody (AlonzoBlockBody, ..),
   hashAlonzoSegWits,
   alignedValidFlags,
 ) where
