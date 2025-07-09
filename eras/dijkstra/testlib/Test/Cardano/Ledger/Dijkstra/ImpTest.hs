@@ -2,9 +2,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.ImpTest () where
+module Test.Cardano.Ledger.Dijkstra.ImpTest (
+  module Test.Cardano.Ledger.Conway.ImpTest,
+  DijkstraEraImp,
+) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
@@ -23,7 +27,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro ((%~), (&))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Dijkstra.Era ()
+import Test.Cardano.Ledger.Dijkstra.Era
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure DijkstraGenesis
@@ -52,6 +56,14 @@ instance AlonzoEraImp DijkstraEra where
       <> plutusTestScripts SPlutusV3
 
 instance ConwayEraImp DijkstraEra
+
+class
+  ( ConwayEraImp era
+  , DijkstraEraTest era
+  ) =>
+  DijkstraEraImp era
+
+instance DijkstraEraImp DijkstraEra
 
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure DijkstraEra where
