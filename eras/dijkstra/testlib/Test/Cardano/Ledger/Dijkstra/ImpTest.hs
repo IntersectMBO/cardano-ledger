@@ -3,11 +3,13 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   exampleDijkstraGenesis,
+  DijkstraEraImp,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -34,7 +36,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.Maybe (fromJust)
 import Lens.Micro ((%~), (&))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Dijkstra.Era ()
+import Test.Cardano.Ledger.Dijkstra.Era
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -63,6 +65,14 @@ instance AlonzoEraImp DijkstraEra where
       <> plutusTestScripts SPlutusV3
 
 instance ConwayEraImp DijkstraEra
+
+class
+  ( ConwayEraImp era
+  , DijkstraEraTest era
+  ) =>
+  DijkstraEraImp era
+
+instance DijkstraEraImp DijkstraEra
 
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure DijkstraEra where

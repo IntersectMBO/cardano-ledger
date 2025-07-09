@@ -5,17 +5,21 @@ module Main where
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules ()
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
+import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
 main =
   ledgerTestMain $ do
-    describe "Dijkstra" $ do
-      ConwaySpec.spec @DijkstraEra
+    describe "Dijkstra era-generic" $ do
+      describe "Imp" $ do
+        Imp.spec @DijkstraEra
+    describe "Dijkstra era-specific" $ do
+      -- TODO
+      pure ()
     roundTripJsonShelleyEraSpec @DijkstraEra
     GoldenSpec.spec
