@@ -156,7 +156,7 @@ spec = describe "Invalid transactions" $ do
             then submitPhase2Invalid_ tx
             else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
-        it "No ExtraRedeemers on same script certificates" $ do
+        it "No ExtraRedeemers on same script certificates" . whenMajorVersionAtMost @11 $ do
           Positive n <- arbitrary
           replicateM_ n $ freshKeyHash >>= registerPool
           pools <- getsNES $ nesEsL . epochStatePoolParamsL
@@ -252,7 +252,7 @@ spec = describe "Invalid transactions" $ do
             it "Spending" $
               testPurpose (mkSpendingPurpose $ AsIx 99)
 
-            it "Multiple equal plutus-locked certs" $ do
+            it "Multiple equal plutus-locked certs" . whenMajorVersionAtMost @11 $ do
               let scriptHash = alwaysSucceedsWithDatumHash
               Positive n <- arbitrary
               replicateM_ n $ freshKeyHash >>= registerPool

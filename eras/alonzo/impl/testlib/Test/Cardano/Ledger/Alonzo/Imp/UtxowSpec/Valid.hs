@@ -88,7 +88,7 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
-        it "Validating CERT script" $ do
+        it "Validating CERT script" . whenMajorVersionAtMost @11 $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
           submitTx_ $
@@ -97,7 +97,7 @@ spec = describe "Valid transactions" $ do
                 & inputsTxBodyL .~ [txIn]
                 & certsTxBodyL .~ [txCert]
 
-        it "Not validating CERT script" $ do
+        it "Not validating CERT script" . whenMajorVersionAtMost @11 $ do
           txIn <- produceScript alwaysFailsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
           submitPhase2Invalid_ $
@@ -106,13 +106,13 @@ spec = describe "Valid transactions" $ do
                 & inputsTxBodyL .~ [txIn]
                 & certsTxBodyL .~ [txCert]
 
-        it "Validating WITHDRAWAL script" $ do
+        it "Validating WITHDRAWAL script" . whenMajorVersionAtMost @11 $ do
           account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
           submitTx_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
-        it "Not validating WITHDRAWAL script" $ do
+        it "Not validating WITHDRAWAL script" . whenMajorVersionAtMost @11 $ do
           account <- registerStakeCredential $ ScriptHashObj alwaysFailsNoDatumHash
           submitPhase2Invalid_ $
             mkBasicTx $
@@ -126,7 +126,7 @@ spec = describe "Valid transactions" $ do
 
         --  Process a transaction with a succeeding script in every place possible,
         --  and also with succeeding timelock scripts.
-        it "Validating scripts everywhere" $ do
+        it "Validating scripts everywhere" . whenMajorVersionAtMost @11 $ do
           slotNo <- use impLastTickG
           let
             timelockScriptHash i = do
@@ -183,7 +183,7 @@ spec = describe "Valid transactions" $ do
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
           submitTx_ tx
 
-        it "Multiple identical certificates" $ do
+        it "Multiple identical certificates" . whenMajorVersionAtMost @11 $ do
           let scriptHash = alwaysSucceedsNoDatumHash
           void . registerStakeCredential $ ScriptHashObj scriptHash
           let tx =
