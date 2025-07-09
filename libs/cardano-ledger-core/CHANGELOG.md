@@ -2,6 +2,11 @@
 
 ## 1.18.0.0
 
+* Rename `EraSegWits` to `EraBlockBody`. #5156
+  * Rename `TxSeq` to `BlockBody`
+  * Add `mkBasicBlockBody`
+  * Deprecate `fromTxSeq` and `toTxSeq` in favour of the `txSeqBlockBodyL` lens
+  * Deprecate `hashTxSeq` in favour of `hashBlockBody`
 * Added support for `PlutusV4`
 * Add a timeout argument to `plutusDebug`
 * Add `pdoExUnitsEnforced` to `PlutusDebugOverrides` and add `defaultPlutusDebugOverrides`
