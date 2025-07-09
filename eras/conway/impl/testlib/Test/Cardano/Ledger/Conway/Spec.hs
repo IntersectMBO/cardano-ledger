@@ -109,8 +109,9 @@ spec =
     CommitteeRatify.spec @era
     SPORatifySpec.spec @era
     roundTripJsonEraSpec @era
-    describe "Imp" $
+    describe "Imp" $ do
       Imp.spec @era
+      Imp.shelleyCertsSpec @era
     describe "CostModels" $ do
       CostModelsSpec.spec @era
     describe "TxWits" $ do
