@@ -11,16 +11,16 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
-  -- AlonzoUtxowPredFailure,
+  AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules (
-  -- ShelleyDelegPredFailure,
+  ShelleyDelegPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
--- import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
@@ -28,12 +28,11 @@ import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , -- , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
-    InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  -- , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   ) =>
   Spec
 spec = do
@@ -41,5 +40,18 @@ spec = do
   describe "AlonzoImpSpec" . withImpInit @(LedgerSpec era) $ do
     Utxo.spec
     Utxos.spec
+    Utxow.spec
 
--- Utxow.spec
+shelleyCertsSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  ) =>
+  Spec
+shelleyCertsSpec = do
+  describe "AlonzoImp - certificates without deposit" . withImpInit @(LedgerSpec era) $ do
+    Utxow.shelleyCertsSpec

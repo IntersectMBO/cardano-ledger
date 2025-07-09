@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec (spec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec (spec, shelleyCertsSpec) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
@@ -23,8 +23,6 @@ import Test.Cardano.Ledger.Common
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
@@ -34,3 +32,18 @@ spec = do
   describe "UTXOW" $ do
     Valid.spec
     Invalid.spec
+
+shelleyCertsSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyCertsSpec = do
+  describe "UTXOW" $ do
+    Valid.shelleyCertsSpec
+    Invalid.shelleyCertsSpec
