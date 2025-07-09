@@ -23,7 +23,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Alonzo.BlockBody.Internal (
-  AlonzoBlockBody (AlonzoBlockBody, abbHash, AlonzoBlockBodyRaw),
+  AlonzoBlockBody (AlonzoBlockBody, AlonzoBlockBodyInternal),
   hashAlonzoSegWits,
   alignedValidFlags,
 ) where
@@ -70,18 +70,18 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- BlockBody provides an alternate way of formatting transactions in a block, in
 -- order to support segregated witnessing.
 
-data AlonzoBlockBody era = AlonzoBlockBodyRaw
-  { abbTxns :: !(StrictSeq (Tx era))
+data AlonzoBlockBody era = AlonzoBlockBodyInternal
+  { abbTxs :: !(StrictSeq (Tx era))
   , abbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
-  , abbBodyBytes :: BSL.ByteString
+  , abbTxsBodyBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxBody' era)@
-  , abbWitsBytes :: BSL.ByteString
+  , abbTxsWitsBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxWits' era)@
-  , abbMetadataBytes :: BSL.ByteString
+  , abbTxsAuxDataBytes :: BSL.ByteString
   -- ^ Bytes encoding a @'TxAuxData')@. Missing indices have
   -- 'SNothing' for metadata
-  , abbIsValidBytes :: BSL.ByteString
+  , abbTxsIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
   -- transactions with 'isValid' == False.
   }
@@ -89,11 +89,9 @@ data AlonzoBlockBody era = AlonzoBlockBodyRaw
 
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra
-  txSeqBlockBodyL = lens abbTxns (\_ s -> AlonzoBlockBody s)
-  fromTxSeq = abbTxns
-  toTxSeq = AlonzoBlockBody
+  mkBasicBlockBody = AlonzoBlockBody mempty
+  txSeqBlockBodyL = lens abbTxs (\_ s -> AlonzoBlockBody s)
   hashBlockBody = abbHash
-  hashTxSeq = abbHash
   numSegComponents = 4
 
 pattern AlonzoBlockBody ::
@@ -104,7 +102,7 @@ pattern AlonzoBlockBody ::
   StrictSeq (Tx era) ->
   AlonzoBlockBody era
 pattern AlonzoBlockBody xs <-
-  AlonzoBlockBodyRaw xs _ _ _ _ _
+  AlonzoBlockBodyInternal xs _ _ _ _ _
   where
     AlonzoBlockBody txns =
       let version = eraProtVerLow @era
@@ -123,13 +121,13 @@ pattern AlonzoBlockBody xs <-
               fmap originalBytes . view auxDataTxL <$> txns
           txSeqIsValids =
             serialize version $ encCBOR $ nonValidatingIndices txns
-       in AlonzoBlockBodyRaw
-            { abbTxns = txns
+       in AlonzoBlockBodyInternal
+            { abbTxs = txns
             , abbHash = hashAlonzoSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
-            , abbBodyBytes = txSeqBodies
-            , abbWitsBytes = txSeqWits
-            , abbMetadataBytes = txSeqAuxDatas
-            , abbIsValidBytes = txSeqIsValids
+            , abbTxsBodyBytes = txSeqBodies
+            , abbTxsWitsBytes = txSeqWits
+            , abbTxsAuxDataBytes = txSeqAuxDatas
+            , abbTxsIsValidBytes = txSeqIsValids
             }
 
 {-# COMPLETE AlonzoBlockBody #-}
@@ -137,10 +135,10 @@ pattern AlonzoBlockBody xs <-
 deriving via
   AllowThunksIn
     '[ "abbHash"
-     , "abbBodyBytes"
-     , "abbWitsBytes"
-     , "abbMetadataBytes"
-     , "abbIsValidBytes"
+     , "abbTxsBodyBytes"
+     , "abbTxsWitsBytes"
+     , "abbTxsAuxDataBytes"
+     , "abbTxsIsValidBytes"
      ]
     (AlonzoBlockBody era)
   instance
@@ -155,7 +153,7 @@ deriving stock instance Eq (Tx era) => Eq (AlonzoBlockBody era)
 --------------------------------------------------------------------------------
 
 instance Era era => EncCBORGroup (AlonzoBlockBody era) where
-  encCBORGroup (AlonzoBlockBodyRaw _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
+  encCBORGroup (AlonzoBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -231,7 +229,7 @@ instance
             StrictSeq.forceToStrict $
               Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
     pure $
-      AlonzoBlockBodyRaw
+      AlonzoBlockBodyInternal
         <$> txns
         <*> (hashAlonzoSegWits <$> bodiesAnn <*> witsAnn <*> auxDataAnn <*> isValAnn)
         <*> bodiesAnn

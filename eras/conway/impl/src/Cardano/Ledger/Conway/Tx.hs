@@ -14,7 +14,7 @@ module Cardano.Ledger.Conway.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (AlonzoBlockBody, abbHash))
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
@@ -120,9 +120,7 @@ instance AlonzoEraTx ConwayEra where
 
 instance EraBlockBody ConwayEra where
   type BlockBody ConwayEra = AlonzoBlockBody ConwayEra
+  mkBasicBlockBody = mkBasicBlockBody
   txSeqBlockBodyL = txSeqBlockBodyL
-  fromTxSeq = (^. txSeqBlockBodyL)
-  toTxSeq = AlonzoBlockBody
-  hashBlockBody = abbHash
-  hashTxSeq = abbHash
+  hashBlockBody = hashBlockBody
   numSegComponents = 4

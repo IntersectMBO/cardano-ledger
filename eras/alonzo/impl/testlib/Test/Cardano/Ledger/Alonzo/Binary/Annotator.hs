@@ -85,7 +85,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith4 mkTx bodies wits validFlags auxData
     pure $
-      AlonzoBlockBodyRaw
+      AlonzoBlockBodyInternal
         txs
         (hashAlonzoSegWits bodiesBytes witsBytes auxDataBytes isValidBytes)
         bodiesBytes

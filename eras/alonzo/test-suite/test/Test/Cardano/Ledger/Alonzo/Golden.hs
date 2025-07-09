@@ -22,7 +22,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
-import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (valueFromList)
 import Cardano.Ledger.Plutus.CostModels (
@@ -37,8 +36,6 @@ import Cardano.Ledger.Plutus.ExUnits (
   Prices (..),
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Protocol.Crypto (StandardCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
@@ -299,10 +296,10 @@ goldenMinFee =
             blockBody =
               case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
-                Right (Block _h blockBody' :: Block (BHeader StandardCrypto) AlonzoEra) -> blockBody'
+                Right blockBody' -> blockBody'
             firstTx =
               case blockBody ^. txSeqBlockBodyL of
-                tx :<| _ -> tx
+                tx :<| _ -> (tx :: Tx AlonzoEra)
                 Empty -> error "Block doesn't have any transactions"
 
             -- Below are the relevant protocol parameters that were active

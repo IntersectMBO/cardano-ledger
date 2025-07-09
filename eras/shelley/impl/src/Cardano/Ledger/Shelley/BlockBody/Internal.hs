@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- | Provides BlockBody internals
 --
@@ -25,7 +26,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Shelley.BlockBody.Internal (
-  ShelleyBlockBody (ShelleyBlockBody, bbHash, BlockBody'),
+  ShelleyBlockBody (ShelleyBlockBody, ..),
   auxDataSeqDecoder,
   hashShelleySegWits,
   bBodySize,
@@ -78,15 +79,15 @@ import GHC.Generics (Generic)
 import Lens.Micro (lens, (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
-data ShelleyBlockBody era = BlockBody'
-  { bbTxns :: !(StrictSeq (ShelleyTx era))
-  , bbHash :: Hash.Hash HASH EraIndependentBlockBody
+data ShelleyBlockBody era = ShelleyBlockBodyInternal
+  { sbbTxs :: !(StrictSeq (ShelleyTx era))
+  , sbbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
-  , bbBodyBytes :: BSL.ByteString
+  , sbbTxsBodyBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxBody' era)@
-  , bbWitsBytes :: BSL.ByteString
+  , sbbTxsWitsBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxWits' era)@
-  , bbMetadataBytes :: BSL.ByteString
+  , sbbTxsAuxDataBytes :: BSL.ByteString
   -- ^ Bytes encoding a @Seq ('TxAuxData' era)@. Missing indices have
   -- 'SNothing' for metadata
   }
@@ -94,19 +95,17 @@ data ShelleyBlockBody era = BlockBody'
 
 instance EraBlockBody ShelleyEra where
   type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
-  txSeqBlockBodyL = lens bbTxns (\_ s -> ShelleyBlockBody s)
-  fromTxSeq = bbTxns
-  toTxSeq = ShelleyBlockBody
-  hashBlockBody = bbHash
-  hashTxSeq = bbHash
+  mkBasicBlockBody = ShelleyBlockBody mempty
+  txSeqBlockBodyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
+  hashBlockBody = sbbHash
   numSegComponents = 3
 
 deriving via
   AllowThunksIn
-    '[ "bbHash"
-     , "bbBodyBytes"
-     , "bbWitsBytes"
-     , "bbMetadataBytes"
+    '[ "sbbHash"
+     , "sbbTxsBodyBytes"
+     , "sbbTxsWitsBytes"
+     , "sbbTxsAuxDataBytes"
      ]
     (ShelleyBlockBody era)
   instance
@@ -147,7 +146,7 @@ pattern ShelleyBlockBody ::
   StrictSeq (Tx era) ->
   ShelleyBlockBody era
 pattern ShelleyBlockBody xs <-
-  BlockBody' xs _ _ _ _
+  ShelleyBlockBodyInternal xs _ _ _ _
   where
     ShelleyBlockBody txns =
       let version = eraProtVerLow @era
@@ -161,15 +160,15 @@ pattern ShelleyBlockBody xs <-
           txSeqWits = serializeFoldable $ coreWitnessBytes @era <$> txns
           txSeqAuxDatas =
             serialize version . encodeFoldableMapEncoder metaChunk $ coreAuxDataBytes @era <$> txns
-       in BlockBody'
-            { bbTxns = txns
-            , bbHash = hashShelleySegWits txSeqBodies txSeqWits txSeqAuxDatas
+       in ShelleyBlockBodyInternal
+            { sbbTxs = txns
+            , sbbHash = hashShelleySegWits txSeqBodies txSeqWits txSeqAuxDatas
             , -- bytes encoding "Seq (TxBody era)"
-              bbBodyBytes = txSeqBodies
+              sbbTxsBodyBytes = txSeqBodies
             , -- bytes encoding "Seq (TxWits era)"
-              bbWitsBytes = txSeqWits
+              sbbTxsWitsBytes = txSeqWits
             , -- bytes encoding a "Map Int TxAuxData"
-              bbMetadataBytes = txSeqAuxDatas
+              sbbTxsAuxDataBytes = txSeqAuxDatas
             }
 
 {-# COMPLETE ShelleyBlockBody #-}
@@ -179,7 +178,7 @@ instance
   Era era =>
   EncCBORGroup (ShelleyBlockBody era)
   where
-  encCBORGroup (BlockBody' _ _ bodyBytes witsBytes metadataBytes) =
+  encCBORGroup (ShelleyBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
@@ -269,7 +268,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith3 segWitAnnTx bodies wits metadata
       hashAnn = hashShelleySegWits <$> bodiesAnn <*> witsAnn <*> metadataAnn
-    pure $ BlockBody' <$> txns <*> hashAnn <*> bodiesAnn <*> witsAnn <*> metadataAnn
+    pure $ ShelleyBlockBodyInternal <$> txns <*> hashAnn <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

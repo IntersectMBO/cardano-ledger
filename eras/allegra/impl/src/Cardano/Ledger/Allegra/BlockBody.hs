@@ -12,14 +12,11 @@ module Cardano.Ledger.Allegra.BlockBody () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Core (EraBlockBody (..))
-import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..), bbHash)
-import Lens.Micro
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 
 instance EraBlockBody AllegraEra where
   type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
+  mkBasicBlockBody = mkBasicBlockBody
   txSeqBlockBodyL = txSeqBlockBodyL
-  fromTxSeq = (^. txSeqBlockBodyL)
-  toTxSeq = ShelleyBlockBody
-  hashBlockBody = bbHash
-  hashTxSeq = bbHash
+  hashBlockBody = hashBlockBody
   numSegComponents = 3

@@ -77,7 +77,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
-import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..), bbHash)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
@@ -145,7 +145,7 @@ import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as Ex (
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
-import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), PreAlonzo, VRFKeyPair (..))
+import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
@@ -306,8 +306,7 @@ testHeaderHash =
 
 testBHB ::
   forall era.
-  ( EraTx era
-  , PreAlonzo era
+  ( EraBlockBody era
   , Tx era ~ ShelleyTx era
   ) =>
   BHBody MockCrypto
@@ -333,7 +332,7 @@ testBHB =
           )
           (vrfSignKey testVRF)
     , bsize = 0
-    , bhash = bbHash @era $ ShelleyBlockBody @era StrictSeq.empty
+    , bhash = hashBlockBody $ mkBasicBlockBody & txSeqBlockBodyL @era .~ StrictSeq.empty
     , bheaderOCert =
         OCert
           (kesVerKey testKESKeys)
@@ -348,8 +347,7 @@ testBHB =
 
 testBHBSigTokens ::
   forall era.
-  ( EraTx era
-  , PreAlonzo era
+  ( EraBlockBody era
   , Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
@@ -900,7 +898,7 @@ tests =
               (vrfSignKey testVRF)
           size = 0
           blockNo = BlockNo 44
-          bbhash = bbHash @C $ ShelleyBlockBody StrictSeq.empty
+          bbhash = hashBlockBody @C $ ShelleyBlockBody StrictSeq.empty
           ocert :: OCert MockCrypto
           ocert =
             OCert

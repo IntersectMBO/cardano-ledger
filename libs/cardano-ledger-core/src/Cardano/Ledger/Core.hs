@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -589,14 +588,14 @@ class
   type BlockBody era = (r :: Type) | r -> era
 
   mkBasicBlockBody :: BlockBody era
-  default mkBasicBlockBody :: BlockBody era
-  mkBasicBlockBody = toTxSeq mempty
 
   txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx era))
 
   fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
+  fromTxSeq = (^. txSeqBlockBodyL)
 
   toTxSeq :: StrictSeq (Tx era) -> BlockBody era
+  toTxSeq s = mkBasicBlockBody & txSeqBlockBodyL .~ s
 
   -- | Get the block body hash from the BlockBody. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
@@ -604,6 +603,7 @@ class
   hashBlockBody :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
 
   hashTxSeq :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
+  hashTxSeq = hashBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64

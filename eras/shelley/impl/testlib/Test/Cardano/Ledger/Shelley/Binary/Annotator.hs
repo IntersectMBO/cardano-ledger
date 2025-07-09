@@ -67,7 +67,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith3 ShelleyTx bodies wits (maybeToStrictMaybe <$> auxData)
         hash = hashShelleySegWits bodiesBytes witsBytes auxDataBytes
-    pure $ BlockBody' txs hash bodiesBytes witsBytes auxDataBytes
+    pure $ ShelleyBlockBodyInternal txs hash bodiesBytes witsBytes auxDataBytes
 
 deriving newtype instance DecCBOR (TxBody ShelleyEra)
 

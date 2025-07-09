@@ -167,15 +167,14 @@ genBlock ::
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
-  , EraBlockBody era
-  , Arbitrary (Tx era)
+  , Arbitrary (BlockBody era)
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
 genBlock aiks =
   Block
     <$> genBHeader aiks
-    <*> ((\x -> mkBasicBlockBody & txSeqBlockBodyL .~ x) <$> arbitrary)
+    <*> arbitrary
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

@@ -9,9 +9,7 @@ module Cardano.Ledger.Babbage.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.BlockBody (
-  AlonzoBlockBody (AlonzoBlockBody, abbHash),
- )
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
@@ -20,7 +18,6 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
-import Lens.Micro
 
 instance EraTx BabbageEra where
   type Tx BabbageEra = AlonzoTx BabbageEra
@@ -49,9 +46,7 @@ instance AlonzoEraTx BabbageEra where
 
 instance EraBlockBody BabbageEra where
   type BlockBody BabbageEra = AlonzoBlockBody BabbageEra
+  mkBasicBlockBody = mkBasicBlockBody
   txSeqBlockBodyL = txSeqBlockBodyL
-  fromTxSeq = (^. txSeqBlockBodyL)
-  toTxSeq = AlonzoBlockBody
-  hashBlockBody = abbHash
-  hashTxSeq = abbHash
+  hashBlockBody = hashBlockBody
   numSegComponents = 4
