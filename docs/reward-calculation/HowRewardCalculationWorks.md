@@ -143,11 +143,11 @@ the actual payment for 2, 3 , or 4 Epochs. This is what is discussed in chapter 
   
 
 3. Structure expensive computation into many pure steps that can be started and stopped when the node is otherwise idle.
-   we call this pulsing, and it two must have many invariants.
+   we call this pulsing, and it too must have many invariants.
      - It must be a pure computation
      - The computation must be serializeable, because if a node fails, we must be able to restart this 
        computation from the last checkpoint.
-     - it must compute the same result as if we ran it all at once, not braking it into many starts and stops. 
+     - It must compute the same result as if we ran it all at once, not breaking it into many starts and stops. 
 
 We look closely at each of these strategies in turn, studying the data structures and algorithms that implement them.
 
@@ -381,7 +381,7 @@ of things at the beginning of the calculation, that cannot change, as the rest o
 It also means the Reward calculation must be pipelined, and that requires a queue of SnapShots (Mark, Set, Go).
 
 
-##  Break the calculation into many pure steps that can be started and stopped.
+##  Tools for breaking the calculation into many pure steps that can be started and stopped.
 
 The module `Data.Pulse` provovides a library for breaking a large computation to 
 series of smaller ones, which can be scheduled by the library.
@@ -406,5 +406,110 @@ class Pulsable (pulse :: (Type -> Type) -> Type -> Type) where
       then pure (current p)
       else do p' <- pulseM p; completeM p
 ```      
+ 
+In order to make a `Pulesable` instance we need to identify
+the monad `m` and the answer type `ans`. The monad type is the
+underlying Monad in the STS rules which is `ShelleyBase`, and the answer type
+is `RewardAns` which has two maps as components
 
 
+```
+-- | The result of reward calculation is a pair of aggregate Maps.
+--   One for the accumulated answer, and one for the answer since the last pulse
+type RewardEvent = Map (Credential 'Staking) (Set Reward)
+
+-- | The result of reward calculation is a pair of aggregate Maps.
+--   One for the accumulated answer, and one for the answer since the last pulse
+data RewardAns = RewardAns
+  { accumRewardAns :: !(Map (Credential 'Staking) Reward)
+  , recentRewardAns :: !RewardEvent
+  }
+```
+
+## The Pulsable Instance
+
+The next step is to make an instance where we define the methods `done`, `current`,  `pulseM` and `completeM`
+
+```
+-- | The type of a Pulser which uses 'rewardStakePoolMember' as its underlying function.
+--     'rewardStakePool' will be partially applied to the component of type
+--     (FreeVars c) when pulsing. Note that we use two type equality (~) constraints
+--     to fix both the monad 'm' and the 'ans' type, to the context where we will use
+--     the type as a Pulser. The type must have 'm' and 'ans' as its last two
+--     parameters so we can make a Pulsable instance.
+--     RSLP = Reward Serializable Listbased Pulser
+data RewardPulser (m :: Type -> Type) ans where
+  RSLP ::
+    (ans ~ RewardAns, m ~ ShelleyBase) =>
+    !Int ->
+    !FreeVars ->
+    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)) ->
+    !ans ->
+    RewardPulser m ans
+
+-- Because of the constraints on the Constructor RSLP, there is really only one inhabited
+-- type:  (RewardPulser c ShelleyBase (RewardAns c))
+-- All of the instances are at that type. Though only the CBOR instances need make that explicit.
+
+clearRecent :: RewardAns -> RewardAns
+clearRecent (RewardAns accum _) = RewardAns accum Map.empty
+
+instance Pulsable RewardPulser where
+  done (RSLP _n _free zs _ans) = VMap.null zs
+  current (RSLP _ _ _ ans) = ans
+  pulseM p@(RSLP n free balance (clearRecent -> ans)) =
+    if VMap.null balance
+      then pure p
+      else do
+        let !(steps, !balance') = VMap.splitAt n balance
+            ans' = VMap.foldlWithKey (rewardStakePoolMember free) ans steps
+        pure $! RSLP n free balance' ans'
+  completeM (RSLP _ free balance (clearRecent -> ans)) =
+    pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
+```    
+
+## The Phases of a pusling computation
+
+To prevent a huge pause in the Reward Calculation we spread out some of the computation
+over many blocks in the idle time of a node. We do this in 3 steps
+
+1. The Start Step of the Reward Calculation is a pure computation, computing and combining some parameters which
+become fixed at the time when we reach the stability point. One of these parameters is a Pulser,
+i.e. a computation that when pulseM'ed computes a portion of what is required, so that the whole 
+compuation can be spread out in time. Note that this can be very cheap, as we just collecting the data
+that must be held constant, and creating the thunks that will execute when it is their time.
+
+2. The Pulse Step. Run the pulser for a bit. It returns a PulsingRewardUpdate, which is one of two things
+     - The final result, if the pulser has completed
+     - Enough information to restart the pulser for the nex pulse
+         ```
+         data PulsingRewUpdate
+            = Pulsing !RewardSnapShot !Pulser -- Pulsing work still to do
+            | Complete !RewardUpdate -- Pulsing work completed, ultimate goal reached
+         ```       
+
+3. The Complete Step. Clean up loose ends, and the return the `RewardUpdate`
+which can be used to update the `NewEpochState`
+
+The 3 steps are combined in this function
+
+```
+-- | To create a reward update, run all 3 phases
+--   This function is not used in the rules, so it ignores RewardEvents
+createRUpd ::
+  forall era.
+  (EraGov era, EraCertState era) =>
+  EpochSize ->
+  BlocksMade ->
+  EpochState era ->
+  Coin ->
+  ActiveSlotCoeff ->
+  NonZero Word64 ->
+  ShelleyBase RewardUpdate
+createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
+  let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
+  (step2, _event) <- pulseStep step1
+  case step2 of
+    Complete r -> pure r
+    Pulsing rewsnap pulser -> fst <$> completeRupd (Pulsing rewsnap pulser)
+```             
