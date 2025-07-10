@@ -414,8 +414,6 @@ is `RewardAns` which has two maps as components
 
 
 ```
--- | The result of reward calculation is a pair of aggregate Maps.
---   One for the accumulated answer, and one for the answer since the last pulse
 type RewardEvent = Map (Credential 'Staking) (Set Reward)
 
 -- | The result of reward calculation is a pair of aggregate Maps.
@@ -468,7 +466,7 @@ instance Pulsable RewardPulser where
     pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 ```    
 
-## The Phases of a pusling computation
+## The Phases of a pulsing computation
 
 To prevent a huge pause in the Reward Calculation we spread out some of the computation
 over many blocks in the idle time of a node. We do this in 3 steps
@@ -481,14 +479,14 @@ that must be held constant, and creating the thunks that will execute when it is
 
 2. The Pulse Step. Run the pulser for a bit. It returns a PulsingRewardUpdate, which is one of two things
      - The final result, if the pulser has completed
-     - Enough information to restart the pulser for the nex pulse
+     - Enough information to restart the pulser for the next pulse
          ```
          data PulsingRewUpdate
             = Pulsing !RewardSnapShot !Pulser -- Pulsing work still to do
             | Complete !RewardUpdate -- Pulsing work completed, ultimate goal reached
          ```       
 
-3. The Complete Step. Clean up loose ends, and the return the `RewardUpdate`
+3. The Complete Step. Clean up loose ends, and return the `RewardUpdate`
 which can be used to update the `NewEpochState`
 
 The 3 steps are combined in this function
@@ -496,6 +494,8 @@ The 3 steps are combined in this function
 ```
 -- | To create a reward update, run all 3 phases
 --   This function is not used in the rules, so it ignores RewardEvents
+--   but it illustrates the three phases and the looping behavior of the second phase
+--   through a recursive call. It is also used in some tests.
 createRUpd ::
   forall era.
   (EraGov era, EraCertState era) =>
@@ -512,4 +512,73 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   case step2 of
     Complete r -> pure r
     Pulsing rewsnap pulser -> fst <$> completeRupd (Pulsing rewsnap pulser)
-```             
+```           
+
+In the STS system, the three phases are packed into one transition funtion `rupdTransisiton`
+which is called on every tick in the STS TICK rule. The three phases
+are ordered by observing the current slot and returning a `RewardTiming` value
+
+
+```
+-- | The Goldilocks labeling of when to do the reward calculation.
+data RewardTiming = RewardsTooEarly | RewardsJustRight | RewardsTooLate
+
+determineRewardTiming :: SlotNo -> SlotNo -> SlotNo -> RewardTiming
+determineRewardTiming currentSlot startAfterSlot endSlot
+  | currentSlot > endSlot = RewardsTooLate
+  | currentSlot <= startAfterSlot = RewardsTooEarly
+  | otherwise = RewardsJustRight
+```
+
+1. A Timing of `RewardsToEarly` is a No-op in the TickRule where pulsing is concerned
+2. A Timing of `RewardsJustRight` means take a StartStep, or a PulseStep
+3. A Timing of `RewardsTooLate` means no time is left, so the rest of the pulsing is forced.
+
+```
+rupdTransition :: (EraGov era, EraCertState era) => TransitionRule (ShelleyRUPD era)
+rupdTransition = do
+  TRC (RupdEnv b es, ru, s) <- judgmentContext
+  (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do
+    ei <- asks epochInfoPure
+    sr <- asks randomnessStabilisationWindow
+    let e = epochInfoEpoch ei s
+        slotsPerEpoch = epochInfoSize ei e
+        slot = epochInfoFirst ei e +* Duration sr
+    maxLL <- asks maxLovelaceSupply
+    asc <- asks activeSlotCoeff
+    k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
+    return (slotsPerEpoch, slot, slot +* Duration sr, maxLL, asc, k, e)
+  let maxsupply = Coin (fromIntegral maxLL)
+  case determineRewardTiming s slot slotForce of
+    -- Waiting for the stability point, do nothing, keep waiting
+    RewardsTooEarly -> pure SNothing
+    -- More blocks to come, get things started or take a step
+    RewardsJustRight ->
+      case ru of
+        SNothing ->
+          -- This is the first opportunity to pulse, so start pulsing.
+          -- SJust <$> tellLeaderEvents (e + 1) (fst (startStep slotsPerEpoch b es maxsupply asc k))
+          (pure . SJust) (startStep slotsPerEpoch b es maxsupply asc k)
+        (SJust p@(Pulsing _ _)) -> do
+          -- We began pulsing earlier, so run another pulse
+          (ans, event) <- liftSTS $ pulseStep p
+          tellRupd "Pulsing Rupd" (RupdEvent (succ e) event)
+          pure (SJust ans)
+        (SJust p@(Complete _)) -> pure (SJust p)
+    -- Time to force the completion of the pulser so that downstream tools such as db-sync
+    -- have time to see the reward update before the epoch boundary rollover.
+    RewardsTooLate ->
+      case ru of
+        SNothing -> do
+          -- Nothing has been done, so start, and then complete the pulser. We hope this is very rare.
+          let pulser = startStep slotsPerEpoch b es maxsupply asc k
+          (reward, event) <- liftSTS $ completeStep pulser
+          tellRupd "Starting too late" (RupdEvent (succ e) event)
+          pure (SJust reward)
+        SJust p@(Pulsing _ _) -> do
+          -- We have been pulsing, but we ran out of time, so complete the pulser.
+          (reward, event) <- liftSTS $ completeStep p
+          tellRupd "Completing too late" (RupdEvent (succ e) event)
+          pure (SJust reward)
+        complete@(SJust (Complete _)) -> pure complete
+```
