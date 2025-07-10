@@ -173,7 +173,7 @@ expectedStEx1' :: [KeyPair 'Witness] -> MIRPot -> ChainState ShelleyEra
 expectedStEx1' txwits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' txwits pot))
     . C.newLab (blockEx1' txwits pot)
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK] []
+    . C.addFees feeTx1
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin

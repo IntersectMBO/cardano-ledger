@@ -39,6 +39,7 @@ import Constrained.Base (
   explainSpec,
   forAllToList,
   name,
+  named,
   toPred,
  )
 import Constrained.Core (
@@ -777,6 +778,22 @@ reify t f body =
   exists (\eval -> pure $ f (eval t)) $ \(name "reify_variable" -> x) ->
     [ reifies x t f
     , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
+    ]
+
+reifyWithName ::
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
+  ) =>
+  String ->
+  Term a ->
+  (a -> b) ->
+  (Term b -> p) ->
+  Pred
+reifyWithName nam t f body =
+  exists (\eval -> pure $ f (eval t)) $ \x ->
+    [ reifies (named nam x) t f
+    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body (named nam x))
     ]
 
 assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred

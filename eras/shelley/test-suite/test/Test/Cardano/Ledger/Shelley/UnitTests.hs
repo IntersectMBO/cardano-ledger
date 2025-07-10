@@ -17,7 +17,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.Crypto (StandardCrypto, VRF, hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
@@ -320,10 +319,13 @@ ledgerState :: LedgerState C
 ledgerState = LedgerState utxoState dpState
 
 addReward :: CertState C -> Credential 'Staking -> Coin -> CertState C
-addReward dp ra c = dp & certDStateL . dsUnifiedL .~ rewards'
+addReward dp cred c =
+  dp
+    & certDStateL . accountsL
+      %~ addToBalanceAccounts (Map.singleton cred (compactCoinOrError c))
+        . registerShelleyAccount cred ptr (CompactCoin 2) Nothing
   where
-    ds = dp ^. certDStateL
-    rewards' = UM.insert ra (UM.RDPair (UM.compactCoinOrError c) (UM.CompactCoin 2)) (rewards ds)
+    ptr = Ptr (SlotNo32 45) (mkTxIxPartial 1234) (mkCertIxPartial 12)
 
 -- Any key deposit works in this test ^
 ledgerEnv :: LedgerEnv C
@@ -570,7 +572,10 @@ testWithdrawalWrongAmt =
       rAccount = mkVKeyRewardAccount Testnet bobStake
       dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
-      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAccount (Coin 11)))]
+      errs =
+        [ DelegsFailure
+            (WithdrawalsNotInRewardsDELEGS (Withdrawals (Map.singleton rAccount (Coin 11))))
+        ]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion

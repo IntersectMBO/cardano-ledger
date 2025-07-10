@@ -7,7 +7,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -31,27 +30,16 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
   curPParamsEpochStateL,
-  dsUnifiedL,
   esLStateL,
   lsCertStateL,
   prevPParamsEpochStateL,
-  psDepositsL,
-  psStakePoolParamsL,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
-import Cardano.Ledger.State (
-  ChainAccountState (..),
-  EraCertState (..),
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShots (..),
-  calculatePoolDistr,
- )
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
@@ -162,7 +150,7 @@ runTest = do
 -- Constructing the "real", initial NewEpochState, from the GenState
 
 initialMockChainState ::
-  Reflect era =>
+  (Reflect era, ShelleyEraAccounts era) =>
   Proof era ->
   GenState era ->
   MockChainState era
@@ -181,7 +169,8 @@ initialMockChainState proof gstate =
         , stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
-makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
+makeEpochState ::
+  (Reflect era, ShelleyEraAccounts era) => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
     { esChainAccountState =
@@ -196,7 +185,7 @@ makeEpochState gstate ledgerstate =
     & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
     & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
-snaps :: (EraTxOut era, EraCertState era) => LedgerState era -> SnapShots
+snaps :: (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
@@ -208,9 +197,7 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
 
 raiseMockError ::
   forall era.
-  ( Reflect era
-  , EraTest era
-  ) =>
+  Reflect era =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -221,7 +208,6 @@ raiseMockError ::
 raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
   let _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
       _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
-      _keydeposits = UM.depositMap $ epochstate ^. esLStateL . lsCertStateL . certDStateL . dsUnifiedL
    in show
         [ toExpr $ adaPots reify epochstate
         , toExpr slot
@@ -377,6 +363,7 @@ chooseIssuer epochnum lastSlot count (PoolDistr m _) = mapProportion epochnum la
 genTrace ::
   forall era.
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
@@ -397,6 +384,7 @@ genTrace proof numTxInTrace gsize initialize = do
 traceProp ::
   forall era prop.
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
@@ -410,9 +398,7 @@ traceProp proof numTxInTrace gsize f = do
 
 forEachEpochTrace ::
   forall era prop.
-  ( Testable prop
-  , Reflect era
-  ) =>
+  Testable prop =>
   Proof era ->
   Int ->
   GenSize ->
@@ -421,7 +407,7 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    Conway -> genTrace proof tracelen genSize initStableFields
+    Conway -> error "Conway can't handle this old trace due to pointers"
     Babbage -> genTrace proof tracelen genSize initStableFields
     Alonzo -> genTrace proof tracelen genSize initStableFields
     Allegra -> genTrace proof tracelen genSize initStableFields
@@ -470,6 +456,7 @@ chainTest ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
+  , ShelleyEraAccounts era
   ) =>
   Proof era ->
   Int ->
@@ -505,6 +492,7 @@ testTraces n =
 -- | Show that Ada is preserved across multiple Epochs
 multiEpochTest ::
   ( Reflect era
+  , ShelleyEraAccounts era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->

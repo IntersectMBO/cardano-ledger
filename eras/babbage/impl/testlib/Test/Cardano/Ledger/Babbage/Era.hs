@@ -19,7 +19,12 @@ class
   ) =>
   BabbageEraTest era
 
-instance EraTest BabbageEra
+instance EraTest BabbageEra where
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest BabbageEra
 

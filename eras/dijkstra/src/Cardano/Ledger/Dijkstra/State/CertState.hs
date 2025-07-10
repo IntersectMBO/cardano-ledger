@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway.State (
   conwayObligationCertState,
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.State.Account ()
 
 instance EraCertState DijkstraEra where
   type CertState DijkstraEra = ConwayCertState DijkstraEra
