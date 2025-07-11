@@ -23,44 +23,15 @@ module Constrained.Generation where
 
 import Constrained.AbstractSyntax
 import Constrained.Base
-import Constrained.Conformance (
-  checkPred,
-  checkPredsE,
-  conformsToSpec,
-  satisfies,
- )
-import Constrained.Core (
-  Evidence (..),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
-  unionWithMaybe,
- )
+import Constrained.Conformance
+import Constrained.Core
 import Constrained.Env (Env)
 import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
-import Constrained.Graph (
-  Graph,
-  deleteNode,
-  topsort,
-  transitiveClosure,
- )
-import Constrained.List (
-  -- All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  -- TypeList,
-  foldMapList,
-  lengthList,
-  mapList,
-  mapMList,
-  uncurryList_,
- )
+import Constrained.Graph hiding (irreflexiveDependencyOn)
+import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
 import Constrained.Syntax
@@ -71,7 +42,6 @@ import Data.Foldable
 import Data.Int
 import Data.Kind
 import Data.List (partition)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe
 import Data.Semigroup (Any (..), getSum)

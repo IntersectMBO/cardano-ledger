@@ -7,47 +7,27 @@
 -- Semigroup (Specification a), Monoid (Specification a)
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Conformance where
+-- | Functions primarily for checking that a value conforms to a
+-- `Specification`
+module Constrained.Conformance (
+  monitorSpec,
+  conformsToSpec,
+  conformsToSpecE,
+  satisfies,
+  checkPred,
+  checkPredsE,
+  )
+where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  HasSpec,
-  Pred,
-  Specification,
-  Term,
-  addToErrorSpec,
-  combineSpec,
-  conformsTo,
-  explainSpec,
-  forAllToList,
-  memberSpecList,
-  notMemberSpec,
-  toPreds,
-  pattern TypeSpec,
- )
-import Constrained.Core (
-  NonEmpty ((:|)),
-  Rename (rename),
- )
+import Constrained.Base
+import Constrained.Core
 import Constrained.Env
 import Constrained.Env qualified as Env
-import Constrained.GenT (
-  GE (..),
-  MonadGenError (..),
-  catMessageList,
-  errorGE,
-  explain,
-  fromGE,
-  runGE,
- )
-import Constrained.List (
-  mapList,
- )
+import Constrained.GenT
+import Constrained.List
 import Constrained.PrettyUtils
-import Constrained.Syntax (
-  runCaseOn,
-  substitutePred,
- )
+import Constrained.Syntax
 import Data.List (intersect, nub)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe
@@ -104,9 +84,6 @@ checkPred env = \case
 
 checkPreds :: (MonadGenError m, Traversable t) => Env -> t Pred -> m Bool
 checkPreds env ps = and <$> mapM (checkPred env) ps
-
-checkPredPure :: Env -> Pred -> Bool
-checkPredPure env p = fromGE (const False) $ checkPred env p
 
 -- ==========================================================
 
@@ -238,11 +215,13 @@ conformsToSpecE a (SuspendedSpec v ps) msgs =
     Just es -> Just (pure ("conformsToSpecE SuspendedSpec case on var " ++ show v ++ " fails") <> es)
 conformsToSpecE _ (ErrorSpec es) msgs = Just (msgs <> pure "conformsToSpecE ErrorSpec case" <> es)
 
+-- | Check if an @a@ conforms to a @`Specification` a@
 conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 conformsToSpec a x = case conformsToSpecE a x (pure "call to conformsToSpecE") of
   Nothing -> True
   Just _ -> False
 
+-- | Embed a `Specification` in a `Pred`. Useful for re-using `Specification`s
 satisfies :: forall a. HasSpec a => Term a -> Specification a -> Pred
 satisfies e (ExplainSpec [] s) = satisfies e s
 satisfies e (ExplainSpec (x : xs) s) = Explain (x :| xs) $ satisfies e s
