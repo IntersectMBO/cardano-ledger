@@ -52,16 +52,13 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure,
   ConwayGovPredFailure,
   EnactSignal (..),
-  maxRefScriptSizePerBlock,
-  maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.Tx (refScriptCostMultiplier, refScriptCostStride)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.HKD (HKD)
@@ -351,10 +348,15 @@ instance SpecTranslate ctx PoolVotingThresholds where
       <*> toSpecRep pvtHardForkInitiation
       <*> toSpecRep pvtPPSecurityGroup
 
-instance SpecTranslate ctx (ConwayPParams Identity era) where
+instance
+  ( ConwayEraPParams era
+  , PParamsHKD Identity era ~ ConwayPParams Identity era
+  ) =>
+  SpecTranslate ctx (ConwayPParams Identity era)
+  where
   type SpecRep (ConwayPParams Identity era) = Agda.PParams
 
-  toSpecRep ConwayPParams {..} = do
+  toSpecRep cpp@ConwayPParams {..} = do
     ppA <- toSpecRep cppMinFeeA
     ppB <- toSpecRep cppMinFeeB
     ppA0 <- toSpecRep cppA0
@@ -378,10 +380,11 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
     ppCostmdls <- toSpecRep cppCostModels
     ppPrices <- toSpecRep cppPrices
     let
-      ppMaxRefScriptSizePerTx = toInteger maxRefScriptSizePerTx
-      ppMaxRefScriptSizePerBlock = toInteger maxRefScriptSizePerBlock
-      ppRefScriptCostStride = toInteger refScriptCostStride
-      ppRefScriptCostMultiplier = refScriptCostMultiplier
+      pp = PParams cpp
+      ppMaxRefScriptSizePerTx = toInteger $ pp ^. ppMaxRefScriptSizePerTxG
+      ppMaxRefScriptSizePerBlock = toInteger $ pp ^. ppMaxRefScriptSizePerBlockG
+      ppRefScriptCostStride = toInteger . unNonZero $ pp ^. ppRefScriptCostStrideG
+      ppRefScriptCostMultiplier = unboundRational $ pp ^. ppRefScriptCostMultiplierG
     ppMaxTxExUnits <- toSpecRep cppMaxTxExUnits
     ppMaxBlockExUnits <- toSpecRep cppMaxBlockExUnits
     let

@@ -18,7 +18,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Identity
 import Lens.Micro
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
 propSetShelleyMinTxOut ::
   forall era.
