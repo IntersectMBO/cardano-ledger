@@ -52,60 +52,14 @@ module Constrained.Spec.SumProd (
 ) where
 
 import Constrained.AbstractSyntax
-import Constrained.Base (
-  BaseW (..),
-  Binder,
-  Forallable (..),
-  Fun (..),
-  GenericRequires,
-  HasSpec (..),
-  IsPred (..),
-  Pred,
-  Specification,
-  Term,
-  bind,
-  constrained,
-  fromGeneric_,
-  toGeneric_,
- )
-import Constrained.Conformance (
-  conformsToSpec,
-  satisfies,
- )
-import Constrained.Core (
-  Evidence (..),
- )
+import Constrained.Base
+import Constrained.Conformance
+import Constrained.Core
 import Constrained.Generation
-import Constrained.Generic (
-  ConstrOf,
-  HasSimpleRep (..),
-  Prod,
-  ProdOver,
-  SOP,
-  SimpleRep,
-  Sum,
-  SumOver,
-  TheSop,
-  (:::),
- )
-import Constrained.List (
-  All,
-  FunTy,
-  List (..),
-  MapList,
-  TypeList,
-  curryList,
-  listShape,
-  mapListC,
- )
+import Constrained.Generic
+import Constrained.List
 import Constrained.Spec.List
-import Constrained.Syntax (
-  exists,
-  forAll,
-  letBind,
-  mkCase,
-  reify,
- )
+import Constrained.Syntax
 import Constrained.TheKnot
 import Constrained.TypeErrors
 import Data.Typeable (Typeable)
@@ -114,93 +68,100 @@ import GHC.TypeLits (Symbol)
 import GHC.TypeNats
 import Test.QuickCheck (Arbitrary (..), oneof)
 
--- ==================================================================
--- Generics
--- HasSpec for various types that are Sums of Products
--- ==================================================================
+------------------------------------------------------------------------
+-- Syntax for `(,)` and `Either`
+------------------------------------------------------------------------
 
-instance (Typeable a, Typeable b) => HasSimpleRep (a, b)
+-- | `fst` in `Term` form
+fst_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term x
+fst_ = prodFst_ . toGeneric_
 
-instance (Typeable a, Typeable b, Typeable c) => HasSimpleRep (a, b, c)
+-- | `snd` in `Term` form
+snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
+snd_ = prodSnd_ . toGeneric_
 
-instance (Typeable a, Typeable b, Typeable c, Typeable d) => HasSimpleRep (a, b, c, d)
-
-instance (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e) => HasSimpleRep (a, b, c, d, e)
-
-instance
-  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g) =>
-  HasSimpleRep (a, b, c, d, e, g)
-
-instance
-  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g, Typeable h) =>
-  HasSimpleRep (a, b, c, d, e, g, h)
-
-instance Typeable a => HasSimpleRep (Maybe a)
-
-instance (Typeable a, Typeable b) => HasSimpleRep (Either a b)
-
-instance
+-- | `(,)` in `Term` form
+pair_ ::
   ( HasSpec a
   , HasSpec b
-  ) =>
-  HasSpec (a, b)
-
-instance
-  ( HasSpec a
-  , HasSpec b
-  , HasSpec c
-  ) =>
-  HasSpec (a, b, c)
-
-instance
-  ( HasSpec a
-  , HasSpec b
-  , HasSpec c
-  , HasSpec d
-  ) =>
-  HasSpec (a, b, c, d)
-
-instance
-  ( HasSpec a
-  , HasSpec b
-  , HasSpec c
-  , HasSpec d
-  , HasSpec e
-  ) =>
-  HasSpec (a, b, c, d, e)
-
-instance
-  ( HasSpec a
-  , HasSpec b
-  , HasSpec c
-  , HasSpec d
-  , HasSpec e
-  , HasSpec g
-  ) =>
-  HasSpec (a, b, c, d, e, g)
-
-instance
-  ( HasSpec a
-  , HasSpec b
-  , HasSpec c
-  , HasSpec d
-  , HasSpec e
-  , HasSpec g
-  , HasSpec h
-  ) =>
-  HasSpec (a, b, c, d, e, g, h)
-
-instance
-  (IsNormalType a, HasSpec a) =>
-  HasSpec (Maybe a)
-
-instance
-  ( HasSpec a
   , IsNormalType a
-  , HasSpec b
   , IsNormalType b
   ) =>
-  HasSpec (Either a b)
+  Term a ->
+  Term b ->
+  Term (a, b)
+pair_ x y = fromGeneric_ $ prod_ x y
+
+-- | `Left` in `Term` form
+left_ ::
+  ( HasSpec a
+  , HasSpec b
+  , IsNormalType a
+  , IsNormalType b
+  ) =>
+  Term a ->
+  Term (Either a b)
+left_ = fromGeneric_ . injLeft_
+
+-- | `Right` in `Term` form
+right_ ::
+  ( HasSpec a
+  , HasSpec b
+  , IsNormalType a
+  , IsNormalType b
+  ) =>
+  Term b ->
+  Term (Either a b)
+right_ = fromGeneric_ . injRight_
+
+-- | @case .. of@ for `Term` and `Pred`. Note that the arguments
+-- here are @`Weighted` `Binder`@ over all the `Cases` of the
+-- `SimpleRep` of the scrutinee. The `Binder`s can be constructed with
+-- `branch` and `branchW`.
+caseOn ::
+  forall a.
+  ( GenericRequires a
+  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
+  , TypeList (Cases (SimpleRep a))
+  ) =>
+  Term a ->
+  FunTy (MapList (Weighted Binder) (Cases (SimpleRep a))) Pred
+caseOn tm = curryList @(Cases (SimpleRep a)) (mkCase (toGeneric_ tm))
+
+-- | Build a branch in a `caseOn`
+branch ::
+  forall p a.
+  ( HasSpec a
+  , All HasSpec (Args a)
+  , IsPred p
+  , IsProd a
+  ) =>
+  FunTy (MapList Term (Args a)) p ->
+  Weighted Binder a
+branch body =
+  -- NOTE: It's not sufficient to simply apply `body` to all the arguments
+  -- with `uncurryList` because that will mean that `var` is repeated in the
+  -- body. For example, consider `branch $ \ i j -> i <=. j`. If we don't
+  -- build the lets this will boil down to `p :-> fst p <=. snd p` which
+  -- will blow up at generation time. If we instead do: `p :-> Let x (fst p) (Let y (snd p) (x <=. y))`
+  -- the solver will solve `x` and `y` separately (`y` before `x` in this case) and things
+  -- will work just fine.
+  Weighted Nothing (bind (buildBranch @p body . toArgs @a))
+
+-- | Build a branch in a `caseOn` with a weight attached.
+branchW ::
+  forall p a.
+  ( HasSpec a
+  , All HasSpec (Args a)
+  , IsPred p
+  , IsProd a
+  ) =>
+  Int ->
+  FunTy (MapList Term (Args a)) p ->
+  Weighted Binder a
+branchW w body =
+  Weighted (Just w) (bind (buildBranch @p body . toArgs @a))
+
 
 -- ====================================================
 -- All the magic for things like 'caseOn', 'match', forAll' etc. lives here.
@@ -357,15 +318,8 @@ instance
   where
   mkCases r k = Weighted Nothing (bind (r @(ProdOver as))) :> mkCases @c @_ @cs r k
 
-------------------------------------------------------------------------
--- Syntax
-------------------------------------------------------------------------
 
-fst_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term x
-fst_ = prodFst_ . toGeneric_
-
-snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
-snd_ = prodSnd_ . toGeneric_
+-- Instances --------------------------------------------------------------
 
 fstW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] a
 fstW = ComposeW ProdFstW ToGenericW
@@ -386,47 +340,6 @@ instance
   shrink NoFold = []
   shrink FoldSpec {} = [NoFold]
 
-pair_ ::
-  ( HasSpec a
-  , HasSpec b
-  , IsNormalType a
-  , IsNormalType b
-  ) =>
-  Term a ->
-  Term b ->
-  Term (a, b)
-pair_ x y = fromGeneric_ $ prod_ x y
-
-left_ ::
-  ( HasSpec a
-  , HasSpec b
-  , IsNormalType a
-  , IsNormalType b
-  ) =>
-  Term a ->
-  Term (Either a b)
-left_ = fromGeneric_ . injLeft_
-
-right_ ::
-  ( HasSpec a
-  , HasSpec b
-  , IsNormalType a
-  , IsNormalType b
-  ) =>
-  Term b ->
-  Term (Either a b)
-right_ = fromGeneric_ . injRight_
-
-caseOn ::
-  forall a.
-  ( GenericRequires a
-  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
-  , TypeList (Cases (SimpleRep a))
-  ) =>
-  Term a ->
-  FunTy (MapList (Weighted Binder) (Cases (SimpleRep a))) Pred
-caseOn tm = curryList @(Cases (SimpleRep a)) (mkCase (toGeneric_ tm))
-
 buildBranch ::
   forall p as.
   ( All HasSpec as
@@ -438,38 +351,6 @@ buildBranch ::
 buildBranch bd Nil = toPred bd
 buildBranch bd (t :> args) =
   letBind t $ \x -> buildBranch @p (bd x) args
-
-branch ::
-  forall p a.
-  ( HasSpec a
-  , All HasSpec (Args a)
-  , IsPred p
-  , IsProd a
-  ) =>
-  FunTy (MapList Term (Args a)) p ->
-  Weighted Binder a
-branch body =
-  -- NOTE: It's not sufficient to simply apply `body` to all the arguments
-  -- with `uncurryList` because that will mean that `var` is repeated in the
-  -- body. For example, consider `branch $ \ i j -> i <=. j`. If we don't
-  -- build the lets this will boil down to `p :-> fst p <=. snd p` which
-  -- will blow up at generation time. If we instead do: `p :-> Let x (fst p) (Let y (snd p) (x <=. y))`
-  -- the solver will solve `x` and `y` separately (`y` before `x` in this case) and things
-  -- will work just fine.
-  Weighted Nothing (bind (buildBranch @p body . toArgs @a))
-
-branchW ::
-  forall p a.
-  ( HasSpec a
-  , All HasSpec (Args a)
-  , IsPred p
-  , IsProd a
-  ) =>
-  Int ->
-  FunTy (MapList Term (Args a)) p ->
-  Weighted Binder a
-branchW w body =
-  Weighted (Just w) (bind (buildBranch @p body . toArgs @a))
 
 -- | ProdAsListComputes is here to make sure that in situations like this:
 --
@@ -704,3 +585,91 @@ data Picky = PickFirst | PickSecond deriving (Ord, Eq, Show, Generic)
 instance HasSimpleRep Picky
 
 instance HasSpec Picky
+
+------------------------------------------------------------------------
+-- Some generic instances of HasSpec and HasSimpleRep
+------------------------------------------------------------------------
+
+instance (Typeable a, Typeable b) => HasSimpleRep (a, b)
+
+instance (Typeable a, Typeable b, Typeable c) => HasSimpleRep (a, b, c)
+
+instance (Typeable a, Typeable b, Typeable c, Typeable d) => HasSimpleRep (a, b, c, d)
+
+instance (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e) => HasSimpleRep (a, b, c, d, e)
+
+instance
+  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g) =>
+  HasSimpleRep (a, b, c, d, e, g)
+
+instance
+  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g, Typeable h) =>
+  HasSimpleRep (a, b, c, d, e, g, h)
+
+instance Typeable a => HasSimpleRep (Maybe a)
+
+instance (Typeable a, Typeable b) => HasSimpleRep (Either a b)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  ) =>
+  HasSpec (a, b)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  , HasSpec c
+  ) =>
+  HasSpec (a, b, c)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  , HasSpec c
+  , HasSpec d
+  ) =>
+  HasSpec (a, b, c, d)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  , HasSpec c
+  , HasSpec d
+  , HasSpec e
+  ) =>
+  HasSpec (a, b, c, d, e)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  , HasSpec c
+  , HasSpec d
+  , HasSpec e
+  , HasSpec g
+  ) =>
+  HasSpec (a, b, c, d, e, g)
+
+instance
+  ( HasSpec a
+  , HasSpec b
+  , HasSpec c
+  , HasSpec d
+  , HasSpec e
+  , HasSpec g
+  , HasSpec h
+  ) =>
+  HasSpec (a, b, c, d, e, g, h)
+
+instance
+  (IsNormalType a, HasSpec a) =>
+  HasSpec (Maybe a)
+
+instance
+  ( HasSpec a
+  , IsNormalType a
+  , HasSpec b
+  , IsNormalType b
+  ) =>
+  HasSpec (Either a b)
+

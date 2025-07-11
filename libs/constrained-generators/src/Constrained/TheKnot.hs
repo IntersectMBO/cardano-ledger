@@ -484,6 +484,7 @@ instance Logic SizeW where
 
 -- ======================================
 
+-- | A spec for a positive non-empty range
 rangeSize :: Integer -> Integer -> SizeSpec
 rangeSize a b | a < 0 || b < 0 = error ("Negative Int in call to rangeSize: " ++ show a ++ " " ++ show b)
 rangeSize a b = NumSpecInterval (Just a) (Just b)
@@ -502,6 +503,6 @@ maxSpec (ErrorSpec xs) = ErrorSpec xs
 maxSpec (MemberSpec xs) = leqSpec (maximum xs)
 maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothing hi) bad
 
--- How to constrain the size of any type, with a Sized instance
+-- | How to constrain the size of any type, with a Sized instance
 hasSize :: (HasSpec t, Sized t) => SizeSpec -> Specification t
 hasSize sz = liftSizeSpec sz []
