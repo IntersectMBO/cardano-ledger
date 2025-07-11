@@ -1241,6 +1241,8 @@ conwayModifiedPPGroups
       , ppGroup p31
       ]
 
+-- | Care should be taken to not apply this function to signed values, otherwise it will result in
+-- an `ArithmeticUnderflow` exception for negative numbers.
 asNaturalHKD :: forall f i. (HKDFunctor f, Integral i) => HKD f i -> HKD f Natural
 asNaturalHKD = hkdMap (Proxy @f) (fromIntegral @i @Natural)
 
