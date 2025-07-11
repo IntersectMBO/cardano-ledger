@@ -88,9 +88,7 @@ module Constrained.API (
   nothing_,
 
   -- ** Higher-order functions
-  id_,
   flip_,
-  compose_,
 
   -- ** List
   foldMap_,

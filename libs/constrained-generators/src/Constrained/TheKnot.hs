@@ -38,9 +38,7 @@ module Constrained.TheKnot (
   SizeW (..),
   PairSpec (..),
   ifElse,
-  compose_,
   flip_,
-  id_,
   sizeOf_,
 
   -- * Useful internal function symbols
@@ -192,8 +190,7 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
 -- Logic instances for Prod
 -- ==================================================
 
--- ========= ProdFstW
-
+-- | Function symbols for talking about `Prod`
 data ProdW :: [Type] -> Type -> Type where
   ProdW :: (HasSpec a, HasSpec b) => ProdW '[a, b] (Prod a b)
   ProdFstW :: (HasSpec a, HasSpec b) => ProdW '[Prod a b] a
@@ -257,21 +254,23 @@ instance Logic ProdW where
   mapTypeSpec ProdFstW (Cartesian s _) = s
   mapTypeSpec ProdSndW (Cartesian _ s) = s
 
+-- | `fst` on `Prod`
 prodFst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
 prodFst_ = appTerm ProdFstW
 
+-- | `snd` on `Prod`
 prodSnd_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
 prodSnd_ = appTerm ProdSndW
 
--- ========= ProdW
+-- | `(,)` on `Prod`
+prod_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
+prod_ = appTerm ProdW
+
 sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
 sameFst a ps = [b | Prod a' b <- ps, a == a']
 
 sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
-
-prod_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
-prod_ = appTerm ProdW
 
 pattern Product ::
   forall c.
@@ -289,6 +288,7 @@ pattern Product x y <- (App (getWitness -> Just ProdW) (x :> y :> Nil))
 -- The TypeSpec for List. Used in the HasSpec instance for Lists
 -- ================================================================
 
+-- | Generalized `length` function
 sizeOf_ :: (HasSpec a, Sized a) => Term a -> Term Integer
 sizeOf_ = curryList (App SizeOfW)
 
@@ -308,6 +308,7 @@ genFromSizeSpec integerSpec = genFromSpecT (integerSpec <> geqSpec 0)
 
 type SizeSpec = NumSpec Integer
 
+-- | The things we need to talk about the `size_` of a thing
 class Sized t where
   sizeOf :: t -> Integer
   default sizeOf :: (HasSimpleRep t, Sized (SimpleRep t)) => t -> Integer
@@ -350,6 +351,7 @@ class Sized t where
 -- other classes as inputs. See FlipW amd ComposeW
 -- ==============================================================
 
+-- | Function symbols for basic higher-order functions
 data FunW (dom :: [Type]) (rng :: Type) where
   IdW :: forall a. FunW '[a] a
   ComposeW ::
@@ -367,13 +369,10 @@ data FunW (dom :: [Type]) (rng :: Type) where
     t '[a, b] r ->
     FunW '[b, a] r
 
-funSem :: FunW dom rng -> FunTy dom rng
-funSem IdW = id
-funSem (ComposeW f g) = (\a -> semantics f (semantics g a))
-funSem (FlipW (f :: g d r)) = flip (semantics f)
-
 instance Semantics FunW where
-  semantics = funSem
+  semantics IdW = id
+  semantics (ComposeW f g) = semantics f . semantics g
+  semantics (FlipW f) = flip (semantics f)
 
 instance Syntax FunW
 
@@ -417,9 +416,6 @@ instance Logic FunW where
   rewriteRules (FlipW f) (a :> b@Lit {} :> Nil) Evidence = Just $ App f (b :> a :> Nil)
   rewriteRules (FlipW {}) _ Evidence = Nothing
 
-id_ :: forall a. HasSpec a => Term a -> Term a
-id_ = appTerm IdW
-
 --   -- Note we need Evidence to apply App to f
 
 flip_ ::
@@ -430,17 +426,6 @@ flip_ ::
   Term a ->
   Term r
 flip_ x = appTerm (FlipW x)
-
-compose_ ::
-  forall b t1 t2 a r.
-  ( AppRequires t1 '[b] r
-  , AppRequires t2 '[a] b
-  ) =>
-  t1 '[b] r ->
-  t2 '[a] b ->
-  Term a ->
-  Term r
-compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 
 -- =======================================================
 -- The Foldy class instances for Numbers
