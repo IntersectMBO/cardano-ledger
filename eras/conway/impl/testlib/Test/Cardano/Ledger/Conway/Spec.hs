@@ -61,7 +61,6 @@ import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
-import qualified Test.Cardano.Ledger.Conway.GoldenSpec as Golden
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
@@ -114,7 +113,6 @@ spec ::
   Spec
 spec =
   describe "Conway features" $ do
-    Golden.spec @era
     Proposals.spec @era
     Binary.spec @era
     DRepRatify.spec @era

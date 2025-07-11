@@ -17,11 +17,11 @@ import Cardano.Ledger.Conway (
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure (UnelectedCommitteeVoters),
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (BadInputsUTxO),
-  maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
@@ -32,6 +32,7 @@ import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Word (Word32)
 import GHC.Exts (fromList)
 import Lens.Micro ((&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use)
@@ -57,9 +58,11 @@ spec = do
     -- we use here the largest script we currently have as many times as necessary to
     -- trigger the predicate failure
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV3
+    pp <- getsPParams id
     let script :: Script era
         script = fromPlutusScript plutusScript
         size = originalBytesSize script
+        maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
         n = maxRefScriptSizePerTx `div` size + 1
     txIns <- replicateM n (produceRefScript script)
     let tx :: Tx era

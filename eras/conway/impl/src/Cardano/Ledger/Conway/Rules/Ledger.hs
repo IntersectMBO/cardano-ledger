@@ -18,7 +18,6 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLEDGER,
   ConwayLedgerPredFailure (..),
   ConwayLedgerEvent (..),
-  maxRefScriptSizePerTx,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -67,6 +66,7 @@ import Cardano.Ledger.Conway.Governance (
   proposalsGovStateL,
   proposalsWithPurpose,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertEvent (..), ConwayCertPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
@@ -125,6 +125,7 @@ import Data.Maybe (isNothing)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Text (Text)
+import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
@@ -138,12 +139,6 @@ data ConwayLedgerPredFailure era
   | ConwayTxRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
   deriving (Generic)
-
--- | In the next era this will become a proper protocol parameter. For now this is a hard
--- coded limit on the total number of bytes of reference scripts that a transaction can
--- use.
-maxRefScriptSizePerTx :: Int
-maxRefScriptSizePerTx = 200 * 1024 -- 200KiB
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
 
@@ -382,7 +377,9 @@ ledgerTransition = do
                       }
                   )
 
-        let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
+        let
+          totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
+          maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
         totalRefScriptSize
           <= maxRefScriptSizePerTx
             ?! ConwayTxRefScriptsSizeTooBig
