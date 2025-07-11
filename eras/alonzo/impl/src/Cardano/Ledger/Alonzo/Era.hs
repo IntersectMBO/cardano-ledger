@@ -14,7 +14,7 @@ module Cardano.Ledger.Alonzo.Era (
   AlonzoUTXOW,
   AlonzoBBODY,
   AlonzoLEDGER,
-  hardforkConwayTranslateUpperBoundForPlutusScripts,
+
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -96,5 +96,4 @@ type instance EraRule "UPEC" AlonzoEra = ShelleyUPEC AlonzoEra
 
 -- | Starting with protocol version 9, we translate the upper bound of validity
 -- interval correctly for Plutus scripts.
-hardforkConwayTranslateUpperBoundForPlutusScripts :: ProtVer -> Bool
-hardforkConwayTranslateUpperBoundForPlutusScripts pv = pvMajor pv > natVersion @8
+
