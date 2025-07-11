@@ -83,8 +83,7 @@ instance
   toSpecRep = pure . showOpaqueErrorString
 
 instance
-  ( Inject ctx TxId
-  ) =>
+  Inject ctx TxId =>
   SpecTranslate ctx (TxBody ConwayEra)
   where
   type SpecRep (TxBody ConwayEra) = Agda.TxBody
