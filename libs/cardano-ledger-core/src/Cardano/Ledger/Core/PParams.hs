@@ -334,6 +334,11 @@ class
 
   type DowngradePParams (f :: Type -> Type) era :: Type
 
+  emptyUpgradePParamsUpdate :: UpgradePParams StrictMaybe era
+  default emptyUpgradePParamsUpdate ::
+    UpgradePParams StrictMaybe era ~ () => UpgradePParams StrictMaybe era
+  emptyUpgradePParamsUpdate = ()
+
   -- | Upgrade PParams from previous era to the current one
   upgradePParamsHKD ::
     (HKDApplicative f, EraPParams (PreviousEra era)) =>

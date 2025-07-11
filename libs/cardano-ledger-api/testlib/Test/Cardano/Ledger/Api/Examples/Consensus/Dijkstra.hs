@@ -36,7 +36,6 @@ import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Keys (asWitness)
@@ -73,6 +72,7 @@ import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Mary as MarySLE
 import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as SLE
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Dijkstra.ImpTest (exampleDijkstraGenesis)
 
 -- ==============================================================
 
@@ -198,6 +198,3 @@ exampleDijkstraNewEpochState =
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
-
-exampleDijkstraGenesis :: DijkstraGenesis
-exampleDijkstraGenesis = DijkstraGenesis

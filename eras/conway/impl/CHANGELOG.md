@@ -2,6 +2,16 @@
 
 ## 1.20.0.0
 
+* Removed:
+  * `maxRefScriptSizePerTx`
+  * `maxRefScriptSizePerBlock`
+  * `refScriptCostMultiplier`
+  * `refScriptCostStride`
+* Added:
+  * `ppMaxRefScriptSizePerTxG`
+  * `ppMaxRefScriptSizePerBlockG`
+  * `ppRefScriptCostMultiplierG`
+  * `ppRefScriptCostStrideG`
 * Add `mkDelegatee` and `getDRepDelegatee`
 * Depercated `getVoteDelegatee` in favor of `getDRepDelegatee`
 * Add `conwayRegisterInitialFundsThenStaking`

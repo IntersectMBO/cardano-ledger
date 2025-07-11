@@ -165,6 +165,7 @@ instance EraPParams ShelleyEra where
   -- Using either one of these two functions with ShelleyEra will result in a build error:
   upgradePParamsHKD = error "IMPOSSIBLE! There cannot be PParams that can be upgraded to Shelley"
   downgradePParamsHKD = error "IMPOSSIBLE! There cannot be PParams that can be downgraded from Shelley"
+  emptyUpgradePParamsUpdate = error "IMPOSSIBLE! There is no UpgradePParams in ShelleyEra"
 
   hkdMinFeeAL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
   hkdMinFeeBL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}

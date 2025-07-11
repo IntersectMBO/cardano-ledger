@@ -6,7 +6,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -84,8 +86,8 @@ import Cardano.Ledger.Conway.TxBody (
   conwayRedeemerPointer,
   conwayRedeemerPointerInverse,
  )
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
@@ -103,7 +105,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Coerce (Coercible, coerce)
+import Data.Coerce (coerce)
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -465,9 +467,12 @@ instance EraTxBody DijkstraEra where
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
 upgradeGovAction ::
-  Coercible (PParamsHKD StrictMaybe (PreviousEra era)) (PParamsHKD StrictMaybe era) =>
-  GovAction (PreviousEra era) -> GovAction era
-upgradeGovAction (ParameterChange x y z) = ParameterChange (coerce x) (coerce y) z
+  forall era.
+  (AlonzoEraPParams era, EraPParams (PreviousEra era)) =>
+  GovAction (PreviousEra era) ->
+  GovAction era
+upgradeGovAction (ParameterChange x y z) =
+  ParameterChange (coerce x) (upgradePParamsUpdate (emptyUpgradePParamsUpdate @era) y) z
 upgradeGovAction (HardForkInitiation x y) = HardForkInitiation (coerce x) y
 upgradeGovAction (TreasuryWithdrawals x y) = TreasuryWithdrawals x y
 upgradeGovAction (NoConfidence x) = NoConfidence x

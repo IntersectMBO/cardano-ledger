@@ -127,6 +127,7 @@ library testlib
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra,
     cardano-ledger-shelley,
+    generic-random,
     microlens,
 
 test-suite tests
@@ -135,6 +136,7 @@ test-suite tests
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_dijkstra
+    Test.Cardano.Ledger.Dijkstra.GoldenSpec
 
   default-language: Haskell2010
   ghc-options:

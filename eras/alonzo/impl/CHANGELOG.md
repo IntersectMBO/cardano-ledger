@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `emptyUpgradePParamsUpdate` method to `AlonzoEraPParams`
 * Add `mkBasicBlockBodyAlonzo` and `txSeqBlockBodyAlonzoL` to use in Babbage, Conway and Dijkstra.
 * Added `eraUnsupportedLanguage`
 * Changed return type of `mkPlutusScript` and `mkBinaryPlutusScript` from `Maybe` to `MonadFail`

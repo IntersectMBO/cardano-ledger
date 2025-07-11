@@ -137,7 +137,6 @@ library testlib
     Test.Cardano.Ledger.Conway.Era
     Test.Cardano.Ledger.Conway.Genesis
     Test.Cardano.Ledger.Conway.GenesisSpec
-    Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GovActionReorderSpec
     Test.Cardano.Ledger.Conway.Imp
     Test.Cardano.Ledger.Conway.Imp.BbodySpec
@@ -251,6 +250,7 @@ test-suite tests
   other-modules:
     Paths_cardano_ledger_conway
     Test.Cardano.Ledger.Conway.Binary.CddlSpec
+    Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GoldenTranslation
 
   default-language: Haskell2010

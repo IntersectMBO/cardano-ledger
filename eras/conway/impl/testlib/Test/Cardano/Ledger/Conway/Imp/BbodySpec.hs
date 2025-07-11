@@ -17,10 +17,9 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure (..),
-  maxRefScriptSizePerBlock,
-  maxRefScriptSizePerTx,
   totalRefScriptSizeInBlock,
  )
 import Cardano.Ledger.Conway.State
@@ -40,6 +39,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
+import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
@@ -54,17 +54,22 @@ spec ::
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , ToExpr (Event (EraRule "BBODY" era))
+  , ConwayEraPParams era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
     let scriptSize = originalBytesSize plutusScript
+    pp <- getsPParams id
 
     -- Determine a number of transactions and a number of times the reference script
     -- needs to be included as an input in each transaction,
     -- in order for the total to exceed the maximum allowed refScript size per block,
     -- while the refScript size per individual transaction doesn't exceed maxRefScriptSizePerTx
+    let
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+      maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
     txScriptCounts <-
       genNumAdditionsExceeding
         scriptSize
@@ -103,6 +108,10 @@ spec = do
       Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
       let scriptSize = originalBytesSize plutusScript
 
+      pp <- getsPParams id
+      let
+        maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+        maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
       txScriptCounts <-
         genNumAdditionsExceeding
           scriptSize

@@ -19,7 +19,6 @@
 module Cardano.Ledger.Conway.Rules.Bbody (
   ConwayBBODY,
   ConwayBbodyPredFailure (..),
-  maxRefScriptSizePerBlock,
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
@@ -56,6 +55,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
@@ -97,15 +97,10 @@ import Data.Monoid (Sum (getSum))
 import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq (..))
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-
--- | In the next era this will become a proper protocol parameter.
--- For now this is a hard coded limit on the total number of bytes of all reference scripts
--- combined from all transactions within a block.
-maxRefScriptSizePerBlock :: Int
-maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
@@ -258,6 +253,7 @@ instance
   , EraRule "BBODY" era ~ ConwayBBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
+  , ConwayEraPParams era
   ) =>
   STS (ConwayBBODY era)
   where
@@ -288,6 +284,7 @@ conwayBbodyTransition ::
   , AlonzoEraTx era
   , EraBlockBody era
   , BabbageEraTxBody era
+  , ConwayEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 conwayBbodyTransition = do
@@ -301,6 +298,7 @@ conwayBbodyTransition = do
         let utxo = utxosUtxo (lsUTxOState ls)
             txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
+            maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure

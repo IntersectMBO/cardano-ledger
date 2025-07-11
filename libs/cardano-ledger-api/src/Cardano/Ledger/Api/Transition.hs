@@ -47,12 +47,13 @@ mkLatestTransitionConfig ::
   ShelleyGenesis ->
   AlonzoGenesis ->
   ConwayGenesis ->
+  DijkstraGenesis ->
   TransitionConfig LatestKnownEra
-mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis =
+mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis dijkstraGenesis =
   mkShelleyTransitionConfig shelleyGenesis
     & mkTransitionConfig NoGenesis
     & mkTransitionConfig NoGenesis
     & mkTransitionConfig alonzoGenesis
     & mkTransitionConfig NoGenesis
     & mkTransitionConfig conwayGenesis
-    & mkTransitionConfig DijkstraGenesis
+    & mkTransitionConfig dijkstraGenesis

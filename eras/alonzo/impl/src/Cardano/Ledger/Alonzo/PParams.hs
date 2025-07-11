@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -17,6 +18,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -312,6 +314,7 @@ instance EraPParams AlonzoEra where
 
   upgradePParamsHKD = upgradeAlonzoPParams
   downgradePParamsHKD = downgradeAlonzoPParams
+  emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
   hkdMinFeeAL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
   hkdMinFeeBL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
@@ -419,6 +422,10 @@ data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   , uappMaxCollateralInputs :: !(HKD f Natural)
   }
   deriving (Generic)
+
+emptyAlonzoUpgradePParamsUpdate :: UpgradeAlonzoPParams StrictMaybe
+emptyAlonzoUpgradePParamsUpdate =
+  UpgradeAlonzoPParams SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
 
 deriving instance Eq (UpgradeAlonzoPParams Identity)
 

@@ -3,8 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,8 +12,6 @@
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
   tierRefScriptFee,
-  refScriptCostStride,
-  refScriptCostMultiplier,
   getConwayMinFeeTx,
   Tx (..),
 ) where
@@ -35,11 +33,11 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoTx (..),
   Tx (..),
  )
-import Cardano.Ledger.BaseTypes (unboundRational)
+import Cardano.Ledger.BaseTypes (NonZero (..), unboundRational)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
@@ -47,6 +45,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
 import Lens.Micro (Lens', lens, (^.))
@@ -82,13 +81,6 @@ instance EqRaw (Tx ConwayEra) where
 conwayTxL :: Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
 conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
--- | 25 KiB
-refScriptCostStride :: Int
-refScriptCostStride = 25_600
-
-refScriptCostMultiplier :: Rational
-refScriptCostMultiplier = 1.2
-
 getConwayMinFeeTx ::
   ( EraTx era
   , AlonzoEraTxWits era
@@ -104,8 +96,8 @@ getConwayMinFeeTx pp tx refScriptsSize =
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
     refScriptsFee =
       tierRefScriptFee
-        refScriptCostMultiplier
-        refScriptCostStride
+        (unboundRational $ pp ^. ppRefScriptCostMultiplierG)
+        (fromIntegral @Word32 @Int . unNonZero $ pp ^. ppRefScriptCostStrideG)
         refScriptCostPerByte
         refScriptsSize
 
