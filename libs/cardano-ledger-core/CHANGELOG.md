@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Add `drepDepositCompactL`
+* Change the type of `drepDeposit` to `CompactForm Coin`
 * Remove `AccountState` type synonym for `ChainAccountState`
 * Remove `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`
 * Replace `dsUnified` with `dsAccounts` in `DState`

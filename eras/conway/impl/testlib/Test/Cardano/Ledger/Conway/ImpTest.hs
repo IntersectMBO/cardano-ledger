@@ -363,7 +363,7 @@ unRegisterDRep ::
   ImpTestM era ()
 unRegisterDRep drep = do
   drepState <- getDRepState drep
-  let refund = drepDeposit drepState
+  let refund = fromCompact $ drepDeposit drepState
   submitTxAnn_ "UnRegister DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL

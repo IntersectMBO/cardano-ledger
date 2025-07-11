@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Change the type of `cppDRepDeposit` to `CompactForm Coin`
+* Add `ppDRepDepositCompactL` and `ppuDRepDepositCompactL`
+* Replace `hkdDRepDepositL` with `hkdDRepDepositCompactL`
 * Delete `Tx` newtype wrapper
 * Hide `Cardano.Ledger.Conway.Translation` module and remove its re-exports: `addrPtrNormalize` and `translateDatum`
 * Removed:
