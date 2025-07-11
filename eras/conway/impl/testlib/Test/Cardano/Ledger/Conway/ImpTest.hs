@@ -134,6 +134,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
   getCommittee,
   registerStakeCredentialWithDeposit,
+  registerPoolWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -1822,3 +1823,11 @@ registerStakeCredentialWithDeposit cred = do
         .~ SSeq.fromList [RegDepositTxCert cred deposit]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
+
+registerPoolWithDeposit ::
+  ConwayEraImp era =>
+  KeyHash 'StakePool ->
+  ImpTestM era ()
+registerPoolWithDeposit khPool =
+  (freshKeyHash >>= registerStakeCredentialWithDeposit . KeyHashObj)
+    >>= registerPoolWithRewardAccount khPool
