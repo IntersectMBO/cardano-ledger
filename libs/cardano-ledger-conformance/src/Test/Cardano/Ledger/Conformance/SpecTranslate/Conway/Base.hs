@@ -639,12 +639,8 @@ instance SpecTranslate ctx TxAuxDataHash where
   toSpecRep (TxAuxDataHash x) = toSpecRep x
 
 data ConwayTxBodyTransContext = ConwayTxBodyTransContext
-  { ctbtcSizeTx :: !Integer
-  , ctbtcTxId :: !TxId
+  { ctbtcTxId :: !TxId
   }
-
-instance Inject ConwayTxBodyTransContext Integer where
-  inject = ctbtcSizeTx
 
 instance Inject ConwayTxBodyTransContext TxId where
   inject = ctbtcTxId

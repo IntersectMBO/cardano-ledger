@@ -83,15 +83,12 @@ instance
   toSpecRep = pure . showOpaqueErrorString
 
 instance
-  ( Inject ctx Integer
-  , Inject ctx TxId
-  ) =>
+  Inject ctx TxId =>
   SpecTranslate ctx (TxBody ConwayEra)
   where
   type SpecRep (TxBody ConwayEra) = Agda.TxBody
 
   toSpecRep txb = do
-    sizeTx <- askCtx
     txId <- askCtx @TxId
     Agda.MkTxBody
       <$> toSpecRep (txb ^. inputsTxBodyL)
@@ -109,7 +106,6 @@ instance
       <*> toSpecRep (txb ^. auxDataHashTxBodyL)
       <*> toSpecRep (txb ^. networkIdTxBodyL)
       <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
-      <*> pure sizeTx
       <*> toSpecRep txId
       <*> toSpecRep (txb ^. collateralInputsTxBodyL)
       <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
@@ -121,8 +117,9 @@ instance SpecTranslate ctx (Tx ConwayEra) where
   toSpecRep tx =
     Agda.MkTx
       <$> withCtx
-        (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
+        (ConwayTxBodyTransContext (txIdTx tx))
         (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. sizeTxF)
       <*> toSpecRep (tx ^. isValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
