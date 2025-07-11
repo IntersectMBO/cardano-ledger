@@ -117,8 +117,9 @@ instance SpecTranslate ctx (Tx ConwayEra) where
   toSpecRep tx =
     Agda.MkTx
       <$> withCtx
-        (ConwayTxBodyTransContext (tx ^. sizeTxF) (txIdTx tx))
+        (ConwayTxBodyTransContext (txIdTx tx))
         (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. sizeTxF)
       <*> toSpecRep (tx ^. isValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
