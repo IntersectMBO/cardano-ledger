@@ -25,6 +25,7 @@ import Cardano.Ledger.BaseTypes (
   Globals (epochInfo),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
@@ -331,7 +332,7 @@ instance TotalAda (DState era) where
       <> (UM.fromCompact $ UM.sumDepositUView (UM.RewDepUView (dsUnified dstate)))
 
 instance TotalAda (PState era) where
-  totalAda pstate = Fold.fold (psDeposits pstate)
+  totalAda pstate = Fold.fold (fromCompact <$> psDeposits pstate)
 
 instance TotalAda (VState era) where
   totalAda _ = mempty

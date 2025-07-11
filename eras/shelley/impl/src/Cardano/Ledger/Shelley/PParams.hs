@@ -67,7 +67,8 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Hashes (GenDelegs)
@@ -103,7 +104,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ Maximal block header size
   , sppKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit
-  , sppPoolDeposit :: !(HKD f Coin)
+  , sppPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , sppEMax :: !(HKD f EpochInterval)
   -- ^ epoch bound on pool retirement
@@ -171,7 +172,7 @@ instance EraPParams ShelleyEra where
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
   hkdKeyDepositL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
-  hkdPoolDepositL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
+  hkdPoolDepositCompactL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
   hkdEMaxL = lens sppEMax $ \pp x -> pp {sppEMax = x}
   hkdNOptL = lens sppNOpt $ \pp x -> pp {sppNOpt = x}
   hkdA0L = lens sppA0 $ \pp x -> pp {sppA0 = x}
@@ -194,7 +195,7 @@ emptyShelleyPParams =
     , sppMaxTxSize = 2048
     , sppMaxBHSize = 0
     , sppKeyDeposit = Coin 0
-    , sppPoolDeposit = Coin 0
+    , sppPoolDeposit = CompactCoin 0
     , sppEMax = EpochInterval 0
     , sppNOpt = 100
     , sppA0 = minBound
@@ -380,8 +381,8 @@ ppPoolDeposit :: EraPParams era => PParam era
 ppPoolDeposit =
   PParam
     { ppName = "stakePoolDeposit"
-    , ppLens = ppPoolDepositL
-    , ppUpdate = Just $ PParamUpdate 6 ppuPoolDepositL
+    , ppLens = ppPoolDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 6 ppuPoolDepositCompactL
     }
 
 ppEMax :: EraPParams era => PParam era

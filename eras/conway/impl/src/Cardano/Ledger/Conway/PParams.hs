@@ -113,7 +113,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin (Coin), CompactForm (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.HKD (
@@ -612,7 +612,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Maximal block header size
   , cppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
   -- ^ The amount of a key registration deposit
-  , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
+  , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , cppEMax :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -788,7 +788,7 @@ instance EraPParams ConwayEra where
   hkdMaxTxSizeL = lens (unTHKD . cppMaxTxSize) $ \pp x -> pp {cppMaxTxSize = THKD x}
   hkdMaxBHSizeL = lens (unTHKD . cppMaxBHSize) $ \pp x -> pp {cppMaxBHSize = THKD x}
   hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
-  hkdPoolDepositL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
+  hkdPoolDepositCompactL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
   hkdNOptL = lens (unTHKD . cppNOpt) $ \pp x -> pp {cppNOpt = THKD x}
   hkdA0L = lens (unTHKD . cppA0) $ \pp x -> pp {cppA0 = THKD x}
@@ -883,7 +883,7 @@ instance ConwayEraPParams ConwayEra where
       , isValid (/= EpochInterval 0) ppuCommitteeMaxTermLengthL
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
-        isValid (/= zero) ppuPoolDepositL
+        isValid (/= CompactCoin 0) ppuPoolDepositCompactL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
       , hardforkConwayBootstrapPhase pv
@@ -929,7 +929,7 @@ emptyConwayPParams =
     , cppMaxTxSize = THKD 2048
     , cppMaxBHSize = THKD 0
     , cppKeyDeposit = THKD (Coin 0)
-    , cppPoolDeposit = THKD (Coin 0)
+    , cppPoolDeposit = THKD (CompactCoin 0)
     , cppEMax = THKD (EpochInterval 0)
     , cppNOpt = THKD 100
     , cppA0 = THKD minBound

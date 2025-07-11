@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `ppPoolDepositCompactL` and `ppuPoolDepositCompactL`
 * Add `standardHashSize` and `standardAddrHashSize`
 * Add `zeroCostModels` method to `EraTest`
 * Added support for `PlutusV4`
