@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -173,6 +175,9 @@ deriving newtype instance
 
 deriving newtype instance
   ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
+
+instance ToExpr (HKD f a) => ToExpr (THKD (t :: k) f a) where
+  toExpr = toExpr . unTHKD
 
 instance ToExpr TxIn
 

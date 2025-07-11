@@ -146,7 +146,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -530,56 +529,6 @@ instance ToStakePoolGroup 'SecurityGroup where
 
 instance ToStakePoolGroup 'NoStakePoolGroup where
   toStakePoolGroup = NoStakePoolGroup
-
--- | HKD that is tagged with a group
-newtype THKD (t :: PPGroups) f a = THKD {unTHKD :: HKD f a}
-
-instance Eq (HKD f a) => Eq (THKD t f a) where
-  THKD x1 == THKD x2 = x1 == x2
-
-instance Ord (HKD f a) => Ord (THKD t f a) where
-  compare (THKD x1) (THKD x2) = compare x1 x2
-
-instance Show (HKD f a) => Show (THKD t f a) where
-  show = show . unTHKD
-
-instance Semigroup (HKD f a) => Semigroup (THKD t f a) where
-  a <> b = THKD $ unTHKD a <> unTHKD b
-
-instance Monoid (HKD f a) => Monoid (THKD t f a) where
-  mempty = THKD mempty
-
-instance NoThunks (HKD f a) => NoThunks (THKD t f a) where
-  noThunks ctx = noThunks ctx . unTHKD
-  wNoThunks ctx = wNoThunks ctx . unTHKD
-  showTypeOf _ = showTypeOf (Proxy @(HKD f a))
-
-instance NFData (HKD f a) => NFData (THKD t f a) where
-  rnf = rnf . unTHKD
-
-instance (Typeable t, EncCBOR a) => EncCBOR (THKD t Identity a) where
-  encCBOR = encCBOR . unTHKD
-
-instance (Typeable t, DecCBOR a) => DecCBOR (THKD t Identity a) where
-  decCBOR = THKD <$> decCBOR
-
-instance (Typeable t, EncCBOR a) => EncCBOR (THKD t StrictMaybe a) where
-  encCBOR = encCBOR . unTHKD
-
-instance (Typeable t, DecCBOR a) => DecCBOR (THKD t StrictMaybe a) where
-  decCBOR = THKD <$> decCBOR
-
-instance (Typeable t, ToJSON a) => ToJSON (THKD t Identity a) where
-  toJSON = toJSON . unTHKD
-
-instance (Typeable t, FromJSON a) => FromJSON (THKD t Identity a) where
-  parseJSON = fmap THKD . parseJSON
-
-instance (Typeable t, ToJSON a) => ToJSON (THKD t StrictMaybe a) where
-  toJSON = toJSON . unTHKD
-
-instance (Typeable t, FromJSON a) => FromJSON (THKD t StrictMaybe a) where
-  parseJSON = fmap THKD . parseJSON
 
 ppGroup ::
   forall t s a.
@@ -1162,18 +1111,18 @@ conwayApplyPPUpdates pp ppu =
     }
   where
     ppUpdate ::
-      THKD f Identity a ->
-      THKD f StrictMaybe a ->
-      THKD f Identity a
+      THKD (f :: PPGroups) Identity a ->
+      THKD (f :: PPGroups) StrictMaybe a ->
+      THKD (f :: PPGroups) Identity a
     ppUpdate (THKD ppCurValue) (THKD ppuValue) =
       case ppuValue of
         SNothing -> THKD ppCurValue
         SJust ppNewValue -> THKD ppNewValue
 
     ppUpdateCostModels ::
-      THKD f Identity CostModels ->
-      THKD f StrictMaybe CostModels ->
-      THKD f Identity CostModels
+      THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) Identity CostModels ->
+      THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) StrictMaybe CostModels ->
+      THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) Identity CostModels
     ppUpdateCostModels (THKD curCostModel) (THKD ppuCostModel) =
       case ppuCostModel of
         SNothing -> THKD curCostModel

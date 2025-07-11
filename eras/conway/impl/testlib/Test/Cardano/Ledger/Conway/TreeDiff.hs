@@ -23,7 +23,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.HKD
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
 import Test.Cardano.Data.TreeDiff ()
@@ -99,8 +98,6 @@ instance
 instance (Era era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Proposals era)
 
 -- PParams
-instance ToExpr (HKD f a) => ToExpr (THKD t f a) where
-  toExpr = toExpr . unTHKD
 
 instance ToExpr (ConwayPParams Identity era)
 

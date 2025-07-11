@@ -42,11 +42,7 @@ import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (
-  ConwayPParams (..),
-  THKD (..),
-  UpgradeConwayPParams (..),
- )
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..), UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
@@ -54,7 +50,7 @@ import Cardano.Ledger.Conway.Transition (TransitionConfig (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.HKD (HKD, NoUpdate (..))
+import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
 import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (Event))
@@ -767,9 +763,6 @@ instance
 
 instance Era era => Arbitrary (ConwayGovCertPredFailure era) where
   arbitrary = genericArbitraryU
-
-instance Arbitrary (HKD f a) => Arbitrary (THKD t f a) where
-  arbitrary = THKD <$> arbitrary
 
 instance Era era => Arbitrary (ConwayPParams Identity era) where
   arbitrary =

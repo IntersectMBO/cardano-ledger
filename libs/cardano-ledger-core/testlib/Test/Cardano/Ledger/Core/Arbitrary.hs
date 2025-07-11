@@ -4,9 +4,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -79,7 +81,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.HKD (NoUpdate (..))
+import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
 import Cardano.Ledger.Plutus.CostModels (
@@ -523,6 +525,9 @@ deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
 deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (PParams era)
 
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
+
+instance Arbitrary (HKD f a) => Arbitrary (THKD (t :: k) f a) where
+  arbitrary = THKD <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.UMap -------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Move `THKD` from `cardano-ledger-conway`
 * Add `standardHashSize` and `standardAddrHashSize`
 * Add `zeroCostModels` method to `EraTest`
 * Added support for `PlutusV4`

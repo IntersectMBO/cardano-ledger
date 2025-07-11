@@ -11,6 +11,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -29,6 +30,9 @@ module Cardano.Ledger.Core.PParams (
   PParamsUpdate (..),
   emptyPParamsUpdate,
   genericApplyPPUpdates,
+
+  -- * THKD
+  THKD (..),
 
   -- * PParams lens
   ppMinFeeAL,
@@ -94,7 +98,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..))
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
@@ -103,14 +107,13 @@ import qualified Data.Foldable as F (foldMap', foldl', foldlM)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
-import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Typeable (typeRep)
+import Data.Typeable
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
-import NoThunks.Class (NoThunks)
+import NoThunks.Class
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
@@ -237,6 +240,56 @@ deriving via
     EraPParams era => ToJSON (PParamsUpdate era)
 
 deriving instance Generic (PParamsUpdate era)
+
+-- | HKD that is capable of polykinded tagging.
+newtype THKD (t :: k) f a = THKD {unTHKD :: HKD f a}
+
+instance Eq (HKD f a) => Eq (THKD t f a) where
+  THKD x1 == THKD x2 = x1 == x2
+
+instance Ord (HKD f a) => Ord (THKD t f a) where
+  compare (THKD x1) (THKD x2) = compare x1 x2
+
+instance Show (HKD f a) => Show (THKD t f a) where
+  show = show . unTHKD
+
+instance Semigroup (HKD f a) => Semigroup (THKD t f a) where
+  a <> b = THKD $ unTHKD a <> unTHKD b
+
+instance Monoid (HKD f a) => Monoid (THKD t f a) where
+  mempty = THKD mempty
+
+instance NoThunks (HKD f a) => NoThunks (THKD t f a) where
+  noThunks ctx = noThunks ctx . unTHKD
+  wNoThunks ctx = wNoThunks ctx . unTHKD
+  showTypeOf _ = showTypeOf (Proxy @(HKD f a))
+
+instance NFData (HKD f a) => NFData (THKD t f a) where
+  rnf = rnf . unTHKD
+
+instance (Typeable t, Typeable k, EncCBOR a) => EncCBOR (THKD (t :: k) Identity a) where
+  encCBOR = encCBOR . unTHKD
+
+instance (Typeable t, Typeable k, DecCBOR a) => DecCBOR (THKD (t :: k) Identity a) where
+  decCBOR = THKD <$> decCBOR
+
+instance (Typeable t, Typeable k, EncCBOR a) => EncCBOR (THKD (t :: k) StrictMaybe a) where
+  encCBOR = encCBOR . unTHKD
+
+instance (Typeable t, Typeable k, DecCBOR a) => DecCBOR (THKD (t :: k) StrictMaybe a) where
+  decCBOR = THKD <$> decCBOR
+
+instance ToJSON a => ToJSON (THKD t Identity a) where
+  toJSON = toJSON . unTHKD
+
+instance FromJSON a => FromJSON (THKD t Identity a) where
+  parseJSON = fmap THKD . parseJSON
+
+instance ToJSON a => ToJSON (THKD t StrictMaybe a) where
+  toJSON = toJSON . unTHKD
+
+instance FromJSON a => FromJSON (THKD t StrictMaybe a) where
+  parseJSON = fmap THKD . parseJSON
 
 -- Generic derivation of `applyPPUpdates`
 

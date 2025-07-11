@@ -12,6 +12,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -922,7 +923,7 @@ instance Typeable a => HasSimpleRep (THKD tag StrictMaybe a) where
   fromSimpleRep = THKD . fromSimpleRep
   toSimpleRep (THKD sm) = toSimpleRep sm
 
-instance (IsNormalType a, Typeable tag, HasSpec a) => HasSpec (THKD tag StrictMaybe a)
+instance (IsNormalType a, Typeable tag, Typeable k, HasSpec a) => HasSpec (THKD (tag :: k) StrictMaybe a)
 
 instance Typeable a => HasSimpleRep (THKD tag Identity a) where
   type SimpleRep (THKD tag Identity a) = a
@@ -932,10 +933,11 @@ instance Typeable a => HasSimpleRep (THKD tag Identity a) where
 instance
   ( IsNormalType a
   , Typeable tag
+  , Typeable k
   , HasSpec a
   , GenericallyInstantiated (THKD tag Identity a)
   ) =>
-  HasSpec (THKD tag Identity a)
+  HasSpec (THKD (tag :: k) Identity a)
 
 instance HasSimpleRep GovActionPurpose
 
