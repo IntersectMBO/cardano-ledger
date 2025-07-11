@@ -6,7 +6,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -465,15 +467,18 @@ instance EraTxBody DijkstraEra where
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
 upgradeGovAction ::
-  Coercible (PParamsHKD StrictMaybe (PreviousEra era)) (PParamsHKD StrictMaybe era) =>
-  GovAction (PreviousEra era) -> GovAction era
-upgradeGovAction (ParameterChange x y z) = ParameterChange (coerce x) (coerce y) z
-upgradeGovAction (HardForkInitiation x y) = HardForkInitiation (coerce x) y
-upgradeGovAction (TreasuryWithdrawals x y) = TreasuryWithdrawals x y
-upgradeGovAction (NoConfidence x) = NoConfidence x
-upgradeGovAction (UpdateCommittee x y z w) = UpdateCommittee x y z w
-upgradeGovAction (NewConstitution x y) = NewConstitution x (coerce y)
-upgradeGovAction InfoAction = InfoAction
+  forall era.
+  (EraPParams era, EraPParams (PreviousEra era)) =>
+  UpgradePParams StrictMaybe era ->
+  GovAction (PreviousEra era) ->
+  GovAction era
+upgradeGovAction args (ParameterChange x y z) = ParameterChange (coerce x) (upgradePParamsUpdate args @era y) z
+upgradeGovAction _ (HardForkInitiation x y) = HardForkInitiation (coerce x) y
+upgradeGovAction _ (TreasuryWithdrawals x y) = TreasuryWithdrawals x y
+upgradeGovAction _ (NoConfidence x) = NoConfidence x
+upgradeGovAction _ (UpdateCommittee x y z w) = UpdateCommittee x y z w
+upgradeGovAction _ (NewConstitution x y) = NewConstitution x (coerce y)
+upgradeGovAction _ InfoAction = InfoAction
 
 upgradeProposals :: ProposalProcedure ConwayEra -> ProposalProcedure DijkstraEra
 upgradeProposals ProposalProcedure {..} =
