@@ -1,20 +1,20 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.Ledger.Dijkstra.PParams 
-  ( DijkstraPParams (..)
-  , DijkstraEraPParams (..)
-  ) where
+module Cardano.Ledger.Dijkstra.PParams (
+  DijkstraPParams (..),
+  DijkstraEraPParams (..),
+) where
 
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Babbage.PParams
@@ -30,19 +30,18 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core hiding (ppUpdate)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.HKD (HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
-import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices (..), updateCostModels, emptyCostModels)
+import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices (..), emptyCostModels)
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
+import Control.DeepSeq (NFData)
 import Data.Data (Proxy (..))
+import Data.Default (Default (..))
+import Data.Functor.Identity (Identity)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (^.))
-import Numeric.Natural (Natural)
-import Data.Functor.Identity (Identity)
-import Data.Set (Set)
-import Data.Default (Default(..))
 import NoThunks.Class (NoThunks)
-import Control.DeepSeq (NFData)
+import Numeric.Natural (Natural)
 
 -- | Dijkstra Protocol parameters. The following parameters have been added since Dijkstra:
 -- * @maxRefScriptSizePerBlock@
@@ -127,7 +126,6 @@ data DijkstraPParams f era = DijkstraPParams
   }
   deriving (Generic)
 
-
 deriving instance Eq (DijkstraPParams Identity era)
 
 deriving instance Ord (DijkstraPParams Identity era)
@@ -147,82 +145,6 @@ deriving instance Show (DijkstraPParams StrictMaybe era)
 instance NoThunks (DijkstraPParams StrictMaybe era)
 
 instance NFData (DijkstraPParams StrictMaybe era)
-
-dijkstraModifiedPPGroups :: DijkstraPParams StrictMaybe era -> Set PPGroups
-dijkstraModifiedPPGroups
-  ( DijkstraPParams
-      p01
-      p02
-      p03
-      p04
-      p05
-      p06
-      p07
-      p08
-      p09
-      p10
-      p11
-      p12
-      _protocolVersion
-      p14
-      p15
-      p16
-      p17
-      p18
-      p19
-      p20
-      p21
-      p22
-      p23
-      p24
-      p25
-      p26
-      p27
-      p28
-      p29
-      p30
-      p31
-      p32
-      p33
-      p34
-      p35
-    ) =
-    mconcat
-      [ ppGroup p01
-      , ppGroup p02
-      , ppGroup p03
-      , ppGroup p04
-      , ppGroup p05
-      , ppGroup p06
-      , ppGroup p07
-      , ppGroup p08
-      , ppGroup p09
-      , ppGroup p10
-      , ppGroup p11
-      , ppGroup p12
-      , ppGroup p14
-      , ppGroup p15
-      , ppGroup p16
-      , ppGroup p17
-      , ppGroup p18
-      , ppGroup p19
-      , ppGroup p20
-      , ppGroup p21
-      , ppGroup p22
-      , ppGroup p23
-      , ppGroup p24
-      , ppGroup p25
-      , ppGroup p26
-      , ppGroup p27
-      , ppGroup p28
-      , ppGroup p29
-      , ppGroup p30
-      , ppGroup p31
-      , ppGroup p32
-      , ppGroup p33
-      , ppGroup p34
-      , ppGroup p35
-      ]
 
 instance EraPParams DijkstraEra where
   type PParamsHKD f DijkstraEra = DijkstraPParams f DijkstraEra
@@ -323,7 +245,6 @@ instance BabbageEraPParams DijkstraEra where
     lens (unTHKD . dppCoinsPerUTxOByte) $ \pp x -> pp {dppCoinsPerUTxOByte = THKD x}
 
 instance ConwayEraPParams DijkstraEra where
-  modifiedPPGroups (PParamsUpdate ppu) = dijkstraModifiedPPGroups ppu
   ppuWellFormed _pv ppu =
     and
       [ -- Numbers

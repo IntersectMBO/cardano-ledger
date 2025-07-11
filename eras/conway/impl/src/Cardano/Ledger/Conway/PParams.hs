@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,6 +17,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -77,7 +79,6 @@ module Cardano.Ledger.Conway.PParams (
   DRepGroup (..),
   PPGroups (..),
   StakePoolGroup (..),
-  conwayModifiedPPGroups,
   pvtHardForkInitiationL,
   pvtMotionNoConfidenceL,
   emptyConwayPParams,
@@ -148,15 +149,24 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word (Word16, Word32)
-import GHC.Generics (Generic, K1 (..))
+import GHC.Generics (Generic (..), K1 (..), M1 (..), (:*:) (..))
 import GHC.Stack (HasCallStack)
-import Lens.Micro
+import Lens.Micro (Lens', lens, set, (^.))
+import qualified Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 
 class BabbageEraPParams era => ConwayEraPParams era where
   modifiedPPGroups :: PParamsUpdate era -> Set PPGroups
+  default modifiedPPGroups ::
+    forall a.
+    ( Generic (PParamsHKD StrictMaybe era)
+    , CollectModifiedPPGroups (Rep (PParamsHKD StrictMaybe era) a)
+    ) =>
+    PParamsUpdate era ->
+    Set PPGroups
+  modifiedPPGroups (PParamsUpdate ppu) = collectModifiedPPGroups $ from @_ @a ppu
   ppuWellFormed :: ProtVer -> PParamsUpdate era -> Bool
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
@@ -799,7 +809,7 @@ instance EraPParams ConwayEra where
   hkdMinPoolCostL = lens (unTHKD . cppMinPoolCost) $ \pp x -> pp {cppMinPoolCost = THKD x}
   ppProtocolVersionL = ppLensHKD . lens cppProtocolVersion (\pp x -> pp {cppProtocolVersion = x})
 
-  ppDG = to (const minBound)
+  ppDG = L.to (const minBound)
   ppuProtocolVersionL = notSupportedInThisEraL
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
@@ -872,7 +882,6 @@ instance BabbageEraPParams ConwayEra where
     lens (unTHKD . cppCoinsPerUTxOByte) $ \pp x -> pp {cppCoinsPerUTxOByte = THKD x}
 
 instance ConwayEraPParams ConwayEra where
-  modifiedPPGroups (PParamsUpdate ppu) = conwayModifiedPPGroups ppu
   ppuWellFormed pv ppu =
     and
       [ -- Numbers
@@ -1121,73 +1130,30 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppMaxCollateralInputs = asNaturalHKD @f @Word16 (unTHKD cppMaxCollateralInputs)
     }
 
-conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroups
-conwayModifiedPPGroups
-  ( ConwayPParams
-      p01
-      p02
-      p03
-      p04
-      p05
-      p06
-      p07
-      p08
-      p09
-      p10
-      p11
-      p12
-      _protocolVersion
-      p14
-      p15
-      p16
-      p17
-      p18
-      p19
-      p20
-      p21
-      p22
-      p23
-      p24
-      p25
-      p26
-      p27
-      p28
-      p29
-      p30
-      p31
-    ) =
-    mconcat
-      [ ppGroup p01
-      , ppGroup p02
-      , ppGroup p03
-      , ppGroup p04
-      , ppGroup p05
-      , ppGroup p06
-      , ppGroup p07
-      , ppGroup p08
-      , ppGroup p09
-      , ppGroup p10
-      , ppGroup p11
-      , ppGroup p12
-      , ppGroup p14
-      , ppGroup p15
-      , ppGroup p16
-      , ppGroup p17
-      , ppGroup p18
-      , ppGroup p19
-      , ppGroup p20
-      , ppGroup p21
-      , ppGroup p22
-      , ppGroup p23
-      , ppGroup p24
-      , ppGroup p25
-      , ppGroup p26
-      , ppGroup p27
-      , ppGroup p28
-      , ppGroup p29
-      , ppGroup p30
-      , ppGroup p31
-      ]
+class CollectModifiedPPGroups x where
+  collectModifiedPPGroups :: x -> Set PPGroups
+
+instance
+  ( CollectModifiedPPGroups (x u)
+  , CollectModifiedPPGroups (y u)
+  ) =>
+  CollectModifiedPPGroups ((x :*: y) u)
+  where
+  collectModifiedPPGroups (x :*: y) = collectModifiedPPGroups x <> collectModifiedPPGroups y
+
+instance
+  ( ToDRepGroup g
+  , ToStakePoolGroup h
+  ) =>
+  CollectModifiedPPGroups (K1 i (THKD ('PPGroups g h) StrictMaybe a) p)
+  where
+  collectModifiedPPGroups (K1 x) = ppGroup x
+
+instance CollectModifiedPPGroups (K1 i (NoUpdate a) p) where
+  collectModifiedPPGroups _ = mempty
+
+instance CollectModifiedPPGroups (a u) => CollectModifiedPPGroups (M1 i c a u) where
+  collectModifiedPPGroups (M1 x) = collectModifiedPPGroups x
 
 asNaturalHKD :: forall f i. (HKDFunctor f, Integral i) => HKD f i -> HKD f Natural
 asNaturalHKD = hkdMap (Proxy @f) (fromIntegral @i @Natural)
