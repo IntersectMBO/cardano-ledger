@@ -94,6 +94,7 @@
 
 ### `testlib`
 
+* Added `registerStakeCredentialWithDeposit`
 * Added `Examples` module with: `ledgerExamples`, `exampleConwayCerts`
 * Fix CDDL for `MultiAsset` in `TxOut` as well as the `Tx` mint field.
 * Add `mkConwayTestAccountState` and `conwayAccountsToUMap`
