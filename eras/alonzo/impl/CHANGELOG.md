@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `emptyUpgradePParamsUpdate` method to `AlonzoEraPParams`
 * Rename `alonzoEqTxRaw` to `alonzoTxEqRaw`
 * Add `Generic` instance to `TransactionScriptFailure`
 * Add `Generic` instance for `AlonzoBbodyEvent`

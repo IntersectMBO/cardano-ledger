@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -17,6 +18,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -146,6 +148,11 @@ class EraPParams era => AlonzoEraPParams era where
   hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
 
   hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+
+  emptyUpgradePParamsUpdate :: UpgradePParams StrictMaybe era
+  default emptyUpgradePParamsUpdate ::
+    UpgradePParams StrictMaybe era ~ () => UpgradePParams StrictMaybe era
+  emptyUpgradePParamsUpdate = ()
 
 ppCoinsPerUTxOWordL ::
   forall era.
@@ -359,6 +366,7 @@ instance EraPParams AlonzoEra where
     ]
 
 instance AlonzoEraPParams AlonzoEra where
+  emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
   hkdCostModelsL = lens appCostModels $ \pp x -> pp {appCostModels = x}
   hkdPricesL = lens appPrices $ \pp x -> pp {appPrices = x}
@@ -419,6 +427,10 @@ data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   , uappMaxCollateralInputs :: !(HKD f Natural)
   }
   deriving (Generic)
+
+emptyAlonzoUpgradePParamsUpdate :: UpgradeAlonzoPParams StrictMaybe
+emptyAlonzoUpgradePParamsUpdate =
+  UpgradeAlonzoPParams SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
 
 deriving instance Eq (UpgradeAlonzoPParams Identity)
 

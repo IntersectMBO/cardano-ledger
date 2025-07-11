@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -46,7 +47,7 @@ import Cardano.Ledger.Core (
  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis)
+import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.Governance ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.Tx ()
@@ -116,7 +117,8 @@ instance TranslateEra DijkstraEra NewEpochState where
 --------------------------------------------------------------------------------
 
 instance TranslateEra DijkstraEra PParams where
-  translateEra _ = pure . upgradePParams ()
+  translateEra DijkstraGenesis {dgUpgradePParams} =
+    pure . upgradePParams dgUpgradePParams
 
 instance TranslateEra DijkstraEra FuturePParams where
   translateEra ctxt = \case
@@ -197,13 +199,13 @@ instance TranslateEra DijkstraEra PulsingSnapshot where
         }
 
 instance TranslateEra DijkstraEra EnactState where
-  translateEra _ EnactState {..} =
+  translateEra ctxt EnactState {..} =
     pure $
       EnactState
         { ensCommittee = coerce ensCommittee
         , ensConstitution = coerce ensConstitution
-        , ensCurPParams = coerce ensCurPParams
-        , ensPrevPParams = coerce ensPrevPParams
+        , ensCurPParams = translateEra' ctxt ensCurPParams
+        , ensPrevPParams = translateEra' ctxt ensPrevPParams
         , ensTreasury = ensTreasury
         , ensWithdrawals = ensWithdrawals
         , ensPrevGovActionIds = ensPrevGovActionIds
@@ -231,8 +233,8 @@ instance TranslateEra DijkstraEra ConwayGovState where
         { cgsCommittee = coerce cgsCommittee
         , cgsProposals = translateEra' ctxt cgsProposals
         , cgsConstitution = coerce cgsConstitution
-        , cgsCurPParams = coerce cgsCurPParams
-        , cgsPrevPParams = coerce cgsPrevPParams
+        , cgsCurPParams = translateEra' ctxt cgsCurPParams
+        , cgsPrevPParams = translateEra' ctxt cgsPrevPParams
         , cgsFuturePParams = translateEra' ctxt cgsFuturePParams
         , cgsDRepPulsingState = translateEra' ctxt cgsDRepPulsingState
         }

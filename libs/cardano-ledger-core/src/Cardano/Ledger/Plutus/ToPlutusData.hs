@@ -14,6 +14,7 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   NonZero (..),
   Nonce,
+  PositiveInterval,
   ProtVer (..),
   UnitInterval,
   nonZero,
@@ -69,19 +70,22 @@ instance ToPlutusData ProtVer where
   fromPlutusData (List [major, minor]) = ProtVer <$> fromPlutusData major <*> fromPlutusData minor
   fromPlutusData _ = Nothing
 
-instance ToPlutusData UnitInterval where
-  toPlutusData x = List [I num, I denom]
-    where
-      (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
+instance ToPlutusData Rational where
+  toPlutusData (num :% denom) = List [I num, I denom]
+  fromPlutusData (List [I num, I denom]) = (num %.) <$> nonZero denom
   fromPlutusData _ = Nothing
 
+instance ToPlutusData UnitInterval where
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
+
 instance ToPlutusData NonNegativeInterval where
-  toPlutusData x = List [I num, I denom]
-    where
-      (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
-  fromPlutusData _ = Nothing
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
+
+instance ToPlutusData PositiveInterval where
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
 
 instance ToPlutusData CostModels where
   toPlutusData costModels = toPlutusData $ fmap toInteger <$> flattenCostModels costModels
