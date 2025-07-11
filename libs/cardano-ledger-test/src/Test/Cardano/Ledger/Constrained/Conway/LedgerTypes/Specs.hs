@@ -251,16 +251,16 @@ vStateSpec univ epoch whoDelegated = constrained $ \ [var|vstate|] ->
     , forAll dreps $ \ [var|pair|] ->
         match pair $ \ [var|drep|] [var|drepstate|] ->
           [ satisfies drep (witCredSpec univ)
-          , match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] [var|delegs|] ->
+          , match drepstate $ \ [var|expiry|] _anchor [var|drepDeposit'|] [var|delegs|] ->
               onJust (lookup_ drep (lit whoDelegated)) $ \ [var|delegSet|] ->
                 [ assertExplain (pure "all delegatees have delegated") $ delegs ==. delegSet
                 , witness univ delegSet
                 , assertExplain (pure "epoch of expiration must follow the current epoch") $ epoch <=. expiry
-                , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. drepDdeposit
+                , assertExplain (pure "no deposit is 0") $ match drepDeposit' (lit 0 <=.)
                 ]
           ]
     , assertExplain (pure "num dormant epochs should not be too large") $
-        [epoch <=. numdormant, numdormant <=. epoch + (lit (EpochNo 10))]
+        [epoch <=. numdormant, numdormant <=. epoch + lit (EpochNo 10)]
     , dependsOn numdormant epoch -- Solve epoch first.
     , match committeestate $ \ [var|committeemap|] ->
         [witness univ (dom_ committeemap), satisfies committeemap (hasSize (rangeSize 1 4))]

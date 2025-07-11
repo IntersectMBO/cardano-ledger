@@ -28,7 +28,7 @@ import Cardano.Ledger.Binary (
   internsFromSet,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, CompactForm, partialCompactCoinL)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -147,7 +147,7 @@ pattern DRepCredential c <- (dRepToCred -> Just c)
 data DRepState = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe Anchor)
-  , drepDeposit :: !Coin
+  , drepDeposit :: !(CompactForm Coin)
   , drepDelegs :: !(Set (Credential 'Staking))
   }
   deriving (Show, Eq, Ord, Generic)
@@ -208,7 +208,10 @@ drepAnchorL :: Lens' DRepState (StrictMaybe Anchor)
 drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
 
 drepDepositL :: Lens' DRepState Coin
-drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
+drepDepositL = drepDepositCompactL . partialCompactCoinL
+
+drepDepositCompactL :: Lens' DRepState (CompactForm Coin)
+drepDepositCompactL = lens drepDeposit (\x y -> x {drepDeposit = y})
 
 drepDelegsL :: Lens' DRepState (Set (Credential 'Staking))
 drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})

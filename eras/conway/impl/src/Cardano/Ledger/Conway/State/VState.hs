@@ -32,6 +32,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.State
@@ -64,7 +65,7 @@ data VState era = VState
 
 -- | Function that looks up the deposit for currently registered DRep
 lookupDepositVState :: VState era -> Credential 'DRepRole -> Maybe Coin
-lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
+lookupDepositVState vstate = fmap (fromCompact . drepDeposit) . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
   def = VState def def (EpochNo 0)

@@ -135,7 +135,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ Gov action lifetime in number of Epochs
   , dppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f Coin)
   -- ^ The amount of the Gov Action deposit
-  , dppDRepDeposit :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f Coin)
+  , dppDRepDeposit :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f (CompactForm Coin))
   -- ^ The amount of a DRep registration deposit
   , dppDRepActivity :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The number of Epochs that a DRep can perform no activity without losing their @Active@ status.
@@ -558,7 +558,7 @@ instance ConwayEraPParams DijkstraEra where
     lens (unTHKD . dppGovActionLifetime) $ \pp x -> pp {dppGovActionLifetime = THKD x}
   hkdGovActionDepositL =
     lens (unTHKD . dppGovActionDeposit) $ \pp x -> pp {dppGovActionDeposit = THKD x}
-  hkdDRepDepositL =
+  hkdDRepDepositCompactL =
     lens (unTHKD . dppDRepDeposit) $ \pp x -> pp {dppDRepDeposit = THKD x}
   hkdDRepActivityL =
     lens (unTHKD . dppDRepActivity) $ \pp x -> pp {dppDRepActivity = THKD x}
@@ -601,7 +601,7 @@ emptyDijkstraPParams =
     , dppCommitteeMaxTermLength = THKD (EpochInterval 0)
     , dppGovActionLifetime = THKD (EpochInterval 0)
     , dppGovActionDeposit = THKD (Coin 0)
-    , dppDRepDeposit = THKD (Coin 0)
+    , dppDRepDeposit = THKD (CompactCoin 0)
     , dppDRepActivity = THKD (EpochInterval 0)
     , dppMinFeeRefScriptCostPerByte = THKD minBound
     , dppMaxRefScriptSizePerBlock = THKD 0

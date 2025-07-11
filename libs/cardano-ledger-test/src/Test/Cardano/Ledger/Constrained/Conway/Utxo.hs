@@ -219,6 +219,6 @@ depositsMap certState props =
           (fromCompact . (^. depositAccountStateL))
           (certState ^. certDStateL . accountsL . accountsMapL)
     , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
-    , fmap drepDeposit . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
+    , fmap (fromCompact . drepDeposit) . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
     , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
     ]
