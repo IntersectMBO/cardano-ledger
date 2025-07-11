@@ -196,7 +196,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
-import Cardano.Ledger.UMap (dRepMap)
+import Cardano.Ledger.UMap (dRepMap, fromCompact)
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
@@ -366,7 +366,7 @@ unRegisterDRep ::
   ImpTestM era ()
 unRegisterDRep drep = do
   drepState <- getDRepState drep
-  let refund = drepDeposit drepState
+  let refund = fromCompact $ drepDeposit drepState
   submitTxAnn_ "UnRegister DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
