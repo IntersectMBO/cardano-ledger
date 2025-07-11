@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -21,8 +20,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
--- GHC9.2.8 needs this
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
@@ -790,7 +787,7 @@ instance Logic StringW where
       bar :: forall s. (HasSpec s, StringLike s) => NonEmpty Int -> Specification s
       bar ys = typeSpec $ lengthSpec @s (MemberSpec ys)
 
-  mapTypeSpec :: forall a b. (HasSpec a, HasSpec b) => StringW '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec :: forall a b. StringW '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec StrLenW ss = getLengthSpec @a ss
 
 class StringLike s where
@@ -1888,9 +1885,8 @@ instance Logic CoercibleW where
   propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec $ MemberSpec xs
   propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec $ TypeSpec ts cant
 
-  mapTypeSpec ::
-    forall a b. (HasSpec a, HasSpec b) => CoercibleW '[a] b -> TypeSpec a -> Specification b
-  mapTypeSpec CoerceW ss = getCoerceSpec @a ss
+  mapTypeSpec :: forall a b. CoercibleW '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec CoerceW = getCoerceSpec @a
 
 coerce_ ::
   forall a b.
