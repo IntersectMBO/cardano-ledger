@@ -33,6 +33,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.State.VState
 import Cardano.Ledger.Core
@@ -100,7 +101,7 @@ conwayObligationCertState :: ConwayEraCertState era => CertState era -> Obligati
 conwayObligationCertState certState =
   let accum ans drepState = ans <> drepDeposit drepState
    in (shelleyObligationCertState certState)
-        { oblDRep = F.foldl' accum (Coin 0) (certState ^. certVStateL . vsDRepsL)
+        { oblDRep = fromCompact $ F.foldl' accum mempty (certState ^. certVStateL . vsDRepsL)
         }
 
 conwayCertsTotalDepositsTxBody ::

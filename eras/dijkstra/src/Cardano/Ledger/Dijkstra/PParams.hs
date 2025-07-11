@@ -167,7 +167,7 @@ instance ConwayEraPParams DijkstraEra where
     lens (unTHKD . cppGovActionLifetime) $ \pp x -> pp {cppGovActionLifetime = THKD x}
   hkdGovActionDepositL =
     lens (unTHKD . cppGovActionDeposit) $ \pp x -> pp {cppGovActionDeposit = THKD x}
-  hkdDRepDepositL =
+  hkdDRepDepositCompactL =
     lens (unTHKD . cppDRepDeposit) $ \pp x -> pp {cppDRepDeposit = THKD x}
   hkdDRepActivityL =
     lens (unTHKD . cppDRepActivity) $ \pp x -> pp {cppDRepActivity = THKD x}
