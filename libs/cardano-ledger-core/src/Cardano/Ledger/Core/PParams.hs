@@ -33,6 +33,7 @@ module Cardano.Ledger.Core.PParams (
 
   -- * THKD
   THKD (..),
+  NoTag,
 
   -- * PParams lens
   ppMinFeeAL,
@@ -243,6 +244,9 @@ deriving instance Generic (PParamsUpdate era)
 
 -- | HKD that is capable of polykinded tagging.
 newtype THKD (t :: k) f a = THKD {unTHKD :: HKD f a}
+
+-- | Helper type for defining tagless `THKD`s
+data NoTag
 
 instance Eq (HKD f a) => Eq (THKD t f a) where
   THKD x1 == THKD x2 = x1 == x2
