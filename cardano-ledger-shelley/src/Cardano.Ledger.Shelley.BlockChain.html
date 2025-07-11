@@ -1,0 +1,953 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.BlockChain</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier">ShelleyTxSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier">ShelleyTxSeq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns%27"><span class="hs-identifier">txSeqTxns'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier">TxSeq'</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#auxDataSeqDecoder"><span class="hs-identifier">auxDataSeqDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns"><span class="hs-identifier">txSeqTxns</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#bbHash"><span class="hs-identifier">bbHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-identifier">hashShelleySegWits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bBodySize"><span class="hs-identifier">bBodySize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#slotToNonce"><span class="hs-identifier">slotToNonce</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#incrBlocks"><span class="hs-identifier">incrBlocks</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#coreAuxDataBytes"><span class="hs-identifier">coreAuxDataBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier">BlocksMade</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier">Nonce</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier">maybeToStrictMaybe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkNonceFromNumber"><span class="hs-identifier">mkNonceFromNumber</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier">strictMaybeToMaybe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Group.html#EncCBORGroup"><span class="hs-identifier">EncCBORGroup</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeFoldableEncoder"><span class="hs-identifier">encodeFoldableEncoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeFoldableMapEncoder"><span class="hs-identifier">encodeFoldableMapEncoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodePreEncoded"><span class="hs-identifier">encodePreEncoded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier">withSlice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Tx.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html"><span class="hs-identifier">Cardano.Ledger.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">unless</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Builder</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Builder</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">shortByteString</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toLazyByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.IntMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IntMap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.IntMap</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IntMap</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Monoid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">All</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier">StrictSeq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StrictSeq</span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#AllowThunksIn"><span class="hs-identifier">AllowThunksIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">data</span><span> </span><span id="ShelleyTxSeq"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-var">ShelleyTxSeq</span></a></span></span><span> </span><span id="local-6989586621679510521"><span class="annot"><a href="#local-6989586621679510521"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxSeq%27"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-var">TxSeq'</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="txSeqTxns%27"><span class="annot"><span class="annottext">forall era. ShelleyTxSeq era -&gt; StrictSeq (Tx era)
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns%27"><span class="hs-identifier hs-var hs-var">txSeqTxns'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">StrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510521"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txSeqHash"><span class="annot"><span class="annottext">forall era. ShelleyTxSeq era -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqHash"><span class="hs-identifier hs-var hs-var">txSeqHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#EraIndependentBlockBody"><span class="hs-identifier hs-type">EraIndependentBlockBody</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Memoized hash to avoid recomputation. Lazy on purpose.</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txSeqBodyBytes"><span class="annot"><span class="annottext">forall era. ShelleyTxSeq era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqBodyBytes"><span class="hs-identifier hs-var hs-var">txSeqBodyBytes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Bytes encoding @Seq ('TxBody' era)@</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txSeqWitsBytes"><span class="annot"><span class="annottext">forall era. ShelleyTxSeq era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqWitsBytes"><span class="hs-identifier hs-var hs-var">txSeqWitsBytes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Bytes encoding @Seq ('TxWits' era)@</span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="txSeqMetadataBytes"><span class="annot"><span class="annottext">forall era. ShelleyTxSeq era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqMetadataBytes"><span class="hs-identifier hs-var hs-var">txSeqMetadataBytes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">-- ^ Bytes encoding a @Seq ('TxAuxData' era)@. Missing indices have</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-comment">-- 'SNothing' for metadata</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679510818"><span id="local-6989586621679510820"><span class="annot"><span class="annottext">(forall x. ShelleyTxSeq era -&gt; Rep (ShelleyTxSeq era) x)
+-&gt; (forall x. Rep (ShelleyTxSeq era) x -&gt; ShelleyTxSeq era)
+-&gt; Generic (ShelleyTxSeq era)
+forall x. Rep (ShelleyTxSeq era) x -&gt; ShelleyTxSeq era
+forall x. ShelleyTxSeq era -&gt; Rep (ShelleyTxSeq era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (ShelleyTxSeq era) x -&gt; ShelleyTxSeq era
+forall era x. ShelleyTxSeq era -&gt; Rep (ShelleyTxSeq era) x
+$cfrom :: forall era x. ShelleyTxSeq era -&gt; Rep (ShelleyTxSeq era) x
+from :: forall x. ShelleyTxSeq era -&gt; Rep (ShelleyTxSeq era) x
+$cto :: forall era x. Rep (ShelleyTxSeq era) x -&gt; ShelleyTxSeq era
+to :: forall x. Rep (ShelleyTxSeq era) x -&gt; ShelleyTxSeq era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraSegWits"><span class="hs-identifier hs-type">EraSegWits</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxSeq"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxSeq"><span class="hs-identifier hs-var">TxSeq</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679510869"><span class="annot"><span class="annottext">fromTxSeq :: TxSeq ShelleyEra -&gt; StrictSeq (Tx ShelleyEra)
+</span><a href="#local-6989586621679510869"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromTxSeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxSeq ShelleyEra -&gt; StrictSeq (Tx ShelleyEra)
+ShelleyTxSeq ShelleyEra -&gt; StrictSeq (Tx ShelleyEra)
+forall era. ShelleyTxSeq era -&gt; StrictSeq (Tx era)
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns"><span class="hs-identifier hs-var">txSeqTxns</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679510875"><span class="annot"><span class="annottext">toTxSeq :: StrictSeq (Tx ShelleyEra) -&gt; TxSeq ShelleyEra
+</span><a href="#local-6989586621679510875"><span class="hs-identifier hs-var hs-var hs-var hs-var">toTxSeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx ShelleyEra) -&gt; TxSeq ShelleyEra
+StrictSeq (Tx ShelleyEra) -&gt; ShelleyTxSeq ShelleyEra
+forall era.
+(EraTx era, SafeToHash (TxWits era)) =&gt;
+StrictSeq (Tx era) -&gt; ShelleyTxSeq era
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-var">ShelleyTxSeq</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679510877"><span class="annot"><span class="annottext">hashTxSeq :: TxSeq ShelleyEra -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="#local-6989586621679510877"><span class="hs-identifier hs-var hs-var hs-var hs-var">hashTxSeq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxSeq ShelleyEra -&gt; Hash HASH EraIndependentBlockBody
+ShelleyTxSeq ShelleyEra -&gt; Hash HASH EraIndependentBlockBody
+forall era. ShelleyTxSeq era -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqHash"><span class="hs-identifier hs-var">txSeqHash</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679510881"><span class="annot"><span class="annottext">numSegComponents :: Word64
+</span><a href="#local-6989586621679510881"><span class="hs-identifier hs-var hs-var hs-var hs-var">numSegComponents</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621679510886"><span id="local-6989586621679510895"><span id="local-6989586621679510903"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679510600"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#AllowThunksIn"><span class="hs-identifier hs-type">AllowThunksIn</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">'</span><span class="hs-special">[</span><span> </span><span class="annot"><span class="hs-string">&quot;txSeqHash&quot;</span></span><span>
+</span><span id="line-98"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;txSeqBodyBytes&quot;</span></span><span>
+</span><span id="line-99"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;txSeqWitsBytes&quot;</span></span><span>
+</span><span id="line-100"></span><span>     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;txSeqMetadataBytes&quot;</span></span><span>
+</span><span id="line-101"></span><span>     </span><span class="hs-special">]</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510600"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679510600"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510600"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510600"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span id="local-6989586621679511029"><span id="local-6989586621679511041"><span id="local-6989586621679511044"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679510555"><span class="annot"><a href="#local-6989586621679510555"><span class="hs-keyword hs-type">stock</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510555"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510555"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679511049"><span id="local-6989586621679511059"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679510554"><span class="annot"><a href="#local-6989586621679510554"><span class="hs-keyword hs-type">stock</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510554"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510554"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- ===========================</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- Getting bytes from pieces of a Tx</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679510612"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#coreWitnessBytes"><span class="hs-identifier hs-type">coreWitnessBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510612"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-type">SafeToHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510612"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510612"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span></span><span>
+</span><span id="line-117"></span><span id="coreWitnessBytes"><span class="annot"><span class="annottext">coreWitnessBytes :: forall era.
+(EraTx era, SafeToHash (TxWits era)) =&gt;
+Tx era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreWitnessBytes"><span class="hs-identifier hs-var hs-var">coreWitnessBytes</span></a></span></span><span> </span><span id="local-6989586621679511069"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511069"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxWits era -&gt; ByteString
+forall t. SafeToHash t =&gt; t -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#originalBytes"><span class="hs-identifier hs-var">originalBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits era -&gt; ByteString) -&gt; TxWits era -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511069"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Getting (TxWits era) (Tx era) (TxWits era) -&gt; TxWits era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (TxWits era) (Tx era) (TxWits era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx era) (TxWits era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span id="local-6989586621679510625"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#coreBodyBytes"><span class="hs-identifier hs-type">coreBodyBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510625"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510625"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span></span><span>
+</span><span id="line-120"></span><span id="coreBodyBytes"><span class="annot"><span class="annottext">coreBodyBytes :: forall era. EraTx era =&gt; Tx era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreBodyBytes"><span class="hs-identifier hs-var hs-var">coreBodyBytes</span></a></span></span><span> </span><span id="local-6989586621679511083"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511083"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBody era -&gt; ByteString
+forall t. SafeToHash t =&gt; t -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#originalBytes"><span class="hs-identifier hs-var">originalBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(TxBody era -&gt; ByteString) -&gt; TxBody era -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511083"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Getting (TxBody era) (Tx era) (TxBody era) -&gt; TxBody era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (TxBody era) (Tx era) (TxBody era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx era) (TxBody era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span id="local-6989586621679510633"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#coreAuxDataBytes"><span class="hs-identifier hs-type">coreAuxDataBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510633"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510633"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span></span><span>
+</span><span id="line-123"></span><span id="coreAuxDataBytes"><span class="annot"><span class="annottext">coreAuxDataBytes :: forall era. EraTx era =&gt; Tx era -&gt; StrictMaybe ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreAuxDataBytes"><span class="hs-identifier hs-var hs-var">coreAuxDataBytes</span></a></span></span><span> </span><span id="local-6989586621679511095"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511095"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxAuxData era -&gt; ByteString
+forall t. SafeToHash t =&gt; t -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#originalBytes"><span class="hs-identifier hs-var">originalBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(TxAuxData era -&gt; ByteString)
+-&gt; StrictMaybe (TxAuxData era) -&gt; StrictMaybe ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679511095"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+-&gt; Getting
+     (StrictMaybe (TxAuxData era))
+     (Tx era)
+     (StrictMaybe (TxAuxData era))
+-&gt; StrictMaybe (TxAuxData era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe (TxAuxData era))
+  (Tx era)
+  (StrictMaybe (TxAuxData era))
+forall era.
+EraTx era =&gt;
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-identifier hs-var">auxDataTxL</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- ===========================</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><span class="hs-comment">-- | Constuct a TxSeq (with all it bytes) from just Tx's</span></span><span>
+</span><span id="line-128"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679510498"><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-type">SafeToHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">StrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-135"></span><span class="hs-keyword">pattern</span><span> </span><span id="ShelleyTxSeq"><span id="%24mShelleyTxSeq"><span id="%24bShelleyTxSeq"><span class="annot"><span class="annottext">$mShelleyTxSeq :: forall {r} {era}.
+(EraTx era, SafeToHash (TxWits era)) =&gt;
+ShelleyTxSeq era -&gt; (StrictSeq (Tx era) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bShelleyTxSeq :: forall era.
+(EraTx era, SafeToHash (TxWits era)) =&gt;
+StrictSeq (Tx era) -&gt; ShelleyTxSeq era
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-var hs-var hs-var hs-var">ShelleyTxSeq</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679511100"><span class="hs-identifier hs-type">xs</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-type">TxSeq'</span></a></span><span> </span><span id="local-6989586621679511100"><span class="annot"><a href="#local-6989586621679511100"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-var">ShelleyTxSeq</span></a></span><span> </span><span id="local-6989586621679511101"><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511101"><span class="hs-identifier hs-var">txns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679511102"><span class="annot"><span class="annottext">version :: Version
+</span><a href="#local-6989586621679511102"><span class="hs-identifier hs-var hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerLow"><span class="hs-identifier hs-var">eraProtVerLow</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-140"></span><span>          </span><span id="local-6989586621679511104"><span class="annot"><span class="annottext">serializeFoldable :: StrictSeq ByteString -&gt; ByteString
+</span><a href="#local-6989586621679511104"><span class="hs-identifier hs-var hs-var">serializeFoldable</span></a></span></span><span> </span><span id="local-6989586621679511105"><span class="annot"><span class="annottext">StrictSeq ByteString
+</span><a href="#local-6989586621679511105"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-141"></span><span>            </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679511102"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString) -&gt; Encoding -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-142"></span><span>              </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding) -&gt; StrictSeq ByteString -&gt; Encoding
+forall (f :: * -&gt; *) a.
+Foldable f =&gt;
+(a -&gt; Encoding) -&gt; f a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeFoldableEncoder"><span class="hs-identifier hs-var">encodeFoldableEncoder</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodePreEncoded"><span class="hs-identifier hs-var">encodePreEncoded</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq ByteString
+</span><a href="#local-6989586621679511105"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-143"></span><span>          </span><span id="local-6989586621679511115"><span class="annot"><span class="annottext">metaChunk :: a -&gt; StrictMaybe ByteString -&gt; Maybe Encoding
+</span><a href="#local-6989586621679511115"><span class="hs-identifier hs-var hs-var">metaChunk</span></a></span></span><span> </span><span id="local-6989586621679511116"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679511116"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span id="local-6989586621679511117"><span class="annot"><span class="annottext">StrictMaybe ByteString
+</span><a href="#local-6989586621679511117"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+</span><a href="#local-6989586621679511118"><span class="hs-identifier hs-var">encodePair</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding) -&gt; Maybe ByteString -&gt; Maybe Encoding
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ByteString -&gt; Maybe ByteString
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ByteString
+</span><a href="#local-6989586621679511117"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-144"></span><span>            </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>              </span><span id="local-6989586621679511118"><span class="annot"><span class="annottext">encodePair :: ByteString -&gt; Encoding
+</span><a href="#local-6989586621679511118"><span class="hs-identifier hs-var hs-var">encodePair</span></a></span></span><span> </span><span id="local-6989586621679511119"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511119"><span class="hs-identifier hs-var">metadata</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679511116"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodePreEncoded"><span class="hs-identifier hs-var">encodePreEncoded</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511119"><span class="hs-identifier hs-var">metadata</span></a></span><span>
+</span><span id="line-146"></span><span>          </span><span id="local-6989586621679511121"><span class="annot"><span class="annottext">txSeqBodies :: ByteString
+</span><a href="#local-6989586621679511121"><span class="hs-identifier hs-var hs-var">txSeqBodies</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq ByteString -&gt; ByteString
+</span><a href="#local-6989586621679511104"><span class="hs-identifier hs-var">serializeFoldable</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq ByteString -&gt; ByteString)
+-&gt; StrictSeq ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; Tx era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreBodyBytes"><span class="hs-identifier hs-var">coreBodyBytes</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(Tx era -&gt; ByteString)
+-&gt; StrictSeq (Tx era) -&gt; StrictSeq ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511101"><span class="hs-identifier hs-var">txns</span></a></span><span>
+</span><span id="line-147"></span><span>          </span><span id="local-6989586621679511122"><span class="annot"><span class="annottext">txSeqWits :: ByteString
+</span><a href="#local-6989586621679511122"><span class="hs-identifier hs-var hs-var">txSeqWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq ByteString -&gt; ByteString
+</span><a href="#local-6989586621679511104"><span class="hs-identifier hs-var">serializeFoldable</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq ByteString -&gt; ByteString)
+-&gt; StrictSeq ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+(EraTx era, SafeToHash (TxWits era)) =&gt;
+Tx era -&gt; ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreWitnessBytes"><span class="hs-identifier hs-var">coreWitnessBytes</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(Tx era -&gt; ByteString)
+-&gt; StrictSeq (Tx era) -&gt; StrictSeq ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511101"><span class="hs-identifier hs-var">txns</span></a></span><span>
+</span><span id="line-148"></span><span>          </span><span id="local-6989586621679511123"><span class="annot"><span class="annottext">txSeqAuxDatas :: ByteString
+</span><a href="#local-6989586621679511123"><span class="hs-identifier hs-var hs-var">txSeqAuxDatas</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-149"></span><span>            </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679511102"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString)
+-&gt; (StrictSeq (StrictMaybe ByteString) -&gt; Encoding)
+-&gt; StrictSeq (StrictMaybe ByteString)
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; StrictMaybe ByteString -&gt; Maybe Encoding)
+-&gt; StrictSeq (StrictMaybe ByteString) -&gt; Encoding
+forall (f :: * -&gt; *) a.
+Foldable f =&gt;
+(Word -&gt; a -&gt; Maybe Encoding) -&gt; f a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeFoldableMapEncoder"><span class="hs-identifier hs-var">encodeFoldableMapEncoder</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; StrictMaybe ByteString -&gt; Maybe Encoding
+forall {a}.
+EncCBOR a =&gt;
+a -&gt; StrictMaybe ByteString -&gt; Maybe Encoding
+</span><a href="#local-6989586621679511115"><span class="hs-identifier hs-var">metaChunk</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (StrictMaybe ByteString) -&gt; ByteString)
+-&gt; StrictSeq (StrictMaybe ByteString) -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; Tx era -&gt; StrictMaybe ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#coreAuxDataBytes"><span class="hs-identifier hs-var">coreAuxDataBytes</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679510498"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(Tx era -&gt; StrictMaybe ByteString)
+-&gt; StrictSeq (Tx era) -&gt; StrictSeq (StrictMaybe ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511101"><span class="hs-identifier hs-var">txns</span></a></span><span>
+</span><span id="line-150"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-type">TxSeq'</span></a></span><span>
+</span><span id="line-151"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">txSeqTxns' :: StrictSeq (Tx era)
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns%27"><span class="hs-identifier hs-var">txSeqTxns'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511101"><span class="hs-identifier hs-var">txns</span></a></span><span>
+</span><span id="line-152"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">txSeqHash :: Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqHash"><span class="hs-identifier hs-var">txSeqHash</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-identifier hs-var">hashShelleySegWits</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511121"><span class="hs-identifier hs-var">txSeqBodies</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511122"><span class="hs-identifier hs-var">txSeqWits</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511123"><span class="hs-identifier hs-var">txSeqAuxDatas</span></a></span><span>
+</span><span id="line-153"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- bytes encoding &quot;Seq (TxBody era)&quot;</span><span>
+</span><span id="line-154"></span><span>              </span><span class="annot"><span class="annottext">txSeqBodyBytes :: ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqBodyBytes"><span class="hs-identifier hs-var">txSeqBodyBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511121"><span class="hs-identifier hs-var">txSeqBodies</span></a></span><span>
+</span><span id="line-155"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- bytes encoding &quot;Seq (TxWits era)&quot;</span><span>
+</span><span id="line-156"></span><span>              </span><span class="annot"><span class="annottext">txSeqWitsBytes :: ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqWitsBytes"><span class="hs-identifier hs-var">txSeqWitsBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511122"><span class="hs-identifier hs-var">txSeqWits</span></a></span><span>
+</span><span id="line-157"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- bytes encoding a &quot;Map Int TxAuxData&quot;</span><span>
+</span><span id="line-158"></span><span>              </span><span class="annot"><span class="annottext">txSeqMetadataBytes :: ByteString
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqMetadataBytes"><span class="hs-identifier hs-var">txSeqMetadataBytes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511123"><span class="hs-identifier hs-var">txSeqAuxDatas</span></a></span><span>
+</span><span id="line-159"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-pragma hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span id="local-6989586621679511125"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns"><span class="hs-identifier hs-type">txSeqTxns</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679511125"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">StrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679511125"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-164"></span><span id="txSeqTxns"><span class="annot"><span class="annottext">txSeqTxns :: forall era. ShelleyTxSeq era -&gt; StrictSeq (Tx era)
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqTxns"><span class="hs-identifier hs-var hs-var">txSeqTxns</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-type">TxSeq'</span></a></span><span> </span><span id="local-6989586621679511126"><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511126"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentBlockBody
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><a href="#local-6989586621679511126"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679510553"><span class="annot"><a href="#local-6989586621679510553"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510553"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Group.html#EncCBORGroup"><span class="hs-identifier hs-type">EncCBORGroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510553"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679511141"><span class="annot"><span class="annottext">encCBORGroup :: ShelleyTxSeq era -&gt; Encoding
+</span><a href="#local-6989586621679511141"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBORGroup</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-type">TxSeq'</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentBlockBody
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679511143"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511143"><span class="hs-identifier hs-var">bodyBytes</span></a></span></span><span> </span><span id="local-6989586621679511144"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511144"><span class="hs-identifier hs-var">witsBytes</span></a></span></span><span> </span><span id="local-6989586621679511145"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511145"><span class="hs-identifier hs-var">metadataBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodePreEncoded"><span class="hs-identifier hs-var">encodePreEncoded</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding) -&gt; ByteString -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSL.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-174"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511143"><span class="hs-identifier hs-var">bodyBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511144"><span class="hs-identifier hs-var">witsBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511145"><span class="hs-identifier hs-var">metadataBytes</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span id="local-6989586621679511154"><span class="annot"><span class="annottext">encodedGroupSizeExpr :: (forall x. EncCBOR x =&gt; Proxy x -&gt; Size)
+-&gt; Proxy (ShelleyTxSeq era) -&gt; Size
+</span><a href="#local-6989586621679511154"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedGroupSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679511156"><span class="annot"><span class="annottext">forall x. EncCBOR x =&gt; Proxy x -&gt; Size
+</span><a href="#local-6989586621679511156"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span id="local-6989586621679511157"><span class="annot"><span class="annottext">Proxy (ShelleyTxSeq era)
+</span><a href="#local-6989586621679511157"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">(forall x. EncCBOR x =&gt; Proxy x -&gt; Size)
+-&gt; Proxy ByteString -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall x. EncCBOR x =&gt; Proxy x -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Size
+forall x. EncCBOR x =&gt; Proxy x -&gt; Size
+</span><a href="#local-6989586621679511156"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ByteString
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">(forall x. EncCBOR x =&gt; Proxy x -&gt; Size)
+-&gt; Proxy ByteString -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall x. EncCBOR x =&gt; Proxy x -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Size
+forall x. EncCBOR x =&gt; Proxy x -&gt; Size
+</span><a href="#local-6989586621679511156"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ByteString
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>      </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">(forall x. EncCBOR x =&gt; Proxy x -&gt; Size)
+-&gt; Proxy ByteString -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall x. EncCBOR x =&gt; Proxy x -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Size
+forall x. EncCBOR x =&gt; Proxy x -&gt; Size
+</span><a href="#local-6989586621679511156"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ByteString
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>  </span><span id="local-6989586621679511167"><span class="annot"><span class="annottext">listLen :: ShelleyTxSeq era -&gt; Word
+</span><a href="#local-6989586621679511167"><span class="hs-identifier hs-var hs-var hs-var hs-var">listLen</span></a></span></span><span> </span><span class="annot"><span class="annottext">ShelleyTxSeq era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-180"></span><span>  </span><span id="local-6989586621679511169"><span class="annot"><span class="annottext">listLenBound :: Proxy (ShelleyTxSeq era) -&gt; Word
+</span><a href="#local-6989586621679511169"><span class="hs-identifier hs-var hs-var hs-var hs-var">listLenBound</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy (ShelleyTxSeq era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="annot"><span class="hs-comment">-- | Hash a given block body</span></span><span>
+</span><span id="line-183"></span><span id="local-6989586621679511171"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#bbHash"><span class="hs-identifier hs-type">bbHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679511171"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#EraIndependentBlockBody"><span class="hs-identifier hs-type">EraIndependentBlockBody</span></a></span></span><span>
+</span><span id="line-184"></span><span id="bbHash"><span class="annot"><span class="annottext">bbHash :: forall era. ShelleyTxSeq era -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#bbHash"><span class="hs-identifier hs-var hs-var">bbHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyTxSeq era -&gt; Hash HASH EraIndependentBlockBody
+forall era. ShelleyTxSeq era -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#txSeqHash"><span class="hs-identifier hs-var">txSeqHash</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-identifier hs-type">hashShelleySegWits</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-188"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bytes for transaction bodies</span></span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bytes for transaction witnesses</span></span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-192"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bytes for transaction auxiliary datas</span></span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#EraIndependentBlockBody"><span class="hs-identifier hs-type">EraIndependentBlockBody</span></a></span><span>
+</span><span id="line-194"></span><span id="hashShelleySegWits"><span class="annot"><span class="annottext">hashShelleySegWits :: ByteString
+-&gt; ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-identifier hs-var hs-var">hashShelleySegWits</span></a></span></span><span> </span><span id="local-6989586621679511172"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511172"><span class="hs-identifier hs-var">bodies</span></a></span></span><span> </span><span id="local-6989586621679511173"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511173"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span id="local-6989586621679511174"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511174"><span class="hs-identifier hs-var">md</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; Hash HASH EraIndependentBlockBody
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">(Hash HASH ByteString -&gt; Hash HASH EraIndependentBlockBody)
+-&gt; (Builder -&gt; Hash HASH ByteString)
+-&gt; Builder
+-&gt; Hash HASH EraIndependentBlockBody
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Hash HASH ByteString
+</span><a href="#local-6989586621679511175"><span class="hs-identifier hs-var">hashLazy</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Hash HASH ByteString)
+-&gt; (Builder -&gt; ByteString) -&gt; Builder -&gt; Hash HASH ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><span class="hs-identifier hs-var">toLazyByteString</span></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; Hash HASH EraIndependentBlockBody)
+-&gt; Builder -&gt; Hash HASH EraIndependentBlockBody
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="#local-6989586621679511176"><span class="hs-identifier hs-var">hashPart</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511172"><span class="hs-identifier hs-var">bodies</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="#local-6989586621679511176"><span class="hs-identifier hs-var">hashPart</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511173"><span class="hs-identifier hs-var">wits</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="#local-6989586621679511176"><span class="hs-identifier hs-var">hashPart</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679511174"><span class="hs-identifier hs-var">md</span></a></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><a href="#local-6989586621679511175"><span class="hs-identifier hs-type">hashLazy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-199"></span><span>    </span><span id="local-6989586621679511175"><span class="annot"><span class="annottext">hashLazy :: ByteString -&gt; Hash HASH ByteString
+</span><a href="#local-6989586621679511175"><span class="hs-identifier hs-var hs-var">hashLazy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; Hash HASH ByteString
+forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">Hash.hashWith</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Hash HASH ByteString)
+-&gt; (ByteString -&gt; ByteString) -&gt; ByteString -&gt; Hash HASH ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSL.toStrict</span></span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679511175"><span class="hs-pragma hs-type">hashLazy</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><a href="#local-6989586621679511176"><span class="hs-identifier hs-type">hashPart</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Builder</span></span><span>
+</span><span id="line-202"></span><span>    </span><span id="local-6989586621679511176"><span class="annot"><span class="annottext">hashPart :: ByteString -&gt; Builder
+</span><a href="#local-6989586621679511176"><span class="hs-identifier hs-var hs-var">hashPart</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; Builder
+</span><span class="hs-identifier hs-var">shortByteString</span></span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; Builder)
+-&gt; (ByteString -&gt; ShortByteString) -&gt; ByteString -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; ShortByteString
+forall h a. Hash h a -&gt; ShortByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.2.0-5d79604f12f7a0799a80ab0b6604665336a4134d572acf7a48c3c1def22825b6/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytesShort"><span class="hs-identifier hs-var">Hash.hashToBytesShort</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash HASH ByteString -&gt; ShortByteString)
+-&gt; (ByteString -&gt; Hash HASH ByteString)
+-&gt; ByteString
+-&gt; ShortByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Hash HASH ByteString
+</span><a href="#local-6989586621679511175"><span class="hs-identifier hs-var">hashLazy</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679511176"><span class="hs-pragma hs-type">hashPart</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-204"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-pragma hs-type">hashShelleySegWits</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span id="local-6989586621679510676"><span id="local-6989586621679510678"><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#auxDataSeqDecoder"><span class="hs-identifier hs-type">auxDataSeqDecoder</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IntMap</span></span><span> </span><span class="annot"><a href="#local-6989586621679510676"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510678"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679510676"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-208"></span><span id="auxDataSeqDecoder"><span class="annot"><span class="annottext">auxDataSeqDecoder :: forall a s. Int -&gt; IntMap a -&gt; Decoder s (Seq (Maybe a))
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#auxDataSeqDecoder"><span class="hs-identifier hs-var hs-var">auxDataSeqDecoder</span></a></span></span><span> </span><span id="local-6989586621679511202"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511202"><span class="hs-identifier hs-var">bodiesLength</span></a></span></span><span> </span><span id="local-6989586621679511203"><span class="annot"><span class="annottext">IntMap a
+</span><a href="#local-6989586621679511203"><span class="hs-identifier hs-var">auxDataMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; Decoder s () -&gt; Decoder s ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">unless</span></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">All -&gt; Bool
+</span><span class="hs-identifier hs-var">getAll</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; a -&gt; All) -&gt; IntMap a -&gt; All
+forall m a. Monoid m =&gt; (Int -&gt; a -&gt; m) -&gt; IntMap a -&gt; m
+</span><span class="hs-identifier hs-var">IntMap.foldMapWithKey</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679511206"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511206"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; All
+</span><span class="hs-identifier hs-var">All</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Bool
+</span><a href="#local-6989586621679511208"><span class="hs-identifier hs-var">inRange</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511206"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">IntMap a
+</span><a href="#local-6989586621679511203"><span class="hs-identifier hs-var">auxDataMap</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Decoder s ()
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Some Auxiliarydata index is not in the range: 0 .. &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511202"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><span class="annottext">Seq (Maybe a) -&gt; Decoder s (Seq (Maybe a))
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; IntMap a -&gt; Seq (Maybe a)
+forall a. Int -&gt; IntMap a -&gt; Seq (Maybe a)
+</span><a href="#local-6989586621679511210"><span class="hs-identifier hs-var">indexLookupSeq</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511202"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap a
+</span><a href="#local-6989586621679511203"><span class="hs-identifier hs-var">auxDataMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-214"></span><span>    </span><span id="local-6989586621679511208"><span class="annot"><span class="annottext">inRange :: Int -&gt; Bool
+</span><a href="#local-6989586621679511208"><span class="hs-identifier hs-var hs-var">inRange</span></a></span></span><span> </span><span id="local-6989586621679511211"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511211"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511211"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511211"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511202"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-comment">-- Given a size and a mapping from indices to maybe values,</span><span>
+</span><span id="line-216"></span><span>    </span><span class="hs-comment">-- return a sequence whose size is the size parameter and</span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-comment">-- whose non-Nothing values correspond to the values in the mapping.</span><span>
+</span><span id="line-218"></span><span>    </span><span id="local-6989586621679510696"><span class="annot"><a href="#local-6989586621679511210"><span class="hs-identifier hs-type">indexLookupSeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IntMap</span></span><span> </span><span class="annot"><a href="#local-6989586621679510696"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679510696"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-219"></span><span>    </span><span id="local-6989586621679511210"><span class="annot"><span class="annottext">indexLookupSeq :: forall a. Int -&gt; IntMap a -&gt; Seq (Maybe a)
+</span><a href="#local-6989586621679511210"><span class="hs-identifier hs-var hs-var">indexLookupSeq</span></a></span></span><span> </span><span id="local-6989586621679511219"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511219"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679511220"><span class="annot"><span class="annottext">IntMap a
+</span><a href="#local-6989586621679511220"><span class="hs-identifier hs-var">ixMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Maybe a] -&gt; Seq (Maybe a)
+forall a. [a] -&gt; Seq a
+</span><span class="hs-identifier hs-var">Seq.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; IntMap a -&gt; Maybe a
+forall a. Int -&gt; IntMap a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">IntMap.lookup</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511223"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap a
+</span><a href="#local-6989586621679511220"><span class="hs-identifier hs-var">ixMap</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679511223"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511223"><span class="hs-identifier hs-var">ix</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511219"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-222"></span><span>  </span><span id="local-6989586621679510552"><span id="local-6989586621679511234"><span id="local-6989586621679511237"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-type">TxAuxData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-227"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#ShelleyTxSeq"><span class="hs-identifier hs-type">ShelleyTxSeq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-comment">-- \| The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.</span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-comment">--   These are exactly the parts that are SafeToHash.</span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-comment">-- \| Decode a TxSeq, used in decoding a Block.</span><span>
+</span><span id="line-232"></span><span>  </span><span id="local-6989586621679511293"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator (ShelleyTxSeq era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679511294"><span class="annot"><span class="annottext">Seq (Annotator (TxBody era))
+</span><a href="#local-6989586621679511294"><span class="hs-identifier hs-var">bodies</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679511295"><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511295"><span class="hs-identifier hs-var">bodiesAnn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (Seq (Annotator (TxBody era)))
+-&gt; Decoder s (Seq (Annotator (TxBody era)), Annotator ByteString)
+forall s a. Decoder s a -&gt; Decoder s (a, Annotator ByteString)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier hs-var">withSlice</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Seq (Annotator (TxBody era)))
+forall s. Decoder s (Seq (Annotator (TxBody era)))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679511296"><span class="annot"><span class="annottext">Seq (Annotator (TxWits era))
+</span><a href="#local-6989586621679511296"><span class="hs-identifier hs-var">wits</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679511297"><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511297"><span class="hs-identifier hs-var">witsAnn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (Seq (Annotator (TxWits era)))
+-&gt; Decoder s (Seq (Annotator (TxWits era)), Annotator ByteString)
+forall s a. Decoder s a -&gt; Decoder s (a, Annotator ByteString)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier hs-var">withSlice</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Seq (Annotator (TxWits era)))
+forall s. Decoder s (Seq (Annotator (TxWits era)))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679511298"><span class="annot"><span class="annottext">bodiesLength :: Int
+</span><a href="#local-6989586621679511298"><span class="hs-identifier hs-var hs-var">bodiesLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxBody era)) -&gt; Int
+forall a. Seq a -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxBody era))
+</span><a href="#local-6989586621679511294"><span class="hs-identifier hs-var">bodies</span></a></span><span>
+</span><span id="line-236"></span><span>        </span><span id="local-6989586621679511300"><span class="annot"><span class="annottext">witsLength :: Int
+</span><a href="#local-6989586621679511300"><span class="hs-identifier hs-var hs-var">witsLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxWits era)) -&gt; Int
+forall a. Seq a -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxWits era))
+</span><a href="#local-6989586621679511296"><span class="hs-identifier hs-var">wits</span></a></span><span>
+</span><span id="line-237"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679511301"><span class="annot"><span class="annottext">Seq (Maybe (Annotator (TxAuxData era)))
+</span><a href="#local-6989586621679511301"><span class="hs-identifier hs-var">metadata</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679511302"><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511302"><span class="hs-identifier hs-var">metadataAnn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (Seq (Maybe (Annotator (TxAuxData era))))
+-&gt; Decoder
+     s (Seq (Maybe (Annotator (TxAuxData era))), Annotator ByteString)
+forall s a. Decoder s a -&gt; Decoder s (a, Annotator ByteString)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier hs-var">withSlice</span></a></span><span> </span><span class="annot"><span class="annottext">(Decoder s (Seq (Maybe (Annotator (TxAuxData era))))
+ -&gt; Decoder
+      s (Seq (Maybe (Annotator (TxAuxData era))), Annotator ByteString))
+-&gt; Decoder s (Seq (Maybe (Annotator (TxAuxData era))))
+-&gt; Decoder
+     s (Seq (Maybe (Annotator (TxAuxData era))), Annotator ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-238"></span><span>      </span><span id="local-6989586621679511303"><span class="annot"><span class="annottext">IntMap (Annotator (TxAuxData era))
+</span><a href="#local-6989586621679511303"><span class="hs-identifier hs-var">auxDataMap</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (IntMap (Annotator (TxAuxData era)))
+forall s. Decoder s (IntMap (Annotator (TxAuxData era)))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-239"></span><span>      </span><span class="annot"><span class="annottext">Int
+-&gt; IntMap (Annotator (TxAuxData era))
+-&gt; Decoder s (Seq (Maybe (Annotator (TxAuxData era))))
+forall a s. Int -&gt; IntMap a -&gt; Decoder s (Seq (Maybe a))
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#auxDataSeqDecoder"><span class="hs-identifier hs-var">auxDataSeqDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511298"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span> </span><span class="annot"><span class="annottext">IntMap (Annotator (TxAuxData era))
+</span><a href="#local-6989586621679511303"><span class="hs-identifier hs-var">auxDataMap</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Decoder s () -&gt; Decoder s ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">unless</span></span><span>
+</span><span id="line-242"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511298"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511300"><span class="hs-identifier hs-var">witsLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s ()
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Decoder s ()) -&gt; String -&gt; Decoder s ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-244"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;different number of transaction bodies (&quot;</span></span><span>
+</span><span id="line-245"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511298"><span class="hs-identifier hs-var">bodiesLength</span></a></span><span>
+</span><span id="line-246"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;) and witness sets (&quot;</span></span><span>
+</span><span id="line-247"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679511300"><span class="hs-identifier hs-var">witsLength</span></a></span><span>
+</span><span id="line-248"></span><span>            </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-249"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-252"></span><span>      </span><span id="local-6989586621679511304"><span class="annot"><span class="annottext">segWitAnnTx :: Annotator (TxBody era)
+-&gt; Annotator (TxWits era)
+-&gt; Maybe (Annotator (TxAuxData era))
+-&gt; Annotator (Tx era)
+</span><a href="#local-6989586621679511304"><span class="hs-identifier hs-var hs-var">segWitAnnTx</span></a></span></span><span> </span><span id="local-6989586621679511305"><span class="annot"><span class="annottext">Annotator (TxBody era)
+</span><a href="#local-6989586621679511305"><span class="hs-identifier hs-var">bodyAnn</span></a></span></span><span> </span><span id="local-6989586621679511306"><span class="annot"><span class="annottext">Annotator (TxWits era)
+</span><a href="#local-6989586621679511306"><span class="hs-identifier hs-var">witsAnn'</span></a></span></span><span> </span><span id="local-6989586621679511307"><span class="annot"><span class="annottext">Maybe (Annotator (TxAuxData era))
+</span><a href="#local-6989586621679511307"><span class="hs-identifier hs-var">metaAnn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FullByteString -&gt; Tx era) -&gt; Annotator (Tx era)
+forall a. (FullByteString -&gt; a) -&gt; Annotator a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-var">Annotator</span></a></span><span> </span><span class="annot"><span class="annottext">((FullByteString -&gt; Tx era) -&gt; Annotator (Tx era))
+-&gt; (FullByteString -&gt; Tx era) -&gt; Annotator (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679511309"><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679511309"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-253"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679511310"><span class="annot"><span class="annottext">body' :: TxBody era
+</span><a href="#local-6989586621679511310"><span class="hs-identifier hs-var hs-var">body'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Annotator (TxBody era) -&gt; FullByteString -&gt; TxBody era
+forall a. Annotator a -&gt; FullByteString -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#runAnnotator"><span class="hs-identifier hs-var">runAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (TxBody era)
+</span><a href="#local-6989586621679511305"><span class="hs-identifier hs-var">bodyAnn</span></a></span><span> </span><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679511309"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-254"></span><span>            </span><span id="local-6989586621679511312"><span class="annot"><span class="annottext">witnessSet :: TxWits era
+</span><a href="#local-6989586621679511312"><span class="hs-identifier hs-var hs-var">witnessSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Annotator (TxWits era) -&gt; FullByteString -&gt; TxWits era
+forall a. Annotator a -&gt; FullByteString -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#runAnnotator"><span class="hs-identifier hs-var">runAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (TxWits era)
+</span><a href="#local-6989586621679511306"><span class="hs-identifier hs-var">witsAnn'</span></a></span><span> </span><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679511309"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-255"></span><span>            </span><span id="local-6989586621679511313"><span class="annot"><span class="annottext">metadata' :: Maybe (TxAuxData era)
+</span><a href="#local-6989586621679511313"><span class="hs-identifier hs-var hs-var">metadata'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Annotator (TxAuxData era) -&gt; FullByteString -&gt; TxAuxData era)
+-&gt; FullByteString -&gt; Annotator (TxAuxData era) -&gt; TxAuxData era
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">Annotator (TxAuxData era) -&gt; FullByteString -&gt; TxAuxData era
+forall a. Annotator a -&gt; FullByteString -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#runAnnotator"><span class="hs-identifier hs-var">runAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679511309"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotator (TxAuxData era) -&gt; TxAuxData era)
+-&gt; Maybe (Annotator (TxAuxData era)) -&gt; Maybe (TxAuxData era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Maybe (Annotator (TxAuxData era))
+</span><a href="#local-6989586621679511307"><span class="hs-identifier hs-var">metaAnn</span></a></span><span>
+</span><span id="line-256"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679510552"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679511310"><span class="hs-identifier hs-var">body'</span></a></span><span>
+</span><span id="line-257"></span><span>              </span><span class="annot"><span class="annottext">Tx era -&gt; (Tx era -&gt; Tx era) -&gt; Tx era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxWits era -&gt; Identity (TxWits era))
+-&gt; Tx era -&gt; Identity (Tx era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx era) (TxWits era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits era -&gt; Identity (TxWits era))
+ -&gt; Tx era -&gt; Identity (Tx era))
+-&gt; TxWits era -&gt; Tx era -&gt; Tx era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679511312"><span class="hs-identifier hs-var">witnessSet</span></a></span><span>
+</span><span id="line-258"></span><span>              </span><span class="annot"><span class="annottext">Tx era -&gt; (Tx era -&gt; Tx era) -&gt; Tx era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (TxAuxData era)
+ -&gt; Identity (StrictMaybe (TxAuxData era)))
+-&gt; Tx era -&gt; Identity (Tx era)
+forall era.
+EraTx era =&gt;
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-identifier hs-var">auxDataTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe (TxAuxData era)
+  -&gt; Identity (StrictMaybe (TxAuxData era)))
+ -&gt; Tx era -&gt; Identity (Tx era))
+-&gt; StrictMaybe (TxAuxData era) -&gt; Tx era -&gt; Tx era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (TxAuxData era) -&gt; StrictMaybe (TxAuxData era)
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (TxAuxData era)
+</span><a href="#local-6989586621679511313"><span class="hs-identifier hs-var">metadata'</span></a></span><span>
+</span><span id="line-259"></span><span>      </span><span id="local-6989586621679511316"><span class="annot"><span class="annottext">txns :: Annotator (StrictSeq (Tx era))
+</span><a href="#local-6989586621679511316"><span class="hs-identifier hs-var hs-var">txns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-260"></span><span>        </span><span class="annot"><span class="annottext">StrictSeq (Annotator (Tx era)) -&gt; Annotator (StrictSeq (Tx era))
+forall (t :: * -&gt; *) (f :: * -&gt; *) a.
+(Traversable t, Applicative f) =&gt;
+t (f a) -&gt; f (t a)
+forall (f :: * -&gt; *) a.
+Applicative f =&gt;
+StrictSeq (f a) -&gt; f (StrictSeq a)
+</span><span class="hs-identifier hs-var">sequenceA</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (Annotator (Tx era)) -&gt; Annotator (StrictSeq (Tx era)))
+-&gt; StrictSeq (Annotator (Tx era)) -&gt; Annotator (StrictSeq (Tx era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-261"></span><span>          </span><span class="annot"><span class="annottext">Seq (Annotator (Tx era)) -&gt; StrictSeq (Annotator (Tx era))
+forall a. Seq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Sequence.Strict.html#forceToStrict"><span class="hs-identifier hs-var">StrictSeq.forceToStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(Seq (Annotator (Tx era)) -&gt; StrictSeq (Annotator (Tx era)))
+-&gt; Seq (Annotator (Tx era)) -&gt; StrictSeq (Annotator (Tx era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-262"></span><span>            </span><span class="annot"><span class="annottext">(Annotator (TxBody era)
+ -&gt; Annotator (TxWits era)
+ -&gt; Maybe (Annotator (TxAuxData era))
+ -&gt; Annotator (Tx era))
+-&gt; Seq (Annotator (TxBody era))
+-&gt; Seq (Annotator (TxWits era))
+-&gt; Seq (Maybe (Annotator (TxAuxData era)))
+-&gt; Seq (Annotator (Tx era))
+forall a b c d.
+(a -&gt; b -&gt; c -&gt; d) -&gt; Seq a -&gt; Seq b -&gt; Seq c -&gt; Seq d
+</span><span class="hs-identifier hs-var">Seq.zipWith3</span></span><span> </span><span class="annot"><span class="annottext">Annotator (TxBody era)
+-&gt; Annotator (TxWits era)
+-&gt; Maybe (Annotator (TxAuxData era))
+-&gt; Annotator (Tx era)
+</span><a href="#local-6989586621679511304"><span class="hs-identifier hs-var">segWitAnnTx</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxBody era))
+</span><a href="#local-6989586621679511294"><span class="hs-identifier hs-var">bodies</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Annotator (TxWits era))
+</span><a href="#local-6989586621679511296"><span class="hs-identifier hs-var">wits</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Maybe (Annotator (TxAuxData era)))
+</span><a href="#local-6989586621679511301"><span class="hs-identifier hs-var">metadata</span></a></span><span>
+</span><span id="line-263"></span><span>      </span><span id="local-6989586621679511320"><span class="annot"><span class="annottext">hashAnn :: Annotator (Hash HASH EraIndependentBlockBody)
+</span><a href="#local-6989586621679511320"><span class="hs-identifier hs-var hs-var">hashAnn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#hashShelleySegWits"><span class="hs-identifier hs-var">hashShelleySegWits</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString
+ -&gt; ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody)
+-&gt; Annotator ByteString
+-&gt; Annotator
+     (ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511295"><span class="hs-identifier hs-var">bodiesAnn</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator
+  (ByteString -&gt; ByteString -&gt; Hash HASH EraIndependentBlockBody)
+-&gt; Annotator ByteString
+-&gt; Annotator (ByteString -&gt; Hash HASH EraIndependentBlockBody)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511297"><span class="hs-identifier hs-var">witsAnn</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (ByteString -&gt; Hash HASH EraIndependentBlockBody)
+-&gt; Annotator ByteString
+-&gt; Annotator (Hash HASH EraIndependentBlockBody)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511302"><span class="hs-identifier hs-var">metadataAnn</span></a></span><span>
+</span><span id="line-264"></span><span>    </span><span class="annot"><span class="annottext">Annotator (ShelleyTxSeq era)
+-&gt; Decoder s (Annotator (ShelleyTxSeq era))
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Annotator (ShelleyTxSeq era)
+ -&gt; Decoder s (Annotator (ShelleyTxSeq era)))
+-&gt; Annotator (ShelleyTxSeq era)
+-&gt; Decoder s (Annotator (ShelleyTxSeq era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Tx era)
+-&gt; Hash HASH EraIndependentBlockBody
+-&gt; ByteString
+-&gt; ByteString
+-&gt; ByteString
+-&gt; ShelleyTxSeq era
+forall era.
+StrictSeq (Tx era)
+-&gt; Hash HASH EraIndependentBlockBody
+-&gt; ByteString
+-&gt; ByteString
+-&gt; ByteString
+-&gt; ShelleyTxSeq era
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#TxSeq%27"><span class="hs-identifier hs-var">TxSeq'</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (Tx era)
+ -&gt; Hash HASH EraIndependentBlockBody
+ -&gt; ByteString
+ -&gt; ByteString
+ -&gt; ByteString
+ -&gt; ShelleyTxSeq era)
+-&gt; Annotator (StrictSeq (Tx era))
+-&gt; Annotator
+     (Hash HASH EraIndependentBlockBody
+      -&gt; ByteString -&gt; ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator (StrictSeq (Tx era))
+</span><a href="#local-6989586621679511316"><span class="hs-identifier hs-var">txns</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator
+  (Hash HASH EraIndependentBlockBody
+   -&gt; ByteString -&gt; ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+-&gt; Annotator (Hash HASH EraIndependentBlockBody)
+-&gt; Annotator
+     (ByteString -&gt; ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Hash HASH EraIndependentBlockBody)
+</span><a href="#local-6989586621679511320"><span class="hs-identifier hs-var">hashAnn</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator
+  (ByteString -&gt; ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+-&gt; Annotator ByteString
+-&gt; Annotator (ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511295"><span class="hs-identifier hs-var">bodiesAnn</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (ByteString -&gt; ByteString -&gt; ShelleyTxSeq era)
+-&gt; Annotator ByteString
+-&gt; Annotator (ByteString -&gt; ShelleyTxSeq era)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511297"><span class="hs-identifier hs-var">witsAnn</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (ByteString -&gt; ShelleyTxSeq era)
+-&gt; Annotator ByteString -&gt; Annotator (ShelleyTxSeq era)
+forall a b. Annotator (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679511302"><span class="hs-identifier hs-var">metadataAnn</span></a></span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#slotToNonce"><span class="hs-identifier hs-type">slotToNonce</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-267"></span><span id="slotToNonce"><span class="annot"><span class="annottext">slotToNonce :: SlotNo -&gt; Nonce
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#slotToNonce"><span class="hs-identifier hs-var hs-var">slotToNonce</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.0-a4caca061adf4b239c701267c939db0da6f326770676ce0000a6657eb8e6a07a/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621679511322"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679511322"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkNonceFromNumber"><span class="hs-identifier hs-var">mkNonceFromNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679511322"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span class="annot"><a href="Cardano.Ledger.Shelley.BlockChain.html#incrBlocks"><span class="hs-identifier hs-type">incrBlocks</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-270"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-271"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-272"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-273"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span>
+</span><span id="line-274"></span><span id="incrBlocks"><span class="annot"><span class="annottext">incrBlocks :: Bool -&gt; KeyHash 'StakePool -&gt; BlocksMade -&gt; BlocksMade
+</span><a href="Cardano.Ledger.Shelley.BlockChain.html#incrBlocks"><span class="hs-identifier hs-var hs-var">incrBlocks</span></a></span></span><span> </span><span id="local-6989586621679511323"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679511323"><span class="hs-identifier hs-var">isOverlay</span></a></span></span><span> </span><span id="local-6989586621679511324"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679511324"><span class="hs-identifier hs-var">hk</span></a></span></span><span> </span><span id="local-6989586621679511325"><span class="annot"><span class="annottext">b' :: BlocksMade
+</span><a href="#local-6989586621679511325"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span> </span><span id="local-6989586621679511327"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679511327"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679511323"><span class="hs-identifier hs-var">isOverlay</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679511325"><span class="hs-identifier hs-var">b'</span></a></span><span>
+</span><span id="line-276"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural -&gt; BlocksMade
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-var">BlocksMade</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) Natural -&gt; BlocksMade)
+-&gt; Map (KeyHash 'StakePool) Natural -&gt; BlocksMade
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Natural
+</span><a href="#local-6989586621679511328"><span class="hs-identifier hs-var">hkVal</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-277"></span><span>      </span><span class="annot"><span class="annottext">Maybe Natural
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+-&gt; Natural
+-&gt; Map (KeyHash 'StakePool) Natural
+-&gt; Map (KeyHash 'StakePool) Natural
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679511324"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679511327"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-278"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679511330"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679511330"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+-&gt; Natural
+-&gt; Map (KeyHash 'StakePool) Natural
+-&gt; Map (KeyHash 'StakePool) Natural
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679511324"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679511330"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679511327"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-279"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-280"></span><span>    </span><span id="local-6989586621679511328"><span class="annot"><span class="annottext">hkVal :: Maybe Natural
+</span><a href="#local-6989586621679511328"><span class="hs-identifier hs-var hs-var">hkVal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+-&gt; Map (KeyHash 'StakePool) Natural -&gt; Maybe Natural
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679511324"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679511327"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-281"></span></pre></body></html>

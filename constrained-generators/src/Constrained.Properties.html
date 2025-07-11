@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ExistentialQuantification #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Useful of helpers for writing properties with constrained generators</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Properties</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Constrained.Properties.html#conformsToSpecProp"><span class="hs-identifier">conformsToSpecProp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Constrained.Properties.html#forAllSpec"><span class="hs-identifier">forAllSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Constrained.Properties.html#forAllSpecShow"><span class="hs-identifier">forAllSpecShow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Constrained.Properties.html#forAllSpecDiscard"><span class="hs-identifier">forAllSpecDiscard</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Base.html"><span class="hs-identifier">Constrained.Base</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Conformance.html"><span class="hs-identifier">Constrained.Conformance</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.GenT.html"><span class="hs-identifier">Constrained.GenT</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Generation.html"><span class="hs-identifier">Constrained.Generation</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">QC</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><span class="hs-comment">-- | Like @Constrained.Conformance.conformsToSpec@ but in @Test.QuickCheck.Property@ form.</span></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="Constrained.Properties.html#conformsToSpecProp"><span class="hs-identifier hs-type">conformsToSpecProp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679871875"><span class="annot"><a href="#local-6989586621679871875"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871875"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679871875"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871875"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QC.Property</span></a></span><span>
+</span><span id="line-21"></span><span id="conformsToSpecProp"><span class="annot"><span class="annottext">conformsToSpecProp :: forall a. HasSpec a =&gt; a -&gt; Specification a -&gt; Property
+</span><a href="Constrained.Properties.html#conformsToSpecProp"><span class="hs-identifier hs-var hs-var">conformsToSpecProp</span></a></span></span><span> </span><span id="local-6989586621679871945"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679871945"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679871946"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871946"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; Specification a -&gt; NonEmpty String -&gt; Maybe (NonEmpty String)
+forall a.
+HasSpec a =&gt;
+a -&gt; Specification a -&gt; NonEmpty String -&gt; Maybe (NonEmpty String)
+</span><a href="Constrained.Conformance.html#conformsToSpecE"><span class="hs-identifier hs-var">conformsToSpecE</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679871945"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification a -&gt; Specification a
+forall a. HasSpec a =&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Generation.html#simplifySpec"><span class="hs-identifier hs-var">simplifySpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871946"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; NonEmpty String
+forall a. a -&gt; NonEmpty a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;call to conformsToSpecProp&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><span class="annottext">Maybe (NonEmpty String)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">QC.property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679871950"><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679871950"><span class="hs-identifier hs-var">msgs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool -&gt; Property
+forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">QC.counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty String -&gt; [String]
+forall a. NonEmpty a -&gt; [a]
+</span><span class="hs-identifier hs-var">NE.toList</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679871950"><span class="hs-identifier hs-var">msgs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><span class="hs-comment">-- | Quanitfy over a @Constrained.Base.Specification@.</span></span><span>
+</span><span id="line-26"></span><span id="local-6989586621679871888"><span id="local-6989586621679871889"><span class="annot"><a href="Constrained.Properties.html#forAllSpec"><span class="hs-identifier hs-type">forAllSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871888"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Testable"><span class="hs-identifier hs-type">QC.Testable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871889"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871888"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679871888"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679871889"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QC.Property</span></a></span></span></span><span>
+</span><span id="line-27"></span><span id="forAllSpec"><span class="annot"><span class="annottext">forAllSpec :: forall a p.
+(HasSpec a, Testable p) =&gt;
+Specification a -&gt; (a -&gt; p) -&gt; Property
+</span><a href="Constrained.Properties.html#forAllSpec"><span class="hs-identifier hs-var hs-var">forAllSpec</span></a></span></span><span> </span><span id="local-6989586621679871961"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871961"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span id="local-6989586621679871962"><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679871962"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; (a -&gt; String) -&gt; (a -&gt; p) -&gt; Property
+forall a p.
+(HasSpec a, Testable p) =&gt;
+Specification a -&gt; (a -&gt; String) -&gt; (a -&gt; p) -&gt; Property
+</span><a href="Constrained.Properties.html#forAllSpecShow"><span class="hs-identifier hs-var">forAllSpecShow</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871961"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679871962"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span id="local-6989586621679871893"><span id="local-6989586621679871894"><span class="annot"><a href="Constrained.Properties.html#forAllSpecShow"><span class="hs-identifier hs-type">forAllSpecShow</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871893"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Testable"><span class="hs-identifier hs-type">QC.Testable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871894"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679871893"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679871893"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679871893"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679871894"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QC.Property</span></a></span></span></span><span>
+</span><span id="line-31"></span><span id="forAllSpecShow"><span class="annot"><span class="annottext">forAllSpecShow :: forall a p.
+(HasSpec a, Testable p) =&gt;
+Specification a -&gt; (a -&gt; String) -&gt; (a -&gt; p) -&gt; Property
+</span><a href="Constrained.Properties.html#forAllSpecShow"><span class="hs-identifier hs-var hs-var">forAllSpecShow</span></a></span></span><span> </span><span id="local-6989586621679871983"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871983"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span id="local-6989586621679871984"><span class="annot"><span class="annottext">a -&gt; String
+</span><a href="#local-6989586621679871984"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679871985"><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679871985"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679871997"><span class="annot"><span class="annottext">sspec :: Specification a
+</span><a href="#local-6989586621679871997"><span class="hs-identifier hs-var hs-var">sspec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; Specification a
+forall a. HasSpec a =&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Generation.html#simplifySpec"><span class="hs-identifier hs-var">simplifySpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871983"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-33"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Gen a -&gt; (a -&gt; [a]) -&gt; (a -&gt; String) -&gt; (a -&gt; Property) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; [a]) -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#forAllShrinkShow"><span class="hs-identifier hs-var">QC.forAllShrinkShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification a -&gt; Gen a
+forall a. (HasCallStack, HasSpec a) =&gt; Specification a -&gt; Gen a
+</span><a href="Constrained.Generation.html#genFromSpec"><span class="hs-identifier hs-var">genFromSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871997"><span class="hs-identifier hs-var">sspec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Specification a -&gt; a -&gt; [a]
+forall a. HasSpec a =&gt; Specification a -&gt; a -&gt; [a]
+</span><a href="Constrained.Generation.html#shrinkWithSpec"><span class="hs-identifier hs-var">shrinkWithSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871997"><span class="hs-identifier hs-var">sspec</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+</span><a href="#local-6989586621679871984"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; Property) -&gt; Property) -&gt; (a -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679872001"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872001"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-34"></span><span>        </span><span class="annot"><span class="annottext">Specification a -&gt; a -&gt; p -&gt; Property
+forall p a. Testable p =&gt; Specification a -&gt; a -&gt; p -&gt; Property
+</span><a href="Constrained.Conformance.html#monitorSpec"><span class="hs-identifier hs-var">monitorSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679871983"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872001"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">(p -&gt; Property) -&gt; p -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679871985"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872001"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | Quanitfy over a @Constrained.Base.Specification@ and discard any test where generation fails.</span></span><span>
+</span><span id="line-37"></span><span id="local-6989586621679872003"><span id="local-6989586621679872004"><span class="annot"><a href="Constrained.Properties.html#forAllSpecDiscard"><span class="hs-identifier hs-type">forAllSpecDiscard</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679872003"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Testable"><span class="hs-identifier hs-type">QC.Testable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679872004"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679872003"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679872003"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679872004"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QC.Property</span></a></span></span></span><span>
+</span><span id="line-38"></span><span id="forAllSpecDiscard"><span class="annot"><span class="annottext">forAllSpecDiscard :: forall a p.
+(HasSpec a, Testable p) =&gt;
+Specification a -&gt; (a -&gt; p) -&gt; Property
+</span><a href="Constrained.Properties.html#forAllSpecDiscard"><span class="hs-identifier hs-var hs-var">forAllSpecDiscard</span></a></span></span><span> </span><span id="local-6989586621679872029"><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679872029"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span id="local-6989586621679872030"><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679872030"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679872042"><span class="annot"><span class="annottext">sspec :: Specification a
+</span><a href="#local-6989586621679872042"><span class="hs-identifier hs-var hs-var">sspec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; Specification a
+forall a. HasSpec a =&gt; Specification a -&gt; Specification a
+</span><a href="Constrained.Generation.html#simplifySpec"><span class="hs-identifier hs-var">simplifySpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679872029"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-40"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Gen (GE a) -&gt; (GE a -&gt; [GE a]) -&gt; (GE a -&gt; Property) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; [a]) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#forAllShrinkBlind"><span class="hs-identifier hs-var">QC.forAllShrinkBlind</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenT GE a -&gt; Gen (GE a)
+forall (m :: * -&gt; *) a. GenT m a -&gt; Gen (m a)
+</span><a href="Constrained.GenT.html#strictGen"><span class="hs-identifier hs-var">strictGen</span></a></span><span> </span><span class="annot"><span class="annottext">(GenT GE a -&gt; Gen (GE a)) -&gt; GenT GE a -&gt; Gen (GE a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, HasSpec a, MonadGenError m) =&gt;
+Specification a -&gt; GenT m a
+</span><a href="Constrained.Generation.html#genFromSpecT"><span class="hs-identifier hs-var">genFromSpecT</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Constrained.GenT.html#GE"><span class="hs-identifier hs-type">GE</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679872042"><span class="hs-identifier hs-var">sspec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; GE a) -&gt; [a] -&gt; [GE a]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; GE a
+forall a. a -&gt; GE a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [GE a]) -&gt; (GE a -&gt; [a]) -&gt; GE a -&gt; [GE a]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Specification a -&gt; a -&gt; [a]
+forall a. HasSpec a =&gt; Specification a -&gt; a -&gt; [a]
+</span><a href="Constrained.Generation.html#shrinkWithSpec"><span class="hs-identifier hs-var">shrinkWithSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification a
+</span><a href="#local-6989586621679872042"><span class="hs-identifier hs-var">sspec</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; [a]) -&gt; (GE a -&gt; a) -&gt; GE a -&gt; [a]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">GE a -&gt; a
+forall a. GE a -&gt; a
+</span><a href="Constrained.GenT.html#errorGE"><span class="hs-identifier hs-var">errorGE</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">((GE a -&gt; Property) -&gt; Property) -&gt; (GE a -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679872048"><span class="annot"><span class="annottext">GE a
+</span><a href="#local-6989586621679872048"><span class="hs-identifier hs-var">ge</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>          </span><span class="annot"><span class="annottext">GE Property -&gt; Property
+forall p. Testable p =&gt; GE p -&gt; Property
+</span><a href="Constrained.GenT.html#fromGEDiscard"><span class="hs-identifier hs-var">fromGEDiscard</span></a></span><span> </span><span class="annot"><span class="annottext">(GE Property -&gt; Property) -&gt; GE Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>            </span><span id="local-6989586621679872050"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872050"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GE a
+</span><a href="#local-6989586621679872048"><span class="hs-identifier hs-var">ge</span></a></span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><span class="annottext">Property -&gt; GE Property
+forall a. a -&gt; GE a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; GE Property) -&gt; Property -&gt; GE Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; p -&gt; Property
+forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-ed1ded934e40a08a10d4f1286d7990f42ee8ccaf5cb9c8f32c8776f76d6dcf0d/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">QC.counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872050"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(p -&gt; Property) -&gt; p -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; p
+</span><a href="#local-6989586621679872030"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679872050"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-47"></span></pre></body></html>
