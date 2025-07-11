@@ -494,12 +494,12 @@ getDRepState dRepCred = do
 -- in Conway. The Shelley version of this function would have to separately
 -- register the staking credential and then delegate it.
 setupPoolWithStake ::
-  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  ConwayEraImp era =>
   Coin ->
   ImpTestM era (KeyHash 'StakePool, Credential 'Payment, Credential 'Staking)
 setupPoolWithStake delegCoin = do
   khPool <- freshKeyHash
-  registerPool khPool
+  registerPoolWithDeposit khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   sendCoinTo_ (mkAddr credDelegatorPayment credDelegatorStaking) delegCoin
