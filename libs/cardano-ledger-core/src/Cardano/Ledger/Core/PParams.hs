@@ -76,6 +76,7 @@ module Cardano.Ledger.Core.PParams (
   downgradePParams,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
+  Updatable (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (

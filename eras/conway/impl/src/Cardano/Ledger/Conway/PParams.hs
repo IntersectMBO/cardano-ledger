@@ -80,11 +80,11 @@ module Cardano.Ledger.Conway.PParams (
   conwayModifiedPPGroups,
   pvtHardForkInitiationL,
   pvtMotionNoConfidenceL,
-  conwayApplyPPUpdates,
   emptyConwayPParams,
   emptyConwayPParamsUpdate,
   asNaturalHKD,
   asBoundedIntegralHKD,
+  ppGroup,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -148,7 +148,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word (Word16, Word32)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic, K1 (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -534,6 +534,10 @@ instance ToStakePoolGroup 'NoStakePoolGroup where
 -- | HKD that is tagged with a group
 newtype THKD (t :: PPGroups) f a = THKD {unTHKD :: HKD f a}
 
+instance Updatable (K1 t (THKD g Identity x) a) (K1 t (THKD h StrictMaybe x) u) where
+  applyUpdate _ (K1 (THKD (SJust x))) = K1 $ THKD x
+  applyUpdate (K1 x) (K1 (THKD SNothing)) = K1 x
+
 instance Eq (HKD f a) => Eq (THKD t f a) where
   THKD x1 == THKD x2 = x1 == x2
 
@@ -772,9 +776,6 @@ instance EraPParams ConwayEra where
   type PParamsHKD f ConwayEra = ConwayPParams f ConwayEra
   type UpgradePParams f ConwayEra = UpgradeConwayPParams f
   type DowngradePParams f ConwayEra = ()
-
-  applyPPUpdates (PParams pp) (PParamsUpdate ppu) =
-    PParams $ conwayApplyPPUpdates pp ppu
 
   emptyPParamsIdentity = emptyConwayPParams
   emptyPParamsStrictMaybe = emptyConwayPParamsUpdate
@@ -1119,65 +1120,6 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppCollateralPercentage = asNaturalHKD @f @Word16 (unTHKD cppCollateralPercentage)
     , bppMaxCollateralInputs = asNaturalHKD @f @Word16 (unTHKD cppMaxCollateralInputs)
     }
-
-conwayApplyPPUpdates ::
-  ConwayPParams Identity era ->
-  ConwayPParams StrictMaybe era ->
-  ConwayPParams Identity era
-conwayApplyPPUpdates pp ppu =
-  ConwayPParams
-    { cppMinFeeA = ppUpdate (cppMinFeeA pp) (cppMinFeeA ppu)
-    , cppMinFeeB = ppUpdate (cppMinFeeB pp) (cppMinFeeB ppu)
-    , cppMaxBBSize = ppUpdate (cppMaxBBSize pp) (cppMaxBBSize ppu)
-    , cppMaxTxSize = ppUpdate (cppMaxTxSize pp) (cppMaxTxSize ppu)
-    , cppMaxBHSize = ppUpdate (cppMaxBHSize pp) (cppMaxBHSize ppu)
-    , cppKeyDeposit = ppUpdate (cppKeyDeposit pp) (cppKeyDeposit ppu)
-    , cppPoolDeposit = ppUpdate (cppPoolDeposit pp) (cppPoolDeposit ppu)
-    , cppEMax = ppUpdate (cppEMax pp) (cppEMax ppu)
-    , cppNOpt = ppUpdate (cppNOpt pp) (cppNOpt ppu)
-    , cppA0 = ppUpdate (cppA0 pp) (cppA0 ppu)
-    , cppRho = ppUpdate (cppRho pp) (cppRho ppu)
-    , cppTau = ppUpdate (cppTau pp) (cppTau ppu)
-    , cppProtocolVersion = cppProtocolVersion pp
-    , cppMinPoolCost = ppUpdate (cppMinPoolCost pp) (cppMinPoolCost ppu)
-    , cppCoinsPerUTxOByte = ppUpdate (cppCoinsPerUTxOByte pp) (cppCoinsPerUTxOByte ppu)
-    , cppCostModels = ppUpdateCostModels (cppCostModels pp) (cppCostModels ppu)
-    , cppPrices = ppUpdate (cppPrices pp) (cppPrices ppu)
-    , cppMaxTxExUnits = ppUpdate (cppMaxTxExUnits pp) (cppMaxTxExUnits ppu)
-    , cppMaxBlockExUnits = ppUpdate (cppMaxBlockExUnits pp) (cppMaxBlockExUnits ppu)
-    , cppMaxValSize = ppUpdate (cppMaxValSize pp) (cppMaxValSize ppu)
-    , cppCollateralPercentage = ppUpdate (cppCollateralPercentage pp) (cppCollateralPercentage ppu)
-    , cppMaxCollateralInputs = ppUpdate (cppMaxCollateralInputs pp) (cppMaxCollateralInputs ppu)
-    , cppPoolVotingThresholds = ppUpdate (cppPoolVotingThresholds pp) (cppPoolVotingThresholds ppu)
-    , cppDRepVotingThresholds = ppUpdate (cppDRepVotingThresholds pp) (cppDRepVotingThresholds ppu)
-    , cppCommitteeMinSize = ppUpdate (cppCommitteeMinSize pp) (cppCommitteeMinSize ppu)
-    , cppCommitteeMaxTermLength =
-        ppUpdate (cppCommitteeMaxTermLength pp) (cppCommitteeMaxTermLength ppu)
-    , cppGovActionLifetime = ppUpdate (cppGovActionLifetime pp) (cppGovActionLifetime ppu)
-    , cppGovActionDeposit = ppUpdate (cppGovActionDeposit pp) (cppGovActionDeposit ppu)
-    , cppDRepDeposit = ppUpdate (cppDRepDeposit pp) (cppDRepDeposit ppu)
-    , cppDRepActivity = ppUpdate (cppDRepActivity pp) (cppDRepActivity ppu)
-    , cppMinFeeRefScriptCostPerByte =
-        ppUpdate (cppMinFeeRefScriptCostPerByte pp) (cppMinFeeRefScriptCostPerByte ppu)
-    }
-  where
-    ppUpdate ::
-      THKD f Identity a ->
-      THKD f StrictMaybe a ->
-      THKD f Identity a
-    ppUpdate (THKD ppCurValue) (THKD ppuValue) =
-      case ppuValue of
-        SNothing -> THKD ppCurValue
-        SJust ppNewValue -> THKD ppNewValue
-
-    ppUpdateCostModels ::
-      THKD f Identity CostModels ->
-      THKD f StrictMaybe CostModels ->
-      THKD f Identity CostModels
-    ppUpdateCostModels (THKD curCostModel) (THKD ppuCostModel) =
-      case ppuCostModel of
-        SNothing -> THKD curCostModel
-        SJust costModelUpdate -> THKD $ updateCostModels curCostModel costModelUpdate
 
 conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroups
 conwayModifiedPPGroups
