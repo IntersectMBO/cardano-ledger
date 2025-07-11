@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -22,49 +23,15 @@ module Constrained.Generation where
 
 import Constrained.AbstractSyntax
 import Constrained.Base
-import Constrained.Conformance (
-  checkPred,
-  checkPredsE,
-  conformsToSpec,
-  satisfies,
- )
-import Constrained.Core (
-  Evidence (..),
-  Value (..),
-  Var (..),
-  eqVar,
-  freshen,
-  unValue,
-  unionWithMaybe,
- )
-import Constrained.Env (
-  Env,
-  extendEnv,
-  findEnv,
-  lookupEnv,
-  singletonEnv,
- )
+import Constrained.Conformance
+import Constrained.Core
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
 import Constrained.GenT
 import Constrained.Generic
-import Constrained.Graph (
-  Graph (..),
-  deleteNode,
-  topsort,
-  transitiveClosure,
- )
-import Constrained.List (
-  -- All,
-  FunTy,
-  List (..),
-  ListCtx (..),
-  -- TypeList,
-  foldMapList,
-  lengthList,
-  mapList,
-  mapMList,
-  uncurryList_,
- )
+import Constrained.Graph hiding (irreflexiveDependencyOn)
+import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
 import Constrained.Syntax
@@ -75,13 +42,12 @@ import Data.Foldable
 import Data.Int
 import Data.Kind
 import Data.List (partition)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe
 import Data.Semigroup (Any (..), getSum)
-import qualified Data.Semigroup as Semigroup
+import Data.Semigroup qualified as Semigroup
 import Data.Set (Set)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.String
 import Data.Typeable
 import GHC.Stack
@@ -113,7 +79,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
         genFromSpecT TrueSpec
     | otherwise -> do
         env <- genFromPreds mempty p
-        findEnv env x
+        Env.find env x
   TypeSpec s cant -> do
     mode <- getMode
     explainNE
@@ -213,7 +179,7 @@ aggressiveInlining pred
         | not (isLit t)
         , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
-            pure $ runCaseOn a (mapList thing bs) $ \x v p -> substPred (singletonEnv x v) p
+            pure $ runCaseOn a (mapList thing bs) $ \x v p -> substPred (Env.singleton x v) p
         | (Weighted w (x :-> p) :> Nil) <- bs -> do
             let t' = substituteAndSimplifyTerm sub t
             p' <- go (underBinder fvs x p) (x := t' : sub) p
@@ -389,7 +355,7 @@ computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
-  Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (Env.singleton va vaVal) psa)
   Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec (Just (showType @a)) branchSpecs) <$> toCtx x t
@@ -563,17 +529,17 @@ shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
 shrinkFromPreds p
   | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
       -- NOTE: we do this to e.g. guard against bad construction functions in Exists
-      xaGood <- checkPred (singletonEnv x a) p
+      xaGood <- checkPred (Env.singleton x a) p
       unless xaGood $
         fatalError "Trying to shrink a bad value, don't do that!"
       -- Get an `env` for the original value
-      initialEnv <- envFromPred (singletonEnv x a) p
+      initialEnv <- envFromPred (Env.singleton x a) p
       return
         [ a'
         | -- Shrink the initialEnv
         env' <- shrinkEnvFromPlan initialEnv plan
         , -- Get the value of the constrained variable `x` in the shrunk env
-        Just a' <- [lookupEnv env' x]
+        Just a' <- [Env.lookup env' x]
         , -- NOTE: this is necessary because it's possible that changing
         -- a particular value in the env during shrinking might not result
         -- in the value of `x` changing and there is no better way to know than
@@ -589,24 +555,24 @@ shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
     go :: Env -> [SolverStage] -> [Env]
     go _ [] = [] -- In this case we decided to keep every variable the same so nothing to return
     go env ((substStage env -> SolverStage {..}) : plan) = do
-      Just a <- [lookupEnv initialEnv stageVar]
+      Just a <- [Env.lookup initialEnv stageVar]
       -- Two cases:
       --  - either we shrink this value and try to fixup every value later on in the plan or
       [ env' <> fixedEnv
         | a' <- shrinkWithSpec stageSpec a
-        , let env' = extendEnv stageVar a' env
+        , let env' = Env.extend stageVar a' env
         , Just fixedEnv <- [fixupPlan env' plan]
         ]
         --  - we keep this value the way it is and try to shrink some later value
-        ++ go (extendEnv stageVar a env) plan
+        ++ go (Env.extend stageVar a env) plan
 
     -- Fix the rest of the plan given an environment `env` for the plan so far
     fixupPlan :: Env -> [SolverStage] -> Maybe Env
     fixupPlan env [] = pure env
     fixupPlan env ((substStage env -> SolverStage {..}) : plan) =
-      case lookupEnv initialEnv stageVar >>= fixupWithSpec stageSpec of
+      case Env.lookup initialEnv stageVar >>= fixupWithSpec stageSpec of
         Nothing -> Nothing
-        Just a -> fixupPlan (extendEnv stageVar a env) plan
+        Just a -> fixupPlan (Env.extend stageVar a env) plan
 
 -- ---------------------- Building a plan -----------------------------------
 
@@ -801,7 +767,7 @@ stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
           )
           (spec <> spec')
       )
-  let env1 = extendEnv x val env
+  let env1 = Env.extend x val env
   pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (deleteNode (Name x) gr))
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
@@ -844,7 +810,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
         termVarEqCases :: HasSpec b => Specification a -> Var b -> Term b -> [SolverStage]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (singletonEnv x v) t) vs))]
+              [SolverStage x' [] $ MemberSpec (NE.nub (fmap (\v -> errorGE $ runTerm (Env.singleton x v) t) vs))]
         termVarEqCases specx x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
@@ -1245,3 +1211,9 @@ isTrueSpec _ = False
 
 prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
+
+fromGESpec :: HasCallStack => GE (Specification a) -> Specification a
+fromGESpec ge = case ge of
+  Result s -> s
+  GenError xs -> ErrorSpec (catMessageList xs)
+  FatalError es -> error $ catMessages es

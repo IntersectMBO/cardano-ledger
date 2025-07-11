@@ -21,7 +21,59 @@
 --    3) Renaming
 --    4) internal helper functions
 --    5) Syntacic only transformations
-module Constrained.Syntax where
+module Constrained.Syntax (
+  computeDependencies,
+  solvableFrom,
+  respecting,
+  dependency,
+  regularizeNames,
+  regularize,
+  lit,
+  genHint,
+  dependsOn,
+  reifies,
+  envFromPred,
+  monitor,
+  explanation,
+  assertReified,
+  reify,
+  letBind,
+  unsafeExists,
+  forAll,
+  assertExplain,
+  mkNamed,
+  isLit,
+  mkCase,
+  letFloating,
+  unBind,
+  letSubexpressionElimination,
+  memberOf,
+  substituteTerm',
+  restrictedTo,
+  var,
+  mkNamedExpr,
+  runCaseOn,
+  substitutePred,
+  Name (..),
+  DependGraph,
+  Hints,
+  FreeVars,
+  Subst,
+  SubstEntry (..),
+  assert,
+  freeVarSet,
+  freeVarNames,
+  irreflexiveDependencyOn,
+  substPred,
+  fromLits,
+  appearsIn,
+  count,
+  countOf,
+  singleton,
+  without,
+  freeVars,
+  exists,
+) where
 
 import Constrained.AbstractSyntax
 import Constrained.Base (
@@ -49,13 +101,8 @@ import Constrained.Core (
   freshen,
   unValue,
  )
-import Constrained.Env (
-  Env,
-  extendEnv,
-  lookupEnv,
-  removeVar,
-  singletonEnv,
- )
+import Constrained.Env (Env)
+import Constrained.Env qualified as Env
 import Constrained.FunctionSymbol
 import Constrained.GenT (
   GE (..),
@@ -422,7 +469,7 @@ substTerm :: Env -> Term a -> Term a
 substTerm env = \case
   Lit a -> Lit a
   V v
-    | Just a <- lookupEnv env v -> Lit a
+    | Just a <- Env.lookup env v -> Lit a
     | otherwise -> V v
   App f (mapList (substTerm env) -> ts) ->
     case fromLits ts of
@@ -430,7 +477,7 @@ substTerm env = \case
       _ -> App f ts
 
 substBinder :: Env -> Binder a -> Binder a
-substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
+substBinder env (x :-> p) = x :-> substPred (Env.remove x env) p
 
 substPred :: Env -> Pred -> Pred
 substPred env = \case
@@ -452,7 +499,7 @@ substPred env = \case
   Explain es p -> Explain es $ substPred env p
 
 unBind :: a -> Binder a -> Pred
-unBind a (x :-> p) = substPred (singletonEnv x a) p
+unBind a (x :-> p) = substPred (Env.singleton x a) p
 
 -- ==========================================================
 -- Renaming
@@ -542,7 +589,7 @@ mkCase tm cs
   -- TODO: all equal maybe?
   | Semigroup.getAll $ foldMapList isTrueBinder cs = TruePred
   | Semigroup.getAll $ foldMapList (isFalseBinder . thing) cs = FalsePred (pure "mkCase on all False")
-  | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (singletonEnv x val) p)
+  | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (Env.singleton x val) p)
   | otherwise = Case tm cs
   where
     isTrueBinder (Weighted Nothing (_ :-> TruePred)) = Semigroup.All True
@@ -845,11 +892,11 @@ envFromPred env p = case p of
   Subst x a pp -> envFromPred env (substitutePred x a pp)
   Let t (x :-> pp) -> do
     v <- runTerm env t
-    envFromPred (extendEnv x v env) pp
+    envFromPred (Env.extend x v env) pp
   Explain _ pp -> envFromPred env pp
   Exists c (x :-> pp) -> do
     v <- c (errorGE . explain "envFromPred: Exists" . runTerm env)
-    envFromPred (extendEnv x v env) pp
+    envFromPred (Env.extend x v env) pp
   And [] -> pure env
   And (pp : ps) -> do
     env' <- envFromPred env pp

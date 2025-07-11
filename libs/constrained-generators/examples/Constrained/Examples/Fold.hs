@@ -8,7 +8,7 @@ module Constrained.Examples.Fold where
 
 import Constrained.API
 import Constrained.Examples.List (Numbery)
-import Constrained.GenT (GE (..), catMessages, genFromGenT, inspect)
+import Constrained.GenT (catMessages, genFromGenT, inspect)
 import Constrained.SumList
 import Data.String (fromString)
 import Prettyprinter (fillSep, punctuate, space)

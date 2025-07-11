@@ -22,6 +22,7 @@ import Constrained.Generation
 import Constrained.List
 import Constrained.NumOrd
 import Constrained.PrettyUtils
+import Constrained.Spec.List
 import Constrained.Spec.Map
 import Constrained.Spec.Set
 import Constrained.TheKnot

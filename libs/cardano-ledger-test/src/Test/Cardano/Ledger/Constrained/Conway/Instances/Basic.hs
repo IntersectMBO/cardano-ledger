@@ -46,7 +46,6 @@ import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Constrained.API
-import Constrained.GenT
 import Constrained.NumOrd
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String

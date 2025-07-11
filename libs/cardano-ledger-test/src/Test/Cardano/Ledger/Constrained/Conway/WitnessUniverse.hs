@@ -69,7 +69,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
-import Constrained.GenT (pureGen)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)
 import Data.ByteString (ByteString)
