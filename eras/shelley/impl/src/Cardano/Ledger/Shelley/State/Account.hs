@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.State hiding (balance)
 import Control.DeepSeq (NFData (rnf), deepseq, rwhnf)
 import Control.Monad.Trans.State.Strict (StateT (..))
-import Data.Aeson as Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson as Aeson (ToJSON (..), (.=))
 import Data.Default
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

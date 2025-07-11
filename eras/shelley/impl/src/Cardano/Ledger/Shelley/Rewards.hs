@@ -38,7 +38,13 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin (..), CompactForm, coinToRational, compactCoinOrError, rationalToCoinViaFloor)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm,
+  coinToRational,
+  compactCoinOrError,
+  rationalToCoinViaFloor,
+ )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
