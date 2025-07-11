@@ -133,6 +133,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
   getCommittee,
+  registerStakeCredentialWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -146,6 +147,7 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   binOpEpochNo,
   inject,
+  networkId,
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -173,7 +175,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -213,6 +215,7 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
+import Lens.Micro.Mtl (use)
 import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -1802,3 +1805,17 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
 
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
 getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+
+registerStakeCredentialWithDeposit ::
+  forall era.
+  ConwayEraImp era =>
+  Credential 'Staking ->
+  ImpTestM era RewardAccount
+registerStakeCredentialWithDeposit cred = do
+  deposit <- getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList [RegDepositTxCert cred deposit]
+  networkId <- use (impGlobalsL . to networkId)
+  pure $ RewardAccount networkId cred
