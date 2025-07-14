@@ -5,11 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Init
--- Description : Initial State for Shelley ledger examples
---
--- The initial state for Shelley Ledger Examples.
+-- | The initial state for Shelley Ledger Examples.
 module Test.Cardano.Ledger.Shelley.Examples.Init (
   ppEx,
   initSt,

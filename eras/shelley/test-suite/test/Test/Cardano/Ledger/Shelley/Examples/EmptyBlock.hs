@@ -20,7 +20,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..))
 import Test.Cardano.Ledger.Shelley.Examples.Combinators (
   evolveNonceUnfrozen,
   newLab,
