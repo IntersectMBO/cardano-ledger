@@ -55,7 +55,6 @@ library
     cardano-protocol-tpraos >=1.0,
     cardano-slotting,
     cardano-strict-containers,
-    cborg,
     containers,
     microlens,
     plutus-ledger-api >=1.33,
