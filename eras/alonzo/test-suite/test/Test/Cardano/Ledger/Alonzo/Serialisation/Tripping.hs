@@ -15,11 +15,8 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (eqAlonzoScriptRaw)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (zipMemoRawType)
-import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
@@ -35,19 +32,7 @@ tests :: TestTree
 tests =
   testGroup
     "Alonzo CBOR round-trip"
-    [ skip $
-        testProperty "alonzo/Script twiddled" $
-          roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
-    , skip $
-        testProperty "alonzo/Data twiddled" $
-          roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))
-    , skip $
-        testProperty "alonzo/BinaryData twiddled" $
-          roundTripTwiddledProperty @(BinaryData AlonzoEra)
-    , skip $
-        testProperty "alonzo/TxBody twiddled" $
-          roundTripAnnTwiddledProperty @(TxBody AlonzoEra) (zipMemoRawType (===))
-    , testProperty "alonzo/AlonzoUtxowPredFailure" $
+    [ testProperty "alonzo/AlonzoUtxowPredFailure" $
         roundTripCborExpectation @(AlonzoUtxowPredFailure AlonzoEra)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $
         roundTripCborExpectation @(AlonzoUtxoPredFailure AlonzoEra)
@@ -62,5 +47,3 @@ tests =
           (eraProtVerLow @AlonzoEra)
           (eraProtVerHigh @AlonzoEra)
     ]
-  where
-    skip _ = testProperty "Test skipped" True
