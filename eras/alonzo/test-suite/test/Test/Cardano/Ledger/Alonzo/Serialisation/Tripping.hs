@@ -35,18 +35,18 @@ tests :: TestTree
 tests =
   testGroup
     "Alonzo CBOR round-trip"
-    [ skip $
-        testProperty "alonzo/Script twiddled" $
-          roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
-    , skip $
-        testProperty "alonzo/Data twiddled" $
-          roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))
-    , skip $
-        testProperty "alonzo/BinaryData twiddled" $
-          roundTripTwiddledProperty @(BinaryData AlonzoEra)
-    , skip $
-        testProperty "alonzo/TxBody twiddled" $
-          roundTripAnnTwiddledProperty @(TxBody AlonzoEra) (zipMemoRawType (===))
+    [ -- skip $
+      testProperty "alonzo/Script twiddled" $
+        roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
+    , -- , skip $
+      testProperty "alonzo/Data twiddled" $
+        roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))
+    , -- , skip $
+      testProperty "alonzo/BinaryData twiddled" $
+        roundTripTwiddledProperty @(BinaryData AlonzoEra)
+    , -- , skip $
+      testProperty "alonzo/TxBody twiddled" $
+        roundTripAnnTwiddledProperty @(TxBody AlonzoEra) (zipMemoRawType (===))
     , testProperty "alonzo/AlonzoUtxowPredFailure" $
         roundTripCborExpectation @(AlonzoUtxowPredFailure AlonzoEra)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $
@@ -62,5 +62,6 @@ tests =
           (eraProtVerLow @AlonzoEra)
           (eraProtVerHigh @AlonzoEra)
     ]
-  where
-    skip _ = testProperty "Test skipped" True
+
+-- where
+-- skip _ = testProperty "Test skipped" True

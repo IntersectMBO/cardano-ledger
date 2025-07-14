@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
@@ -46,11 +47,17 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
-import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
-import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
+-- import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
+-- import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
+-- import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
+
+alicePHK = undefined
+
+aliceByronAddr = undefined
+
+genesisId = undefined
 
 byronAddr :: Addr
 byronAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)

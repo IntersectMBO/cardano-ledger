@@ -1,14 +1,10 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
+module Test.Cardano.Ledger.Alonzo.Binary.Twiddle () where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -28,9 +24,7 @@ import Data.Maybe (catMaybes)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
--- import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.QuickCheck
+import Test.Cardano.Ledger.Common
 
 instance (Era era, Val (Value era)) => Twiddle (AlonzoTxOut era) where
   twiddle v = twiddle v . toTerm v
