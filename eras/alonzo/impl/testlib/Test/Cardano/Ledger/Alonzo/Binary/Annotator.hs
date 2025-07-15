@@ -18,17 +18,17 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.BlockBody.Internal
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
-import Cardano.Ledger.Alonzo.TxSeq.Internal
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
+import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -50,7 +50,7 @@ instance
   , DecCBOR (TxWits era)
   , DecCBOR (NativeScript era)
   ) =>
-  DecCBOR (AlonzoTxSeq era)
+  DecCBOR (AlonzoBlockBody era)
   where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
@@ -85,7 +85,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith4 mkTx bodies wits validFlags auxData
     pure $
-      AlonzoTxSeqRaw
+      AlonzoBlockBodyInternal
         txs
         (hashAlonzoSegWits bodiesBytes witsBytes auxDataBytes isValidBytes)
         bodiesBytes

@@ -29,6 +29,7 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.Babbage
+    Cardano.Ledger.Babbage.BlockBody
     Cardano.Ledger.Babbage.Collateral
     Cardano.Ledger.Babbage.Core
     Cardano.Ledger.Babbage.PParams

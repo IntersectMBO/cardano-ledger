@@ -33,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
@@ -140,7 +140,7 @@ instance
   NoThunks (ShelleyBbodyPredFailure era)
 
 instance
-  ( EraSegWits era
+  ( EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -169,7 +169,7 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (ShelleyBBODY era)
-  , EraSegWits era
+  , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -180,12 +180,12 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account
                , BbodyState ls b
-               , Block bhview txsSeq
+               , Block bhview blockBody
                )
            ) -> do
-        let txs = fromTxSeq txsSeq
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq txsSeq
+        let txs = blockBody ^. txSeqBlockBodyL
+            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
+            actualBodyHash = hashBlockBody blockBody
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)

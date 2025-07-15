@@ -51,8 +51,8 @@ module Cardano.Ledger.Core (
 
   -- * Era
   module Cardano.Ledger.Core.Era,
-  -- $segWit
-  EraSegWits (..),
+  -- $erablockbody
+  EraBlockBody (..),
   bBodySize,
 
   -- * Rewards
@@ -553,13 +553,13 @@ hashScript =
       (\x -> scriptPrefixTag @era x <> originalBytes x)
 
 --------------------------------------------------------------------------------
--- Segregated Witness
+-- EraBlockBody - Segregated Witness
 --------------------------------------------------------------------------------
 
--- $segWit
--- * Segregated Witness
+-- $erablockbody
+-- * EraBlockBody
 --
--- The idea of segregated witnessing is to alter the encoding of transactions in
+-- The idea of EraBlockBody is to alter the encoding of transactions in
 -- a block such that the witnesses (the information needed to verify the
 -- validity of the transactions) can be stored separately from the body (the
 -- information needed to update the ledger state). In this way, a node which
@@ -567,37 +567,53 @@ hashScript =
 -- information.
 --
 -- In order to do this, we introduce two concepts:
--- - A 'TxSeq`, which represents the decoded structure of a sequence of
+-- - A 'BlockBody`, which represents the decoded structure of a sequence of
 --   transactions as represented in the encoded block; that is, with witnessing,
 --   metadata and other non-body parts split separately.
 
 -- | Indicates that an era supports segregated witnessing.
 --
---   This class embodies an isomorphism between 'TxSeq era' and 'StrictSeq
---   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
+--   This class embodies an isomorphism between 'BlockBody era' and 'StrictSeq
+--   (Tx era)', witnessed by the `txSeqBlockBodyL` lens.
 class
   ( EraTx era
-  , Eq (TxSeq era)
-  , Show (TxSeq era)
-  , EncCBORGroup (TxSeq era)
-  , DecCBOR (Annotator (TxSeq era))
+  , Eq (BlockBody era)
+  , Show (BlockBody era)
+  , EncCBORGroup (BlockBody era)
+  , DecCBOR (Annotator (BlockBody era))
   ) =>
-  EraSegWits era
+  EraBlockBody era
   where
-  type TxSeq era = (r :: Type) | r -> era
+  type BlockBody era = (r :: Type) | r -> era
 
-  fromTxSeq :: TxSeq era -> StrictSeq (Tx era)
-  toTxSeq :: StrictSeq (Tx era) -> TxSeq era
+  mkBasicBlockBody :: BlockBody era
 
-  -- | Get the block body hash from the TxSeq. Note that this is not a regular
+  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx era))
+
+  fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
+  fromTxSeq = (^. txSeqBlockBodyL)
+
+  toTxSeq :: StrictSeq (Tx era) -> BlockBody era
+  toTxSeq s = mkBasicBlockBody & txSeqBlockBodyL .~ s
+
+  -- | Get the block body hash from the BlockBody. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
   -- Merkle tree.
-  hashTxSeq :: TxSeq era -> Hash.Hash HASH EraIndependentBlockBody
+  hashBlockBody :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
+
+  hashTxSeq :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
+  hashTxSeq = hashBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64
 
-bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
+{-# DEPRECATED fromTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
+
+{-# DEPRECATED toTxSeq "In favor of the `txSeqBlockBodyL` lens" #-}
+
+{-# DEPRECATED hashTxSeq "In favor of `hashBlockBody`" #-}
+
+bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 txIdTx :: EraTx era => Tx era -> TxId

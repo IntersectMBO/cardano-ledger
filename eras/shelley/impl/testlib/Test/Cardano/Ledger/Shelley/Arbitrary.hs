@@ -38,6 +38,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   TxBody (ShelleyTxBody),
  )
+import Cardano.Ledger.Shelley.BlockBody
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.LedgerState
@@ -756,3 +757,13 @@ deriving newtype instance Arbitrary (TransitionConfig ShelleyEra)
 instance EncCBOR RawSeed where
   encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
   encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
+
+instance
+  ( EraBlockBody era
+  , BlockBody era ~ ShelleyBlockBody era
+  , Arbitrary (Tx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Arbitrary (ShelleyBlockBody era)
+  where
+  arbitrary = ShelleyBlockBody <$> arbitrary

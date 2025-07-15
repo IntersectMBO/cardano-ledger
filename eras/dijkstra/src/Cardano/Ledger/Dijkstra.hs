@@ -5,6 +5,7 @@
 module Cardano.Ledger.Dijkstra (DijkstraEra) where
 
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
+import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Genesis ()
 import Cardano.Ledger.Dijkstra.Governance ()

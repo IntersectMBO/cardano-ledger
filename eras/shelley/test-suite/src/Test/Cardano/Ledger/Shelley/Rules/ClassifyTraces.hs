@@ -136,9 +136,9 @@ relevantCasesAreCoveredForTrace ::
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block (BHeader MockCrypto) era -> [Tx era]
-      blockTxs (Block _ txSeq) = toList (fromTxSeq @era txSeq)
+      blockTxs (Block _ blockBody) = toList $ blockBody ^. txSeqBlockBodyL
       bs = traceSignals OldestFirst tr
-      txs = concat (blockTxs <$> bs)
+      txs = concatMap blockTxs bs
       certsByTx_ = certsByTx @era txs
       certs_ = concat certsByTx_
 

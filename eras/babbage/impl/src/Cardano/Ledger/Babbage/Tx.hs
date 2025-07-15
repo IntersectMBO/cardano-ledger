@@ -15,10 +15,6 @@ module Cardano.Ledger.Babbage.Tx (
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx as X
-import Cardano.Ledger.Alonzo.TxSeq (
-  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  hashAlonzoTxSeq,
- )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
@@ -62,13 +58,6 @@ instance EqRaw (Tx BabbageEra) where
 instance AlonzoEraTx BabbageEra where
   isValidTxL = babbageTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
-
-instance EraSegWits BabbageEra where
-  type TxSeq BabbageEra = AlonzoTxSeq BabbageEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
-  numSegComponents = 4
 
 instance DecCBOR (Annotator (Tx BabbageEra)) where
   decCBOR = fmap MkBabbageTx <$> decCBOR
