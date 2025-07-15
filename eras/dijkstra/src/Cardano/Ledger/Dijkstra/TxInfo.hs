@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (ProtVer (..), strictMaybe)
+import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Scripts (PlutusScript (..))
@@ -43,7 +43,6 @@ import Cardano.Ledger.Conway.TxInfo (
   transScriptPurpose,
   transTxBodyId,
   transTxBodyWithdrawals,
-  transTxCertV1V2,
   transTxInInfoV1,
   transTxInInfoV3,
   transTxOutV1,
@@ -149,6 +148,26 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = Alonzo.toPlutusV1Args
+
+transTxCertV1V2 ::
+  ( ConwayEraTxCert era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  TxCert era ->
+  Either (ContextError era) PV1.DCert
+transTxCertV1V2 = \case
+  RegDepositTxCert stakeCred _deposit ->
+    Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegDepositTxCert stakeCred _refund ->
+    Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+    Right $
+      PV1.DCertPoolRegister
+        (transKeyHash ppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+  RetirePoolTxCert poolId retireEpochNo ->
+    Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  txCert -> Left $ inject $ CertificateNotSupported txCert
 
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
