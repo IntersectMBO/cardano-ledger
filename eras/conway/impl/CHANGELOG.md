@@ -2,6 +2,10 @@
 
 ## 1.20.0.0
 
+* Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
+  * `DecCBOR ConwayTxCert`
+  * `transTxCert`
+  * `transTxCertV1V2`
 * Added `conwayGovCertVKeyWitness`
 * Added `conwayTxCertDelegDecoder`
 * Changed `MaxTxSizeUTxO` to use `Word32`
@@ -94,6 +98,20 @@
 
 ### `testlib`
 
+* Generalised the following helpers and thus changed their constraints to `ConwayEraImp`:
+  * `setupPoolWithStake`
+  * `setupPoolWithoutStake`
+  * `trySubmitGovAction`
+  * `trySubmitGovActions`
+  * `mkProposal`
+  * `submitGovAction`
+  * `submitGovAction_`
+  * `submitGovActions`
+  * `submitTreasuryWithdrawals`
+  * `submitFailingGovAction`
+* Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
+  * `genUnRegTxCert`
+  * `genRegTxCert`
 * Added `registerPoolWithDeposit`
 * Added `registerStakeCredentialWithDeposit`
 * Added `Examples` module with: `ledgerExamples`, `exampleConwayCerts`

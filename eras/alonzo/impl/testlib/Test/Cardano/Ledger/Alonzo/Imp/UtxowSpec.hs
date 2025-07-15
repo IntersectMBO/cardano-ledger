@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Core (InjectRuleFailure)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
@@ -21,6 +21,7 @@ import Test.Cardano.Ledger.Common
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era

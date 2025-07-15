@@ -42,6 +42,7 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
@@ -56,7 +57,9 @@ spec = do
 
 proposalsSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec =
   describe "Proposals" $ do
@@ -141,7 +144,9 @@ proposalsSpec =
 
 dRepSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 dRepSpec =
   describe "DRep" $ do
@@ -340,7 +345,9 @@ dRepSpec =
 
 dRepVotingSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 dRepVotingSpec =
   describe "DRep" $ do
@@ -387,7 +394,9 @@ dRepVotingSpec =
 
 treasurySpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 treasurySpec =
   -- Treasury withdrawal are disallowed during bootstrap,
@@ -412,7 +421,7 @@ treasurySpec =
 
 treasuryWithdrawalExpectation ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, ShelleyEraTxCert era) =>
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
@@ -443,7 +452,8 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   impAnn "Withdrawal received by reward account" $
     getBalance (raCredential rewardAccount) `shouldReturn` withdrawalAmount
 
-depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
+depositMovesToTreasuryWhenStakingAddressUnregisters ::
+  (ConwayEraImp era, ShelleyEraTxCert era) => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do
   disableTreasuryExpansion
   initialTreasury <- getsNES treasuryL
@@ -481,6 +491,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
 eventsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
