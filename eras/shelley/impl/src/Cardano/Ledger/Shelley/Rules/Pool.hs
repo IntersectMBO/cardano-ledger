@@ -124,7 +124,7 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
 
-instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
+instance EraPParams era => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
   type Signal (ShelleyPOOL era) = PoolCert
