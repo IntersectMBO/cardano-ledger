@@ -376,7 +376,8 @@ guardConwayFeaturesForPlutusV1V2 tx = do
       Left $ inject $ CurrentTreasuryFieldNotSupported @era treasury
 
 transTxCertV1V2 ::
-  ( ConwayEraTxCert era
+  ( ShelleyEraTxCert era
+  , ConwayEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
   TxCert era ->

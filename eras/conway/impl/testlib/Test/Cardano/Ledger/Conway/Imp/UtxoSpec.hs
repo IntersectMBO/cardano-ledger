@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsOverlap
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , Inject (ConwayContextError era) (ContextError era)
