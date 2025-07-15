@@ -317,7 +317,6 @@ instance AlonzoEraImp ConwayEra where
 class
   ( AlonzoEraImp era
   , ConwayEraTest era
-  , ConwayEraTxCert era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
