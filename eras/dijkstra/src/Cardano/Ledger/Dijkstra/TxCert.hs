@@ -34,7 +34,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxCert,
-  ShelleyEraTxCert (..),
   notSupportedInThisEra,
   poolCertKeyHashWitness,
   pattern AuthCommitteeHotKeyTxCert,
@@ -42,12 +41,10 @@ import Cardano.Ledger.Conway.Core (
   pattern RegDepositDelegTxCert,
   pattern RegDepositTxCert,
   pattern RegPoolTxCert,
-  pattern RegTxCert,
   pattern ResignCommitteeColdTxCert,
   pattern RetirePoolTxCert,
   pattern UnRegDRepTxCert,
   pattern UnRegDepositTxCert,
-  pattern UnRegTxCert,
   pattern UpdateDRepTxCert,
  )
 import Cardano.Ledger.Conway.TxCert (
@@ -166,7 +163,7 @@ instance Era era => ToJSON (DijkstraTxCert era) where
     DijkstraTxCertGov govCert -> toJSON govCert
 
 instance
-  ( ShelleyEraTxCert era
+  ( EraTxCert era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   FromCBOR (DijkstraTxCert era)
@@ -231,8 +228,6 @@ instance EraTxCert DijkstraEra where
   upgradeTxCert = \case
     RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
     RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
-    RegTxCert _ -> Left RegTxCertExpunged
-    UnRegTxCert _ -> Left UnRegTxCertExpunged
     RegDepositTxCert cred c -> Right $ RegDepositTxCert cred c
     UnRegDepositTxCert cred c -> Right $ UnRegDepositTxCert cred c
     RegDepositDelegTxCert cred d c -> Right $ RegDepositDelegTxCert cred d c
@@ -260,12 +255,10 @@ instance EraTxCert DijkstraEra where
   getRetirePoolTxCert _ = Nothing
 
   lookupRegStakeTxCert = \case
-    RegTxCert c -> Just c
     RegDepositTxCert c _ -> Just c
     RegDepositDelegTxCert c _ _ -> Just c
     _ -> Nothing
   lookupUnRegStakeTxCert = \case
-    UnRegTxCert c -> Just c
     UnRegDepositTxCert c _ -> Just c
     _ -> Nothing
 
@@ -310,22 +303,6 @@ getVKeyWitnessDijkstraTxCert = \case
       ConwayRegDRep cred _ _ -> credKeyHashWitness cred
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
       ConwayUpdateDRep cred _ -> credKeyHashWitness cred
-
-instance ShelleyEraTxCert DijkstraEra where
-  mkRegTxCert = notSupportedInThisEra
-  getRegTxCert = const Nothing
-
-  mkUnRegTxCert = notSupportedInThisEra
-  getUnRegTxCert = const Nothing
-
-  mkDelegStakeTxCert = notSupportedInThisEra
-  getDelegStakeTxCert = const Nothing
-
-  mkGenesisDelegTxCert = notSupportedInThisEra
-  getGenesisDelegTxCert _ = Nothing
-
-  mkMirTxCert = notSupportedInThisEra
-  getMirTxCert = const Nothing
 
 instance ConwayEraTxCert DijkstraEra where
   mkRegDepositTxCert cred c = DijkstraTxCertDeleg $ DijkstraRegCert cred c
