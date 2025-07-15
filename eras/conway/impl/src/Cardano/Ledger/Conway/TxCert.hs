@@ -168,7 +168,7 @@ instance ShelleyEraTxCert ConwayEra where
   mkMirTxCert = notSupportedInThisEra
   getMirTxCert = const Nothing
 
-class ShelleyEraTxCert era => ConwayEraTxCert era where
+class EraTxCert era => ConwayEraTxCert era where
   mkRegDepositTxCert :: StakeCredential -> Coin -> TxCert era
   getRegDepositTxCert :: TxCert era -> Maybe (StakeCredential, Coin)
 
@@ -642,7 +642,8 @@ instance
   fromCBOR = fromEraCBOR @era
 
 instance
-  ( ConwayEraTxCert era
+  ( ShelleyEraTxCert era
+  , ConwayEraTxCert era
   , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (ConwayTxCert era)
