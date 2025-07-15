@@ -34,6 +34,7 @@ spec ::
   ( AlonzoEraImp era
   , BabbageEraTxBody era
   , EraPlutusTxInfo 'PlutusV2 era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era

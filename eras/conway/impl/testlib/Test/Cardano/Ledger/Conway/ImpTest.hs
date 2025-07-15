@@ -379,6 +379,7 @@ unRegisterDRep drep = do
 genUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxCert era
   ) =>
   Credential 'Staking ->
@@ -397,6 +398,7 @@ genUnRegTxCert stakingCredential = do
 genRegTxCert ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxCert era
   ) =>
   Credential 'Staking ->
@@ -516,7 +518,10 @@ setupPoolWithStake delegCoin = do
   pure (khPool, credDelegatorPayment, credDelegatorStaking)
 
 setupPoolWithoutStake ::
-  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , ConwayEraTxCert era
+  ) =>
   ImpTestM era (KeyHash 'StakePool, Credential 'Staking)
 setupPoolWithoutStake = do
   khPool <- freshKeyHash
@@ -691,6 +696,7 @@ submitFailingProposal proposal expectedFailure =
 -- multiple actions in the same transaciton use `trySubmitGovActions` instead.
 trySubmitGovAction ::
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -722,7 +728,10 @@ submitAndExpireProposalToMakeReward stakingC = do
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitGovActions ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , ConwayEraTxBody era
+  ) =>
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
@@ -746,7 +755,10 @@ mkProposalWithRewardAccount ga rewardAccount = do
       }
 
 mkProposal ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , ConwayEraTxBody era
+  ) =>
   GovAction era ->
   ImpTestM era (ProposalProcedure era)
 mkProposal ga = do
@@ -756,6 +768,7 @@ mkProposal ga = do
 submitGovAction ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
@@ -768,6 +781,7 @@ submitGovAction ga = do
 submitGovAction_ ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
@@ -778,6 +792,7 @@ submitGovAction_ = void . submitGovAction
 submitGovActions ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
@@ -797,6 +812,7 @@ mkTreasuryWithdrawalsGovAction wdrls =
 
 submitTreasuryWithdrawals ::
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , ConwayEraGov era
   ) =>
@@ -806,7 +822,9 @@ submitTreasuryWithdrawals wdrls =
   mkTreasuryWithdrawalsGovAction wdrls >>= submitGovAction
 
 enactTreasuryWithdrawals ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   [(RewardAccount, Coin)] ->
   Credential 'DRepRole ->
   NonEmpty (Credential 'HotCommitteeRole) ->
@@ -819,7 +837,9 @@ enactTreasuryWithdrawals withdrawals dRep cms = do
   pure gaId
 
 submitParameterChange ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   StrictMaybe GovActionId ->
   PParamsUpdate era ->
   ImpTestM era GovActionId
@@ -849,6 +869,7 @@ getGovPolicy =
 submitFailingGovAction ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
@@ -1269,6 +1290,7 @@ submitCommitteeElection ::
   forall era.
   ( HasCallStack
   , ConwayEraImp era
+  , ShelleyEraTxCert era
   ) =>
   StrictMaybe (GovPurposeId 'CommitteePurpose) ->
   Credential 'DRepRole ->
@@ -1291,6 +1313,7 @@ electBasicCommittee ::
   forall era.
   ( HasCallStack
   , ConwayEraImp era
+  , ShelleyEraTxCert era
   ) =>
   ImpTestM
     era
@@ -1435,6 +1458,7 @@ submitGovActionForest submitAction p forest =
 enactConstitution ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , HasCallStack
   ) =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
@@ -1461,7 +1485,9 @@ expectNumDormantEpochs expected = do
   nd `shouldBeExpr` expected
 
 mkConstitutionProposal ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   ImpTestM era (ProposalProcedure era, Constitution era)
 mkConstitutionProposal prevGovId = do
@@ -1470,7 +1496,9 @@ mkConstitutionProposal prevGovId = do
 
 submitConstitution ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   ImpTestM era GovActionId
 submitConstitution prevGovId = do
@@ -1598,7 +1626,9 @@ submitYesVoteCCs_ committeeMembers govId =
   mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers
 
 mkUpdateCommitteeProposal ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
   Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose)) ->
   -- | CC members to remove
@@ -1618,7 +1648,9 @@ mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
   mkProposal $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
 
 submitUpdateCommittee ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
   Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose)) ->
   -- | CC members to remove

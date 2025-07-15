@@ -63,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (ImpInit)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
@@ -103,6 +104,7 @@ spec = do
 conwaySpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era

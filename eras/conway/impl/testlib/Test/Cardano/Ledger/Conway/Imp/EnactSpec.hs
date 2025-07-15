@@ -46,6 +46,7 @@ import Type.Reflection (Typeable)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -70,6 +71,7 @@ spec = do
 treasuryWithdrawalsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -203,6 +205,7 @@ treasuryWithdrawalsSpec =
 hardForkInitiationSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -251,6 +254,7 @@ hardForkInitiationSpec =
 hardForkInitiationNoDRepsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -285,7 +289,8 @@ hardForkInitiationNoDRepsSpec =
           ]
     getProtVer `shouldReturn` nextProtVer
 
-pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+pparamPredictionSpec ::
+  (ConwayEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -306,7 +311,8 @@ pparamPredictionSpec =
     passEpoch
     getProtVer `shouldReturn` nextProtVer
 
-noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+noConfidenceSpec ::
+  forall era. (ConwayEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
@@ -350,6 +356,7 @@ noConfidenceSpec =
 
 constitutionSpec ::
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -423,6 +430,7 @@ constitutionSpec =
 actionPrioritySpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -559,6 +567,7 @@ expectHardForkEvents actual expected =
 
 committeeSpec ::
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
