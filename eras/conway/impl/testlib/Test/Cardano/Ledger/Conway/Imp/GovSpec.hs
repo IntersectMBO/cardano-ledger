@@ -44,6 +44,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -62,7 +63,9 @@ spec = do
 
 unknownCostModelsSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 unknownCostModelsSpec =
   describe "Unknown CostModels" $ do
@@ -84,6 +87,7 @@ unknownCostModelsSpec =
 predicateFailuresSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -160,6 +164,7 @@ predicateFailuresSpec =
 hardForkSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -177,6 +182,7 @@ hardForkSpec =
 pparamUpdateSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -242,6 +248,7 @@ pparamUpdateSpec =
 proposalsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -746,6 +753,7 @@ proposalsSpec = do
 votingSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -897,6 +905,7 @@ votingSpec =
 constitutionSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -980,6 +989,7 @@ constitutionSpec =
 policySpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1028,6 +1038,7 @@ policySpec =
 networkIdSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1064,6 +1075,7 @@ networkIdSpec =
 withdrawalsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1149,7 +1161,10 @@ withdrawalsSpec =
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
   forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , ConwayEraTxBody era
+  ) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1160,6 +1175,7 @@ firstHardForkFollows computeNewFromOld = do
 firstHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
@@ -1182,7 +1198,10 @@ firstHardForkCantFollow = do
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
   forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , ConwayEraTxBody era
+  ) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1196,6 +1215,7 @@ secondHardForkFollows computeNewFromOld = do
 secondHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
@@ -1219,6 +1239,7 @@ secondHardForkCantFollow = do
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
@@ -1260,6 +1281,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 bootstrapPhaseSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

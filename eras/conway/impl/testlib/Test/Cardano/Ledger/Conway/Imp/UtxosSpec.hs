@@ -52,6 +52,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
@@ -206,6 +207,7 @@ datumAndReferenceInputsSpec = do
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , Inject (ConwayContextError era) (ContextError era)
@@ -453,6 +455,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 govPolicySpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
@@ -537,6 +540,7 @@ govPolicySpec = do
 costModelsSpec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
@@ -700,7 +704,9 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     )
 
 enactCostModels ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
   Credential 'DRepRole ->
