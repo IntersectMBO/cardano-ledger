@@ -8,6 +8,7 @@ import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
+import qualified Test.Cardano.Ledger.Conway.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
@@ -24,6 +25,7 @@ main = ledgerTestMain $ do
     describe "Plutus" $ do
       PlutusSpec.spec
     Cddl.spec
+    GoldenSpec.spec
   describe "Various tests for functions defined in Conway" $ do
     prop "tierRefScriptFee is a linear function when growth is 1" $ \(Positive sizeIncrement) baseFee (NonNegative size) ->
       tierRefScriptFee 1 sizeIncrement baseFee size

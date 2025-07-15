@@ -149,11 +149,6 @@ class EraPParams era => AlonzoEraPParams era where
 
   hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
 
-  emptyUpgradePParamsUpdate :: UpgradePParams StrictMaybe era
-  default emptyUpgradePParamsUpdate ::
-    UpgradePParams StrictMaybe era ~ () => UpgradePParams StrictMaybe era
-  emptyUpgradePParamsUpdate = ()
-
 ppCoinsPerUTxOWordL ::
   forall era.
   (AlonzoEraPParams era, ExactEra AlonzoEra era) =>
@@ -319,6 +314,7 @@ instance EraPParams AlonzoEra where
 
   upgradePParamsHKD = upgradeAlonzoPParams
   downgradePParamsHKD = downgradeAlonzoPParams
+  emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
   hkdMinFeeAL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
   hkdMinFeeBL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
@@ -366,7 +362,6 @@ instance EraPParams AlonzoEra where
     ]
 
 instance AlonzoEraPParams AlonzoEra where
-  emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
   hkdCostModelsL = lens appCostModels $ \pp x -> pp {appCostModels = x}
   hkdPricesL = lens appPrices $ \pp x -> pp {appPrices = x}

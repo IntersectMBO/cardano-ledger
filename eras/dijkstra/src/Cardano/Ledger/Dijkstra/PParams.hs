@@ -373,6 +373,7 @@ instance EraPParams DijkstraEra where
 
   upgradePParamsHKD = upgradeDijkstraPParams
   downgradePParamsHKD _ = downgradeDijkstraPParams
+  emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
 
   hkdMinFeeAL = lens (unTHKD . dppMinFeeA) $ \pp x -> pp {dppMinFeeA = THKD x}
   hkdMinFeeBL = lens (unTHKD . dppMinFeeB) $ \pp x -> pp {dppMinFeeB = THKD x}
@@ -436,7 +437,7 @@ instance EraPParams DijkstraEra where
 ppMaxRefScriptSizePerBlock :: PParam DijkstraEra
 ppMaxRefScriptSizePerBlock =
   PParam
-    { ppName = "ppMaxRefScriptSizePerBlock"
+    { ppName = "maxRefScriptSizePerBlock"
     , ppLens = ppMaxRefScriptSizePerBlockL
     , ppUpdate =
         Just
@@ -449,7 +450,7 @@ ppMaxRefScriptSizePerBlock =
 ppMaxRefScriptSizePerTx :: PParam DijkstraEra
 ppMaxRefScriptSizePerTx =
   PParam
-    { ppName = "ppMaxRefScriptSizePerTx"
+    { ppName = "maxRefScriptSizePerTx"
     , ppLens = ppMaxRefScriptSizePerTxL
     , ppUpdate =
         Just
@@ -462,7 +463,7 @@ ppMaxRefScriptSizePerTx =
 ppRefScriptCostStride :: PParam DijkstraEra
 ppRefScriptCostStride =
   PParam
-    { ppName = "ppRefScriptCostStride"
+    { ppName = "refScriptCostStride"
     , ppLens = ppRefScriptCostStrideL
     , ppUpdate =
         Just
@@ -475,7 +476,7 @@ ppRefScriptCostStride =
 ppRefScriptCostMultiplier :: PParam DijkstraEra
 ppRefScriptCostMultiplier =
   PParam
-    { ppName = "ppRefScriptCostMultiplier"
+    { ppName = "refScriptCostMultiplier"
     , ppLens = ppRefScriptCostMultiplierL
     , ppUpdate =
         Just
@@ -486,7 +487,6 @@ ppRefScriptCostMultiplier =
     }
 
 instance AlonzoEraPParams DijkstraEra where
-  emptyUpgradePParamsUpdate = emptyDijkstraUpgradePParamsUpdate
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . dppCostModels) $ \pp x -> pp {dppCostModels = THKD x}
   hkdPricesL = lens (unTHKD . dppPrices) $ \pp x -> pp {dppPrices = THKD x}

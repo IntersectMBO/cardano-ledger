@@ -798,6 +798,7 @@ instance EraPParams ConwayEra where
   emptyPParamsIdentity = emptyConwayPParams
   emptyPParamsStrictMaybe = emptyConwayPParamsUpdate
 
+  emptyUpgradePParamsUpdate = emptyConwayUpgradePParamsUpdate
   upgradePParamsHKD = upgradeConwayPParams
   downgradePParamsHKD () = downgradeConwayPParams
 
@@ -872,7 +873,6 @@ emptyConwayUpgradePParamsUpdate =
     SNothing
 
 instance AlonzoEraPParams ConwayEra where
-  emptyUpgradePParamsUpdate = emptyConwayUpgradePParamsUpdate
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . cppCostModels) $ \pp x -> pp {cppCostModels = THKD x}
   hkdPricesL = lens (unTHKD . cppPrices) $ \pp x -> pp {cppPrices = THKD x}

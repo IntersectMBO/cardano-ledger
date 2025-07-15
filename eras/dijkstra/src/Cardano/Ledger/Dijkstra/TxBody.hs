@@ -44,7 +44,6 @@ module Cardano.Ledger.Dijkstra.TxBody (
   DijkstraTxBodyRaw (..),
 ) where
 
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..))
 import Cardano.Ledger.Babbage.TxBody (
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
@@ -87,6 +86,7 @@ import Cardano.Ledger.Conway.TxBody (
   conwayRedeemerPointer,
   conwayRedeemerPointerInverse,
  )
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.TxOut ()
