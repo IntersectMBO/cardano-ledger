@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
+  * `DecCBOR ConwayTxCert`
+  * `transTxCert`
 * Added `conwayTxCertDelegDecoder`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
