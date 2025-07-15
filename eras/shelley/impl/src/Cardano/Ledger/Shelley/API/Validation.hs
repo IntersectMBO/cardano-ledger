@@ -52,7 +52,7 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
-class (EraGov era, EraSegWits era) => ApplyBlock era where
+class (EraGov era, EraBlockBody era) => ApplyBlock era where
   -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
   -- whenever validation is turned on it is necessary to check for presence of predicate failures
   -- before a call can be marked successful. Therefore it is recommended to call `applyBlockEither`

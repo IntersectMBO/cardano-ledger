@@ -20,13 +20,9 @@ import Cardano.Ledger.Alonzo.Tx (
   sizeAlonzoTxF,
   witsAlonzoTxL,
  )
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..), hashAlonzoTxSeq)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
-import Cardano.Ledger.Core (
-  EraSegWits (..),
-  EraTx (..),
- )
+import Cardano.Ledger.Core (EraTx (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
@@ -70,13 +66,6 @@ dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
 instance AlonzoEraTx DijkstraEra where
   isValidTxL = dijkstraTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
-
-instance EraSegWits DijkstraEra where
-  type TxSeq DijkstraEra = AlonzoTxSeq DijkstraEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
-  numSegComponents = 4
 
 instance DecCBOR (Annotator (Tx DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR

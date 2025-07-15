@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Deprecate `Alonzo.TxSeq` in favour of `Alonzo.BlockBody`. #5156
+  * Rename `AlonzoTxSeq` to `AlonzoBlockBody`
 * Rename `alonzoEqTxRaw` to `alonzoTxEqRaw`
 * Add `Generic` instance to `TransactionScriptFailure`
 * Add `Generic` instance for `AlonzoBbodyEvent`

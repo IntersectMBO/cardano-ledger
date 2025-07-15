@@ -41,20 +41,20 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
-  = Block !h !(TxSeq era)
+  = Block !h !(BlockBody era)
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (TxSeq era), Show h) =>
+  (Era era, Show (BlockBody era), Show h) =>
   Show (Block h era)
 
 deriving stock instance
-  (Era era, Eq (TxSeq era), Eq h) =>
+  (Era era, Eq (BlockBody era), Eq h) =>
   Eq (Block h era)
 
 deriving anyclass instance
   ( Era era
-  , NoThunks (TxSeq era)
+  , NoThunks (BlockBody era)
   , NoThunks h
   ) =>
   NoThunks (Block h era)
@@ -62,7 +62,7 @@ deriving anyclass instance
 instance
   forall era h.
   ( Era era
-  , EncCBORGroup (TxSeq era)
+  , EncCBORGroup (BlockBody era)
   , EncCBOR h
   ) =>
   EncCBOR (Block h era)
@@ -73,7 +73,7 @@ instance
 instance
   forall era h.
   ( Era era
-  , EncCBORGroup (TxSeq era)
+  , EncCBORGroup (BlockBody era)
   , EncCBOR h
   ) =>
   Plain.ToCBOR (Block h era)
@@ -81,7 +81,7 @@ instance
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 instance
-  ( EraSegWits era
+  ( EraBlockBody era
   , DecCBOR (Annotator h)
   , Typeable h
   ) =>
@@ -99,7 +99,7 @@ bheader ::
   h
 bheader (Block bh _) = bh
 
-bbody :: Block h era -> TxSeq era
+bbody :: Block h era -> BlockBody era
 bbody (Block _ txs) = txs
 
 -- | The validity of any individual block depends only on a subset
@@ -113,12 +113,12 @@ bbody (Block _ txs) = txs
 -- and present only those to the ledger.
 neededTxInsForBlock ::
   forall h era.
-  EraSegWits era =>
+  EraBlockBody era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block _ txsSeq) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block _ blockBody) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
+    txBodies = map (^. bodyTxL) $ toList $ blockBody ^. txSeqBlockBodyL
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

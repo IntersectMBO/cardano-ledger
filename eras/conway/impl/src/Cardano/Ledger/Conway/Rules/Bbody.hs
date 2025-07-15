@@ -26,6 +26,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBbodyEvent (..),
@@ -38,7 +39,6 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
@@ -98,7 +98,7 @@ import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq (..))
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | In the next era this will become a proper protocol parameter.
@@ -250,8 +250,8 @@ instance
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , AlonzoEraTxWits era
-  , TxSeq era ~ AlonzoTxSeq era
-  , EraSegWits era
+  , BlockBody era ~ AlonzoBlockBody era
+  , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
@@ -282,10 +282,11 @@ conwayBbodyTransition ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , TxSeq era ~ AlonzoTxSeq era
+  , BlockBody era ~ AlonzoBlockBody era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , AlonzoEraTx era
+  , EraBlockBody era
   , BabbageEraTxBody era
   ) =>
   TransitionRule (EraRule "BBODY" era)
@@ -298,7 +299,7 @@ conwayBbodyTransition = do
                )
            ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txSeqTxns txsSeq
+            txs = txsSeq ^. txSeqBlockBodyL
             totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
         totalRefScriptSize
           <= maxRefScriptSizePerBlock

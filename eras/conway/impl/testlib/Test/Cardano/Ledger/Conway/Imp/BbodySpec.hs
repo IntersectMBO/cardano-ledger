@@ -263,24 +263,24 @@ spec = do
           `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
   where
     tryRunBBODY txs = do
-      let txSeq = toTxSeq @era $ SSeq.fromList txs
+      let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
       nes <- use impNESL
       let ls = nes ^. nesEsL . esLStateL
-          pp = nes ^. nesEsL . curPParamsEpochStateL
+          pp = nes ^. nesEsL . curPParamsEpochStateL @era
       kh <- freshKeyHash
       slotNo <- use impLastTickG
       let bhView =
             BHeaderView
               { bhviewID = kh
-              , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
+              , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
               , bhviewHSize = 0
-              , bhviewBHash = hashTxSeq txSeq
+              , bhviewBHash = hashBlockBody blockBody
               , bhviewSlot = slotNo
               }
       tryRunImpRule @"BBODY"
         (BbodyEnv pp (nes ^. chainAccountStateL))
         (BbodyState ls (BlocksMade Map.empty))
-        (Block bhView txSeq)
+        (Block bhView blockBody)
     isPostV10 protVer = pvMajor protVer >= natVersion @11
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed

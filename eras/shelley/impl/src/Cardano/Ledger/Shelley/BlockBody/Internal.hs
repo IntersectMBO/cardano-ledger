@@ -14,12 +14,19 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
-module Cardano.Ledger.Shelley.BlockChain (
-  ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
+-- | Provides BlockBody internals
+--
+-- = Warning
+--
+-- This module is considered __internal__.
+--
+-- The contents of this module may change __in any way whatsoever__
+-- and __without any warning__ between minor versions of this package.
+module Cardano.Ledger.Shelley.BlockBody.Internal (
+  ShelleyBlockBody (ShelleyBlockBody, ..),
   auxDataSeqDecoder,
-  txSeqTxns,
-  bbHash,
   hashShelleySegWits,
   bBodySize,
   slotToNonce,
@@ -68,44 +75,48 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro (lens, (&), (.~), (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
-data ShelleyTxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (Tx era))
-  , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
+data ShelleyBlockBody era = ShelleyBlockBodyInternal
+  { sbbTxs :: !(StrictSeq (Tx era))
+  , sbbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
-  , txSeqBodyBytes :: BSL.ByteString
+  , sbbTxsBodyBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxBody' era)@
-  , txSeqWitsBytes :: BSL.ByteString
+  , sbbTxsWitsBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxWits' era)@
-  , txSeqMetadataBytes :: BSL.ByteString
+  , sbbTxsAuxDataBytes :: BSL.ByteString
   -- ^ Bytes encoding a @Seq ('TxAuxData' era)@. Missing indices have
   -- 'SNothing' for metadata
   }
   deriving (Generic)
 
-instance EraSegWits ShelleyEra where
-  type TxSeq ShelleyEra = ShelleyTxSeq ShelleyEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = ShelleyTxSeq
-  hashTxSeq = txSeqHash
+instance EraBlockBody ShelleyEra where
+  type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
+  mkBasicBlockBody = ShelleyBlockBody mempty
+  txSeqBlockBodyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
+  hashBlockBody = sbbHash
   numSegComponents = 3
 
 deriving via
   AllowThunksIn
-    '[ "txSeqHash"
-     , "txSeqBodyBytes"
-     , "txSeqWitsBytes"
-     , "txSeqMetadataBytes"
+    '[ "sbbHash"
+     , "sbbTxsBodyBytes"
+     , "sbbTxsWitsBytes"
+     , "sbbTxsAuxDataBytes"
      ]
-    (ShelleyTxSeq era)
+    (ShelleyBlockBody era)
   instance
-    (Typeable era, NoThunks (Tx era)) => NoThunks (ShelleyTxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (ShelleyBlockBody era)
 
-deriving stock instance Show (Tx era) => Show (ShelleyTxSeq era)
+deriving stock instance
+  Show (Tx era) =>
+  Show (ShelleyBlockBody era)
 
-deriving stock instance Eq (Tx era) => Eq (ShelleyTxSeq era)
+deriving stock instance
+  Eq (Tx era) =>
+  Eq (ShelleyBlockBody era)
 
 -- ===========================
 -- Getting bytes from pieces of a Tx
@@ -124,18 +135,28 @@ coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 
 -- ===========================
 
--- | Constuct a TxSeq (with all it bytes) from just Tx's
-pattern ShelleyTxSeq ::
+-- | Constuct a BlockBody (with all it bytes) from just Tx's
+pattern ShelleyBlockBody ::
+>>>>>>> a13a811a73 (Rename EraSegWits->EraBlockBody, TxSeq->BlockBody.)
   forall era.
   ( EraTx era
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
-  ShelleyTxSeq era
-pattern ShelleyTxSeq xs <-
-  TxSeq' xs _ _ _ _
+  ShelleyBlockBody era
+<<<<<<< HEAD
+pattern ShelleyTxSeq s = ShelleyBlockBody s
+
+txSeqTxns :: ShelleyBlockBody era -> StrictSeq (Tx era)
+txSeqTxns = shelleyBlockBodyTxs
+
+bbHash :: EraBlockBody era => BlockBody era -> Hash HASH EraIndependentBlockBody
+bbHash = hashBlockBody
+=======
+pattern ShelleyBlockBody xs <-
+  ShelleyBlockBodyInternal xs _ _ _ _
   where
-    ShelleyTxSeq txns =
+    ShelleyBlockBody txns =
       let version = eraProtVerLow @era
           serializeFoldable x =
             serialize version $
@@ -147,28 +168,25 @@ pattern ShelleyTxSeq xs <-
           txSeqWits = serializeFoldable $ coreWitnessBytes @era <$> txns
           txSeqAuxDatas =
             serialize version . encodeFoldableMapEncoder metaChunk $ coreAuxDataBytes @era <$> txns
-       in TxSeq'
-            { txSeqTxns' = txns
-            , txSeqHash = hashShelleySegWits txSeqBodies txSeqWits txSeqAuxDatas
+       in ShelleyBlockBodyInternal
+            { sbbTxs = txns
+            , sbbHash = hashShelleySegWits txSeqBodies txSeqWits txSeqAuxDatas
             , -- bytes encoding "Seq (TxBody era)"
-              txSeqBodyBytes = txSeqBodies
+              sbbTxsBodyBytes = txSeqBodies
             , -- bytes encoding "Seq (TxWits era)"
-              txSeqWitsBytes = txSeqWits
+              sbbTxsWitsBytes = txSeqWits
             , -- bytes encoding a "Map Int TxAuxData"
-              txSeqMetadataBytes = txSeqAuxDatas
+              sbbTxsAuxDataBytes = txSeqAuxDatas
             }
 
-{-# COMPLETE ShelleyTxSeq #-}
-
-txSeqTxns :: ShelleyTxSeq era -> StrictSeq (Tx era)
-txSeqTxns (TxSeq' ts _ _ _ _) = ts
+{-# COMPLETE ShelleyBlockBody #-}
 
 instance
   forall era.
   Era era =>
-  EncCBORGroup (ShelleyTxSeq era)
+  EncCBORGroup (ShelleyBlockBody era)
   where
-  encCBORGroup (TxSeq' _ _ bodyBytes witsBytes metadataBytes) =
+  encCBORGroup (ShelleyBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
@@ -178,10 +196,6 @@ instance
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 3
   listLenBound _ = 3
-
--- | Hash a given block body
-bbHash :: ShelleyTxSeq era -> Hash HASH EraIndependentBlockBody
-bbHash = txSeqHash
 
 hashShelleySegWits ::
   BSL.ByteString ->
@@ -224,11 +238,11 @@ instance
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
-  DecCBOR (Annotator (ShelleyTxSeq era))
+  DecCBOR (Annotator (ShelleyBlockBody era))
   where
   -- \| The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
   --   These are exactly the parts that are SafeToHash.
-  -- \| Decode a TxSeq, used in decoding a Block.
+  -- \| Decode a BlockBody, used in decoding a Block.
   decCBOR = do
     (bodies, bodiesAnn) <- withSlice decCBOR
     (wits, witsAnn) <- withSlice decCBOR
@@ -261,7 +275,7 @@ instance
           StrictSeq.forceToStrict $
             Seq.zipWith3 segWitAnnTx bodies wits metadata
       hashAnn = hashShelleySegWits <$> bodiesAnn <*> witsAnn <*> metadataAnn
-    pure $ TxSeq' <$> txns <*> hashAnn <*> bodiesAnn <*> witsAnn <*> metadataAnn
+    pure $ ShelleyBlockBodyInternal <$> txns <*> hashAnn <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

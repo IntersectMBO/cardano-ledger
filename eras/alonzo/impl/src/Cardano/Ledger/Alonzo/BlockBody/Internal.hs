@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
--- | Provides TxSeq internals
+-- | Provides BlockBody internals
 --
 -- = Warning
 --
@@ -22,9 +22,8 @@
 --
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
-module Cardano.Ledger.Alonzo.TxSeq.Internal (
-  AlonzoTxSeq (.., AlonzoTxSeq),
-  hashAlonzoTxSeq,
+module Cardano.Ledger.Alonzo.BlockBody.Internal (
+  AlonzoBlockBody (AlonzoBlockBody, ..),
   hashAlonzoSegWits,
   alignedValidFlags,
 ) where
@@ -45,7 +44,7 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
+import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
@@ -64,48 +63,48 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 -- =================================================
 
--- $TxSeq
+-- $BlockBody
 --
--- * TxSeq
+-- * BlockBody
 --
--- TxSeq provides an alternate way of formatting transactions in a block, in
+-- BlockBody provides an alternate way of formatting transactions in a block, in
 -- order to support segregated witnessing.
 
-data AlonzoTxSeq era = AlonzoTxSeqRaw
-  { txSeqTxns :: !(StrictSeq (Tx era))
-  , txSeqHash :: Hash.Hash HASH EraIndependentBlockBody
+data AlonzoBlockBody era = AlonzoBlockBodyInternal
+  { abbTxs :: !(StrictSeq (Tx era))
+  , abbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
-  , txSeqBodyBytes :: BSL.ByteString
+  , abbTxsBodyBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxBody' era)@
-  , txSeqWitsBytes :: BSL.ByteString
+  , abbTxsWitsBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('TxWits' era)@
-  , txSeqMetadataBytes :: BSL.ByteString
+  , abbTxsAuxDataBytes :: BSL.ByteString
   -- ^ Bytes encoding a @'TxAuxData')@. Missing indices have
   -- 'SNothing' for metadata
-  , txSeqIsValidBytes :: BSL.ByteString
+  , abbTxsIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
   -- transactions with 'isValid' == False.
   }
   deriving (Generic)
 
-instance EraSegWits AlonzoEra where
-  type TxSeq AlonzoEra = AlonzoTxSeq AlonzoEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
+instance EraBlockBody AlonzoEra where
+  type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra
+  mkBasicBlockBody = AlonzoBlockBody mempty
+  txSeqBlockBodyL = lens abbTxs (\_ s -> AlonzoBlockBody s)
+  hashBlockBody = abbHash
   numSegComponents = 4
 
-pattern AlonzoTxSeq ::
+pattern AlonzoBlockBody ::
   forall era.
   ( AlonzoEraTx era
   , SafeToHash (TxWits era)
   ) =>
   StrictSeq (Tx era) ->
-  AlonzoTxSeq era
-pattern AlonzoTxSeq xs <-
-  AlonzoTxSeqRaw xs _ _ _ _ _
+  AlonzoBlockBody era
+pattern AlonzoBlockBody xs <-
+  AlonzoBlockBodyInternal xs _ _ _ _ _
   where
-    AlonzoTxSeq txns =
+    AlonzoBlockBody txns =
       let version = eraProtVerLow @era
           serializeFoldablePreEncoded x =
             serialize version $
@@ -122,39 +121,39 @@ pattern AlonzoTxSeq xs <-
               fmap originalBytes . view auxDataTxL <$> txns
           txSeqIsValids =
             serialize version $ encCBOR $ nonValidatingIndices txns
-       in AlonzoTxSeqRaw
-            { txSeqTxns = txns
-            , txSeqHash = hashAlonzoSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
-            , txSeqBodyBytes = txSeqBodies
-            , txSeqWitsBytes = txSeqWits
-            , txSeqMetadataBytes = txSeqAuxDatas
-            , txSeqIsValidBytes = txSeqIsValids
+       in AlonzoBlockBodyInternal
+            { abbTxs = txns
+            , abbHash = hashAlonzoSegWits txSeqBodies txSeqWits txSeqAuxDatas txSeqIsValids
+            , abbTxsBodyBytes = txSeqBodies
+            , abbTxsWitsBytes = txSeqWits
+            , abbTxsAuxDataBytes = txSeqAuxDatas
+            , abbTxsIsValidBytes = txSeqIsValids
             }
 
-{-# COMPLETE AlonzoTxSeq #-}
+{-# COMPLETE AlonzoBlockBody #-}
 
 deriving via
   AllowThunksIn
-    '[ "txSeqHash"
-     , "txSeqBodyBytes"
-     , "txSeqWitsBytes"
-     , "txSeqMetadataBytes"
-     , "txSeqIsValidBytes"
+    '[ "abbHash"
+     , "abbTxsBodyBytes"
+     , "abbTxsWitsBytes"
+     , "abbTxsAuxDataBytes"
+     , "abbTxsIsValidBytes"
      ]
-    (AlonzoTxSeq era)
+    (AlonzoBlockBody era)
   instance
-    (Typeable era, NoThunks (Tx era)) => NoThunks (AlonzoTxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (AlonzoBlockBody era)
 
-deriving stock instance Show (Tx era) => Show (AlonzoTxSeq era)
+deriving stock instance Show (Tx era) => Show (AlonzoBlockBody era)
 
-deriving stock instance Eq (Tx era) => Eq (AlonzoTxSeq era)
+deriving stock instance Eq (Tx era) => Eq (AlonzoBlockBody era)
 
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
 --------------------------------------------------------------------------------
 
-instance Era era => EncCBORGroup (AlonzoTxSeq era) where
-  encCBORGroup (AlonzoTxSeqRaw _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
+instance Era era => EncCBORGroup (AlonzoBlockBody era) where
+  encCBORGroup (AlonzoBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -165,13 +164,6 @@ instance Era era => EncCBORGroup (AlonzoTxSeq era) where
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 4
   listLenBound _ = 4
-
--- | Hash a given block body
-hashAlonzoTxSeq ::
-  forall era.
-  AlonzoTxSeq era ->
-  Hash HASH EraIndependentBlockBody
-hashAlonzoTxSeq = txSeqHash
 
 hashAlonzoSegWits ::
   BSL.ByteString ->
@@ -204,7 +196,7 @@ instance
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
-  DecCBOR (Annotator (AlonzoTxSeq era))
+  DecCBOR (Annotator (AlonzoBlockBody era))
   where
   decCBOR = do
     (bodies, bodiesAnn) <- withSlice decCBOR
@@ -237,7 +229,7 @@ instance
             StrictSeq.forceToStrict $
               Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
     pure $
-      AlonzoTxSeqRaw
+      AlonzoBlockBodyInternal
         <$> txns
         <*> (hashAlonzoSegWits <$> bodiesAnn <*> witsAnn <*> auxDataAnn <*> isValAnn)
         <*> bodiesAnn

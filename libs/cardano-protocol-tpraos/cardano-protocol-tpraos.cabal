@@ -95,6 +95,7 @@ library testlib
     cardano-protocol-tpraos,
     cardano-strict-containers,
     generic-random,
+    microlens,
     nothunks,
 
 test-suite tests

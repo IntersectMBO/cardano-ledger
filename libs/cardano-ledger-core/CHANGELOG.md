@@ -2,6 +2,11 @@
 
 ## 1.18.0.0
 
+* Rename `EraSegWits` to `EraBlockBody`. #5156
+  * Rename `TxSeq` to `BlockBody`
+  * Add `mkBasicBlockBody`
+  * Deprecate `fromTxSeq` and `toTxSeq` in favour of the `txSeqBlockBodyL` lens
+  * Deprecate `hashTxSeq` in favour of `hashBlockBody`
 * Replaced `hkdPoolDepositL` method with `hkdPoolDepositCompactL`
 * Add `ppPoolDepositCompactL` and `ppuPoolDepositCompactL`
 * Add `standardHashSize` and `standardAddrHashSize`

@@ -260,13 +260,13 @@ ledgerTraceBase chainSt block =
   , txs
   )
   where
-    (Block (BHeader bhb _) txSeq) = block
+    (Block (BHeader bhb _) blockBody) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = nes ^. curPParamsEpochStateL
     -- Oldest to Newest first
-    txs = (reverse . toList . fromTxSeq) txSeq -- HERE WE USE SOME SegWit function
+    txs = reverse $ toList $ blockBody ^. txSeqBlockBodyL -- HERE WE USE SOME SegWit function
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing

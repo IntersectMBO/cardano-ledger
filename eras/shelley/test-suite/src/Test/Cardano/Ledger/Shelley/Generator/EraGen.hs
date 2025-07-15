@@ -153,7 +153,7 @@ class Show (TxOut era) => MinGenTxout era where
 -- ======================================================================================
 
 class
-  ( EraSegWits era
+  ( EraBlockBody era
   , ShelleyEraTxBody era
   , Split (Value era)
   , ScriptClass era

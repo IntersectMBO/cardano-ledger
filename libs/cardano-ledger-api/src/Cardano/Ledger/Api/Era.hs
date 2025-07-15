@@ -122,7 +122,7 @@ class
   , EraTxWits era
   , EraScript era
   , EraPParams era
-  , EraSegWits era
+  , EraBlockBody era
   , EraTxCert era
   ) =>
   EraApi era

@@ -57,7 +57,7 @@ initStEx1 = initSt (UTxO mempty)
 blockEx1 ::
   forall era.
   ( HasCallStack
-  , EraSegWits era
+  , EraBlockBody era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
@@ -79,7 +79,7 @@ blockEx1 =
 blockNonce ::
   forall era.
   ( HasCallStack
-  , EraSegWits era
+  , EraBlockBody era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
@@ -88,7 +88,7 @@ blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  ( EraSegWits era
+  ( EraBlockBody era
   , EraGov era
   , EraStake era
   , EraCertState era
@@ -107,7 +107,7 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( EraSegWits era
+  ( EraBlockBody era
   , EraGov era
   , EraStake era
   , EraCertState era
