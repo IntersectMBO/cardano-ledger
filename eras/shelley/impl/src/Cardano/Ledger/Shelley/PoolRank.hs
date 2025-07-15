@@ -25,6 +25,7 @@ module Cardano.Ledger.Shelley.PoolRank (
   applyDecay,
   Likelihood (..),
   leaderProbability,
+  emptyNonMyopic,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -64,7 +65,6 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
 import Data.Aeson (FromJSON, ToJSON (..), (.=))
-import Data.Default (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
 import Data.List (sortBy)
@@ -235,8 +235,8 @@ data NonMyopic = NonMyopic
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs NonMyopic
 
-instance Default NonMyopic where
-  def = NonMyopic Map.empty (Coin 0)
+emptyNonMyopic :: NonMyopic
+emptyNonMyopic = NonMyopic mempty mempty
 
 instance NoThunks NonMyopic
 

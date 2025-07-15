@@ -101,7 +101,6 @@ import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Bifunctor (Bifunctor (second), first)
 import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
-import Data.Default (Default, def)
 import Data.Foldable as F (find, toList, traverse_)
 import Data.Functor (($>), (<&>))
 import Data.Kind (Type)
@@ -239,8 +238,6 @@ class
 
   -- | Rules governing transition under this system.
   initialRules :: [InitialRule a]
-  default initialRules :: Default (State a) => [InitialRule a]
-  initialRules = [pure def]
 
   transitionRules :: [TransitionRule a]
 

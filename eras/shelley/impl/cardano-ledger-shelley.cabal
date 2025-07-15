@@ -111,7 +111,6 @@ library
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    data-default,
     deepseq,
     groups,
     mempack,
@@ -149,6 +148,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.JSON
     Test.Cardano.Ledger.Shelley.TreeDiff
     Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest
+    Test.Cardano.Ledger.Shelley.Orphans
 
   visibility: public
   hs-source-dirs: testlib

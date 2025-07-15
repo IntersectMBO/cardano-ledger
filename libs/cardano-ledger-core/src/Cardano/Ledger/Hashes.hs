@@ -101,7 +101,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
-import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.MemPack
 import Data.Typeable
@@ -168,7 +167,6 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , FromJSONKey
     , ToJSON
     , FromJSON
-    , Default
     , MemPack
     )
 
@@ -231,7 +229,6 @@ newtype VRFVerKeyHash (r :: KeyRoleVRF) = VRFVerKeyHash
     , FromJSONKey
     , ToJSON
     , FromJSON
-    , Default
     )
 
 toVRFVerKeyHash :: Hash.Hash HASH (VRF.VerKeyVRF v) -> VRFVerKeyHash (r :: KeyRoleVRF)
@@ -341,9 +338,6 @@ newtype SafeHash i = SafeHash (Hash.Hash HASH i)
     , FromJSON
     , MemPack
     )
-
-instance Default (SafeHash i) where
-  def = unsafeMakeSafeHash def
 
 -- | Extract the hash out of a 'SafeHash'
 extractHash :: SafeHash i -> Hash.Hash HASH i

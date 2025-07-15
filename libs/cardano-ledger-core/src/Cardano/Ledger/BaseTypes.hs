@@ -160,7 +160,6 @@ import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Default (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
@@ -488,9 +487,6 @@ newtype UnitInterval
 instance Integral a => Bounded (BoundedRatio UnitInterval a) where
   minBound = BoundedRatio (0 % 1)
   maxBound = BoundedRatio (1 % 1)
-
-instance Default UnitInterval where
-  def = minBound
 
 -- | Evolving nonce type.
 data Nonce
@@ -824,7 +820,7 @@ newtype BlocksMade = BlocksMade
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Semigroup, Monoid)
 
 -- | Transaction index.
 newtype TxIx = TxIx {unTxIx :: Word16}
@@ -927,12 +923,6 @@ instance ToKeyValuePairs Anchor where
      in [ "url" .= anchorUrl
         , "dataHash" .= anchorDataHash
         ]
-
-instance Default Anchor where
-  def = Anchor (Url "") def
-
-instance Default Network where
-  def = Mainnet
 
 class Inject t s where
   inject :: t -> s

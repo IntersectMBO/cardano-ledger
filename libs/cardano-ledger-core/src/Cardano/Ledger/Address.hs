@@ -107,7 +107,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length, toShort)
 import Data.ByteString.Short.Internal as SBS (unsafeIndex)
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTake)
-import Data.Default (Default (..))
 import Data.Function (fix)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
@@ -187,9 +186,6 @@ rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
 
 rewardAccountNetworkL :: Lens' RewardAccount Network
 rewardAccountNetworkL = lens raNetwork $ \x y -> x {raNetwork = y}
-
-instance Default RewardAccount where
-  def = RewardAccount def def
 
 instance ToJSON RewardAccount where
   toJSON ra =

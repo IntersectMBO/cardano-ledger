@@ -58,14 +58,13 @@ import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
+import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic, emptyNonMyopic)
 import Cardano.Ledger.Shelley.Rewards (
   PoolRewardInfo (..),
   rewardOnePoolMember,
  )
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), Value (Null), (.=))
-import Data.Default (def)
 import Data.Group (invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -151,7 +150,7 @@ instance ToKeyValuePairs RewardUpdate where
 
 emptyRewardUpdate :: RewardUpdate
 emptyRewardUpdate =
-  RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
+  RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) emptyNonMyopic
 
 -- ===================================================
 

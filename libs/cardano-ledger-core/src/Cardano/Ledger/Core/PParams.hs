@@ -111,7 +111,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
-import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldlM)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
@@ -128,9 +127,6 @@ import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
 newtype PParams era = PParams (PParamsHKD Identity era)
-
-instance EraPParams era => Default (PParams era) where
-  def = emptyPParams
 
 deriving newtype instance
   Eq (PParamsHKD Identity era) => Eq (PParams era)
@@ -186,9 +182,6 @@ deriving instance Generic (PParams era)
 
 -- | The type of updates to Protocol parameters
 newtype PParamsUpdate era = PParamsUpdate (PParamsHKD StrictMaybe era)
-
-instance EraPParams era => Default (PParamsUpdate era) where
-  def = emptyPParamsUpdate
 
 deriving newtype instance
   Eq (PParamsHKD StrictMaybe era) => Eq (PParamsUpdate era)

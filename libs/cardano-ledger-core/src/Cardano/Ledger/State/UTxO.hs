@@ -64,7 +64,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Data.Aeson (ToJSON)
 import Data.Coerce (coerce)
-import Data.Default (Default)
 import Data.Foldable (foldMap', toList)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
@@ -93,7 +92,7 @@ instance CanSetUTxO UTxO where
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map.Map TxIn (TxOut era)}
-  deriving (Default, Generic, Semigroup)
+  deriving (Generic, Semigroup)
 
 instance (EncCBOR (TxOut era), Era era) => ToCBOR (UTxO era) where
   toCBOR = toEraCBOR @era

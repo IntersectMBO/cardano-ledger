@@ -7,6 +7,7 @@ module Cardano.Ledger.Shelley.RewardProvenance (
   RewardProvenance (..),
   RewardProvenancePool (..),
   Desirability (..),
+  emptyRewardProvenance,
 ) where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
@@ -17,7 +18,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics
@@ -63,9 +63,6 @@ instance NFData RewardProvenancePool
 instance FromJSON RewardProvenancePool
 
 instance ToJSON RewardProvenancePool
-
-instance Default RewardProvenancePool where
-  def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 -- | The desirability score of a stake pool, as described
 -- in <https://arxiv.org/abs/1807.11218 "Reward Sharing Schemes for Stake Pools">.
@@ -136,6 +133,25 @@ data RewardProvenance = RewardProvenance
   }
   deriving (Eq, Generic)
 
+emptyRewardProvenance :: RewardProvenance
+emptyRewardProvenance = RewardProvenance
+  0
+  mempty
+  mempty
+  mempty
+  mempty
+  mempty
+  mempty
+  0
+  0
+  0
+  0
+  mempty
+  mempty
+  mempty
+  mempty
+  mempty
+
 instance FromJSON Desirability
 
 instance ToJSON Desirability
@@ -147,26 +163,6 @@ instance ToJSON RewardProvenance
 instance NoThunks RewardProvenance
 
 instance NFData RewardProvenance
-
-instance Default RewardProvenance where
-  def =
-    RewardProvenance
-      0
-      (BlocksMade def)
-      (Coin 0)
-      (Coin 0)
-      (Coin 0)
-      (Coin 0)
-      (Coin 0)
-      0
-      0
-      0
-      0
-      (Coin 0)
-      (Coin 0)
-      (Coin 0)
-      def
-      def
 
 -- =======================================================
 -- Show instances

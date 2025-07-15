@@ -44,13 +44,13 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 
 instance EraGov ShelleyEra where
   type GovState ShelleyEra = ShelleyGovState ShelleyEra
+  emptyGovState = emptyShelleyGovState
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
@@ -178,9 +178,6 @@ instance EraPParams era => ToKeyValuePairs (ShelleyGovState era) where
     , "curPParams" .= sgsCurPParams
     , "prevPParams" .= sgsPrevPParams
     ]
-
-instance EraPParams era => Default (ShelleyGovState era) where
-  def = emptyShelleyGovState
 
 emptyShelleyGovState :: EraPParams era => ShelleyGovState era
 emptyShelleyGovState =

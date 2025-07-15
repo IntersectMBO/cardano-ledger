@@ -42,7 +42,6 @@ library
     base >=4.18 && <5,
     cardano-strict-containers,
     containers,
-    data-default,
     free,
     mtl,
     nothunks,

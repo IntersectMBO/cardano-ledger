@@ -69,7 +69,6 @@ import Data.Aeson (
  )
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (toJSONKeyText)
-import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
 import Data.MemPack
@@ -106,9 +105,6 @@ instance Typeable kr => MemPack (Credential kr) where
       1 -> KeyHashObj <$> unpackM
       n -> unknownTagM @(Credential kr) n
   {-# INLINE unpackM #-}
-
-instance Default (Credential r) where
-  def = KeyHashObj def
 
 instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x

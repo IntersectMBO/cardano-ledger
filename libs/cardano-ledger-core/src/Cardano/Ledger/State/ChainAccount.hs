@@ -23,7 +23,6 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -72,9 +71,6 @@ instance ToKeyValuePairs ChainAccountState where
 instance NoThunks ChainAccountState
 
 instance NFData ChainAccountState
-
-instance Default ChainAccountState where
-  def = ChainAccountState (Coin 0) (Coin 0)
 
 casTreasuryL :: Lens' ChainAccountState Coin
 casTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})

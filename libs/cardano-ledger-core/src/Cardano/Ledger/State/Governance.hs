@@ -34,7 +34,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State.CertState (Obligations)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
-import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -58,7 +57,6 @@ class
         )
   , ToCBOR (GovState era)
   , FromCBOR (GovState era)
-  , Default (GovState era)
   , ToJSON (GovState era)
   ) =>
   EraGov era
@@ -67,7 +65,6 @@ class
 
   -- | Construct empty governance state
   emptyGovState :: GovState era
-  emptyGovState = def
 
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)
@@ -100,9 +97,6 @@ data FuturePParams era
     -- `solidifyFuturePParams` two stability windows before the end of the epoch.
     PotentialPParamsUpdate (Maybe (PParams era))
   deriving (Generic)
-
-instance Default (FuturePParams era) where
-  def = NoPParamsUpdate
 
 instance ToJSON (PParams era) => ToJSON (FuturePParams era)
 

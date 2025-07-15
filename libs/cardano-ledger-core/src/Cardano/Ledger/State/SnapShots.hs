@@ -88,7 +88,6 @@ import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -255,9 +254,6 @@ instance DecShareCBOR SnapShots where
     ssFee <- lift decCBOR
     let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
-
-instance Default SnapShots where
-  def = emptySnapShots
 
 instance ToKeyValuePairs SnapShots where
   toKeyValuePairs ss@(SnapShots !_ _ _ _ _) =

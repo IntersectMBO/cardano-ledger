@@ -134,6 +134,7 @@ instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (She
   type Event (ShelleyDELEG era) = ShelleyDelegEvent era
 
   transitionRules = [delegationTransition]
+  initialRules = [pure emptyDState]
 
 instance NoThunks (ShelleyDelegPredFailure era)
 

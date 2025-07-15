@@ -33,7 +33,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON)
-import Data.Default (Default)
 import Data.Functor.Identity
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
@@ -47,7 +46,6 @@ class
   , Eq (InstantStake era)
   , Show (InstantStake era)
   , Monoid (InstantStake era)
-  , Default (InstantStake era)
   , NFData (InstantStake era)
   , NoThunks (InstantStake era)
   , ToJSON (InstantStake era)

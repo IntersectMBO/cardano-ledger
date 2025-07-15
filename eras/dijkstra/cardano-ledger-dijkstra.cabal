@@ -85,7 +85,6 @@ library
     cardano-ledger-shelley,
     cardano-strict-containers,
     containers,
-    data-default,
     deepseq,
     mempack,
     microlens,

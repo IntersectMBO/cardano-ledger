@@ -34,7 +34,6 @@ import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Default (Default (..))
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -50,7 +49,7 @@ data ShelleyCertState era = ShelleyCertState
 
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
-  def
+  emptyCertState
     & certPStateL .~ p
     & certDStateL .~ d
 
@@ -87,6 +86,7 @@ shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
 
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
+  emptyCertState = ShelleyCertState undefined undefined
 
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
@@ -127,9 +127,6 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
       decSharePlusLensCBOR $
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
     pure ShelleyCertState {..}
-
-instance Default (ShelleyCertState era) where
-  def = ShelleyCertState def def
 
 instance Era era => NoThunks (ShelleyCertState era)
 

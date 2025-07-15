@@ -24,7 +24,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Default (def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -71,7 +70,7 @@ genesisState genDelegs0 utxo0 =
         mempty
         mempty
     )
-    ( def
+    ( emptyCertState
         & certDStateL .~ dState
     )
   where
@@ -81,7 +80,7 @@ genesisState genDelegs0 utxo0 =
         { dsUnified = UM.empty
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
-        , dsIRewards = def
+        , dsIRewards = emptyInstantaneousRewards
         }
 
 -- Functions for stake delegation model

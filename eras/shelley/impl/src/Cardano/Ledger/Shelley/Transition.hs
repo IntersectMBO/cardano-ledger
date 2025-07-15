@@ -67,7 +67,6 @@ import qualified Data.Aeson as Aeson (Value (..))
 import Data.Aeson.Key (Key, fromString)
 import Data.Aeson.Types (Parser)
 import Data.Char (toLower)
-import Data.Default
 import Data.Kind
 import qualified Data.ListMap as LM
 import qualified Data.ListMap as ListMap
@@ -78,6 +77,7 @@ import GHC.Generics (Generic)
 import GHC.Stack
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.Shelley.PoolRank (emptyNonMyopic)
 
 class
   ( EraTxOut era
@@ -88,12 +88,15 @@ class
   , Eq (TransitionConfig era)
   , Show (TransitionConfig era)
   , FromJSON (TransitionConfig era)
-  , Default (StashedAVVMAddresses era)
   ) =>
   EraTransition era
   where
   -- | Cumulative configuration that is needed to be able to start in a current era
   data TransitionConfig era :: Type
+
+  emptyStashedAVVMAddresses :: StashedAVVMAddresses era
+  default emptyStashedAVVMAddresses :: Monoid (StashedAVVMAddresses era) => StashedAVVMAddresses era
+  emptyStashedAVVMAddresses = mempty
 
   mkTransitionConfig ::
     -- | Translation context necessary for advancing from previous era into the current
@@ -346,13 +349,13 @@ createInitialState tc =
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
                   , lsCertState =
-                      def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
+                      emptyCertState & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
                   }
-            , esNonMyopic = def
+            , esNonMyopic = emptyNonMyopic
             }
       , nesRu = SNothing
       , nesPd = PoolDistr Map.empty mempty
-      , stashedAVVMAddresses = def
+      , stashedAVVMAddresses = emptyStashedAVVMAddresses @era
       }
   where
     govState :: GovState era
