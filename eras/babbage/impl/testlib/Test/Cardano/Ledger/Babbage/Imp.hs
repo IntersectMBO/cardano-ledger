@@ -33,6 +33,7 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , BabbageEraTxBody era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era

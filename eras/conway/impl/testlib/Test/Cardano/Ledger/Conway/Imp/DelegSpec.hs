@@ -46,6 +46,7 @@ import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

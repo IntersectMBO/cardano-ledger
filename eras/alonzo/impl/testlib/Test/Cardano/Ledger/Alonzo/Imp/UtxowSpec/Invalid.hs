@@ -52,6 +52,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
