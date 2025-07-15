@@ -70,6 +70,7 @@ library testlib
     Test.Cardano.Protocol.Crypto.VRF.Fake
     Test.Cardano.Protocol.TPraos.Arbitrary
     Test.Cardano.Protocol.TPraos.Create
+    Test.Cardano.Protocol.TPraos.Examples
 
   visibility: public
   hs-source-dirs: testlib
@@ -94,6 +95,7 @@ library testlib
     cardano-ledger-shelley:testlib,
     cardano-protocol-tpraos,
     cardano-strict-containers,
+    containers,
     generic-random,
     nothunks,
 
