@@ -104,7 +104,6 @@ library testlib
   build-depends:
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
@@ -125,7 +124,6 @@ library testlib
     plutus-ledger-api,
     prettyprinter,
     small-steps,
-    time,
 
 test-suite cardano-ledger-api-test
   type: exitcode-stdio-1.0
