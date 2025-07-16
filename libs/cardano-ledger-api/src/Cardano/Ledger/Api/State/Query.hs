@@ -20,6 +20,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetDRepState@
   queryDRepState,
 
+  -- * @GetDRepDelegationState@
+  queryDRepDelegationState,
+
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
 
@@ -109,6 +112,8 @@ import Cardano.Ledger.UMap (
   UMap,
   dRepMap,
   domRestrictedStakeCredentials,
+  umElemDRepDelegatedDeposit,
+  umElemsL,
  )
 import Control.Monad (guard)
 import Data.Foldable (foldMap')
@@ -177,6 +182,46 @@ queryDRepState nes creds
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+
+-- | Query the delegators and amounts delegated to each DRep, including
+-- @AlwaysAbstain@ and @NoConfidence@.
+queryDRepDelegationState ::
+  ConwayEraCertState era =>
+  NewEpochState era ->
+  -- | Specify a set of DReps whose state should be returned. When this set is
+  -- empty, states for all of the DReps will be returned.
+  Set DRep ->
+  Map DRep DRepDelegation
+queryDRepDelegationState nes creds
+  | null creds = getDelegationStateRestricting Nothing dState
+  | otherwise = getDelegationStateRestricting (Just creds) dState
+  where
+    getDelegationStateRestricting :: Maybe (Set DRep) -> DState era -> Map DRep DRepDelegation
+    getDelegationStateRestricting restrict ds =
+      Map.foldlWithKey
+        ( \m cred umElem ->
+            case umElemDRepDelegatedDeposit umElem of
+              Just (coin, drep) ->
+                case restrict of
+                  Just r | not (Set.member drep r) -> m
+                  _ -> Map.insertWith addDRepDelegation drep (toDRepDelegation coin cred) m
+              _ -> m
+        )
+        Map.empty
+        (dsUnified ds ^. umElemsL)
+    addDRepDelegation :: DRepDelegation -> DRepDelegation -> DRepDelegation
+    addDRepDelegation x y =
+      DRepDelegation
+        { drepDelegDeposit = drepDelegDeposit x <> drepDelegDeposit y
+        , drepDelegDelegs = Set.union (drepDelegDelegs x) (drepDelegDelegs y)
+        }
+    toDRepDelegation :: CompactForm Coin -> Credential 'Staking -> DRepDelegation
+    toDRepDelegation coin cred =
+      DRepDelegation
+        { drepDelegDeposit = fromCompact coin
+        , drepDelegDelegs = Set.singleton cred
+        }
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.

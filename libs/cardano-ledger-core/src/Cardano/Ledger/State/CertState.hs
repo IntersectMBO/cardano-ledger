@@ -25,6 +25,7 @@ module Cardano.Ledger.State.CertState (
   FutureGenDeleg (..),
   Anchor (..),
   DRepState (..),
+  DRepDelegation (..),
   DRep (..),
   CommitteeState (..),
   authorizedHotCommitteeCredentials,
@@ -77,7 +78,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
+import Cardano.Ledger.DRep (DRep (..), DRepDelegation (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))

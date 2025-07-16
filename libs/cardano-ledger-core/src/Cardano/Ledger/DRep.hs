@@ -11,6 +11,7 @@
 module Cardano.Ledger.DRep (
   DRep (DRepCredential, DRepKeyHash, DRepScriptHash, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
   DRepState (..),
+  DRepDelegation (..),
   drepExpiryL,
   drepAnchorL,
   drepDepositL,
@@ -212,3 +213,49 @@ drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
 
 drepDelegsL :: Lens' DRepState (Set (Credential 'Staking))
 drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})
+
+data DRepDelegation = DRepDelegation
+  { drepDelegDeposit :: !Coin
+  , drepDelegDelegs :: !(Set (Credential 'Staking))
+  }
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoThunks DRepDelegation
+
+instance NFData DRepDelegation
+
+instance DecCBOR DRepDelegation where
+  decCBOR = decNoShareCBOR
+
+instance DecShareCBOR DRepDelegation where
+  type Share DRepDelegation = Interns (Credential 'Staking)
+  getShare = internsFromSet . drepDelegDelegs
+  decShareCBOR is = do
+    decode $
+      RecD DRepDelegation
+        <! From
+        <! D (decShareCBOR is)
+
+instance EncCBOR DRepDelegation where
+  encCBOR DRepDelegation {..} =
+    encode $
+      Rec DRepDelegation
+        !> To drepDelegDeposit
+        !> To drepDelegDelegs
+
+instance ToJSON DRepDelegation where
+  toJSON x@(DRepDelegation _ _) =
+    let DRepDelegation {..} = x
+     in toJSON $
+          object $
+            [ "deposit" .= toJSON drepDelegDeposit
+            , "delegators" .= toJSON drepDelegDelegs
+            ]
+
+instance FromJSON DRepDelegation where
+  parseJSON = withObject "DRepDelegation" $ \o ->
+    DRepDelegation
+      <$> o .: "deposit"
+      -- Construction of DRep state with deleagations is intentionally prohibited, since
+      -- there is a requirement to retain the invariant of delegations in the UMap
+      <*> pure mempty
