@@ -113,7 +113,7 @@ library testlib
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
-    cardano-ledger-mary,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
     cardano-slotting,
