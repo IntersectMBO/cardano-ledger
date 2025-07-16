@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -18,6 +19,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetDRepState@
   queryDRepState,
+
+  -- * @GetDRepDelegations@
+  queryDRepDelegations,
 
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
@@ -96,7 +100,8 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad (guard)
 import Data.Foldable (foldMap')
@@ -155,6 +160,45 @@ queryDRepState nes creds
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+
+-- | Query the delegators delegated to each DRep, including
+-- @AlwaysAbstain@ and @NoConfidence@.
+queryDRepDelegations ::
+  forall era.
+  ConwayEraCertState era =>
+  NewEpochState era ->
+  -- | Specify a set of DReps whose state should be returned. When this set is
+  -- empty, states for all of the DReps will be returned.
+  Set DRep ->
+  Map DRep (Set (Credential 'Staking))
+queryDRepDelegations nes dreps =
+  case getDRepCreds dreps of
+    Just creds ->
+      Map.map drepDelegs $
+        Map.mapKeys credToDRep ((vState ^. vsDRepsL) `Map.restrictKeys` creds)
+    Nothing ->
+      -- Whenever predefined `AlwaysAbstain` or `AlwaysNoConfidence` are
+      -- requested we are forced to iterate over all accounts and find those
+      -- delegations.
+      Map.foldlWithKey'
+        ( \m cred cas ->
+            case cas ^. dRepDelegationAccountStateL of
+              Just drep
+                | Set.null dreps || drep `Set.member` dreps ->
+                    Map.insertWith (<>) drep (Set.singleton cred) m
+              _ ->
+                m
+        )
+        Map.empty
+        (dState ^. accountsL . accountsMapL)
+  where
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
+    -- Find all credentials for requested DReps, but only when we don't care
+    -- about predefined DReps
+    getDRepCreds ds = do
+      guard $ not $ Set.null ds
+      Set.fromList <$> traverse dRepToCred (Set.elems ds)
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
