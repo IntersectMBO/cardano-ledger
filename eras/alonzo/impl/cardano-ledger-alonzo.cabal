@@ -114,6 +114,7 @@ library testlib
     Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec
     Test.Cardano.Ledger.Alonzo.CDDL
     Test.Cardano.Ledger.Alonzo.Era
+    Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Imp
     Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec
     Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
@@ -155,6 +156,7 @@ library testlib
     cborg,
     containers,
     cuddle >=0.4,
+    data-default,
     generic-random,
     heredoc,
     microlens,
