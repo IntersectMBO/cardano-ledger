@@ -41,6 +41,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
   ConwayUtxoPredFailure,
+  ConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -103,6 +104,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))

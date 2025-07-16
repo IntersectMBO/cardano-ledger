@@ -37,7 +37,11 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams (AlonzoPParams),
+  LangDepView (..),
+  OrdExUnits (OrdExUnits),
+ )
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (ContextError),
   EraPlutusTxInfo,
@@ -475,3 +479,6 @@ instance Arbitrary (TransitionConfig AlonzoEra) where
   arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary
 
 deriving newtype instance Arbitrary (Tx AlonzoEra)
+
+instance Arbitrary LangDepView where
+  arbitrary = LangDepView <$> arbitrary <*> arbitrary
