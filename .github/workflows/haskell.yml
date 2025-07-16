@@ -215,7 +215,6 @@ jobs:
         - cardano-ledger-shelley-test
         - cardano-ledger-test
         - cardano-protocol-tpraos
-        - constrained-generators
         - non-integral
         - set-algebra
         - small-steps
