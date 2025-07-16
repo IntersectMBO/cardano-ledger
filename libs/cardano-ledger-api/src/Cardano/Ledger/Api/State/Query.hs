@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -18,6 +19,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetDRepState@
   queryDRepState,
+
+  -- * @GetDRepDelegationState@
+  queryDRepDelegationState,
 
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
@@ -155,6 +159,36 @@ queryDRepState nes creds
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+
+-- | Query the delegators delegated to each DRep, including
+-- @AlwaysAbstain@ and @NoConfidence@.
+queryDRepDelegationState ::
+  forall era.
+  ConwayEraCertState era =>
+  NewEpochState era ->
+  -- | Specify a set of DReps whose state should be returned. When this set is
+  -- empty, states for all of the DReps will be returned.
+  Set DRep ->
+  Map DRep (Set (Credential 'Staking))
+queryDRepDelegationState nes creds
+  | null creds = getDelegationStateRestricting Nothing dState
+  | otherwise = getDelegationStateRestricting (Just creds) dState
+  where
+    getDelegationStateRestricting ::
+      Maybe (Set DRep) -> DState era -> Map DRep (Set (Credential 'Staking))
+    getDelegationStateRestricting restrict ds =
+      Map.foldlWithKey
+        ( \m cred cas ->
+            case cas ^. dRepDelegationAccountStateL of
+              Just drep ->
+                case restrict of
+                  Just r | not (Set.member drep r) -> m
+                  _ -> Map.insertWith (<>) drep (Set.singleton cred) m
+              _ -> m
+        )
+        Map.empty
+        (ds ^. accountsL . accountsMapL)
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
