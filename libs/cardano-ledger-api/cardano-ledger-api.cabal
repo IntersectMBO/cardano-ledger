@@ -104,7 +104,6 @@ library testlib
   build-depends:
     base,
     bytestring,
-    cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-api,
@@ -116,14 +115,9 @@ library testlib
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
-    cardano-slotting,
-    cardano-strict-containers,
     containers,
     data-default,
-    microlens,
-    plutus-ledger-api,
     prettyprinter,
-    small-steps,
 
 test-suite cardano-ledger-api-test
   type: exitcode-stdio-1.0
