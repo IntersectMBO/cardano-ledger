@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.12.1.0
+
+* Add `queryDRepDelegationState`
+
 ## 1.12.0.0
 
 * Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`

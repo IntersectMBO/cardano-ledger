@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-core`
 
+## 1.18.1.0
+
+* Add `DRepDelegation`
+* Add `umElemDRepDelegatedReward`
+
 ## 1.18.0.0
 
 * Replaced `hkdPoolDepositL` method with `hkdPoolDepositCompactL`
