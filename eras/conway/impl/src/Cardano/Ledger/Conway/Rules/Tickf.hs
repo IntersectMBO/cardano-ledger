@@ -20,6 +20,7 @@ import Control.State.Transition
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
+import Data.Void (Void)
 
 -- ==================================================
 
@@ -53,7 +54,7 @@ instance
   type Signal (ConwayTICKF era) = SlotNo
   type Environment (ConwayTICKF era) = ()
   type BaseM (ConwayTICKF era) = ShelleyBase
-  type PredicateFailure (ConwayTICKF era) = ConwayTickfPredFailure era
+  type PredicateFailure (ConwayTICKF era) = Void
   type Event (ConwayTICKF era) = ConwayTickfEvent era
 
   initialRules = []
