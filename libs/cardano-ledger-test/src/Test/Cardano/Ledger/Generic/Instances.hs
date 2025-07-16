@@ -62,10 +62,10 @@ import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.Cardano.Ledger.Generic.TxGen (
   alonzoMkRedeemers,
   alonzoMkRedeemersFromTags,
-  alonzoNewScriptIntegrityHash,
   mkAlonzoPlutusPurposePointer,
   mkConwayPlutusPurposePointer,
  )
+import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 

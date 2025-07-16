@@ -28,10 +28,10 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
-  AlonzoUtxowPredFailure (..),
+  AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
+  checkScriptIntegrityHash,
   hasExactSetOfRedeemers,
   missingRequiredDatums,
-  ppViewHashesMatch,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (validScript)
@@ -39,8 +39,9 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
+import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
-import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -75,6 +76,7 @@ import Control.State.Transition.Extended (
   liftSTS,
   trans,
  )
+import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -98,6 +100,10 @@ data BabbageUtxowPredFailure era
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
       (Set ScriptHash)
+  | -- | The computed script integrity hash does not match the provided script integrity hash
+    ScriptIntegrityHashMismatch
+      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (StrictMaybe ByteString)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" BabbageEra = BabbageUtxowPredFailure BabbageEra
@@ -166,6 +172,7 @@ instance
       UtxoFailure x -> Sum UtxoFailure 2 !> To x
       MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 3 !> To x
       MalformedReferenceScripts x -> Sum MalformedReferenceScripts 4 !> To x
+      ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 5 !> To x !> To y
 
 instance
   ( AlonzoEraScript era
@@ -183,6 +190,7 @@ instance
     2 -> SumD UtxoFailure <! From
     3 -> SumD MalformedScriptWitnesses <! From
     4 -> SumD MalformedReferenceScripts <! From
+    5 -> SumD ScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
 
 deriving via
@@ -198,7 +206,7 @@ instance
   NFData (BabbageUtxowPredFailure era)
 
 -- ==================================================
--- Reuseable tests first used in the Babbage Era
+-- Reusable tests first used in the Babbage Era
 
 -- Int the Babbage Era with reference scripts, the needed
 -- scripts only has to be a subset of the txscripts.
@@ -277,7 +285,7 @@ validateScriptsWellFormed pp tx =
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================
--- Here we define the transtion function, using reusable tests.
+-- Here we define the transition function, using reusable tests.
 -- The tests are very generic and reusable, but the transition
 -- function is very specific to the Babbage Era.
 
@@ -376,14 +384,15 @@ babbageUtxowTransition = do
   -}
   runTest $ validateScriptsWellFormed pp tx
   -- Note that Datum validation is done during deserialization,
-  -- as given by the decoders in the Plutus libraray
+  -- as given by the decoders in the Plutus library
 
   {- languages tx utxo ⊆ dom(costmdls pp) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
-  -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'.
+  -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptHashesNeeded
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
+  runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
   trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 

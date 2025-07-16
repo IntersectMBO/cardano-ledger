@@ -2,6 +2,10 @@
 
 ## 1.14.0.0
 
+* Add `mkScriptIntegrity`
+* Changed the type of `hashScriptIntegrity`
+* Add `ScriptIntegrityHashMismatch`
+* Rename `ppViewHashesMatch` to `checkScriptIntegrityHash`
 * Add `emptyUpgradePParamsUpdate` method to `AlonzoEraPParams`
 * Add `mkBasicBlockBodyAlonzo` and `txSeqBlockBodyAlonzoL` to use in Babbage, Conway and Dijkstra.
 * Added `eraUnsupportedLanguage`
@@ -44,6 +48,8 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `LangDepView`
+* Add `computeScriptIntegrityPure`, `computeScriptIntegrity` and `computeScriptIntegrityHash`
 * Added `TxInfoPV4` to `VersionedTxInfo`
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:

@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Add `ScriptIntegrityHashMismatch`
 * Change the type of `cppDRepDeposit` to `CompactForm Coin`
 * Add `ppDRepDepositCompactL` and `ppuDRepDepositCompactL`
 * Replace `hkdDRepDepositL` with `hkdDRepDepositCompactL`

@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
  )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
+  ScriptIntegrity (..),
   hashScriptIntegrity,
   totExUnits,
  )
@@ -99,6 +100,7 @@ import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.ImpTest (computeScriptIntegrity)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
@@ -324,7 +326,9 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
         minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
-        (hashScriptIntegrity @AlonzoEra Set.empty (Redeemers Map.empty) (TxDats Map.empty))
+        ( SJust . hashScriptIntegrity @AlonzoEra $
+            ScriptIntegrity (Redeemers Map.empty) (TxDats Map.empty) Set.empty
+        )
         auxDHash
         netid
     , List.map TimelockScript scriptsFromPolicies <> plutusScripts
@@ -429,13 +433,12 @@ instance EraGen AlonzoEra where
       , -- The wits may have changed, recompute the scriptIntegrityHash.
         atbScriptIntegrityHash =
           hashScriptIntegrity
-            langViews
-            (wits ^. rdmrsTxWitsL)
-            (wits ^. datsTxWitsL)
+            <$> computeScriptIntegrity
+              pp
+              utxo
+              (mkBasicTx txb & witsTxL .~ wits)
       }
     where
-      langs = langsUsed @AlonzoEra (wits ^. scriptTxWitsL)
-      langViews = Set.map (getLanguageView pp) langs
       requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
       potentialCollateral = Set.filter (okAsCollateral utxo) txin
       txInAmounts = List.sortOn snd . Map.toList . Map.map (unCoin . view coinTxOutL) . unUTxO . txInsFilter utxo

@@ -61,6 +61,7 @@ module Cardano.Ledger.Alonzo.Tx (
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
   alonzoTxEqRaw,
+  mkScriptIntegrity,
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
@@ -73,9 +74,10 @@ import Cardano.Ledger.Alonzo.PParams (
   ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
+  AlonzoEraScript (..),
   CostModel,
   ExUnits (..),
+  plutusScriptLanguage,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
@@ -112,17 +114,21 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
+import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
@@ -273,17 +279,32 @@ instance
   Era era =>
   HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity
 
-hashScriptIntegrity ::
-  forall era.
-  AlonzoEraScript era =>
-  Set LangDepView ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe ScriptIntegrityHash
-hashScriptIntegrity langViews rdmrs dats =
-  if null (rdmrs ^. unRedeemersL) && null langViews && null (dats ^. unTxDatsL)
-    then SNothing
-    else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
+hashScriptIntegrity :: Era era => ScriptIntegrity era -> ScriptIntegrityHash
+hashScriptIntegrity = hashAnnotated
+
+mkScriptIntegrity ::
+  ( AlonzoEraPParams era
+  , AlonzoEraTxWits era
+  , EraUTxO era
+  ) =>
+  PParams era ->
+  Tx era ->
+  ScriptsProvided era ->
+  Set ScriptHash ->
+  StrictMaybe (ScriptIntegrity era)
+mkScriptIntegrity pp tx (ScriptsProvided scriptsProvided) scriptsNeeded
+  | null (txRedeemers ^. unRedeemersL)
+  , null langViews
+  , null (txDats ^. unTxDatsL) =
+      SNothing
+  | otherwise = SJust $ ScriptIntegrity txRedeemers txDats langViews
+  where
+    scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
+    langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
+    langViews = Set.map (getLanguageView pp) langs
+    txWits = tx ^. witsTxL
+    txRedeemers = txWits ^. rdmrsTxWitsL
+    txDats = txWits ^. datsTxWitsL
 
 -- ===============================================================
 -- From the specification, Figure 4 "Functions related to fees"
