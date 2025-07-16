@@ -22,21 +22,20 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   AlonzoUtxowPredFailure (..),
   hasExactSetOfRedeemers,
   missingRequiredDatums,
-  ppViewHashesMatch,
+  checkScriptIntegrityHash,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure (..),
  )
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity (..), hashScriptIntegrity, mkScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
@@ -48,12 +47,13 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
+  ProtVer (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   quorum,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -79,9 +79,9 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (➖))
 import Control.State.Transition.Extended
+import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -122,6 +122,10 @@ data AlonzoUtxowPredFailure era
   | -- | List of redeemers not needed
     ExtraRedeemers
       [PlutusPurpose AsIx era]
+  | -- | The computed script integrity hash does not match the provided script integrity hash
+    ScriptIntegrityHashMismatch
+      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (StrictMaybe ByteString)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEra
@@ -191,6 +195,7 @@ instance
       PPViewHashesDontMatch m -> Sum PPViewHashesDontMatch 4 !> To m
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
       ExtraRedeemers x -> Sum ExtraRedeemers 7 !> To x
+      ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 8 !> To x !> To y
 
 newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
@@ -217,6 +222,7 @@ instance
       4 -> SumD PPViewHashesDontMatch <! From
       6 -> SumD UnspendableUTxONoDatumHash <! From
       7 -> SumD ExtraRedeemers <! From
+      8 -> SumD ScriptIntegrityHashMismatch <! From <! From
       n -> Invalid n
 
 -- =================
@@ -283,24 +289,27 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-ppViewHashesMatch ::
+checkScriptIntegrityHash ::
   forall era.
   AlonzoEraTx era =>
   Tx era ->
   PParams era ->
-  ScriptsProvided era ->
-  Set ScriptHash ->
+  StrictMaybe (ScriptIntegrity era) ->
   Test (AlonzoUtxowPredFailure era)
-ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
-  let scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
-      langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
-      langViews = Set.map (getLanguageView pp) langs
-      txWits = tx ^. witsTxL
-      computedPPhash = hashScriptIntegrity langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
-      bodyPPhash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
+checkScriptIntegrityHash tx pp scriptIntegrity = do
+  let computedScriptIntegrityHash = hashScriptIntegrity <$> scriptIntegrity
+      suppliedScriptIntegrityHash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
+      expectedScriptIntegrity = originalBytes <$> scriptIntegrity
+      mismatch =
+        Mismatch
+          { mismatchSupplied = suppliedScriptIntegrityHash
+          , mismatchExpected = computedScriptIntegrityHash
+          }
   failureUnless
-    (bodyPPhash == computedPPhash)
-    (PPViewHashesDontMatch Mismatch {mismatchSupplied = bodyPPhash, mismatchExpected = computedPPhash})
+    (suppliedScriptIntegrityHash == computedScriptIntegrityHash)
+    $ if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+      then PPViewHashesDontMatch mismatch
+      else ScriptIntegrityHashMismatch mismatch expectedScriptIntegrity
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -383,8 +392,9 @@ alonzoStyleWitness = do
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptsHashesNeeded
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptsHashesNeeded
+  runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
   trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
