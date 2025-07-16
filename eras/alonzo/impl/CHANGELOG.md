@@ -44,6 +44,7 @@
 
 ### `testlib`
 
+* Add `computeScriptIntegrityPure`, `computeScriptIntegrity` and `computeScriptIntegrityHash`
 * Added `TxInfoPV4` to `VersionedTxInfo`
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:

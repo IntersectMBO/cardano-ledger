@@ -38,7 +38,11 @@ import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (AlonzoBlockBody))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams (AlonzoPParams),
+  LangDepView (..),
+  OrdExUnits (OrdExUnits),
+ )
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (ContextError),
   EraPlutusTxInfo,
@@ -480,3 +484,6 @@ instance
   Arbitrary (AlonzoBlockBody era)
   where
   arbitrary = AlonzoBlockBody <$> arbitrary
+
+instance Arbitrary LangDepView where
+  arbitrary = LangDepView <$> arbitrary <*> arbitrary

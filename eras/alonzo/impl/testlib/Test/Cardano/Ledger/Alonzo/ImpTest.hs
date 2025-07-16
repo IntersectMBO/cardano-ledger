@@ -31,6 +31,10 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   submitPhase2Invalid_,
   submitPhase2Invalid,
   impAlonzoExpectTxSuccess,
+  computeScriptIntegrity,
+  computeScriptIntegrityHash,
+  -- Pure functions
+  computeScriptIntegrityPure,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -45,7 +49,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScriptsWithLogs,
@@ -54,10 +57,11 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   TagMismatchDescription (..),
+  mkScriptIntegrity,
   scriptFailureToFailureDescription,
  )
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity, hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -92,7 +96,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes, isJust, isNothing)
-import Data.Set (Set, (\\))
+import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Lens.Micro
@@ -301,21 +305,7 @@ fixupPPHash ::
   Tx era ->
   ImpTestM era (Tx era)
 fixupPPHash tx = impAnn "fixupPPHash" $ do
-  pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  utxo <- getUTxO
-  let
-    scriptHashes :: Set ScriptHash
-    scriptHashes = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
-    scriptLanguage sh = do
-      let mbyPlutus = impLookupPlutusScript sh
-      pure $ getLanguageView pp . plutusScriptLanguage @era <$> mbyPlutus
-  langs <- traverse scriptLanguage $ Set.toList scriptHashes
-  let
-    integrityHash =
-      hashScriptIntegrity
-        (Set.fromList $ catMaybes langs)
-        (tx ^. witsTxL . rdmrsTxWitsL)
-        (tx ^. witsTxL . datsTxWitsL)
+  integrityHash <- computeScriptIntegrityHash tx
   pure $
     tx
       & bodyTxL . scriptIntegrityHashTxBodyL .~ integrityHash
@@ -415,7 +405,7 @@ instance ShelleyEraImp AlonzoEra where
   initGenesis =
     pure
       AlonzoGenesis
-        { agCoinsPerUTxOWord = CoinPerWord (Coin 34482)
+        { agCoinsPerUTxOWord = CoinPerWord (Coin 34_482)
         , agCostModels = testingCostModels [PlutusV1]
         , agPrices =
             Prices
@@ -545,3 +535,25 @@ impAlonzoExpectTxSuccess tx = do
         expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList collaterals]
       impAnn "Outputs should not be in UTxO" $
         expectUTxOContent utxo [(txIn, isNothing) | (txIn, _txOut) <- outputs]
+
+computeScriptIntegrityPure ::
+  AlonzoEraImp era =>
+  PParams era ->
+  UTxO era ->
+  Tx era ->
+  StrictMaybe (ScriptIntegrity era)
+computeScriptIntegrityPure pp utxo tx = mkScriptIntegrity pp tx scriptsProvided scriptsNeeded
+  where
+    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
+    scriptsNeeded = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
+
+computeScriptIntegrity ::
+  AlonzoEraImp era =>
+  Tx era ->
+  ImpTestM era (StrictMaybe (ScriptIntegrity era))
+computeScriptIntegrity tx =
+  computeScriptIntegrityPure <$> getsPParams id <*> getUTxO <*> pure tx
+
+computeScriptIntegrityHash ::
+  forall era. AlonzoEraImp era => Tx era -> ImpTestM era (StrictMaybe ScriptIntegrityHash)
+computeScriptIntegrityHash tx = fmap (hashScriptIntegrity @era) <$> computeScriptIntegrity tx

@@ -125,9 +125,9 @@ spec = describe "Invalid transactions" $ do
                       PPViewHashesDontMatch Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
                   ]
 
-          it "Mismatched" $
+          it "Mismatched" . whenMajorVersionAtMost @10 $
             testHashMismatch . SJust =<< arbitrary
-          it "Missing" $
+          it "Missing" . whenMajorVersionAtMost @10 $
             testHashMismatch SNothing
 
         it "UnspendableUTxONoDatumHash" $ do

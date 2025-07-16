@@ -273,17 +273,8 @@ instance
   Era era =>
   HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity
 
-hashScriptIntegrity ::
-  forall era.
-  AlonzoEraScript era =>
-  Set LangDepView ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe ScriptIntegrityHash
-hashScriptIntegrity langViews rdmrs dats =
-  if null (rdmrs ^. unRedeemersL) && null langViews && null (dats ^. unTxDatsL)
-    then SNothing
-    else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
+hashScriptIntegrity :: Era era => ScriptIntegrity era -> ScriptIntegrityHash
+hashScriptIntegrity = hashAnnotated
 
 -- ===============================================================
 -- From the specification, Figure 4 "Functions related to fees"
