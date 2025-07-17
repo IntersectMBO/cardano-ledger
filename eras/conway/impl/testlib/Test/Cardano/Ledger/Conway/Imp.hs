@@ -29,6 +29,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
   ConwayUtxoPredFailure,
+  ConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus (Language (..))
@@ -52,6 +53,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
+import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Conway.ImpTest (
   ConwayEraImp,
   LedgerSpec,
@@ -80,6 +82,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -116,6 +119,7 @@ conwaySpec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -127,6 +131,7 @@ conwaySpec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , EraPlutusTxInfo PlutusV2 era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwaySpec = do
@@ -141,3 +146,4 @@ conwaySpec = do
   describe "RATIFY" Ratify.spec
   describe "UTXO" Utxo.spec
   describe "UTXOS" Utxos.spec
+  describe "UTXOW" Utxow.spec
