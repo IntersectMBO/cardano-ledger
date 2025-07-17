@@ -62,7 +62,7 @@ spec = do
       passNEpochs 2
       getProtVer `shouldReturn` pv11
     registerStakePool kh vrf = do
-      pps <- registerRewardAccount >>= freshPoolParams kh
+      pps <- registerRewardAccountWithDeposit >>= freshPoolParams kh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & ppVrfL .~ vrf]
