@@ -65,7 +65,6 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -105,7 +104,6 @@ spec = do
 conwaySpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
