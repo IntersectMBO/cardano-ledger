@@ -102,8 +102,10 @@ library testlib
     Test.Cardano.Ledger.Babbage.Arbitrary
     Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
+    Test.Cardano.Ledger.Babbage.Binary.Twiddle
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Era
+    Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
@@ -130,9 +132,11 @@ library testlib
     bytestring,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
-    cardano-ledger-shelley,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-slotting,
     cardano-strict-containers,
     containers,
     cuddle >=0.4,

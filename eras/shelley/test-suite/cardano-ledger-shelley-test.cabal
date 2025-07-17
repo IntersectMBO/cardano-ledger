@@ -112,7 +112,7 @@ test-suite cardano-ledger-shelley-test
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_shelley_test
-    Test.Cardano.Ledger.Shelley.Examples
+    Test.Cardano.Ledger.Shelley.Examples.Chain
     Test.Cardano.Ledger.Shelley.Examples.Combinators
     Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
     Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
@@ -158,7 +158,6 @@ test-suite cardano-ledger-shelley-test
     bytestring,
     cardano-crypto-class,
     cardano-data,
-    cardano-ledger-api:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, testlib},

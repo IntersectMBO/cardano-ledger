@@ -23,8 +23,8 @@ import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.Examples (testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (testCHAINExample)
 import Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (exEmptyBlock)
 import Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (genesisDelegExample)
 import Test.Cardano.Ledger.Shelley.Examples.Mir (mirExample)

@@ -5,10 +5,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Api.Examples.Consensus.Allegra (
-  ledgerExamplesAllegra,
+module Test.Cardano.Ledger.Allegra.Examples (
+  ledgerExamples,
   exampleAllegraTxBody,
-  exampleTimelock,
   exampleAllegraTxAuxData,
 ) where
 
@@ -25,14 +24,26 @@ import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
-import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Shelley.Examples (
+  LedgerExamples,
+  defaultLedgerExamples,
+  exampleAuxDataMap,
+  exampleCerts,
+  exampleCoin,
+  examplePayKey,
+  exampleProposedPPUpdates,
+  exampleStakeKey,
+  exampleTxIns,
+  exampleWithdrawals,
+  mkKeyHash,
+  mkWitnessesPreAlonzo,
+ )
 
--- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples AllegraEra
-ledgerExamplesAllegra =
-  defaultShelleyLedgerExamples
+ledgerExamples :: LedgerExamples AllegraEra
+ledgerExamples =
+  defaultLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @AllegraEra))
     exampleCoin
     (exampleAllegraTxBody exampleCoin)
@@ -60,8 +71,7 @@ exampleAllegraTxBody value =
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
     auxiliaryDataHash :: TxAuxDataHash
-    auxiliaryDataHash =
-      TxAuxDataHash $ mkDummySafeHash 30
+    auxiliaryDataHash = TxAuxDataHash $ mkDummySafeHash 30
 
 exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =
@@ -82,4 +92,5 @@ exampleTimelock =
 
 exampleAllegraTxAuxData ::
   (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
-exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])
+exampleAllegraTxAuxData =
+  AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

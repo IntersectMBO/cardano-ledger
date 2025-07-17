@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Examples (
+module Test.Cardano.Ledger.Shelley.Examples.Chain (
   CHAINExample (..),
   testCHAINExample,
 ) where
