@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec, conwayEraSpecificSpec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
@@ -37,10 +37,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   votingSpec
@@ -72,10 +69,7 @@ spec = do
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
@@ -103,10 +97,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
 
 spoAndCCVotingSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoAndCCVotingSpec = do
   describe "When CC expired" $ do
@@ -210,10 +201,7 @@ spoAndCCVotingSpec = do
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeExpiryResignationDiscountSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -285,10 +273,7 @@ committeeExpiryResignationDiscountSpec =
 
 paramChangeAffectsProposalsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 paramChangeAffectsProposalsSpec =
   -- These tests rely on submitting committee-update proposals and on drep votes, which are disallowed during bootstrap,
@@ -466,17 +451,14 @@ paramChangeAffectsProposalsSpec =
 
 committeeMinSizeAffectsInFlightProposalsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMinSizeAffectsInFlightProposalsSpec =
   -- Treasury withdrawals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
         submitTreasuryWithdrawal amount = do
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
@@ -536,10 +518,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
 
 spoVotesForHardForkInitiation ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
@@ -577,10 +556,7 @@ spoVotesForHardForkInitiation =
 
 votingSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
@@ -773,150 +749,7 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-          it "After switching delegations" $ whenPostBootstrap $ do
-            -- Only modify the applicable thresholds
-            modifyPParams $ ppGovActionDepositL .~ Coin 1_000_000
-            -- Setup DRep delegation without stake #1
-            (drepKH1, stakingKH1) <- setupDRepWithoutStake
-            -- Setup DRep delegation #2
-            (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
-            -- Setup DRep delegation #3
-            (_drepKH3, stakingKH3) <- setupDRepWithoutStake
-            (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-            -- Make a note of the reward accounts for the delegators to DReps #1 and #3
-            dRepRewardAccount1 <- getRewardAccountFor $ KeyHashObj stakingKH1
-            dRepRewardAccount3 <- getRewardAccountFor $ KeyHashObj stakingKH3
-            -- Submit committee proposals
-            -- The proposal deposits comes from the root UTxO
-            -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
-            cc <- KeyHashObj <$> freshKeyHash
-            curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
-            addCCGaid <-
-              mkProposalWithRewardAccount
-                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                dRepRewardAccount1
-                >>= submitProposal
-            cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
-              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              dRepRewardAccount3
-              >>= submitProposal_
-            -- Submit the vote from DRep #1
-            submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
-            submitYesVote_ (StakePoolVoter spoC) addCCGaid
-            passNEpochs 2
-            -- The vote should not result in a ratification
-            isDRepAccepted addCCGaid `shouldReturn` False
-            getLastEnactedCommittee `shouldReturn` SNothing
-            -- Switch the delegation from DRep #3 to DRep #1
-            submitTxAnn_ "Switch the delegation from DRep #3 to DRep #1" $
-              mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ SSeq.fromList
-                    [ DelegTxCert
-                        (KeyHashObj stakingKH3)
-                        (DelegVote (DRepCredential $ KeyHashObj drepKH1))
-                    ]
-            passNEpochs 2
-            -- The same vote should now successfully ratify the proposal
-            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
       describe "Predefined DReps" $ do
-        it "acceptedRatio with default DReps" $ whenPostBootstrap $ do
-          (drep1, _, committeeGovId) <- electBasicCommittee
-          (_, drep2Staking, _) <- setupSingleDRep 1_000_000
-
-          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 1000)
-          submitYesVote_ (DRepVoter drep1) paramChangeGovId
-
-          passEpoch
-          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
-
-          kh <- freshKeyHash
-          _ <- registerStakeCredential (KeyHashObj kh)
-          _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
-          passEpoch
-          -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
-          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 3
-
-          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
-          passEpoch
-          -- AlwaysAbstain vote acts like 'Abstain' vote
-          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
-
-          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
-          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
-          passEpoch
-          -- AlwaysNoConfidence vote acts like 'Yes' for NoConfidence actions
-          calculateDRepAcceptedRatio noConfidenceGovId `shouldReturn` 2 % 2
-
-        it "AlwaysNoConfidence" $ whenPostBootstrap $ do
-          (drep1, _, committeeGovId) <- electBasicCommittee
-          initialMembers <- getCommitteeMembers
-
-          -- drep2 won't explicitly vote, but eventually delegate to AlwaysNoConfidence
-          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
-
-          -- we register another drep with the same stake as drep1, which will vote No -
-          -- in order to make it necessary to redelegate to AlwaysNoConfidence,
-          -- rather than just unregister
-          (drep3, _, _) <- setupSingleDRep 1_000_000
-          (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-
-          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
-          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
-          submitVote_ VoteNo (DRepVoter drep3) noConfidenceGovId
-          submitYesVote_ (StakePoolVoter spoC) noConfidenceGovId
-          passEpoch
-          -- drep1 doesn't have enough stake to enact NoConfidence
-          isDRepAccepted noConfidenceGovId `shouldReturn` False
-          passEpoch
-          getCommitteeMembers `shouldReturn` initialMembers
-
-          -- drep2 unregisters, but NoConfidence still doesn't pass, because there's a tie between drep1 and drep3
-          unRegisterDRep drep2
-          passEpoch
-          isDRepAccepted noConfidenceGovId `shouldReturn` False
-
-          _ <- delegateToDRep drep2Staking zero DRepAlwaysNoConfidence
-          passEpoch
-          isDRepAccepted noConfidenceGovId `shouldReturn` True
-          passEpoch
-          getCommitteeMembers `shouldReturn` mempty
-        it "AlwaysAbstain" $ whenPostBootstrap $ do
-          let getTreasury = getsNES treasuryL
-
-          disableTreasuryExpansion
-          donateToTreasury $ Coin 5_000_000
-
-          (drep1, comMember, _) <- electBasicCommittee
-          initialTreasury <- getTreasury
-
-          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
-
-          rewardAccount <- registerRewardAccount
-          govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
-
-          submitYesVote_ (CommitteeVoter comMember) govId
-          submitYesVote_ (DRepVoter drep1) govId
-          submitVote_ VoteNo (DRepVoter drep2) govId
-          passEpoch
-          -- drep1 doesn't have enough stake to enact the withdrawals
-          isDRepAccepted govId `shouldReturn` False
-          passEpoch
-          getTreasury `shouldReturn` initialTreasury
-
-          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
-
-          passEpoch
-          -- the delegation turns the No vote into an Abstain, enough to pass the action
-          isDRepAccepted govId `shouldReturn` True
-          passEpoch
-          getTreasury `shouldReturn` zero
-
         it "DRepAlwaysNoConfidence is sufficient to pass NoConfidence" $ whenPostBootstrap $ do
           modifyPParams $ \pp ->
             pp
@@ -924,9 +757,8 @@ votingSpec =
               & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
               & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
-          kh <- freshKeyHash
-          _ <- registerStakeCredential (KeyHashObj kh)
-          _ <- delegateToDRep (KeyHashObj kh) (Coin 300) DRepAlwaysNoConfidence
+          cred <- KeyHashObj <$> freshKeyHash
+          void $ regDelegToDRep cred (Coin 300) DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
           logAcceptedRatio noConfidence
@@ -1101,61 +933,6 @@ votingSpec =
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
               spoRewardAccount
               >>= submitProposal_
-            passNEpochs 2
-            -- The same vote should now successfully ratify the proposal
-            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-          it "After switching delegations" $ whenPostBootstrap $ do
-            -- Only modify the applicable thresholds
-            modifyPParams $ \pp ->
-              pp
-                & ppPoolVotingThresholdsL
-                  .~ def
-                    { pvtCommitteeNormal = 51 %! 100
-                    , pvtCommitteeNoConfidence = 51 %! 100
-                    }
-                & ppDRepVotingThresholdsL
-                  .~ def
-                    { dvtCommitteeNormal = 0 %! 1
-                    , dvtCommitteeNoConfidence = 0 %! 1
-                    }
-                & ppGovActionDepositL .~ Coin 1_000_000
-            -- Setup Pool delegation #1
-            (poolKH1, stakingC1) <- setupPoolWithoutStake
-            -- Setup Pool delegation #2
-            (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
-            -- Setup Pool delegation #3
-            (_poolKH3, stakingC3) <- setupPoolWithoutStake
-            -- Make a note of the reward accounts for the delegators to SPOs #1 and #3
-            spoRewardAccount1 <- getRewardAccountFor stakingC1
-            spoRewardAccount3 <- getRewardAccountFor stakingC3
-            -- Submit committee proposals
-            -- The proposal deposits come from the root UTxO
-            -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
-            cc <- KeyHashObj <$> freshKeyHash
-            curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
-            addCCGaid <-
-              mkProposalWithRewardAccount
-                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
-                spoRewardAccount1
-                >>= submitProposal
-            cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            mkProposalWithRewardAccount
-              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
-              spoRewardAccount3
-              >>= submitProposal_
-            -- Submit a yes vote from SPO #1 and a no vote from SPO #2
-            submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
-            submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
-            passNEpochs 2
-            -- The vote should not result in a ratification
-            getLastEnactedCommittee `shouldReturn` SNothing
-            submitTxAnn_ "Switch the delegation from SPO #3 to SPO #1" $
-              mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL .~ SSeq.fromList [mkDelegTxCert stakingC3 (DelegStake poolKH1)]
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -1351,138 +1128,9 @@ votingSpec =
 
           getLastEnactedCommittee `shouldReturn` SNothing
 
-        it "HardForkInitiation - default vote is No" $ whenPostBootstrap $ do
-          curProtVer <- getProtVer
-          nextMajorVersion <- succVersion $ pvMajor curProtVer
-          let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
-
-          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
-          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
-          hotCs <- registerInitialCommittee
-          (drep, _, _) <- setupSingleDRep 1_000_000
-
-          gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
-
-          impAnn
-            ( "No SPO has voted so far and the default vote is no:\n"
-                <> "YES: 0; ABSTAIN: 0; NO (default): 2 -> YES / total - ABSTAIN == 0 % 2"
-            )
-            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
-
-          submitYesVoteCCs_ hotCs gid
-          submitYesVote_ (DRepVoter drep) gid
-
-          passNEpochs 2
-
-          getLastEnactedHardForkInitiation `shouldReturn` SNothing
-
-          impAnn
-            ( "One SPO voted yes and the default vote is no:\n"
-                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
-            )
-            $ do
-              submitVote_ VoteYes (StakePoolVoter spoC2) gid
-              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
-
-          impAnn
-            ( "Although the other SPO delegated its reward account to an AlwaysAbstain DRep,\n"
-                <> "since this is a HardForkInitiation action, their default vote remains no regardless:\n"
-                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
-            )
-            $ do
-              delegateSPORewardAddressToDRep_ spoC1 (Coin 1_000_000) DRepAlwaysAbstain
-              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
-
-          impAnn
-            ( "One SPO voted yes, the other explicitly abstained and the default vote is no:\n"
-                <> "YES: 1; ABSTAIN: 1; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
-            )
-            $ do
-              submitVote_ Abstain (StakePoolVoter spoC1) gid
-              calculatePoolAcceptedRatio gid `shouldReturn` 1
-
-          passNEpochs 2
-
-          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
-
-        it "Reward account delegated to AlwaysNoConfidence" $ whenPostBootstrap $ do
-          (spoC, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
-          (drep, _, _) <- setupSingleDRep 1_000_000
-
-          gid <- submitGovAction $ NoConfidence SNothing
-
-          impAnn
-            ( "No SPO has voted so far and the default vote is no:\n"
-                <> "YES: 0; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 0 % 1"
-            )
-            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
-
-          submitYesVote_ (DRepVoter drep) gid
-
-          passNEpochs 2
-
-          impAnn "Only the DReps accepted the proposal so far, so it should not be enacted yet" $
-            getCommitteeMembers `shouldNotReturn` mempty
-
-          impAnn
-            ( "The SPO delegated its reward account to an AlwaysNoConfidence DRep,\n"
-                <> "since this is a NoConfidence action, their default vote will now count as a yes:\n"
-                <> "YES: 1; ABSTAIN: 0; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
-            )
-            $ do
-              delegateSPORewardAddressToDRep_ spoC (Coin 1_000_000) DRepAlwaysNoConfidence
-              calculatePoolAcceptedRatio gid `shouldReturn` 1
-
-          passNEpochs 2
-
-          getCommitteeMembers `shouldReturn` mempty
-
-        it "Reward account delegated to AlwaysAbstain" $ whenPostBootstrap $ do
-          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
-          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
-          (drep, _, _) <- setupSingleDRep 1_000_000
-
-          gid <- submitGovAction $ NoConfidence SNothing
-
-          impAnn
-            ( "No SPO has voted so far and the default vote is no:\n"
-                <> "YES: 0; ABSTAIN: 0; NO (default): 2 -> YES / total - ABSTAIN == 0 % 2"
-            )
-            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
-
-          submitYesVote_ (DRepVoter drep) gid
-
-          passNEpochs 2
-
-          impAnn "Only the DReps accepted the proposal so far, so it should not be enacted yet" $
-            getCommitteeMembers `shouldNotReturn` mempty
-
-          impAnn
-            ( "One SPO voted yes and the default vote is no:\n"
-                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
-            )
-            $ do
-              submitYesVote_ (StakePoolVoter spoC2) gid
-              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
-
-          impAnn
-            ( "One SPO voted yes and the other SPO delegated its reward account to an AlwaysAbstain DRep:\n"
-                <> "YES: 1; ABSTAIN: 1; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
-            )
-            $ do
-              delegateSPORewardAddressToDRep_ spoC1 (Coin 1_000_000) DRepAlwaysAbstain
-              calculatePoolAcceptedRatio gid `shouldReturn` 1
-
-          passNEpochs 2
-
-          getCommitteeMembers `shouldReturn` mempty
-
 delayingActionsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 delayingActionsSpec =
   -- All tests below are relying on submitting constitution of committe-update proposals, which are disallowed during bootstrap,
@@ -1699,10 +1347,7 @@ delayingActionsSpec =
 
 committeeMaxTermLengthSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -1901,3 +1546,342 @@ committeeMaxTermLengthSpec =
       -- is now enacted since the CCs were active during the check
       getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
       getProtVer `shouldReturn` nextProtVer
+
+conwayEraSpecificSpec ::
+  forall era.
+  (HasCallStack, ConwayEraImp era, ShelleyEraTxCert era) =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwayEraSpecificSpec = do
+  describe "Voting" $ do
+    describe "Active voting stake" $ do
+      describe "DRep" $ do
+        describe "Proposal deposits contribute to active voting stake" $ do
+          it "After switching delegations" $ whenPostBootstrap $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ ppGovActionDepositL .~ Coin 1_000_000
+            -- Setup DRep delegation without stake #1
+            (drepKH1, stakingKH1) <- setupDRepWithoutStake
+            -- Setup DRep delegation #2
+            (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+            -- Setup DRep delegation #3
+            (_drepKH3, stakingKH3) <- setupDRepWithoutStake
+            (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+            -- Make a note of the reward accounts for the delegators to DReps #1 and #3
+            dRepRewardAccount1 <- getRewardAccountFor $ KeyHashObj stakingKH1
+            dRepRewardAccount3 <- getRewardAccountFor $ KeyHashObj stakingKH3
+            -- Submit committee proposals
+            -- The proposal deposits comes from the root UTxO
+            -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
+            cc <- KeyHashObj <$> freshKeyHash
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            addCCGaid <-
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                dRepRewardAccount1
+                >>= submitProposal
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              dRepRewardAccount3
+              >>= submitProposal_
+            -- Submit the vote from DRep #1
+            submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+            submitYesVote_ (StakePoolVoter spoC) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            isDRepAccepted addCCGaid `shouldReturn` False
+            getLastEnactedCommittee `shouldReturn` SNothing
+            -- Switch the delegation from DRep #3 to DRep #1
+            submitTxAnn_ "Switch the delegation from DRep #3 to DRep #1" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ SSeq.fromList
+                    [ DelegTxCert
+                        (KeyHashObj stakingKH3)
+                        (DelegVote (DRepCredential $ KeyHashObj drepKH1))
+                    ]
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+
+      describe "Predefined DReps" $ do
+        it "acceptedRatio with default DReps" $ whenPostBootstrap $ do
+          (drep1, _, committeeGovId) <- electBasicCommittee
+          (_, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 1000)
+          submitYesVote_ (DRepVoter drep1) paramChangeGovId
+
+          passEpoch
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
+
+          kh <- freshKeyHash
+          _ <- registerStakeCredentialWithDeposit (KeyHashObj kh)
+          _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
+          passEpoch
+          -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 3
+
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
+          passEpoch
+          -- AlwaysAbstain vote acts like 'Abstain' vote
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
+
+          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
+          passEpoch
+          -- AlwaysNoConfidence vote acts like 'Yes' for NoConfidence actions
+          calculateDRepAcceptedRatio noConfidenceGovId `shouldReturn` 2 % 2
+
+        it "AlwaysNoConfidence" $ whenPostBootstrap $ do
+          (drep1, _, committeeGovId) <- electBasicCommittee
+          initialMembers <- getCommitteeMembers
+
+          -- drep2 won't explicitly vote, but eventually delegate to AlwaysNoConfidence
+          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          -- we register another drep with the same stake as drep1, which will vote No -
+          -- in order to make it necessary to redelegate to AlwaysNoConfidence,
+          -- rather than just unregister
+          (drep3, _, _) <- setupSingleDRep 1_000_000
+          (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+
+          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
+          submitVote_ VoteNo (DRepVoter drep3) noConfidenceGovId
+          submitYesVote_ (StakePoolVoter spoC) noConfidenceGovId
+          passEpoch
+          -- drep1 doesn't have enough stake to enact NoConfidence
+          isDRepAccepted noConfidenceGovId `shouldReturn` False
+          passEpoch
+          getCommitteeMembers `shouldReturn` initialMembers
+
+          -- drep2 unregisters, but NoConfidence still doesn't pass, because there's a tie between drep1 and drep3
+          unRegisterDRep drep2
+          passEpoch
+          isDRepAccepted noConfidenceGovId `shouldReturn` False
+
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysNoConfidence
+          passEpoch
+          isDRepAccepted noConfidenceGovId `shouldReturn` True
+          passEpoch
+          getCommitteeMembers `shouldReturn` mempty
+        it "AlwaysAbstain" $ whenPostBootstrap $ do
+          let getTreasury = getsNES treasuryL
+
+          disableTreasuryExpansion
+          donateToTreasury $ Coin 5_000_000
+
+          (drep1, comMember, _) <- electBasicCommittee
+          initialTreasury <- getTreasury
+
+          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          rewardAccount <- registerRewardAccountWithDeposit
+          govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
+
+          submitYesVote_ (CommitteeVoter comMember) govId
+          submitYesVote_ (DRepVoter drep1) govId
+          submitVote_ VoteNo (DRepVoter drep2) govId
+          passEpoch
+          -- drep1 doesn't have enough stake to enact the withdrawals
+          isDRepAccepted govId `shouldReturn` False
+          passEpoch
+          getTreasury `shouldReturn` initialTreasury
+
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
+
+          passEpoch
+          -- the delegation turns the No vote into an Abstain, enough to pass the action
+          isDRepAccepted govId `shouldReturn` True
+          passEpoch
+          getTreasury `shouldReturn` zero
+
+      describe "StakePool" $ do
+        describe "Proposal deposits contribute to active voting stake" $ do
+          it "After switching delegations" $ whenPostBootstrap $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ \pp ->
+              pp
+                & ppPoolVotingThresholdsL
+                  .~ def
+                    { pvtCommitteeNormal = 51 %! 100
+                    , pvtCommitteeNoConfidence = 51 %! 100
+                    }
+                & ppDRepVotingThresholdsL
+                  .~ def
+                    { dvtCommitteeNormal = 0 %! 1
+                    , dvtCommitteeNoConfidence = 0 %! 1
+                    }
+                & ppGovActionDepositL .~ Coin 1_000_000
+            -- Setup Pool delegation #1
+            (poolKH1, stakingC1) <- setupPoolWithoutStake
+            -- Setup Pool delegation #2
+            (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+            -- Setup Pool delegation #3
+            (_poolKH3, stakingC3) <- setupPoolWithoutStake
+            -- Make a note of the reward accounts for the delegators to SPOs #1 and #3
+            spoRewardAccount1 <- getRewardAccountFor stakingC1
+            spoRewardAccount3 <- getRewardAccountFor stakingC3
+            -- Submit committee proposals
+            -- The proposal deposits come from the root UTxO
+            -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
+            cc <- KeyHashObj <$> freshKeyHash
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            addCCGaid <-
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                spoRewardAccount1
+                >>= submitProposal
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              spoRewardAccount3
+              >>= submitProposal_
+            -- Submit a yes vote from SPO #1 and a no vote from SPO #2
+            submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+            submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            getLastEnactedCommittee `shouldReturn` SNothing
+            submitTxAnn_ "Switch the delegation from SPO #3 to SPO #1" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ SSeq.fromList [mkDelegTxCert stakingC3 (DelegStake poolKH1)]
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+    describe "SPO default votes" $ do
+      describe "After bootstrap phase" $ do
+        it "HardForkInitiation - default vote is No" $ whenPostBootstrap $ do
+          curProtVer <- getProtVer
+          nextMajorVersion <- succVersion $ pvMajor curProtVer
+          let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+
+          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          hotCs <- registerInitialCommittee
+          (drep, _, _) <- setupSingleDRep 1_000_000
+
+          gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+          impAnn
+            ( "No SPO has voted so far and the default vote is no:\n"
+                <> "YES: 0; ABSTAIN: 0; NO (default): 2 -> YES / total - ABSTAIN == 0 % 2"
+            )
+            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
+
+          submitYesVoteCCs_ hotCs gid
+          submitYesVote_ (DRepVoter drep) gid
+
+          passNEpochs 2
+
+          getLastEnactedHardForkInitiation `shouldReturn` SNothing
+
+          impAnn
+            ( "One SPO voted yes and the default vote is no:\n"
+                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
+            )
+            $ do
+              submitVote_ VoteYes (StakePoolVoter spoC2) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
+
+          impAnn
+            ( "Although the other SPO delegated its reward account to an AlwaysAbstain DRep,\n"
+                <> "since this is a HardForkInitiation action, their default vote remains no regardless:\n"
+                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
+            )
+            $ do
+              delegateSPORewardAddressToDRep_ spoC1 (Coin 1_000_000) DRepAlwaysAbstain
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
+
+          impAnn
+            ( "One SPO voted yes, the other explicitly abstained and the default vote is no:\n"
+                <> "YES: 1; ABSTAIN: 1; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
+            )
+            $ do
+              submitVote_ Abstain (StakePoolVoter spoC1) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` 1
+
+          passNEpochs 2
+
+          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
+
+        it "Reward account delegated to AlwaysNoConfidence" $ whenPostBootstrap $ do
+          (spoC, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (drep, _, _) <- setupSingleDRep 1_000_000
+
+          gid <- submitGovAction $ NoConfidence SNothing
+
+          impAnn
+            ( "No SPO has voted so far and the default vote is no:\n"
+                <> "YES: 0; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 0 % 1"
+            )
+            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
+
+          submitYesVote_ (DRepVoter drep) gid
+
+          passNEpochs 2
+
+          impAnn "Only the DReps accepted the proposal so far, so it should not be enacted yet" $
+            getCommitteeMembers `shouldNotReturn` mempty
+
+          impAnn
+            ( "The SPO delegated its reward account to an AlwaysNoConfidence DRep,\n"
+                <> "since this is a NoConfidence action, their default vote will now count as a yes:\n"
+                <> "YES: 1; ABSTAIN: 0; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
+            )
+            $ do
+              delegateSPORewardAddressToDRep_ spoC (Coin 1_000_000) DRepAlwaysNoConfidence
+              calculatePoolAcceptedRatio gid `shouldReturn` 1
+
+          passNEpochs 2
+
+          getCommitteeMembers `shouldReturn` mempty
+
+        it "Reward account delegated to AlwaysAbstain" $ whenPostBootstrap $ do
+          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (drep, _, _) <- setupSingleDRep 1_000_000
+
+          gid <- submitGovAction $ NoConfidence SNothing
+
+          impAnn
+            ( "No SPO has voted so far and the default vote is no:\n"
+                <> "YES: 0; ABSTAIN: 0; NO (default): 2 -> YES / total - ABSTAIN == 0 % 2"
+            )
+            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
+
+          submitYesVote_ (DRepVoter drep) gid
+
+          passNEpochs 2
+
+          impAnn "Only the DReps accepted the proposal so far, so it should not be enacted yet" $
+            getCommitteeMembers `shouldNotReturn` mempty
+
+          impAnn
+            ( "One SPO voted yes and the default vote is no:\n"
+                <> "YES: 1; ABSTAIN: 0; NO (default): 1 -> YES / total - ABSTAIN == 1 % 2"
+            )
+            $ do
+              submitYesVote_ (StakePoolVoter spoC2) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
+
+          impAnn
+            ( "One SPO voted yes and the other SPO delegated its reward account to an AlwaysAbstain DRep:\n"
+                <> "YES: 1; ABSTAIN: 1; NO (default): 0 -> YES / total - ABSTAIN == 1 % 1"
+            )
+            $ do
+              delegateSPORewardAddressToDRep_ spoC1 (Coin 1_000_000) DRepAlwaysAbstain
+              calculatePoolAcceptedRatio gid `shouldReturn` 1
+
+          passNEpochs 2
+
+          getCommitteeMembers `shouldReturn` mempty
