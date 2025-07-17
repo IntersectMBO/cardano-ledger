@@ -52,6 +52,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   updateDRep,
   delegateToDRep,
   setupSingleDRep,
+  setupSingleDRepWith,
   setupDRepWithoutStake,
   setupPoolWithStake,
   setupPoolWithoutStake,
@@ -447,16 +448,32 @@ setupSingleDRep ::
   ImpTestM era (Credential 'DRepRole, Credential 'Staking, KeyPair 'Payment)
 setupSingleDRep stake = do
   drepKH <- registerDRep
+  (delegatorKH, spendingKP) <- setupSingleDRepWith (Coin stake) (DRepCredential (KeyHashObj drepKH))
+  pure (KeyHashObj drepKH, delegatorKH, spendingKP)
+
+-- TODO: rename
+setupSingleDRepWith ::
+  ConwayEraImp era =>
+  Coin ->
+  DRep ->
+  ImpTestM era (Credential 'Staking, KeyPair 'Payment)
+setupSingleDRepWith stake dRep = do
   delegatorKH <- freshKeyHash
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  (_, spendingKP) <- freshKeyPair
   let tx =
         mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL
+            .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP (KeyHashObj delegatorKH)) (inject stake))
           & bodyTxL . certsTxBodyL
-            .~ SSeq.fromList [RegDepositTxCert (KeyHashObj delegatorKH) deposit]
+            .~ SSeq.fromList
+              [ RegDepositDelegTxCert
+                  (KeyHashObj delegatorKH)
+                  (DelegVote dRep)
+                  deposit
+              ]
   submitTx_ tx
-  spendingKP <-
-    delegateToDRep (KeyHashObj delegatorKH) (Coin stake) (DRepCredential (KeyHashObj drepKH))
-  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
+  pure (KeyHashObj delegatorKH, spendingKP)
 
 delegateToDRep ::
   ConwayEraImp era =>
