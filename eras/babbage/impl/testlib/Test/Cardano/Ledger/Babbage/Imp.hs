@@ -19,7 +19,7 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
+  -- ShelleyDelegPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
@@ -34,9 +34,8 @@ spec ::
   ( AlonzoEraImp era
   , BabbageEraTxBody era
   , EraPlutusTxInfo 'PlutusV2 era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
+  , -- , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+    InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
