@@ -96,6 +96,7 @@
 
 ### `testlib`
 
+* Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`
 * Generalised the following helpers and thus changed their constraints to `ConwayEraImp`:
   * `setupPoolWithStake`
