@@ -94,24 +94,9 @@
 
 * Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`
-* Hoisted `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:
-  * `trySubmitGovActions`
-  * `mkProposal`
-  * `submitGovAction_`
-  * `submitGovActions`
-  * `submitTreasuryWithdrawals`
-  * `enactTreasuryWithdrawals`
-  * `submitParameterChange`
-  * `submitFailingGovAction`
-  * `submitCommitteeElection`
-  * `electBasicCommittee`
-  * `submitGovActionForest`
-  * `mkConstitutionProposal`
-  * `submitConstitution`
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
   * `genUnRegTxCert`
   * `genRegTxCert`
-  * `setupPoolWithoutStake`
 * Added `registerPoolWithDeposit`
 * Added `registerStakeCredentialWithDeposit`
 * Added `Examples` module with `ledgerExamples`
