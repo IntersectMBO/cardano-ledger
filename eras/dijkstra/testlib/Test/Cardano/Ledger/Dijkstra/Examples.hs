@@ -88,7 +88,7 @@ exampleTxBodyDijkstra =
     )
     (SJust $ mkSized (eraProtVerHigh @DijkstraEra) exampleCollateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    exampleConwayCerts -- txcerts
+    exampleConwayCerts
     ( Withdrawals $
         Map.singleton
           (RewardAccount Testnet (keyToCredential exampleStakeKey))

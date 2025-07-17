@@ -71,8 +71,7 @@ exampleAllegraTxBody value =
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
     auxiliaryDataHash :: TxAuxDataHash
-    auxiliaryDataHash =
-      TxAuxDataHash $ mkDummySafeHash 30
+    auxiliaryDataHash = TxAuxDataHash $ mkDummySafeHash 30
 
 exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =
@@ -93,4 +92,5 @@ exampleTimelock =
 
 exampleAllegraTxAuxData ::
   (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
-exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])
+exampleAllegraTxAuxData =
+  AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

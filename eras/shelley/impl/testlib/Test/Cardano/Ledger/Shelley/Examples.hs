@@ -312,18 +312,6 @@ testShelleyGenesis =
     , sgStaking = emptyGenesisStaking
     }
 
-mkWitnessesPreAlonzo ::
-  EraTx era =>
-  Proxy era ->
-  TxBody era ->
-  [KeyPair 'Witness] ->
-  ShelleyTxWits era
-mkWitnessesPreAlonzo _ txBody keyPairWits =
-  mempty
-    { addrWits =
-        mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
-    }
-
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
@@ -426,6 +414,18 @@ exampleVrfVerKeyHash = VRFVerKeyHash "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652
 
 exampleRewardAccount :: RewardAccount
 exampleRewardAccount = RewardAccount Testnet (keyToCredential exampleStakeKey)
+
+mkWitnessesPreAlonzo ::
+  EraTx era =>
+  Proxy era ->
+  TxBody era ->
+  [KeyPair 'Witness] ->
+  ShelleyTxWits era
+mkWitnessesPreAlonzo _ txBody keyPairWits =
+  mempty
+    { addrWits =
+        mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
+    }
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
 -- crypto:
