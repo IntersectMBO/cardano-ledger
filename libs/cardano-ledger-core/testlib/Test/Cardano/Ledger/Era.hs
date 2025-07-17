@@ -26,7 +26,7 @@ class
   , EraTxWits era
   , EraScript era
   , EraPParams era
-  , EraSegWits era
+  , EraBlockBody era
   , EraTxCert era
   , -- State
     EraCertState era

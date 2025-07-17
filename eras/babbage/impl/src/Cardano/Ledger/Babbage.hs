@@ -17,6 +17,7 @@ module Cardano.Ledger.Babbage (
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
+import Cardano.Ledger.Babbage.BlockBody ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.State ()

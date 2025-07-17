@@ -14,6 +14,7 @@ module Cardano.Ledger.Conway (
 ) where
 
 import Cardano.Ledger.Babbage.TxBody ()
+import Cardano.Ledger.Conway.BlockBody ()
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
   hardforkConwayBootstrapPhase,

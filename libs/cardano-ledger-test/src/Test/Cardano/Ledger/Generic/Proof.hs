@@ -268,7 +268,7 @@ postConway = [Some Conway]
 -- | Specialize ('action' :: (constraint era => t)) to all known 'era', because
 -- we know (constraint era) holds for all known era. In order for this to work
 -- it is best to type apply 'specialize' to a concrete constraint. So a call site
--- looks like '(specialize @EraSegWits proof action). This way the constraint does
+-- looks like '(specialize @EraBlockBody proof action). This way the constraint does
 -- not percolate upwards, past the call site of 'action'
 specialize ::
   forall constraint era t.

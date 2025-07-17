@@ -76,7 +76,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
-import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
@@ -141,7 +141,7 @@ import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as Ex
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), PreAlonzo, VRFKeyPair (..))
+import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
@@ -302,9 +302,7 @@ testHeaderHash =
 
 testBHB ::
   forall era.
-  ( EraTx era
-  , PreAlonzo era
-  ) =>
+  EraBlockBody era =>
   BHBody MockCrypto
 testBHB =
   BHBody
@@ -328,7 +326,7 @@ testBHB =
           )
           (vrfSignKey testVRF)
     , bsize = 0
-    , bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty
+    , bhash = hashBlockBody $ mkBasicBlockBody @era
     , bheaderOCert =
         OCert
           (kesVerKey testKESKeys)
@@ -343,9 +341,7 @@ testBHB =
 
 testBHBSigTokens ::
   forall era.
-  ( EraTx era
-  , PreAlonzo era
-  ) =>
+  EraBlockBody era =>
   Tokens ->
   Tokens
 testBHBSigTokens = e
@@ -894,7 +890,7 @@ tests =
               (vrfSignKey testVRF)
           size = 0
           blockNo = BlockNo 44
-          bbhash = bbHash @ShelleyEra $ ShelleyTxSeq StrictSeq.empty
+          bbhash = hashBlockBody $ mkBasicBlockBody @ShelleyEra
           ocert :: OCert MockCrypto
           ocert =
             OCert
@@ -972,7 +968,7 @@ tests =
       let sig :: (SignedKES (KES MockCrypto) (BHBody MockCrypto))
           sig = unsoundPureSignedKES () 0 (testBHB @ShelleyEra) (kesSignKey testKESKeys)
           bh = BHeader (testBHB @ShelleyEra) sig
-          txns = ShelleyTxSeq StrictSeq.Empty
+          txns = mkBasicBlockBody
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
@@ -1033,7 +1029,7 @@ tests =
             mkBasicTx txb5
               & witsTxL @ShelleyEra .~ (mkBasicTxWits @ShelleyEra & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
               & auxDataTxL @ShelleyEra .~ SJust tx5MD
-          txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
+          txns = ShelleyBlockBody $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"

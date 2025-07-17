@@ -159,7 +159,7 @@ infoRetire deposits keyhash = showKeyHash keyhash ++ extra
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
   forall era.
-  ( EraSegWits era
+  ( EraBlockBody era
   , GovState era ~ ShelleyGovState era
   , EraGov era
   , EraCertState era
@@ -269,7 +269,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = toList $ (fromTxSeq @era . bbody) signal
+    txs' = toList $ bbody signal ^. txSeqBlockBodyL
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =
@@ -567,14 +567,14 @@ withdrawals ::
   EraGen era =>
   Block (BHeader MockCrypto) era ->
   Coin
-withdrawals (Block _ txseq) =
+withdrawals (Block _ blockBody) =
   F.foldl'
     ( \c tx ->
         let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ fromTxSeq @era txseq
+    $ blockBody ^. txSeqBlockBodyL
 
 txFees ::
   forall era.

@@ -30,10 +30,6 @@ import Cardano.Ledger.Alonzo.Tx (
   sizeAlonzoTxF,
   witsAlonzoTxL,
  )
-import Cardano.Ledger.Alonzo.TxSeq (
-  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  hashAlonzoTxSeq,
- )
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
@@ -140,13 +136,6 @@ tierRefScriptFee multiplier sizeIncrement
 instance AlonzoEraTx ConwayEra where
   isValidTxL = conwayTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
-
-instance EraSegWits ConwayEra where
-  type TxSeq ConwayEra = AlonzoTxSeq ConwayEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
-  numSegComponents = 4
 
 instance DecCBOR (Annotator (Tx ConwayEra)) where
   decCBOR = fmap MkConwayTx <$> decCBOR

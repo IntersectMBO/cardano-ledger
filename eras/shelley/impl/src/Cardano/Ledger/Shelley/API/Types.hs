@@ -65,7 +65,7 @@ import Cardano.Ledger.PoolParams as X (
   PoolParams (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
+import Cardano.Ledger.Shelley.BlockBody as X
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
   AccountState,

@@ -27,6 +27,8 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.Alonzo
+    Cardano.Ledger.Alonzo.BlockBody
+    Cardano.Ledger.Alonzo.BlockBody.Internal
     Cardano.Ledger.Alonzo.Core
     Cardano.Ledger.Alonzo.Genesis
     Cardano.Ledger.Alonzo.PParams
@@ -43,7 +45,6 @@ library
     Cardano.Ledger.Alonzo.TxBody
     Cardano.Ledger.Alonzo.TxOut
     Cardano.Ledger.Alonzo.TxSeq
-    Cardano.Ledger.Alonzo.TxSeq.Internal
     Cardano.Ledger.Alonzo.TxWits
     Cardano.Ledger.Alonzo.UTxO
 

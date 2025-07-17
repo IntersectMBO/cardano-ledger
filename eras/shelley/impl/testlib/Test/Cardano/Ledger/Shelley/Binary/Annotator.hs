@@ -21,7 +21,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
-import Cardano.Ledger.Shelley.BlockChain
+import Cardano.Ledger.Shelley.BlockBody.Internal
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
@@ -42,7 +42,7 @@ instance
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   ) =>
-  DecCBOR (ShelleyTxSeq era)
+  DecCBOR (ShelleyBlockBody era)
   where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
@@ -71,7 +71,7 @@ instance
         StrictSeq.forceToStrict $
           Seq.zipWith3 mkTx bodies wits (maybeToStrictMaybe <$> auxData)
       hash = hashShelleySegWits bodiesBytes witsBytes auxDataBytes
-    pure $ TxSeq' txs hash bodiesBytes witsBytes auxDataBytes
+    pure $ ShelleyBlockBodyInternal txs hash bodiesBytes witsBytes auxDataBytes
 
 deriving newtype instance DecCBOR (TxBody ShelleyEra)
 
