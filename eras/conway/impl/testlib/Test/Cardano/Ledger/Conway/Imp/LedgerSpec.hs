@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec, conwayEraSpecificSpec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
@@ -47,7 +47,6 @@ import Test.Cardano.Ledger.Plutus.Examples (
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -78,42 +77,15 @@ spec = do
               }
       ]
 
-  it "Withdraw from delegated and non-delegated staking key" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
-    submitAndExpireProposalToMakeReward cred
-    balance <- getBalance cred
-
-    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
-
-    pv <- getProtVer
-    if hardforkConwayBootstrapPhase pv
-      then submitTx_ tx
-      else
-        submitFailingTx
-          tx
-          [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
-    _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
-
   it "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
@@ -128,9 +100,9 @@ spec = do
 
   it "Withdraw and unregister staking credential in the same transaction" $ do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    (_, cred, _) <- setupSingleDRep 1_000_000
+    ra <- getRewardAccountFor cred
+
     Positive newDeposit <- arbitrary
     modifyPParams $ \pp ->
       pp
@@ -140,10 +112,6 @@ spec = do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
-
     let tx =
           mkBasicTx $
             mkBasicTxBody
@@ -151,47 +119,15 @@ spec = do
               & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
     submitTx_ tx
 
-  it "Withdraw from a key delegated to an expired DRep" $ do
-    modifyPParams $ \pp ->
-      pp
-        & ppGovActionLifetimeL .~ EpochInterval 4
-        & ppDRepActivityL .~ EpochInterval 1
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
-    submitAndExpireProposalToMakeReward cred
-    balance <- getBalance cred
-
-    (drep, _, _) <- setupSingleDRep 1_000_000
-
-    -- expire the drep before delegation
-    mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
-    passNEpochs 4
-    isDRepExpired drep `shouldReturn` True
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
-
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              [(ra, balance)]
-
   it "Withdraw from a key delegated to a DRep that expired after delegation" $ do
     modifyPParams $ \pp ->
       pp
         & ppGovActionLifetimeL .~ EpochInterval 4
         & ppDRepActivityL .~ EpochInterval 1
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    (drep, cred, _) <- setupSingleDRep 1_000_000
+    ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
-
-    (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     -- expire the drep after delegation
     mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
@@ -210,7 +146,8 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    ra <- registerStakeCredential cred
+    void $ regDelegToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
+    ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -218,7 +155,6 @@ spec = do
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
-    _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitTx_ $
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
@@ -286,7 +222,7 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
       let
@@ -309,3 +245,63 @@ spec = do
               pure . injectFailure . ConwayMempoolFailure $
                 "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
           withNoFixup $ submitTx_ txFixed
+
+conwayEraSpecificSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwayEraSpecificSpec = do
+  it "Withdraw from delegated and non-delegated staking key" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredentialWithDeposit cred
+    submitAndExpireProposalToMakeReward cred
+    balance <- getBalance cred
+
+    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
+
+    pv <- getProtVer
+    if hardforkConwayBootstrapPhase pv
+      then submitTx_ tx
+      else
+        submitFailingTx
+          tx
+          [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
+    _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
+
+  it "Withdraw from a key delegated to an expired DRep" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppGovActionLifetimeL .~ EpochInterval 4
+        & ppDRepActivityL .~ EpochInterval 1
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredentialWithDeposit cred
+    submitAndExpireProposalToMakeReward cred
+    balance <- getBalance cred
+
+    (drep, _, _) <- setupSingleDRep 1_000_000
+
+    -- expire the drep before delegation
+    mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
+    passNEpochs 4
+    isDRepExpired drep `shouldReturn` True
+
+    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
+
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(ra, balance)]
