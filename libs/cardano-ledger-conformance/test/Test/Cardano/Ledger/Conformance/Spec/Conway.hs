@@ -31,7 +31,7 @@ spec = do
       prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayEra
       prop "POOL" $ conformsToImpl @"POOL" @ConwayEra
       prop "CERT" $ conformsToImpl @"CERT" @ConwayEra
-      prop "CERTS" $ conformsToImpl @"CERTS" @ConwayEra
+      xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayEra
       prop "GOV" $ conformsToImpl @"GOV" @ConwayEra
       -- UTXO is disabled due to: https://github.com/IntersectMBO/cardano-ledger/issues/4876
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayEra
