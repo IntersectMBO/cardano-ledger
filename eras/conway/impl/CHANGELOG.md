@@ -92,6 +92,7 @@
 
 ### `testlib`
 
+* Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`
 * Hoisted `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:
   * `trySubmitGovActions`
