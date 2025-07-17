@@ -134,6 +134,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getCommittee,
   registerStakeCredentialWithDeposit,
   registerPoolWithDeposit,
+  registerRewardAccountWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -1854,3 +1855,10 @@ registerPoolWithDeposit ::
 registerPoolWithDeposit khPool =
   (freshKeyHash >>= registerStakeCredentialWithDeposit . KeyHashObj)
     >>= registerPoolWithRewardAccount khPool
+
+registerRewardAccountWithDeposit ::
+  forall era.
+  ConwayEraImp era =>
+  ImpTestM era RewardAccount
+registerRewardAccountWithDeposit = do
+  freshKeyHash >>= registerStakeCredentialWithDeposit . KeyHashObj
