@@ -58,7 +58,7 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "BodyRefScriptsSizeTooBig" $ do
-    Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
+    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
     let scriptSize = originalBytesSize plutusScript
 
     -- Determine a number of transactions and a number of times the reference script

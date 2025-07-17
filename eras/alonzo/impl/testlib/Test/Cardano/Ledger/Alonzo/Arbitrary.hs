@@ -85,9 +85,9 @@ import Cardano.Ledger.Plutus.Language (
   Plutus (..),
   PlutusLanguage,
   asSLanguage,
-  plutusLanguage,
  )
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
+import Control.Monad.Trans.Fail (runFail)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE (toList)
@@ -464,12 +464,7 @@ mkPlutusScript' ::
   (HasCallStack, AlonzoEraScript era, PlutusLanguage l) =>
   Plutus l ->
   Script era
-mkPlutusScript' plutus =
-  case mkPlutusScript plutus of
-    Nothing ->
-      error $
-        "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
-    Just plutusScript -> fromPlutusScript plutusScript
+mkPlutusScript' = either error fromPlutusScript . runFail . mkPlutusScript
 {-# DEPRECATED mkPlutusScript' "In favor of `fromPlutusScript` . `mkSupportedPlutusScript`" #-}
 
 instance Arbitrary (TransitionConfig AlonzoEra) where

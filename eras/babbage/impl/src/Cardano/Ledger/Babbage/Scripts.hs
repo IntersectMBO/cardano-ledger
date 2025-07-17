@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   PlutusScript (..),
   alonzoScriptPrefixTag,
+  eraUnsupportedLanguage,
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Era
@@ -63,9 +64,9 @@ instance AlonzoEraScript BabbageEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ BabbagePlutusV1 plutus
-      SPlutusV2 -> Just $ BabbagePlutusV2 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ BabbagePlutusV1 plutus
+      SPlutusV2 -> pure $ BabbagePlutusV2 plutus
+      slang -> eraUnsupportedLanguage @BabbageEra slang
 
   withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
   withPlutusScript (BabbagePlutusV2 plutus) f = f plutus

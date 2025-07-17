@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `mkInlineDatum`, `mkHashedDatum`
 * Rename `EraSegWits` to `EraBlockBody`. #5156
   * Rename `TxSeq` to `BlockBody`
   * Add `mkBasicBlockBody`

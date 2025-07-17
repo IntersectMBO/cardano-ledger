@@ -56,7 +56,7 @@ spec = do
   it "TxRefScriptsSizeTooBig" $ do
     -- we use here the largest script we currently have as many times as necessary to
     -- trigger the predicate failure
-    Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV3
+    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV3
     let script :: Script era
         script = fromPlutusScript plutusScript
         size = originalBytesSize script

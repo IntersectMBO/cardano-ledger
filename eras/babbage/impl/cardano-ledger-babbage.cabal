@@ -107,7 +107,10 @@ library testlib
     Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
+    Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
+    Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Invalid
+    Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid
     Test.Cardano.Ledger.Babbage.ImpTest
     Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
     Test.Cardano.Ledger.Babbage.TreeDiff

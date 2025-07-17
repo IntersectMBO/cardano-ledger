@@ -119,7 +119,6 @@ import Cardano.Ledger.Plutus.Language (
   PlutusLanguage,
   SLanguage (..),
   plutusBinary,
-  plutusLanguage,
  )
 import Cardano.Ledger.Shelley.TxWits (
   mapTraverseableDecoderA,
@@ -127,13 +126,13 @@ import Cardano.Ledger.Shelley.TxWits (
  )
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
+import Control.Monad.Trans.Fail (runFail)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -569,12 +568,9 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
       toScript ::
         forall l h. PlutusLanguage l => Map.Map h (Plutus l) -> Map.Map h (Script era)
       toScript ps =
-        case traverse (fmap fromPlutusScript . mkPlutusScript) ps of
-          Nothing ->
-            error $
-              "Impossible: Re-constructing unsupported language: "
-                ++ show (plutusLanguage (Proxy @l))
-          Just plutusScripts -> plutusScripts
+        case runFail $ traverse (fmap fromPlutusScript . mkPlutusScript) ps of
+          Left e -> error $ "Impossible: Re-constructing unsupported language: " <> e
+          Right plutusScripts -> plutusScripts
 
 instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
