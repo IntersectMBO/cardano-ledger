@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Change the type of `cppDRepDeposit` to `CompactForm Coin`
+* Add `ppDRepDepositCompactL` and `ppuDRepDepositCompactL`
+* Replace `hkdDRepDepositL` with `hkdDRepDepositCompactL`
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.

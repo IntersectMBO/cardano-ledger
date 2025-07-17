@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (Anchor (..), Committee (..))
@@ -62,7 +62,7 @@ expectedConwayGenesis =
             , DRepState
                 { drepExpiry = EpochNo 1000
                 , drepAnchor = SNothing
-                , drepDeposit = Coin 5000
+                , drepDeposit = CompactCoin 5000
                 , drepDelegs = mempty
                 }
             )
@@ -77,7 +77,7 @@ expectedConwayGenesis =
                         { anchorUrl = fromJust $ textToUrl 99 "example.com"
                         , anchorDataHash = def
                         }
-                , drepDeposit = Coin 6000
+                , drepDeposit = CompactCoin 6000
                 , drepDelegs = mempty
                 }
             )

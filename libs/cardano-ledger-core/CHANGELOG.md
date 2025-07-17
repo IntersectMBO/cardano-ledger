@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Add `drepDepositCompactL`
+* Change the type of `drepDeposit` to `CompactForm Coin`
 * Replaced `hkdPoolDepositL` method with `hkdPoolDepositCompactL`
 * Add `ppPoolDepositCompactL` and `ppuPoolDepositCompactL`
 * Add `standardHashSize` and `standardAddrHashSize`

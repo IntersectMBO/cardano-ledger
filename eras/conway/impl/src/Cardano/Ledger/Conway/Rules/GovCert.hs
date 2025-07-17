@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
@@ -47,6 +48,7 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
+import Cardano.Ledger.Conway.PParams (ppDRepDepositCompactL)
 import Cardano.Ledger.Conway.State (
   ConwayEraCertState (..),
   VState (..),
@@ -192,7 +194,8 @@ conwayGovCertTransition = do
       , cert
       ) <-
     judgmentContext
-  let ppDRepDeposit = cgcePParams ^. ppDRepDepositL
+  let ppDRepDepositCompact = cgcePParams ^. ppDRepDepositCompactL
+      ppDRepDeposit = fromCompact ppDRepDepositCompact
       ppDRepActivity = cgcePParams ^. ppDRepActivityL
       checkAndOverwriteCommitteeMemberState coldCred newMemberState = do
         let VState {vsCommitteeState = CommitteeState csCommitteeCreds} = certState ^. certVStateL
@@ -231,7 +234,7 @@ conwayGovCertTransition = do
                     cgceCurrentEpoch
                     (certState ^. certVStateL . vsNumDormantEpochsL)
               , drepAnchor = mAnchor
-              , drepDeposit = ppDRepDeposit
+              , drepDeposit = ppDRepDepositCompact
               , drepDelegs = mempty
               }
       pure $
@@ -262,18 +265,17 @@ conwayGovCertTransition = do
       pure $
         certState
           & certVStateL . vsDRepsL
-            %~ ( Map.adjust
-                   ( \drepState ->
-                       drepState
-                         & drepExpiryL
-                           .~ computeDRepExpiry
-                             ppDRepActivity
-                             cgceCurrentEpoch
-                             (certState ^. certVStateL . vsNumDormantEpochsL)
-                         & drepAnchorL .~ mAnchor
-                   )
-                   cred
-               )
+            %~ Map.adjust
+              ( \drepState ->
+                  drepState
+                    & drepExpiryL
+                      .~ computeDRepExpiry
+                        ppDRepActivity
+                        cgceCurrentEpoch
+                        (certState ^. certVStateL . vsNumDormantEpochsL)
+                    & drepAnchorL .~ mAnchor
+              )
+              cred
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeHotCredential hotCred
     ConwayResignCommitteeColdKey coldCred anchor ->
