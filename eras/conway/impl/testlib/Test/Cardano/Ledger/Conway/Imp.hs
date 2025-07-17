@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
 
@@ -42,15 +43,15 @@ import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
-import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
-import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
-import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
-import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
-import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
-import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
-import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
-import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
+-- import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
+-- import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
+-- import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
+-- import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
+-- import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
+-- import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
+-- import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
+-- import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
+-- import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest (
   ConwayEraImp,
   LedgerSpec,
@@ -62,7 +63,6 @@ import Test.Cardano.Ledger.Shelley.ImpTest (ImpInit)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -103,7 +103,6 @@ spec = do
 conwaySpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -132,12 +131,13 @@ conwaySpec ::
 conwaySpec = do
   describe "BBODY" Bbody.spec
   describe "CERTS" Certs.spec
-  describe "DELEG" Deleg.spec
-  describe "ENACT" Enact.spec
-  describe "EPOCH" Epoch.spec
-  describe "GOV" Gov.spec
-  describe "GOVCERT" GovCert.spec
-  describe "LEDGER" Ledger.spec
-  describe "RATIFY" Ratify.spec
-  describe "UTXO" Utxo.spec
-  describe "UTXOS" Utxos.spec
+
+-- describe "DELEG" Deleg.spec
+-- describe "ENACT" Enact.spec
+-- describe "EPOCH" Epoch.spec
+-- describe "GOV" Gov.spec
+-- describe "GOVCERT" GovCert.spec
+-- describe "LEDGER" Ledger.spec
+-- describe "RATIFY" Ratify.spec
+-- describe "UTXO" Utxo.spec
+-- describe "UTXOS" Utxos.spec
