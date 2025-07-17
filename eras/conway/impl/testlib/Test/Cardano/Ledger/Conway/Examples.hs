@@ -7,10 +7,7 @@
 
 module Test.Cardano.Ledger.Conway.Examples (
   ledgerExamples,
-  exampleTxConway,
-  exampleTxBodyConway,
   exampleConwayCerts,
-  exampleConwayGenesis,
 ) where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -63,11 +60,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkKeyHash,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep ConwayEra
+ledgerExamples :: LedgerExamples ConwayEra
 ledgerExamples =
   defaultLedgerExamples
     ( ApplyTxError $

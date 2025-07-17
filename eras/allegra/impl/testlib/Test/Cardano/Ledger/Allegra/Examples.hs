@@ -7,9 +7,7 @@
 
 module Test.Cardano.Ledger.Allegra.Examples (
   ledgerExamples,
-  exampleTxAllegra,
   exampleAllegraTxBody,
-  exampleTimelock,
   exampleAllegraTxAuxData,
 ) where
 
@@ -37,18 +35,13 @@ import Test.Cardano.Ledger.Shelley.Examples (
   examplePayKey,
   exampleProposedPPUpdates,
   exampleStakeKey,
-  exampleTx,
   exampleTxIns,
   exampleWithdrawals,
   mkKeyHash,
   mkWitnessesPreAlonzo,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep AllegraEra
+ledgerExamples :: LedgerExamples AllegraEra
 ledgerExamples =
   defaultLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @AllegraEra))
@@ -101,10 +94,3 @@ exampleTimelock =
 exampleAllegraTxAuxData ::
   (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
 exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])
-
-exampleTxAllegra :: Tx AllegraEra
-exampleTxAllegra =
-  exampleTx
-    (mkWitnessesPreAlonzo (Proxy @AllegraEra))
-    (exampleAllegraTxBody exampleCoin)
-    exampleAllegraTxAuxData

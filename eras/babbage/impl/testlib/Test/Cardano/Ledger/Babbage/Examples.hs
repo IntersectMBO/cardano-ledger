@@ -7,8 +7,6 @@
 
 module Test.Cardano.Ledger.Babbage.Examples (
   ledgerExamples,
-  exampleTxBabbage,
-  exampleTxBodyBabbage,
   exampleBabbageNewEpochState,
   exampleCollateralOutput,
 ) where
@@ -61,11 +59,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkKeyHash,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep BabbageEra
+ledgerExamples :: LedgerExamples BabbageEra
 ledgerExamples =
   defaultLedgerExamples
     ( ApplyTxError $

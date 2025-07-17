@@ -7,9 +7,7 @@
 
 module Test.Cardano.Ledger.Mary.Examples (
   ledgerExamples,
-  exampleTxMary,
   exampleMultiAssetValue,
-  exampleMultiAsset,
 ) where
 
 import Cardano.Ledger.Coin
@@ -24,16 +22,11 @@ import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTxAuxData, exampleAll
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples,
   defaultLedgerExamples,
-  exampleTx,
   mkScriptHash,
   mkWitnessesPreAlonzo,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep MaryEra
+ledgerExamples :: LedgerExamples MaryEra
 ledgerExamples =
   defaultLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @MaryEra))
@@ -54,10 +47,3 @@ exampleMultiAsset x =
     policyId = PolicyID $ mkScriptHash x
     couttsCoin :: AssetName
     couttsCoin = AssetName "couttsCoin"
-
-exampleTxMary :: Tx MaryEra
-exampleTxMary =
-  exampleTx
-    (mkWitnessesPreAlonzo (Proxy @MaryEra))
-    (exampleAllegraTxBody (exampleMultiAssetValue 1))
-    exampleAllegraTxAuxData

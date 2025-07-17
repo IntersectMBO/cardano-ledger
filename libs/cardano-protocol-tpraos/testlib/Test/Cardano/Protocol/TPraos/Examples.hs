@@ -1,13 +1,16 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Protocol.TPraos.Examples (
+  LedgerExamplesTPraos (..),
+  ledgerExamplesTPraos,
   exampleBlockHeader,
-  exampleKeys,
-  exampleLedgerChainDepState,
+  exampleChainDepState,
   exampleHashHeader,
 ) where
 
@@ -15,9 +18,11 @@ import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Core (EraSegWits (..), Tx)
-import Cardano.Ledger.Hashes (HASH)
+import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State (EraGov, InstantStake)
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto, VRF)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -25,6 +30,7 @@ import Cardano.Protocol.TPraos.OCert
 import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn
 import Data.Coerce (Coercible, coerce)
+import Data.Functor.Identity (Identity)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -34,6 +40,7 @@ import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.Examples (
+  LedgerExamples (..),
   mkDSIGNKeyPair,
   mkKeyHash,
   seedFromByte,
@@ -46,6 +53,40 @@ import Test.Cardano.Protocol.TPraos.Create (
   kesSignKey,
   mkOCert,
  )
+
+data LedgerExamplesTPraos era = LedgerExamplesTPraos
+  { letHashHeader :: HashHeader
+  , letBlockHeader :: BHeader StandardCrypto
+  , letChainDepState :: ChainDepState
+  , letLedgerExamples :: LedgerExamples era
+  , letBlock :: Block (BHeader StandardCrypto) era
+  }
+
+deriving instance
+  ( EraTx era
+  , Eq (PParamsHKD Identity era)
+  , Eq (PParamsHKD StrictMaybe era)
+  , EraGov era
+  , Eq (TxSeq era)
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (StashedAVVMAddresses era)
+  , Eq (TranslationContext era)
+  , Eq (CertState era)
+  , Eq (InstantStake era)
+  ) =>
+  Eq (LedgerExamplesTPraos era)
+
+ledgerExamplesTPraos ::
+  forall era. EraSegWits era => LedgerExamples era -> LedgerExamplesTPraos era
+ledgerExamplesTPraos ledgerExamples =
+  LedgerExamplesTPraos
+    exampleHashHeader
+    (exampleBlockHeader @era txs)
+    (exampleChainDepState 1)
+    ledgerExamples
+    (Block (exampleBlockHeader txs) (toTxSeq @era (StrictSeq.fromList txs)))
+  where
+    txs = [leTx ledgerExamples]
 
 exampleHashHeader :: HashHeader
 exampleHashHeader = coerce $ mkDummyHash @HASH (0 :: Int)
@@ -75,8 +116,8 @@ exampleBlockHeader txs = BHeader blockHeaderBody (unsoundPureSignedKES () 0 bloc
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
 
-exampleLedgerChainDepState :: Word64 -> ChainDepState
-exampleLedgerChainDepState seed =
+exampleChainDepState :: Word64 -> ChainDepState
+exampleChainDepState seed =
   ChainDepState
     { csProtocol =
         PrtclState

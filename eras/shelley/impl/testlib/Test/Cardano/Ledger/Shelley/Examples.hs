@@ -12,36 +12,29 @@
 module Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   ledgerExamples,
+  -- functions used in building examples for other eras
   defaultLedgerExamples,
-  exampleLedgerBlock,
-  exampleTx,
-  exampleTxShelley,
-  exampleTxBodyShelley,
-  exampleNewEpochState,
-  examplePoolDistr,
-  exampleNonMyopicRewards,
-  exampleCoin,
-  exampleAuxDataMap,
-  exampleTxIns,
   exampleCerts,
   exampleWithdrawals,
-  exampleProposedPPUpdates,
+  exampleAuxDataMap,
+  exampleNonMyopicRewards,
+  exampleCoin,
   examplePayKey,
   exampleStakeKey,
-  exampleAuxiliaryDataShelley,
+  exampleNewEpochState,
+  examplePoolDistr,
   examplePoolParams,
-  exampleVrfVerKeyHash,
+  exampleTxIns,
+  exampleProposedPPUpdates,
   testShelleyGenesis,
-  -- -- * helper functions used in other examples
+  -- utility functions
   keyToCredential,
   mkDSIGNKeyPair,
   mkKeyHash,
-  mkWitnessesPreAlonzo,
   mkScriptHash,
+  mkWitnessesPreAlonzo,
   seedFromByte,
   seedFromWords,
-  -- -- * from Translation
-  emptyFromByronTranslationContext,
 ) where
 
 import Cardano.Crypto.DSIGN as DSIGN
@@ -79,12 +72,8 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 
-data LedgerExamples bheader hheader cdep era = LedgerExamples
-  { -- protocol
-    leBlock :: Block bheader era
-  , leHashHeader :: hheader
-  , leChainDepState :: cdep
-  , -- tx
+data LedgerExamples era = LedgerExamples
+  { -- tx
     leTx :: Tx era
   , leApplyTxError :: ApplyTxError era
   , -- protocol parameters
@@ -114,17 +103,10 @@ deriving instance
   , Eq (TranslationContext era)
   , Eq (CertState era)
   , Eq (InstantStake era)
-  , Eq bheader
-  , Eq hheader
-  , Eq cdep
   ) =>
-  Eq (LedgerExamples bheader hheader cdep era)
+  Eq (LedgerExamples era)
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep ShelleyEra
+ledgerExamples :: LedgerExamples ShelleyEra
 ledgerExamples =
   defaultLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
@@ -134,7 +116,7 @@ ledgerExamples =
     emptyFromByronTranslationContext
 
 defaultLedgerExamples ::
-  forall bheader hheader cdep era.
+  forall era.
   ( EraSegWits era
   , EraGov era
   , EraStake era
@@ -149,24 +131,15 @@ defaultLedgerExamples ::
   TxBody era ->
   TxAuxData era ->
   TranslationContext era ->
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep era
+  LedgerExamples era
 defaultLedgerExamples
   mkWitnesses
   value
   txBody
   auxData
-  translationContext
-  blockHeader
-  hashHeader
-  chainDepState =
+  translationContext =
     LedgerExamples
-      { leBlock = exampleLedgerBlock blockHeader tx
-      , leHashHeader = hashHeader
-      , leChainDepState = chainDepState
-      , leTx = tx
+      { leTx = tx
       , leApplyTxError =
           ApplyTxError . pure . DelegsFailure $
             DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
@@ -195,15 +168,6 @@ defaultLedgerExamples
     where
       tx = exampleTx mkWitnesses txBody auxData
 
-exampleLedgerBlock ::
-  forall bheader era.
-  EraSegWits era =>
-  bheader ->
-  Tx era ->
-  Block bheader era
-exampleLedgerBlock blockHeader tx =
-  Block blockHeader (toTxSeq @era (StrictSeq.fromList [tx]))
-
 -- | This is not a valid transaction. We don't care, we are only interested in
 -- serialisation, not validation.
 exampleTx ::
@@ -225,13 +189,6 @@ exampleTx mkWitnesses txBody auxData =
       , asWitness exampleStakeKey
       , asWitness $ mkDSIGNKeyPair 1
       ]
-
-exampleTxShelley :: Tx ShelleyEra
-exampleTxShelley =
-  exampleTx
-    (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
-    exampleTxBodyShelley
-    exampleAuxiliaryDataShelley
 
 -- | This is probably not a valid ledger. We don't care, we are only
 -- interested in serialisation, not validation.

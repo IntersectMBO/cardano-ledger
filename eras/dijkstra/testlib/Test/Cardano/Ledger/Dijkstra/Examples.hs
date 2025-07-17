@@ -1,16 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
-  exampleTxDijkstra,
-  exampleTxBodyDijkstra,
-  exampleDijkstraGenesis,
 ) where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -60,11 +56,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkKeyHash,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep DijkstraEra
+ledgerExamples :: LedgerExamples DijkstraEra
 ledgerExamples =
   defaultLedgerExamples
     ( ApplyTxError $

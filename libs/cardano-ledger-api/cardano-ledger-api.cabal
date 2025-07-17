@@ -79,13 +79,7 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Api.Arbitrary
     Test.Cardano.Ledger.Api.DebugTools
-    Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
-    Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo
-    Test.Cardano.Ledger.Api.Examples.Consensus.Babbage
-    Test.Cardano.Ledger.Api.Examples.Consensus.Conway
-    Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
-    Test.Cardano.Ledger.Api.Examples.Consensus.Mary
-    Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
+    Test.Cardano.Ledger.Api.Examples.Consensus
     Test.Cardano.Ledger.Api.State.Query
     Test.Cardano.Ledger.Api.Upgrade
 
@@ -114,7 +108,7 @@ library testlib
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
+    cardano-protocol-tpraos:testlib,
     containers,
     data-default,
     prettyprinter,

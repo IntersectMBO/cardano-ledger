@@ -9,11 +9,7 @@ module Test.Cardano.Ledger.Alonzo.Examples (
   ledgerExamples,
   defaultLedgerExamples,
   exampleTx,
-  exampleTxAlonzo,
-  exampleTxBodyAlonzo,
-  exampleAlonzoNewEpochState,
   exampleDatum,
-  exampleRedeemer,
   exampleAlonzoGenesis,
 ) where
 
@@ -69,7 +65,6 @@ import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   exampleAuxDataMap,
   exampleCerts,
-  exampleLedgerBlock,
   exampleNewEpochState,
   exampleNonMyopicRewards,
   examplePayKey,
@@ -81,11 +76,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   testShelleyGenesis,
  )
 
-ledgerExamples ::
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep AlonzoEra
+ledgerExamples :: LedgerExamples AlonzoEra
 ledgerExamples =
   defaultLedgerExamples
     ( ApplyTxError $
@@ -98,31 +89,20 @@ ledgerExamples =
     exampleAlonzoGenesis
 
 defaultLedgerExamples ::
-  forall bheader hheader cdep era.
-  ( EraSegWits era
-  , AlonzoEraPParams era
-  ) =>
+  forall era.
+  AlonzoEraPParams era =>
   ApplyTxError era ->
   NewEpochState era ->
   Tx era ->
   TranslationContext era ->
-  bheader ->
-  hheader ->
-  cdep ->
-  LedgerExamples bheader hheader cdep era
+  LedgerExamples era
 defaultLedgerExamples
   applyTxError
   newEpochState
   tx
-  translationContext
-  blockHeader
-  hashHeader
-  chainDepState =
+  translationContext =
     LedgerExamples
-      { leBlock = exampleLedgerBlock blockHeader tx
-      , leHashHeader = hashHeader
-      , leChainDepState = chainDepState
-      , leTx = tx
+      { leTx = tx
       , leApplyTxError = applyTxError
       , lePParams = def
       , leProposedPPUpdates =
