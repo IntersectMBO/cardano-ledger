@@ -1,6 +1,6 @@
 module Test.Cardano.Ledger.Api.Examples.Consensus (
   Shelley.LedgerExamples (..),
-  LedgerExamplesTPraos (..),
+  TPraosLedgerExamples (..),
   ledgerExamplesShelley,
   ledgerExamplesAllegra,
   ledgerExamplesMary,
@@ -28,27 +28,27 @@ import qualified Test.Cardano.Ledger.Shelley.Examples as Shelley (
   ledgerExamples,
  )
 import Test.Cardano.Protocol.TPraos.Examples (
-  LedgerExamplesTPraos (..),
+  TPraosLedgerExamples (..),
   ledgerExamplesTPraos,
  )
 
-ledgerExamplesShelley :: LedgerExamplesTPraos ShelleyEra
+ledgerExamplesShelley :: TPraosLedgerExamples ShelleyEra
 ledgerExamplesShelley = ledgerExamplesTPraos Shelley.ledgerExamples
 
-ledgerExamplesAllegra :: LedgerExamplesTPraos AllegraEra
+ledgerExamplesAllegra :: TPraosLedgerExamples AllegraEra
 ledgerExamplesAllegra = ledgerExamplesTPraos Allegra.ledgerExamples
 
-ledgerExamplesMary :: LedgerExamplesTPraos MaryEra
+ledgerExamplesMary :: TPraosLedgerExamples MaryEra
 ledgerExamplesMary = ledgerExamplesTPraos Mary.ledgerExamples
 
-ledgerExamplesAlonzo :: LedgerExamplesTPraos AlonzoEra
+ledgerExamplesAlonzo :: TPraosLedgerExamples AlonzoEra
 ledgerExamplesAlonzo = ledgerExamplesTPraos Alonzo.ledgerExamples
 
-ledgerExamplesBabbage :: LedgerExamplesTPraos BabbageEra
+ledgerExamplesBabbage :: TPraosLedgerExamples BabbageEra
 ledgerExamplesBabbage = ledgerExamplesTPraos Babbage.ledgerExamples
 
-ledgerExamplesConway :: LedgerExamplesTPraos ConwayEra
+ledgerExamplesConway :: TPraosLedgerExamples ConwayEra
 ledgerExamplesConway = ledgerExamplesTPraos Conway.ledgerExamples
 
-ledgerExamplesDijkstra :: LedgerExamplesTPraos DijkstraEra
+ledgerExamplesDijkstra :: TPraosLedgerExamples DijkstraEra
 ledgerExamplesDijkstra = ledgerExamplesTPraos Dijkstra.ledgerExamples

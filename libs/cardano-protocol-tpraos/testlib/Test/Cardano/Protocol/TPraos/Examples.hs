@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Protocol.TPraos.Examples (
-  LedgerExamplesTPraos (..),
+  TPraosLedgerExamples (..),
   ledgerExamplesTPraos,
   exampleBlockHeader,
   exampleChainDepState,
@@ -54,12 +54,12 @@ import Test.Cardano.Protocol.TPraos.Create (
   mkOCert,
  )
 
-data LedgerExamplesTPraos era = LedgerExamplesTPraos
-  { letHashHeader :: HashHeader
-  , letBlockHeader :: BHeader StandardCrypto
-  , letChainDepState :: ChainDepState
-  , letLedgerExamples :: LedgerExamples era
-  , letBlock :: Block (BHeader StandardCrypto) era
+data TPraosLedgerExamples era = TPraosLedgerExamples
+  { tleHashHeader :: HashHeader
+  , tleBlockHeader :: BHeader StandardCrypto
+  , tleChainDepState :: ChainDepState
+  , tleLedgerExamples :: LedgerExamples era
+  , tleBlock :: Block (BHeader StandardCrypto) era
   }
 
 deriving instance
@@ -74,12 +74,12 @@ deriving instance
   , Eq (CertState era)
   , Eq (InstantStake era)
   ) =>
-  Eq (LedgerExamplesTPraos era)
+  Eq (TPraosLedgerExamples era)
 
 ledgerExamplesTPraos ::
-  forall era. EraSegWits era => LedgerExamples era -> LedgerExamplesTPraos era
+  forall era. EraSegWits era => LedgerExamples era -> TPraosLedgerExamples era
 ledgerExamplesTPraos ledgerExamples =
-  LedgerExamplesTPraos
+  TPraosLedgerExamples
     exampleHashHeader
     (exampleBlockHeader @era txs)
     (exampleChainDepState 1)

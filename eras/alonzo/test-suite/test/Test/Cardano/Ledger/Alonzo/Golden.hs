@@ -54,7 +54,7 @@ import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Api.Examples.Consensus (
   LedgerExamples (..),
-  LedgerExamplesTPraos (..),
+  TPraosLedgerExamples (..),
   ledgerExamplesAlonzo,
  )
 import Test.Cardano.Ledger.Mary.Golden (
@@ -215,10 +215,10 @@ goldenCborSerialization =
     "golden tests - CBOR serialization"
     [ testCase "Alonzo Block" $ do
         expected <- readDataFile "golden/block.cbor"
-        Plain.serialize (letBlock ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (tleBlock ledgerExamplesAlonzo) @?= expected
     , testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
-        Plain.serialize (leTx $ letLedgerExamples ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (leTx $ tleLedgerExamples ledgerExamplesAlonzo) @?= expected
     ]
 
 goldenJsonSerialization :: TestTree
