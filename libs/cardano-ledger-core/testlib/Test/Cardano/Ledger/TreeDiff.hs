@@ -254,3 +254,6 @@ instance ToExpr TxOutSource
 
 instance ToExpr a => ToExpr (NonZero a) where
   toExpr x = App "NonZero" [toExpr $ unNonZero x]
+
+instance ToExpr PositiveInterval where
+  toExpr = toExpr . unboundRational

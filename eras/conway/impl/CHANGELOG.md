@@ -2,6 +2,16 @@
 
 ## 1.20.0.0
 
+* Removed:
+  * `maxRefScriptSizePerTx`
+  * `maxRefScriptSizePerBlock`
+  * `refScriptCostMultiplier`
+  * `refScriptCostStride`
+* Added:
+  * `ppMaxRefScriptSizePerTxG`
+  * `ppMaxRefScriptSizePerBlockG`
+  * `ppRefScriptCostMultiplierG`
+  * `ppRefScriptCostStrideG`
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
