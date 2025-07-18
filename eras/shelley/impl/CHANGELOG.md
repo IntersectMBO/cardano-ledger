@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add inlineable `mkBasicBlockBodyShelley` and `txSeqBlockBodyShelleyL` to use in Allegra and Mary.
 * Deprecate `Cardano.Ledger.Shelley.BlockChain` in favor of `Cardano.Ledger.Shelley.BlockBody`. #5156
   * Rename `ShelleyTxSeq` to `ShelleyBlockBody`
 * Rename `shelleyEqTxRaw` to `shelleyTxEqRaw`
