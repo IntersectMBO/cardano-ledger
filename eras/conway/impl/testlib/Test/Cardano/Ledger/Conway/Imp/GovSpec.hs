@@ -44,7 +44,6 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -63,9 +62,7 @@ spec = do
 
 unknownCostModelsSpec ::
   forall era.
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 unknownCostModelsSpec =
   describe "Unknown CostModels" $ do
@@ -87,7 +84,6 @@ unknownCostModelsSpec =
 predicateFailuresSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -123,7 +119,7 @@ predicateFailuresSpec =
             }
 
     it "ProposalDepositIncorrect" $ do
-      rewardAccount <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
       actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       anchor <- arbitrary
       submitFailingProposal
@@ -164,7 +160,6 @@ predicateFailuresSpec =
 hardForkSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -182,7 +177,6 @@ hardForkSpec =
 pparamUpdateSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -248,7 +242,6 @@ pparamUpdateSpec =
 proposalsSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -716,7 +709,7 @@ proposalsSpec = do
       it "Proposals are stored in the expected order" $ whenPostBootstrap $ do
         modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
         ens <- getEnactState
-        returnAddr <- registerRewardAccount
+        returnAddr <- registerRewardAccountWithDeposit
         withdrawal <-
           (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
@@ -753,7 +746,6 @@ proposalsSpec = do
 votingSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -894,7 +886,7 @@ votingSpec =
       conAnchor `shouldNotBe` anchor
     it "can submit SPO votes" $ do
       spoHash <- freshKeyHash
-      registerPool spoHash
+      registerPoolWithDeposit spoHash
       passNEpochs 3
       gaId <-
         submitParameterChange SNothing $
@@ -905,7 +897,6 @@ votingSpec =
 constitutionSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -989,7 +980,6 @@ constitutionSpec =
 policySpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1016,7 +1006,7 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust scriptHash)) >>= submitProposal_
 
       impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust scriptHash)) >>= submitProposal_
 
@@ -1028,7 +1018,7 @@ policySpec =
             [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
@@ -1038,7 +1028,6 @@ policySpec =
 networkIdSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1075,7 +1064,6 @@ networkIdSpec =
 withdrawalsSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1084,7 +1072,7 @@ withdrawalsSpec =
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
       policy <- getGovPolicy
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      registeredRewardAccount <- registerRewardAccount
+      registeredRewardAccount <- registerRewardAccountWithDeposit
       let genPositiveCoin = Coin . getPositive <$> arbitrary
       withdrawals <-
         sequence
@@ -1129,10 +1117,10 @@ withdrawalsSpec =
     it "Fails for empty withdrawals" $ do
       mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount1 <- registerRewardAccount
+      rwdAccount1 <- registerRewardAccountWithDeposit
       mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount2 <- registerRewardAccount
+      rwdAccount2 <- registerRewardAccountWithDeposit
       let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
 
       mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
@@ -1161,10 +1149,7 @@ withdrawalsSpec =
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
   forall era.
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  , ConwayEraTxBody era
-  ) =>
+  ConwayEraImp era =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1174,9 +1159,7 @@ firstHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
   forall era.
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
@@ -1198,10 +1181,7 @@ firstHardForkCantFollow = do
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
   forall era.
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  , ConwayEraTxBody era
-  ) =>
+  ConwayEraImp era =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1214,9 +1194,7 @@ secondHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
   forall era.
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
@@ -1239,7 +1217,6 @@ secondHardForkCantFollow = do
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
@@ -1281,7 +1258,6 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 bootstrapPhaseSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -1316,7 +1292,7 @@ bootstrapPhaseSpec =
       submitYesVote_ (StakePoolVoter spo) gid
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
-      rewardAccount <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
       action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
       proposal <- mkProposalWithRewardAccount action rewardAccount
       checkProposalFailure proposal
