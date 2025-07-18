@@ -87,6 +87,7 @@ import Cardano.Ledger.Hashes (
   HASH,
   Hash,
   HashAnnotated (..),
+  HashHeader (..),
   KeyHash,
   KeyRole (..),
   SafeToHash,
@@ -118,13 +119,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
--- | The hash of a Block Header
-newtype HashHeader = HashHeader {unHashHeader :: Hash HASH EraIndependentBlockHeader}
-  deriving stock (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance EncCBOR HashHeader
-
 -- | The previous hash of a block
 data PrevHash = GenesisHash | BlockHash !HashHeader
   deriving (Show, Eq, Generic, Ord)
@@ -149,8 +143,6 @@ instance DecCBOR PrevHash where
         decodeNull
         pure GenesisHash
       _ -> BlockHash <$> decCBOR
-
-deriving newtype instance DecCBOR HashHeader
 
 data BHBody c = BHBody
   { bheaderBlockNo :: !BlockNo

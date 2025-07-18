@@ -2,6 +2,8 @@
 
 ## 1.4.1.0
 
+* Remove `HashHeader` definition (move to `cardano-ledger-core`)
+* Re-export `HashHeader` from `API`
 * Add `GetLedgerView` instance for `DijkstraEra`
 
 ### `testlib`

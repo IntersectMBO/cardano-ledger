@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `HashHeader` (moved from `cardano-protocol-tpraos`)
 * Add `drepDepositCompactL`
 * Change the type of `drepDeposit` to `CompactForm Coin`
 * Remove `AccountState` type synonym for `ChainAccountState`

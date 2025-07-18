@@ -39,7 +39,7 @@ testCoreTypes =
     , testProperty "Header" $
         roundTripCborRangeExpectation @(TP.BHeader StandardCrypto) minBound maxBound
     , testProperty "Block Header Hash" $
-        roundTripExpectation @TP.HashHeader cborTrip
+        roundTripExpectation @HashHeader cborTrip
     , testProperty "Protocol State" $
         roundTripExpectation @STS.PrtclState cborTrip
     ]
