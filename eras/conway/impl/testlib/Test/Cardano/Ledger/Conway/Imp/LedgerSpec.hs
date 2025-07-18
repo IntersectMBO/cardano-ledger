@@ -47,7 +47,6 @@ import Test.Cardano.Ledger.Plutus.Examples (
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -82,7 +81,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -107,7 +106,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -130,7 +129,7 @@ spec = do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     Positive newDeposit <- arbitrary
     modifyPParams $ \pp ->
       pp
@@ -158,7 +157,7 @@ spec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -185,7 +184,7 @@ spec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -210,7 +209,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -286,7 +285,7 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
       let
