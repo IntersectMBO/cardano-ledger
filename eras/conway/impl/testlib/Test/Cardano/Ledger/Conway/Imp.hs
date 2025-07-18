@@ -44,7 +44,7 @@ import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
--- import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
+import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
 -- import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 -- import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
 -- import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
@@ -131,8 +131,8 @@ conwaySpec ::
 conwaySpec = do
   describe "BBODY" Bbody.spec
   describe "CERTS" Certs.spec
+  describe "DELEG" Deleg.spec
 
--- describe "DELEG" Deleg.spec
 -- describe "ENACT" Enact.spec
 -- describe "EPOCH" Epoch.spec
 -- describe "GOV" Gov.spec
