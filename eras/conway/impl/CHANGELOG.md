@@ -81,6 +81,7 @@
 
 ### `testlib`
 
+* Fix CDDL for `MultiAsset` in `TxOut` as well as the `Tx` mint field.
 * Add `mkConwayTestAccountState` and `conwayAccountsToUMap`
 * Rename `electCommittee` to `submitCommitteeElection` #5091
 * Fixed `Arbitrary` instance for `ConwayGenesis`
