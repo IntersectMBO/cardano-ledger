@@ -29,7 +29,6 @@ import Cardano.Ledger.Slot (
  )
 import Cardano.Ledger.Val ((<->))
 import Cardano.Protocol.TPraos.BHeader (
-  HashHeader (..),
   LastAppliedBlock (..),
   hashHeaderToNonce,
  )
