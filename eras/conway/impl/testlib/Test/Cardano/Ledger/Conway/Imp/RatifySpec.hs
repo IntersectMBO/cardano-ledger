@@ -37,10 +37,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   votingSpec
@@ -72,10 +69,7 @@ spec = do
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
@@ -103,10 +97,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
 
 spoAndCCVotingSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoAndCCVotingSpec = do
   describe "When CC expired" $ do
@@ -210,10 +201,7 @@ spoAndCCVotingSpec = do
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeExpiryResignationDiscountSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -285,10 +273,7 @@ committeeExpiryResignationDiscountSpec =
 
 paramChangeAffectsProposalsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 paramChangeAffectsProposalsSpec =
   -- These tests rely on submitting committee-update proposals and on drep votes, which are disallowed during bootstrap,
@@ -466,17 +451,14 @@ paramChangeAffectsProposalsSpec =
 
 committeeMinSizeAffectsInFlightProposalsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMinSizeAffectsInFlightProposalsSpec =
   -- Treasury withdrawals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
         submitTreasuryWithdrawal amount = do
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
@@ -536,10 +518,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
 
 spoVotesForHardForkInitiation ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
@@ -577,10 +556,7 @@ spoVotesForHardForkInitiation =
 
 votingSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
@@ -836,7 +812,7 @@ votingSpec =
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
 
           kh <- freshKeyHash
-          _ <- registerStakeCredential (KeyHashObj kh)
+          _ <- registerStakeCredentialWithDeposit (KeyHashObj kh)
           _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
           passEpoch
           -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
@@ -897,7 +873,7 @@ votingSpec =
 
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
 
           submitYesVote_ (CommitteeVoter comMember) govId
@@ -925,7 +901,7 @@ votingSpec =
               & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
           kh <- freshKeyHash
-          _ <- registerStakeCredential (KeyHashObj kh)
+          _ <- registerStakeCredentialWithDeposit (KeyHashObj kh)
           _ <- delegateToDRep (KeyHashObj kh) (Coin 300) DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
@@ -1479,10 +1455,7 @@ votingSpec =
 
 delayingActionsSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 delayingActionsSpec =
   -- All tests below are relying on submitting constitution of committe-update proposals, which are disallowed during bootstrap,
@@ -1699,10 +1672,7 @@ delayingActionsSpec =
 
 committeeMaxTermLengthSpec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
