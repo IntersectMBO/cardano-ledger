@@ -46,7 +46,6 @@ import Type.Reflection (Typeable)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -71,7 +70,6 @@ spec = do
 treasuryWithdrawalsSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -82,7 +80,7 @@ treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
     it "Modify EnactState as expected" $ whenPostBootstrap $ do
-      rewardAcount1 <- registerRewardAccount
+      rewardAcount1 <- registerRewardAccountWithDeposit
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
       let govAction = gasAction gas
@@ -99,7 +97,7 @@ treasuryWithdrawalsSpec =
       enactState' <- runImpRule @"ENACT" () enactState signal
       ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
 
-      rewardAcount2 <- registerRewardAccount
+      rewardAcount2 <- registerRewardAccountWithDeposit
       let withdrawals' =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
@@ -190,7 +188,7 @@ treasuryWithdrawalsSpec =
     sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
-      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccountWithDeposit
     checkNoWithdrawal initialTreasury withdrawals = do
       getsNES treasuryL `shouldReturn` initialTreasury
       sumRewardAccounts withdrawals `shouldReturn` zero
@@ -205,7 +203,6 @@ treasuryWithdrawalsSpec =
 hardForkInitiationSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -254,7 +251,6 @@ hardForkInitiationSpec =
 hardForkInitiationNoDRepsSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -290,7 +286,7 @@ hardForkInitiationNoDRepsSpec =
     getProtVer `shouldReturn` nextProtVer
 
 pparamPredictionSpec ::
-  (ConwayEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
+  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -312,7 +308,7 @@ pparamPredictionSpec =
     getProtVer `shouldReturn` nextProtVer
 
 noConfidenceSpec ::
-  forall era. (ConwayEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
+  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
@@ -356,7 +352,6 @@ noConfidenceSpec =
 
 constitutionSpec ::
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -430,7 +425,6 @@ constitutionSpec =
 actionPrioritySpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -567,7 +561,6 @@ expectHardForkEvents actual expected =
 
 committeeSpec ::
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
