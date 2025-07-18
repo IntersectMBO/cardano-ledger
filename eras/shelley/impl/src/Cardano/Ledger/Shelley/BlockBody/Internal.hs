@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
@@ -26,6 +27,8 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Shelley.BlockBody.Internal (
   ShelleyBlockBody (ShelleyBlockBody, ..),
+  mkBasicBlockBodyShelley,
+  txSeqBlockBodyShelleyL,
   auxDataSeqDecoder,
   hashShelleySegWits,
   bBodySize,
@@ -75,7 +78,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro (lens, (&), (.~), (^.))
+import Lens.Micro hiding (ix)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyBlockBody era = ShelleyBlockBodyInternal
@@ -94,10 +97,28 @@ data ShelleyBlockBody era = ShelleyBlockBodyInternal
 
 instance EraBlockBody ShelleyEra where
   type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
-  mkBasicBlockBody = ShelleyBlockBody mempty
-  txSeqBlockBodyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
+  mkBasicBlockBody = mkBasicBlockBodyShelley
+  txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = sbbHash
   numSegComponents = 3
+
+mkBasicBlockBodyShelley ::
+  ( EraBlockBody era
+  , SafeToHash (TxWits era)
+  , BlockBody era ~ ShelleyBlockBody era
+  ) =>
+  BlockBody era
+mkBasicBlockBodyShelley = ShelleyBlockBody mempty
+{-# INLINEABLE mkBasicBlockBodyShelley #-}
+
+txSeqBlockBodyShelleyL ::
+  ( EraBlockBody era
+  , SafeToHash (TxWits era)
+  , BlockBody era ~ ShelleyBlockBody era
+  ) =>
+  Lens' (BlockBody era) (StrictSeq (Tx era))
+txSeqBlockBodyShelleyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
+{-# INLINEABLE txSeqBlockBodyShelleyL #-}
 
 deriving via
   AllowThunksIn
