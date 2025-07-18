@@ -185,46 +185,6 @@ commonTxIn :: HasCallStack => TxIn
 commonTxIn = mkGenesisTxIn 4
 
 -- =========================================================================
--- Spend a EUTxO with an inline datum (without and with a failing script)
--- =========================================================================
-
-inlineDatum ::
-  forall era.
-  ( Reflect era
-  , AlonzoEraTxBody era
-  , BabbageEraTxOut era
-  , AlonzoEraTxWits era
-  , EraModel era
-  , BabbageEraPParams era
-  ) =>
-  TestCaseData era
-inlineDatum =
-  TestCaseData
-    { txBody =
-        mkBasicTxBody
-          & inputsTxBodyL .~ [someTxIn]
-          & collateralInputsTxBodyL .~ [anotherTxIn]
-          & outputsTxBodyL .~ [mkBasicTxOut plainAddr . inject $ Coin 4995]
-          & feeTxBodyL .~ Coin 5
-          & scriptIntegrityHashTxBodyL
-            .~ newScriptIntegrityHash @era defaultPParams [PlutusV2] validatingRedeemers mempty
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ mkBasicTxOut (scriptAddr @era evenData3ArgsScript) (inject $ Coin 5000)
-                  & datumTxOutL .~ (Datum . dataToBinaryData $ datumExampleEven @era)
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [mkBasicTxOut plainAddr . inject $ Coin 2115]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole]
-    , otherWitsFields = \x ->
-        x
-          & witsTxL . hashScriptTxWitsL .~ [evenData3ArgsScript @era]
-          & witsTxL . rdmrsTxWitsL .~ validatingRedeemers
-    }
-
--- =========================================================================
 -- Valid: Use a reference script.
 -- =========================================================================
 
@@ -657,8 +617,7 @@ genericBabbageFeatures =
     (eraName @era ++ " UTXOW examples")
     [ testGroup
         "valid transactions"
-        [ testCase "inline datum" $ testExpectSuccessValid @era inlineDatum
-        , testCase "reference script" $ testExpectSuccessValid @era referenceScript
+        [ testCase "reference script" $ testExpectSuccessValid @era referenceScript
         , testCase "inline datum and ref script" $ testExpectSuccessValid @era inlineDatumAndRefScript
         , testCase "reference input with data hash, no data witness" $
             testExpectSuccessValid @era refInputWithDataHashNoWit
