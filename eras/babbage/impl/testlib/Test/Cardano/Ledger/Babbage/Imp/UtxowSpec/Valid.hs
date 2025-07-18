@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -10,14 +9,38 @@
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid (spec) where
 
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Shelley.Scripts (pattern RequireAnyOf)
-import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Plutus (
+  Data (..),
+  Datum (..),
+  Language (..),
+  hashData,
+  hashPlutusScript,
+  mkInlineDatum,
+  withSLanguage,
+ )
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+ )
+import Data.Foldable (for_)
 import Lens.Micro
+import Lens.Micro.GHC ()
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples
+
+nativeSucceeds :: forall era. ShelleyEraScript era => Script era
+nativeSucceeds = fromNativeScript @era $ RequireAllOf []
+
+nativeFails :: forall era. ShelleyEraScript era => Script era
+nativeFails = fromNativeScript @era $ RequireAnyOf []
 
 spec ::
   forall era.
@@ -29,41 +52,152 @@ spec = describe "Valid" $ do
   it "Native reference scripts must be witnessed" $ do
     addr <- freshKeyAddr_
     let
-      timelock = fromNativeScript @era $ RequireAnyOf []
-      txOut =
-        mkCoinTxOut addr (inject $ Coin 15_000_000)
-          & referenceScriptTxOutL .~ SJust timelock
-    tx0 <-
+      script = nativeFails
+      txOutRef =
+        mkBasicTxOut addr mempty
+          & referenceScriptTxOutL .~ SJust script
+    txInitial <-
       submitTx $
         mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL .~ [txOut]
+          & bodyTxL . outputsTxBodyL .~ [txOutRef]
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
+
+  it "Spend native script output with reference script" $ do
+    addr <- freshKeyAddr_
     let
-      txIn = mkTxInPartial (txIdTx tx0) 0
-      tx1 =
+      script = nativeSucceeds
+      txOut =
+        mkBasicTxOut (mkAddr (hashScript script) StakeRefNull) mempty
+      txOutRef =
+        mkBasicTxOut addr mempty
+          & referenceScriptTxOutL .~ SJust script
+    txInitial <-
+      submitTx $
         mkBasicTx mkBasicTxBody
-          & bodyTxL . referenceInputsTxBodyL .~ [txIn]
-    submitTx_ tx1
+          & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & inputsTxBodyL .~ [txInAt 0 txInitial]
+          & referenceInputsTxBodyL .~ [txInAt 1 txInitial]
 
-  it "Inline datum" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Reference script" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Inline datum and ref script" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Reference input with data hash, no data witness" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Reference input with data hash, with data witness" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Reference script to authorize delegation certificate" $ do
-    const $ pendingWith "not implemented yet"
+  for_ @[] [("without", const Nothing), ("with", Just)] $ \(state, mkState) -> do
+    it ("Reference input with data hash, " <> state <> " data witness") $ do
+      addr <- freshKeyAddr_
+      let
+        datumValue = Data @era $ PV1.B "abcde"
+        datumHash = hashData datumValue
+        txOut =
+          mkBasicTxOut addr mempty
+        txOutDatum =
+          mkBasicTxOut addr mempty
+            & datumTxOutL .~ DatumHash datumHash
+      txInitial <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
+      let
+        datumWitTxL :: Lens' (Tx era) (Maybe (Data era))
+        datumWitTxL = witsTxL . datsTxWitsL . unTxDatsL . at datumHash
+      tx <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+            & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+            & datumWitTxL .~ mkState datumValue
+      -- Verify that the witness was as we expected
+      tx ^. datumWitTxL `shouldBe` mkState datumValue
 
   it "Reference script in output" $ do
-    const $ pendingWith "not implemented yet"
+    addr <- freshKeyAddr_
+    let
+      script = nativeFails
+      txOutRef =
+        mkBasicTxOut addr mempty
+          & referenceScriptTxOutL .~ SJust script
+    txInitial <-
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [txOutRef]
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
 
-  it "Spend simple script output with reference script" $ do
-    const $ pendingWith "not implemented yet"
+  forM_ @[] [PlutusV2 .. eraMaxLanguage @era] $ \slang -> do
+    describe (show slang) $ do
+      withSLanguage slang $ \lang -> do
+        it "Inline datum" $ do
+          let
+            scriptHash = hashPlutusScript $ alwaysSucceedsWithDatum lang
+            txOut =
+              mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
+                & datumTxOutL .~ mkInlineDatum (PV1.I 0)
+          txInitial <-
+            submitTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut]
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
+
+        it "Reference script" $ do
+          addr <- freshKeyAddr_
+          plutus <- mkPlutusScript $ alwaysSucceedsWithDatum lang
+          let
+            script = fromPlutusScript plutus
+            txOut =
+              mkBasicTxOut (mkAddr (hashScript script) StakeRefNull) mempty
+            txOutRef =
+              mkBasicTxOut addr mempty
+                & referenceScriptTxOutL .~ SJust script
+          txInitial <-
+            submitTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+
+        it "Inline datum and ref script" $ do
+          addr <- freshKeyAddr_
+          plutus <- mkPlutusScript $ alwaysSucceedsWithDatum lang
+          let
+            script = fromPlutusScript plutus
+            txOut =
+              mkBasicTxOut (mkAddr (hashScript script) StakeRefNull) mempty
+                & datumTxOutL .~ mkInlineDatum (PV1.I 0)
+            txOutRef =
+              mkBasicTxOut addr mempty
+                & referenceScriptTxOutL .~ SJust script
+          txInitial <-
+            submitTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+
+        it "Reference script to authorize delegation certificate" $ do
+          addr <- freshKeyAddr_
+          plutus <- mkPlutusScript $ alwaysSucceedsNoDatum lang
+          let
+            script = fromPlutusScript plutus
+            txOut =
+              mkBasicTxOut addr mempty
+            txOutRef =
+              mkBasicTxOut addr mempty
+                & referenceScriptTxOutL .~ SJust script
+          txInitial <-
+            submitTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+              & bodyTxL . certsTxBodyL
+                .~ [RegTxCert . ScriptHashObj $ hashScript script]
