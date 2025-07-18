@@ -62,6 +62,7 @@
 
 ### `testlib`
 
+* Add `nativeAlwaysFails`, `nativeAlwaysSucceeds`
 * Deprecated `getRewardAccountAmount`, `lookupReward` and `getReward`
 * Add `getBalance`, `lookupBalance`, `getAccountBalance`, `lookupAccountBalance`
 * Add `mkShelleyTestAccountState`, `shelleyAccountsFromAccountsMap`, `shelleyAccountsToUMap`
