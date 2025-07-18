@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
+  DRepDelegations (..),
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
@@ -223,9 +224,9 @@ spec = do
     let drepStates = queryDRepDelegationState nes mempty
     let expected =
           Map.fromList
-            [ (DRepKeyHash drepRoleCredKh, DRepDelegation (Coin 2_000_000) (Set.fromList [delegator]))
-            , (DRepAlwaysAbstain, DRepDelegation (Coin 2_000_000) (Set.fromList [cred]))
-            , (DRepAlwaysNoConfidence, DRepDelegation (Coin 2_000_000) (Set.fromList [cred2]))
+            [ (DRepKeyHash drepRoleCredKh, DRepDelegations (Coin 2_000_000) (Set.fromList [delegator]))
+            , (DRepAlwaysAbstain, DRepDelegations (Coin 2_000_000) (Set.fromList [cred]))
+            , (DRepAlwaysNoConfidence, DRepDelegations (Coin 2_000_000) (Set.fromList [cred2]))
             ]
     drepStates `shouldBe` expected
 
