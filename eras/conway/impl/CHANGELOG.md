@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Fix CDDL for `MultiAsset` in `TxOut` as well as the mint field.
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
