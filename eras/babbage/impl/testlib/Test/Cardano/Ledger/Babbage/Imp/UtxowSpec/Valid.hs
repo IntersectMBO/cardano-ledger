@@ -13,11 +13,17 @@ module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid (spec) where
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Plutus (
+  Language (..),
+  hashPlutusScript,
+  withSLanguage,
+ )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAnyOf)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples
 
 spec ::
   forall era.
@@ -44,8 +50,15 @@ spec = describe "Valid" $ do
           & bodyTxL . referenceInputsTxBodyL .~ [txIn]
     submitTx_ tx1
 
-  it "Inline datum" $ do
-    const $ pendingWith "not implemented yet"
+  forM_ @[] [PlutusV2 .. eraMaxLanguage @era] $ \slang -> do
+    describe (show slang) $ do
+      withSLanguage slang $ \lang -> do
+        it "Inline datum" $ do
+          let scriptHash = hashPlutusScript $ alwaysSucceedsWithDatum lang
+          txIn <- produceScript scriptHash
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ [txIn]
 
   it "Reference script" $ do
     const $ pendingWith "not implemented yet"
