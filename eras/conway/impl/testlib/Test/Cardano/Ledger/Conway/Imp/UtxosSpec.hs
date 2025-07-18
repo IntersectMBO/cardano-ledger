@@ -704,9 +704,7 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     )
 
 enactCostModels ::
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
   Credential 'DRepRole ->
