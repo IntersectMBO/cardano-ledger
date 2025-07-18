@@ -72,9 +72,7 @@ spec = do
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
@@ -531,9 +529,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
 
 spoVotesForHardForkInitiation ::
   forall era.
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
