@@ -215,20 +215,26 @@ spec = do
     _ <- registerStakeCredential cred2
     _ <- delegateToDRep cred2 (Coin 3_000_000) DRepAlwaysNoConfidence
 
-    drepRoleCredKh <-
-      case credKeyHash credDrep of
-        Just d -> pure d
-        Nothing -> fail "expected drep keyhash cred"
+    drepRoleCredKh <- expectJust $ credKeyHash credDrep
 
     nes <- getsNES id
-    let drepStates = queryDRepDelegationState nes mempty
-    let expected =
+    let abstainDelegations =
+          Map.singleton DRepAlwaysAbstain $
+            DRepDelegations (Coin 2_000_000) (Set.fromList [cred])
+        noConfidenceDelegations =
+          Map.singleton DRepAlwaysNoConfidence $
+            DRepDelegations (Coin 2_000_000) (Set.fromList [cred2])
+        expectedAllDelegations =
           Map.fromList
             [ (DRepKeyHash drepRoleCredKh, DRepDelegations (Coin 2_000_000) (Set.fromList [delegator]))
-            , (DRepAlwaysAbstain, DRepDelegations (Coin 2_000_000) (Set.fromList [cred]))
-            , (DRepAlwaysNoConfidence, DRepDelegations (Coin 2_000_000) (Set.fromList [cred2]))
             ]
-    drepStates `shouldBe` expected
+            <> abstainDelegations
+            <> noConfidenceDelegations
+    queryDRepDelegationState nes mempty `shouldBe` expectedAllDelegations
+    queryDRepDelegationState nes (Set.singleton DRepAlwaysAbstain)
+      `shouldBe` abstainDelegations
+    queryDRepDelegationState nes (Set.singleton DRepAlwaysNoConfidence)
+      `shouldBe` noConfidenceDelegations
 
   it "Committee queries" $ whenPostBootstrap $ do
     (drep, _, _) <- setupSingleDRep 1_000_000
