@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -19,6 +20,10 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetDRepState@
   queryDRepState,
+
+  -- * @GetDRepDelegationState@
+  queryDRepDelegationState,
+  DRepDelegations (..),
 
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
@@ -109,8 +114,11 @@ import Cardano.Ledger.UMap (
   UMap,
   dRepMap,
   domRestrictedStakeCredentials,
+  umElemDRepDelegatedDeposit,
+  umElemsL,
  )
 import Control.Monad (guard)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Foldable (foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -177,6 +185,73 @@ queryDRepState nes creds
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+
+data DRepDelegations = DRepDelegations
+  { drepDelegDeposit :: !Coin
+  , drepDelegDelegs :: !(Set (Credential 'Staking))
+  }
+  deriving (Show, Eq, Ord)
+
+instance Semigroup DRepDelegations where
+  x <> y =
+    DRepDelegations
+      { drepDelegDeposit = drepDelegDeposit x <> drepDelegDeposit y
+      , drepDelegDelegs = Set.union (drepDelegDelegs x) (drepDelegDelegs y)
+      }
+
+instance Monoid DRepDelegations where
+  mempty = DRepDelegations mempty mempty
+
+instance ToJSON DRepDelegations where
+  toJSON x@(DRepDelegations _ _) =
+    let DRepDelegations {..} = x
+     in toJSON $
+          object $
+            [ "deposit" .= toJSON drepDelegDeposit
+            , "delegators" .= toJSON drepDelegDelegs
+            ]
+
+instance FromJSON DRepDelegations where
+  parseJSON = withObject "DRepDelegations" $ \o ->
+    DRepDelegations
+      <$> o .: "deposit"
+      -- Construction of DRep state with deleagations is intentionally prohibited, since
+      -- there is a requirement to retain the invariant of delegations in the UMap
+      <*> pure mempty
+
+-- | Query the delegators and amounts delegated to each DRep, including
+-- @AlwaysAbstain@ and @NoConfidence@.
+queryDRepDelegationState ::
+  ConwayEraCertState era =>
+  NewEpochState era ->
+  -- | Specify a set of DReps whose state should be returned. When this set is
+  -- empty, states for all of the DReps will be returned.
+  Set DRep ->
+  Map DRep DRepDelegations
+queryDRepDelegationState nes creds
+  | null creds = getDelegationStateRestricting Nothing dState
+  | otherwise = getDelegationStateRestricting (Just creds) dState
+  where
+    getDelegationStateRestricting :: Maybe (Set DRep) -> DState era -> Map DRep DRepDelegations
+    getDelegationStateRestricting restrict ds =
+      Map.foldlWithKey
+        ( \m cred umElem ->
+            case umElemDRepDelegatedDeposit umElem of
+              Just (coin, drep) ->
+                case restrict of
+                  Just r | not (Set.member drep r) -> m
+                  _ -> Map.insertWith (<>) drep (toDRepDelegations coin cred) m
+              _ -> m
+        )
+        Map.empty
+        (dsUnified ds ^. umElemsL)
+    toDRepDelegations :: CompactForm Coin -> Credential 'Staking -> DRepDelegations
+    toDRepDelegations coin cred =
+      DRepDelegations
+        { drepDelegDeposit = fromCompact coin
+        , drepDelegDelegs = Set.singleton cred
+        }
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.

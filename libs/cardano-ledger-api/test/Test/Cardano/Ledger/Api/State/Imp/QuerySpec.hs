@@ -10,10 +10,12 @@ module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
+  DRepDelegations (..),
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
   queryCommitteeMembersState,
+  queryDRepDelegationState,
   queryDRepState,
  )
 import Cardano.Ledger.BaseTypes
@@ -25,7 +27,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (StakePoolVoter),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
-import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.Credential (Credential (KeyHashObj), credKeyHash)
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -197,6 +199,42 @@ spec = do
         passEpoch
         expectQueryResult (Set.singleton c1) mempty mempty $
           [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)]
+
+  it "queryDRepDelegationState" $ do
+    let drepActivity = 3
+    modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
+    (credDrep, delegator, _) <- setupSingleDRep 1_000_000
+
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    _ <- registerStakeCredential cred
+    _ <- delegateToDRep cred (Coin 2_000_000) DRepAlwaysAbstain
+
+    kh2 <- freshKeyHash
+    let cred2 = KeyHashObj kh2
+    _ <- registerStakeCredential cred2
+    _ <- delegateToDRep cred2 (Coin 3_000_000) DRepAlwaysNoConfidence
+
+    drepRoleCredKh <- expectJust $ credKeyHash credDrep
+
+    nes <- getsNES id
+    let abstainDelegations =
+          Map.singleton DRepAlwaysAbstain $
+            DRepDelegations (Coin 2_000_000) (Set.fromList [cred])
+        noConfidenceDelegations =
+          Map.singleton DRepAlwaysNoConfidence $
+            DRepDelegations (Coin 2_000_000) (Set.fromList [cred2])
+        expectedAllDelegations =
+          Map.fromList
+            [ (DRepKeyHash drepRoleCredKh, DRepDelegations (Coin 2_000_000) (Set.fromList [delegator]))
+            ]
+            <> abstainDelegations
+            <> noConfidenceDelegations
+    queryDRepDelegationState nes mempty `shouldBe` expectedAllDelegations
+    queryDRepDelegationState nes (Set.singleton DRepAlwaysAbstain)
+      `shouldBe` abstainDelegations
+    queryDRepDelegationState nes (Set.singleton DRepAlwaysNoConfidence)
+      `shouldBe` noConfidenceDelegations
 
   it "Committee queries" $ whenPostBootstrap $ do
     (drep, _, _) <- setupSingleDRep 1_000_000
