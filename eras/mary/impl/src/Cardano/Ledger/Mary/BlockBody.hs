@@ -13,15 +13,15 @@ import Cardano.Ledger.Core (EraBlockBody (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (
-  ShelleyBlockBody (ShelleyBlockBody),
+  ShelleyBlockBody,
+  mkBasicBlockBodyShelley,
   shelleyBlockBodyHash,
-  shelleyBlockBodyTxs,
+  txSeqBlockBodyShelleyL,
  )
-import Lens.Micro
 
 instance EraBlockBody MaryEra where
   type BlockBody MaryEra = ShelleyBlockBody MaryEra
-  mkBasicBlockBody = ShelleyBlockBody mempty
-  txSeqBlockBodyL = lens shelleyBlockBodyTxs (\_ s -> ShelleyBlockBody s)
+  mkBasicBlockBody = mkBasicBlockBodyShelley
+  txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = shelleyBlockBodyHash
   numSegComponents = 3

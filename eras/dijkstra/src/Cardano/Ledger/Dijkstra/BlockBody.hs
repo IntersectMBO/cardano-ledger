@@ -7,11 +7,10 @@ import Cardano.Ledger.Alonzo.BlockBody
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx ()
-import Lens.Micro (lens)
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = AlonzoBlockBody DijkstraEra
-  mkBasicBlockBody = AlonzoBlockBody mempty
-  txSeqBlockBodyL = lens alonzoBlockBodyTxs (\_ s -> AlonzoBlockBody s)
+  mkBasicBlockBody = mkBasicBlockBodyAlonzo
+  txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = alonzoBlockBodyHash
   numSegComponents = 4

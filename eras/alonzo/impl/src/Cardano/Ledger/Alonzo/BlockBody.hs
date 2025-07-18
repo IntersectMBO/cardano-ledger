@@ -1,5 +1,7 @@
 module Cardano.Ledger.Alonzo.BlockBody (
   AlonzoBlockBody (AlonzoBlockBody),
+  mkBasicBlockBodyAlonzo,
+  txSeqBlockBodyAlonzoL,
   alonzoBlockBodyHash,
   alonzoBlockBodyTxs,
 ) where

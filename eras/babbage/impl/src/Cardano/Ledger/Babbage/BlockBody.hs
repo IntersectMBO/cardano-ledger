@@ -7,11 +7,10 @@ import Cardano.Ledger.Alonzo.BlockBody
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Tx ()
 import Cardano.Ledger.Core
-import Lens.Micro (lens)
 
 instance EraBlockBody BabbageEra where
   type BlockBody BabbageEra = AlonzoBlockBody BabbageEra
-  mkBasicBlockBody = AlonzoBlockBody mempty
-  txSeqBlockBodyL = lens alonzoBlockBodyTxs (\_ s -> AlonzoBlockBody s)
+  mkBasicBlockBody = mkBasicBlockBodyAlonzo
+  txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = alonzoBlockBodyHash
   numSegComponents = 4
