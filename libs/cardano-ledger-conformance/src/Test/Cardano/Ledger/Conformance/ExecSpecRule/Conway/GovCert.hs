@@ -19,6 +19,7 @@ import Cardano.Ledger.Conway.TxCert
 import Constrained.API
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
@@ -45,7 +46,7 @@ instance ExecSpecRule "GOVCERT" ConwayEra where
   environmentSpec (univ, _) = govCertEnvSpec univ
 
   stateSpec (univ, ccec) _env =
-    certStateSpec @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra univ (Map.keysSet (ccecDelegatees ccec)) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) = govCertSpec univ
 

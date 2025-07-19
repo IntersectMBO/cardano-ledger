@@ -56,6 +56,8 @@ instance BabbageEraTest ConwayEra
 
 instance ConwayEraTest ConwayEra
 
+-- | similar to mkShelleyTestAccountState, but it ignores the mPtr, and doesn't
+--   need to test that mDRep is SNothing, since this is the Conway Era, where DReps can be allocated.
 mkConwayTestAccountState ::
   ConwayEraAccounts era =>
   CompactForm Coin ->

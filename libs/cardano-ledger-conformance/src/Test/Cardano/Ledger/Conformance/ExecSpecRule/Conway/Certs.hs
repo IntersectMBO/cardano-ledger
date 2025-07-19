@@ -24,7 +24,7 @@ import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert ()
 import Test.Cardano.Ledger.Constrained.Conway hiding (conwayCertStateSpec)
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (conwayCertStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Imp.Common hiding (context)
 
@@ -33,13 +33,16 @@ instance ExecSpecRule "CERTS" ConwayEra where
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 4)
     pure (univ, ccec)
 
   environmentSpec _ = certsEnvSpec
 
-  stateSpec (univ, _context) _ =
-    conwayCertStateSpec univ (lit (EpochNo 100))
+  stateSpec (univ, context) _ =
+    conwayCertStateSpec
+      univ
+      (ccecDelegatees context, ccecWithdrawals context)
+      (lit (EpochNo 100))
 
   signalSpec (univ, _) env state = txCertsSpec @ConwayEra univ env state
 

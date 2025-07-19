@@ -30,6 +30,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   crecGovActionMapL,
   enactStateSpec,
   externalFunctions,
+  whoDelegatesSpec,
 ) where
 
 import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
@@ -110,11 +111,9 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   ConwayExecEnactEnv (..),
-  DepositPurpose,
   signatureFromInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
-  delegateeSpec,
   newEpochStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
@@ -124,28 +123,25 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   committeeMinSize_,
   protocolVersion_,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Utxo (witnessDepositPurpose)
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..), witness)
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (delegators, whoDelegatesSpec)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var, witness)
 
--- ================================================================
+-- ======================================================================
 
 data ConwayCertExecContext era
-  = -- | The UMap of the DState has a field with type: Map (Credential 'Staking) DRep
-    --   The VState field vsDReps has type: Map (Credential DRepRole) DRepState
-    --   The DRepState field drepDelegs has type: Set (Credential Staking)
-    --   Every (Credential 'DRepRole c) corresponds to a unique (DRep)
-    -- the ccecDelegatees field helps maintain that correspondance, It is used in
-    -- vstateSpec and bootstrapDStateSpec. Also see
-    -- getDelegatees :: DState era -> Map (Credential 'DRepRole) (Set (Credential 'Staking))
-    -- in Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs, which defines the exact correspondance.  }
+  = -- | The VState and the DState (which contains the AccountState) are subtly related.
+    --   VState {vsDReps :: !(Map (Credential DRepRole) DRepState) ..}
+    --   ConwayAccounts :: {caStates :: Map(Credential Staking) (ConwayAccountState era)}
+    --   we maintain this subtle relationship by storing the ccecDelagatees field in this context.
+    --   See Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs(whoDelegatesSpec) and its uses
+    --   in that module.  whoDelegatesSpec :: WitUniv era -> Specification (Map (Credential 'DRepRole) (Set (Credential 'Staking)))
     ConwayCertExecContext
     { ccecWithdrawals :: !(Map RewardAccount Coin)
-    , ccecDeposits :: !(Map DepositPurpose Coin)
     , ccecVotes :: !(VotingProcedures era)
-    , ccecDelegatees :: !(Set (Credential 'DRepRole))
+    , ccecDelegatees :: !(Map (Credential 'DRepRole) (Set (Credential 'Staking)))
     }
   deriving (Generic, Eq, Show)
 
@@ -153,19 +149,24 @@ instance Typeable era => HasSimpleRep (ConwayCertExecContext era)
 
 instance Era era => HasSpec (ConwayCertExecContext era)
 
--- No particular constraints, other than witnessing
+-- | A Specification version of `Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs.genCertContext`
+--   Makes sure all the subtle invariants of `type WhoDelegates` are met.
 conwayCertExecContextSpec ::
   forall era.
   Era era =>
   WitUniv era -> Integer -> Specification (ConwayCertExecContext era)
 conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
-  match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
-    [ assert $
-        [ witness univ (dom_ withdrawals)
-        , assert $ sizeOf_ withdrawals <=. (lit wdrlsize)
+  match ccec $ \ [var|withdrawals|] _voteProcs [var|delegatees|] ->
+    [ dependsOn withdrawals delegatees
+    , satisfies delegatees (whoDelegatesSpec univ)
+    , assert $
+        [ assert $ sizeOf_ withdrawals <=. (lit wdrlsize)
+        , reify delegatees delegators $ \ [var|credStakeSet|] ->
+            [ forAll' withdrawals $ \ [var|rewAccount|] [var|_wCoin|] ->
+                match rewAccount $ \ [var|network|] [var|rewcred|] ->
+                  [network ==. lit Testnet, member_ rewcred credStakeSet]
+            ]
         ]
-    , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
-    , satisfies delegatees (delegateeSpec @era univ)
     ]
 
 instance Era era => Arbitrary (ConwayCertExecContext era) where
@@ -174,15 +175,13 @@ instance Era era => Arbitrary (ConwayCertExecContext era) where
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance Era era => EncCBOR (ConwayCertExecContext era) where
-  encCBOR x@(ConwayCertExecContext _ _ _ _) =
+  encCBOR x@(ConwayCertExecContext _ _ _) =
     let ConwayCertExecContext {..} = x
      in encode $
           Rec ConwayCertExecContext
             !> To ccecWithdrawals
-            !> To ccecDeposits
             !> To ccecVotes
             !> To ccecDelegatees
 
@@ -193,16 +192,12 @@ instance Reflect era => DecCBOR (ConwayCertExecContext era) where
         <! From
         <! From
         <! From
-        <! From
 
 instance Inject (ConwayCertExecContext era) (Map RewardAccount Coin) where
   inject = ccecWithdrawals
 
 instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
   inject = ccecVotes
-
-instance Inject (ConwayCertExecContext era) (Map DepositPurpose Coin) where
-  inject = ccecDeposits
 
 instance Era era => ToExpr (ConwayCertExecContext era)
 

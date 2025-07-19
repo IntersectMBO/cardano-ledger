@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) whe
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Constrained.API
+import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
@@ -30,13 +31,13 @@ instance ExecSpecRule "CERT" ConwayEra where
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 4)
     pure (univ, ccec)
 
   environmentSpec (univ, _) = certEnvSpec @ConwayEra univ
 
   stateSpec (univ, ccec) _ =
-    certStateSpec @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra univ (Map.keysSet (ccecDelegatees ccec)) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) env state = conwayTxCertSpec @ConwayEra univ env state
 

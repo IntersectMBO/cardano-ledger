@@ -16,6 +16,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained.API
 import Data.Bifunctor (second)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
@@ -35,20 +36,20 @@ instance
     (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
     (Set (Credential 'DRepRole))
   where
-  inject (_, x) = ccecDelegatees x
+  inject (_, x) = Map.keysSet (ccecDelegatees x)
 
 instance ExecSpecRule "DELEG" ConwayEra where
   type ExecContext "DELEG" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 4)
     pure (univ, ccec)
 
   environmentSpec _ = delegEnvSpec
 
   stateSpec (univ, ccec) _env =
-    certStateSpec @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra univ (Map.keysSet (ccecDelegatees ccec)) (ccecWithdrawals ccec)
 
   signalSpec _ = conwayDelegCertSpec
 

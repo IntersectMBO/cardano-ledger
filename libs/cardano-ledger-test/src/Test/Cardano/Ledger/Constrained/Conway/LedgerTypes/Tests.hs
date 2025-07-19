@@ -15,6 +15,7 @@ import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -28,18 +29,15 @@ import Data.TreeDiff
 import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
   testConwayCert,
-  testGenesisCert,
   testShelleyCert,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (stakePoolDelegationsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (prettyE)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (irewardSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Era
-import Test.Hspec
+import Test.Hspec hiding (context)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
   Gen,
@@ -92,6 +90,14 @@ delegationsSpec ::
     (Map (Credential 'Staking) (KeyHash 'StakePool))
 delegationsSpec = (hasSize (rangeSize 8 12))
 
+poolRegSpec ::
+  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) PoolParams)
+poolRegSpec univ = constrained $ \poolRegMap ->
+  [ witness univ (dom_ poolRegMap)
+  , witness univ (rng_ poolRegMap)
+  , satisfies poolRegMap (hasSize (rangeSize 8 12))
+  ]
+
 -- ====================================================================
 -- HSpec tests
 -- ===================================================================
@@ -115,10 +121,8 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 --   The idea is to run this suite on every era.
 specSuite ::
   forall (era :: Type).
-  ( EraSpecLedger era
+  ( era ~ ConwayEra
   , ShelleyEraTest era
-  , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   Int -> Spec
 specSuite n = do
@@ -126,61 +130,71 @@ specSuite n = do
 
   soundSpecWith @(PState era) (5 * n) $ do
     univ <- genWitUniv @era 200
-    pStateSpec @era univ !$! stakePoolDelegationsSpec @era univ !*! epochNoSpec
+    pStateSpec @era univ !$! epochNoSpec
+
+  soundSpecWith @(DState era) (5 * n) $ do
+    univ <- genWitUniv @era 200
+    context <- genCertContext @era univ
+    poolreg <- genFromSpec (poolRegSpec univ)
+    pure (conwayDStateSpec @era univ context (lit poolreg))
 
   soundSpecWith @(VState era) (10 * n) $ do
-    univ <- genWitUniv @era 25
-    vStateSpec @era univ
-      !$! epochNoSpec
-      !*! goodDrep @era univ
+    univ <- genWitUniv @era 200
+    whodelegates <- genFromSpec (goodDrep @era univ)
+    epoch <- genFromSpec epochNoSpec
+    pure (vStateSpec @era univ (lit epoch) whodelegates)
 
   soundSpecWith @(CertState era) (5 * n) $ do
-    univ <- genWitUniv @era 50
-    certStateSpec @era univ !$! accountStateSpec !*! epochNoSpec
+    univ <- genWitUniv @era 200
+    context <- genCertContext @era univ
+    epn <- genFromSpec epochNoSpec
+    pure (conwayCertStateSpec univ context (lit epn))
 
   soundSpecWith @(UTxO era) (5 * n) (utxoSpecWit @era <$> universe !*! delegationsSpec)
 
-  soundSpecWith @(UTxOState era) (2 * n) (utxoStateGen @era)
+  soundSpecWith @(UTxOState era) (2 * n) utxoStateGen
 
-  soundSpecWith @(GovState era)
-    (2 * n)
-    (govStateSpec @era <$> genFromSpec pparamsSpec)
+  soundSpecWith @(GovState era) (2 * n) $ do
+    pp <- genFromSpec pparamsSpec
+    pure (conwayGovStateSpec pp (testGovEnv pp))
 
-  soundSpecWith @(LedgerState era)
-    (2 * n)
-    ( ledgerStateSpec
-        <$> genConwayFn pparamsSpec
-        <*> genWitUniv @era 100 !*! accountStateSpec !*! epochNoSpec
-    )
-  soundSpecWith @(EpochState era)
-    (2 * n)
-    (epochStateSpec @era <$> genConwayFn pparamsSpec <*> genWitUniv @era 50 !*! epochNoSpec)
-  soundSpecWith @(NewEpochState era)
-    (2 * n)
-    (newEpochStateSpec @era <$> genConwayFn pparamsSpec <*> genWitUniv @era 50)
+  soundSpecWith @(LedgerState era) (2 * n) $ do
+    pp <- genConwayFn pparamsSpec
+    univ <- genWitUniv @era 200
+    context <- genCertContext @era univ
+    epn <- genFromSpec epochNoSpec
+    pure (ledgerStateSpec pp univ context (lit epn))
+
+  soundSpecWith @(EpochState era) (2 * n) $ do
+    pp <- genConwayFn pparamsSpec
+    univ <- genWitUniv @era 200
+    context <- genCertContext @era univ
+    epn <- genFromSpec epochNoSpec
+    pure (epochStateSpec @era pp univ context (lit epn))
+
+  soundSpecWith @(NewEpochState era) (2 * n) $ do
+    pp <- genConwayFn pparamsSpec
+    univ <- genWitUniv @era 200
+    context <- genCertContext @era univ
+    pure (newEpochStateSpec @era pp univ context)
 
 spec :: Spec
 spec = do
-  prop "Classify GenesisCert" (testGenesisCert @ShelleyEra)
   prop "Classify ShelleyCert" (testShelleyCert @BabbageEra)
   prop "Classify ConwayCert" testConwayCert
   describe "Soundness of WellFormed types from the Cardano Ledger: " $ do
     soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
-    soundSpecWith @InstantaneousRewards
-      20
-      (irewardSpec @ShelleyEra (eraWitUniv @ShelleyEra 50) !$! accountStateSpec)
-    soundSpecWith @SnapShots
-      10
-      (snapShotsSpec <$> (lit . getMarkSnapShot <$> wff @(LedgerState ConwayEra) @ConwayEra))
 
-utxoStateGen ::
-  forall era.
-  ( WellFormed (CertState era) era
-  , EraSpecLedger era
-  ) =>
-  Gen (Specification (UTxOState era))
+    soundSpecWith @SnapShots 10 $ do
+      pp <- genConwayFn pparamsSpec
+      ls <- lsX pp
+      pure (snapShotsSpec (lit (getMarkSnapShot ls)))
+
+  specSuite @ConwayEra 10
+
+utxoStateGen :: Gen (Specification (UTxOState ConwayEra))
 utxoStateGen =
-  utxoStateSpec @era
-    <$> genConwayFn @(PParams era) pparamsSpec
-    <*> genWitUniv @era 25
-    <*> (lit <$> wff @(CertState era) @era)
+  utxoStateSpec @ConwayEra
+    <$> genConwayFn @(PParams ConwayEra) pparamsSpec
+    <*> genWitUniv @ConwayEra 25
+    <*> (lit <$> csX @ConwayEra)

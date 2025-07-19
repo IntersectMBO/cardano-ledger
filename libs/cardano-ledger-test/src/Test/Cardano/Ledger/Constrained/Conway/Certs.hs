@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -28,66 +27,6 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 setMapMaybe :: Ord a => (t -> Maybe a) -> Set t -> Set a
 setMapMaybe f set = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty set
-
--- The current spec is written to specify the phase when Voting goes into effect (the Post BootStrap phase)
--- The implementation is written to implement the phase before Voting goes into effect (the BootStrap phase)
--- This affects the Certs rule because in the Post Bootstrap Phase, the spec tests that the (Credential 'Staking c)
--- of every withdrawal, is delegated to some DRep, and that every Withdrawal is consistent with some Rewards entry.
--- This is tested in the Spec, but it is not tested in implementation.
--- A hardfork, sometime in the future will turn this test on.
--- So to satisfy both we add this more refined DState spec, that make sure these post bootstrap tests are always True.
--- The implementation does not test these, so the extra refinement has no effect here, the Spec will test them so refinement does matter there.
--- Note that only the keyhash credentials need be delegated to a DRep.
--- bootstrapDStateSpec ::
---   forall era.
---   EraSpecTxOut era =>
---   WitUniv era ->
---   -- Set of credentials, each uniquely identifying a DRep,
---   -- Every delegation of a stake credential to a DRep should be in this set.
---   Set (Credential 'DRepRole) ->
---   Map RewardAccount Coin ->
---   Specification (DState era)
--- bootstrapDStateSpec univ delegatees withdrawals =
---   constrained $ \ [var| dstate |] ->
---     match dstate $ \ [var| uMap |] futureGenDelegs genDelegs [var|irewards|] ->
---       [ -- futureGenDelegs
---         assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
---       , -- genDelegs
---         match genDelegs $ \gd ->
---           [ witness univ (dom_ gd)
---           , witness univ (rng_ gd)
---           , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
---           ]
---       , -- irewards
---         match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
---       , -- uMap
---         match [var| uMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
---           [ -- rdMap
---             satisfies rdMap (rewDepMapSpec2 univ withdrawals)
---           , -- dRepMap
---             dependsOn dRepMap rdMap
---           , reify rdMap id $ \ [var|rdm|] ->
---               [ witness univ (dom_ dRepMap)
---               , assert $ subset_ (lit (keyHashWdrl withdrawals)) (dom_ dRepMap)
---               , witness univ (rng_ dRepMap)
---               , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
---               , -- All DReps delegated to are known delegatees
---                 forAll' dRepMap $ \_ dRep ->
---                   [ (caseOn dRep)
---                       (branch $ \kh -> assert (kh `member_` lit (setMapMaybe credKeyHash delegatees)))
---                       (branch $ \sh -> assert (sh `member_` lit (setMapMaybe credScriptHash delegatees)))
---                       (branch $ \_ -> assert True)
---                       (branch $ \_ -> assert True)
---                   ]
---               ]
---           , -- sPoolMap
---             dependsOn sPoolMap rdMap
---           , reify rdMap id $ \ [var|rdmp|] ->
---               assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
---           , -- ptrMap
---             assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
---           ]
---       ]
 
 txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody

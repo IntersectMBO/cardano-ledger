@@ -294,10 +294,6 @@ instance ToExpr DRepVotingThresholds
 instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
   show x = show (toExpr (subsetToPP @era x))
 
-instance HasSimpleRep (CompactForm Coin)
-
-instance HasSpec (CompactForm Coin)
-
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
 
