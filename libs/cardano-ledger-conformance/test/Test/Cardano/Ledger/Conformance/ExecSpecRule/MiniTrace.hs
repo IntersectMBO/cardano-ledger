@@ -167,7 +167,7 @@ spec = do
     prop
       "CERT"
       (withMaxSuccess 50 (minitraceProp @"CERT" @ConwayEra 50 nameTxCert))
-    xprop
+    prop
       "CERTS"
       ( withMaxSuccess
           50
