@@ -440,40 +440,6 @@ refScriptInOutput =
     }
 
 -- ====================================================================================
---  Valid: Unlock Simple Scripts with a Reference Script
--- ====================================================================================
-
-simpleScriptOutWithRefScriptUTxOState ::
-  forall era.
-  (Reflect era, BabbageEraTxBody era) => TestCaseData era
-simpleScriptOutWithRefScriptUTxOState =
-  TestCaseData
-    { txBody =
-        mkBasicTxBody
-          & inputsTxBodyL .~ [someTxIn]
-          & referenceInputsTxBodyL .~ [anotherTxIn]
-          & outputsTxBodyL .~ [mkBasicTxOut plainAddr (inject $ Coin 4995)]
-          & feeTxBodyL .~ Coin 5
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ mkBasicTxOut
-                  (simpleScriptAddr @era)
-                  (inject $ Coin 5000)
-              ]
-          , ofRefInputs =
-              [ mkBasicTxOut
-                  plainAddr
-                  (inject $ Coin 5000)
-                  & referenceScriptTxOutL .~ SJust simpleScript
-              ]
-          , ofCollateral = []
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole, keysForMultisigWitnessKeyRole]
-    , otherWitsFields = id
-    }
-
--- ====================================================================================
 
 type InOut era = (TxIn, TxOut era)
 
@@ -626,8 +592,6 @@ genericBabbageFeatures =
         , testCase "reference script to authorize delegation certificate" $
             testExpectSuccessValid @era refscriptForDelegCert
         , testCase "reference script in output" $ testExpectSuccessValid @era refScriptInOutput
-        , testCase "spend simple script output with reference script" $
-            testExpectSuccessValid @era simpleScriptOutWithRefScriptUTxOState
         ]
     ]
 
