@@ -214,7 +214,10 @@ instance
     | (a', b', c', d') <- shrink (a, toList b, c, d)
     ]
 
-instance (Era era, Arbitrary (InstantStake era)) => Arbitrary (RatifyEnv era) where
+instance
+  (Era era, Arbitrary (InstantStake era), Arbitrary (Accounts era)) =>
+  Arbitrary (RatifyEnv era)
+  where
   arbitrary =
     RatifyEnv
       <$> arbitrary
@@ -875,8 +878,14 @@ instance Arbitrary DRepVotingThresholds where
 instance Era era => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
 
-instance Era era => Arbitrary (ConwayCertState era) where
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (ConwayCertState era) where
   arbitrary = ConwayCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+deriving instance Arbitrary (ConwayAccounts era)
+
+instance Arbitrary (ConwayAccountState era) where
+  arbitrary = ConwayAccountState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Arbitrary (TransitionConfig ConwayEra) where

@@ -10,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -31,27 +30,16 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
   curPParamsEpochStateL,
-  dsUnifiedL,
   esLStateL,
   lsCertStateL,
   prevPParamsEpochStateL,
-  psDepositsL,
-  psStakePoolParamsL,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
-import Cardano.Ledger.State (
-  ChainAccountState (..),
-  EraCertState (..),
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShots (..),
-  calculatePoolDistr,
- )
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
@@ -166,7 +154,7 @@ runTest = do
 
 initialMockChainState ::
   forall era.
-  Reflect era =>
+  (Reflect era, ShelleyEraAccounts era) =>
   GenState era ->
   MockChainState era
 initialMockChainState gstate =
@@ -184,7 +172,8 @@ initialMockChainState gstate =
         , stashedAVVMAddresses = stashedAVVMAddressesZero (reify @era)
         }
 
-makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
+makeEpochState ::
+  (Reflect era, ShelleyEraAccounts era) => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
     { esChainAccountState =
@@ -199,7 +188,7 @@ makeEpochState gstate ledgerstate =
     & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
     & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
-snaps :: (EraTxOut era, EraCertState era) => LedgerState era -> SnapShots
+snaps :: (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
@@ -211,9 +200,7 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
 
 raiseMockError ::
   forall era.
-  ( Reflect era
-  , EraTest era
-  ) =>
+  Reflect era =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -224,7 +211,6 @@ raiseMockError ::
 raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
   let _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
       _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
-      _keydeposits = UM.depositMap $ epochstate ^. esLStateL . lsCertStateL . certDStateL . dsUnifiedL
    in show
         [ toExpr $ adaPots reify epochstate
         , toExpr slot
@@ -389,6 +375,7 @@ genTrace ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->
@@ -408,6 +395,7 @@ traceProp ::
   forall era prop.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->
@@ -422,6 +410,7 @@ forEachEpochTrace ::
   ( Testable prop
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->
@@ -480,6 +469,7 @@ chainTest ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->
@@ -515,6 +505,7 @@ multiEpochTest ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
+  , ShelleyEraAccounts era
   ) =>
   Int ->
   GenSize ->

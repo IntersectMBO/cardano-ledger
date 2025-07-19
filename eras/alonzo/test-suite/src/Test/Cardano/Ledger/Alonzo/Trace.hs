@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   UtxoEnv,
  )
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
@@ -48,6 +48,7 @@ instance
   , EraGov era
   , EraUTxO era
   , AlonzoEraTx era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era

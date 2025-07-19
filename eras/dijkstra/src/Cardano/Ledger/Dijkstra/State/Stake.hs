@@ -12,6 +12,7 @@ import Cardano.Ledger.Conway.State (
   resolveConwayInstantStake,
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.State.Account ()
 import Cardano.Ledger.Dijkstra.TxOut ()
 
 instance EraStake DijkstraEra where

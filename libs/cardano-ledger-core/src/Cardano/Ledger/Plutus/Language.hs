@@ -564,7 +564,7 @@ toSLanguage lang
     thisLanguage = isLanguage
 
 asSLanguage :: SLanguage l -> proxy l -> proxy l
-asSLanguage = flip const
+asSLanguage _ = id
 
 withSLanguage :: Language -> (forall l. PlutusLanguage l => SLanguage l -> a) -> a
 withSLanguage l f =

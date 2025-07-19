@@ -97,7 +97,6 @@ import Test.Cardano.Ledger.Generic.ModelState (Model)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), runSTS, runSTS')
 import Test.Cardano.Ledger.Shelley.Era (EraTest, ShelleyEraTest)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
@@ -265,7 +264,11 @@ testBBODY ::
   , Eq (State (EraRule "LEDGERS" era))
   , ToExpr (PredicateFailure (EraRule "BBODY" era))
   , ToExpr (State (EraRule "LEDGERS" era))
-  , ShelleyEraImp era
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , STS (EraRule "BBODY" era)
   ) =>
   ShelleyBbodyState era ->
   Block BHeaderView era ->

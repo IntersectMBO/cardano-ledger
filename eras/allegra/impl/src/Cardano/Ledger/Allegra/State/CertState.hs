@@ -5,6 +5,7 @@
 module Cardano.Ledger.Allegra.State.CertState () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State.Account ()
 import Cardano.Ledger.Shelley.State
 
 instance EraCertState AllegraEra where

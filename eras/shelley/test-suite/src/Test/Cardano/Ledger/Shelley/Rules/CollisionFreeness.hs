@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
   tests,
 ) where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Block (bbody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (witVKeyHash)
@@ -19,9 +20,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
  )
+import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.SetAlgebra (eval, (∩))
+import Control.State.Transition.Extended (BaseM, Environment, STS, Signal, State)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -34,7 +37,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
@@ -61,9 +63,14 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
+  , EraStake era
   , ChainProperty era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
-  , ShelleyEraImp era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , STS (EraRule "LEDGER" era)
   ) =>
   TestTree
 tests =
@@ -85,7 +92,11 @@ eliminateTxInputs ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , ShelleyEraImp era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -111,7 +122,11 @@ newEntriesAndUniqueTxIns ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , ShelleyEraImp era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -142,7 +157,11 @@ requiredMSigSignaturesSubset ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , ShelleyEraImp era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property

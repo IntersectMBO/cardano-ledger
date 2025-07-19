@@ -111,7 +111,6 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
 import Constrained.API.Extend hiding (Sized)
 import Constrained.API.Extend qualified as C
@@ -751,17 +750,17 @@ instance Semantics StringW where
 -- | In this instance there is no way to bring the type variable `s` into scope
 --   so we introduce some local functions that have a signature that bring it into scope.
 instance Logic StringW where
-  propagateTypeSpec StrLenW (Unary HOLE) ts cant = foo ts cant
+  propagateTypeSpec StrLenW (Unary HOLE) = go
     where
-      foo :: forall s. (HasSpec s, StringLike s) => NumSpec Int -> [Int] -> Specification s
-      foo t c = typeSpec $ lengthSpec @s (TypeSpec t c)
-  propagateMemberSpec StrLenW (Unary HOLE) xs = bar xs
+      go :: forall s. (HasSpec s, StringLike s) => NumSpec Int -> [Int] -> Specification s
+      go t c = typeSpec $ lengthSpec @s (TypeSpec t c)
+  propagateMemberSpec StrLenW (Unary HOLE) = go
     where
-      bar :: forall s. (HasSpec s, StringLike s) => NonEmpty Int -> Specification s
-      bar ys = typeSpec $ lengthSpec @s (MemberSpec ys)
+      go :: forall s. (HasSpec s, StringLike s) => NonEmpty Int -> Specification s
+      go ys = typeSpec $ lengthSpec @s (MemberSpec ys)
 
   mapTypeSpec :: forall a b. StringW '[a] b -> TypeSpec a -> Specification b
-  mapTypeSpec StrLenW ss = getLengthSpec @a ss
+  mapTypeSpec StrLenW = getLengthSpec @a
 
 class StringLike s where
   lengthSpec :: Specification Int -> TypeSpec s
@@ -967,9 +966,9 @@ instance HasSimpleRep (PState era)
 
 instance Era era => HasSpec (PState era)
 
-instance HasSimpleRep (DState era)
+instance Typeable (Accounts era) => HasSimpleRep (DState era)
 
-instance Era era => HasSpec (DState era)
+instance (Era era, HasSpec (Accounts era)) => HasSpec (DState era)
 
 instance HasSimpleRep FutureGenDeleg
 
@@ -987,46 +986,29 @@ instance HasSimpleRep InstantaneousRewards
 
 instance HasSpec InstantaneousRewards
 
-type UMapTypes =
-  '[ Map (Credential 'Staking) RDPair
-   , Map Ptr (Credential 'Staking)
-   , Map (Credential 'Staking) (KeyHash 'StakePool)
-   , Map (Credential 'Staking) DRep
-   ]
+instance Typeable era => HasSimpleRep (ShelleyAccountState era)
 
-instance HasSimpleRep UMap where
-  type TheSop UMap = '["UMap" ::: UMapTypes]
-  toSimpleRep um = inject @"UMap" @'["UMap" ::: UMapTypes] (rdPairMap um) (ptrMap um) (sPoolMap um) (dRepMap um)
-  fromSimpleRep rep = algebra @'["UMap" ::: UMapTypes] rep unify
+instance Typeable era => HasSpec (ShelleyAccountState era)
 
-instance HasSpec UMap
+instance Typeable era => HasSimpleRep (ShelleyAccounts era)
 
-instance HasSimpleRep RDPair where
-  type TheSop RDPair = '["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
-  toSimpleRep (RDPair rew dep) =
-    inject
-      @"RDPair"
-      @'["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
-      (toSimpleRep rew)
-      (toSimpleRep dep)
-  fromSimpleRep rep =
-    algebra @'["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
-      rep
-      ( \rew dep ->
-          RDPair
-            (fromSimpleRep rew)
-            (fromSimpleRep dep)
-      )
+instance Typeable era => HasSpec (ShelleyAccounts era)
 
-instance HasSpec RDPair
+instance Typeable era => HasSimpleRep (ConwayAccountState era)
+
+instance Typeable era => HasSpec (ConwayAccountState era)
+
+instance Typeable era => HasSimpleRep (ConwayAccounts era)
+
+instance Typeable era => HasSpec (ConwayAccounts era)
 
 instance Typeable era => HasSimpleRep (ShelleyCertState era)
 
-instance EraCertState era => HasSpec (ShelleyCertState era)
+instance (EraCertState era, HasSpec (Accounts era)) => HasSpec (ShelleyCertState era)
 
 instance Typeable era => HasSimpleRep (ConwayCertState era)
 
-instance ConwayEraCertState era => HasSpec (ConwayCertState era)
+instance (ConwayEraCertState era, HasSpec (Accounts era)) => HasSpec (ConwayCertState era)
 
 instance HasSimpleRep (GovRelation StrictMaybe)
 
@@ -1270,13 +1252,15 @@ instance HasSimpleRep (Committee era)
 instance Era era => HasSpec (Committee era)
 
 instance
-  ( HasSpec (InstantStake era)
+  ( HasSpec (Accounts era)
+  , HasSpec (InstantStake era)
   , Typeable era
   ) =>
   HasSimpleRep (RatifyEnv era)
 
 instance
-  ( HasSpec (InstantStake era)
+  ( HasSpec (Accounts era)
+  , HasSpec (InstantStake era)
   , Era era
   ) =>
   HasSpec (RatifyEnv era)
@@ -1411,7 +1395,7 @@ instance HasSpec (PulsingSnapshot ConwayEra)
 
 type DRepPulserTypes =
   '[ Int
-   , UMap
+   , Accounts ConwayEra
    , Int
    , InstantStake ConwayEra
    , PoolDistr
@@ -1435,7 +1419,7 @@ instance
   toSimpleRep DRepPulser {..} =
     inject @"DRepPulser" @'["DRepPulser" ::: DRepPulserTypes]
       dpPulseSize
-      dpUMap
+      dpAccounts
       dpIndex
       dpInstantStake
       dpStakePoolDistr
@@ -1450,8 +1434,8 @@ instance
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep
-      $ \ps um b sd spd dd ds ce cs es p pds poolps ->
-        DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals poolps
+      $ \ps accs b sd spd dd ds ce cs es p pds poolps ->
+        DRepPulser ps accs b sd spd dd ds ce cs es p pds testGlobals poolps
 
 instance HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
 

@@ -23,7 +23,7 @@ instance EraTransition BabbageEra where
 
   mkTransitionConfig NoGenesis = BabbageTransitionConfig
 
-  injectIntoTestState = registerInitialFundsThenStaking
+  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens btcAlonzoTransitionConfig (\btc pc -> btc {btcAlonzoTransitionConfig = pc})

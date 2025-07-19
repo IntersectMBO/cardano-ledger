@@ -56,7 +56,7 @@ instance
       <*> toSpecRep withdrawals
       <*> toSpecRep ccColdCreds
 
-instance SpecTranslate ctx (ConwayCertState era) where
+instance ConwayEraAccounts era => SpecTranslate ctx (ConwayCertState era) where
   type SpecRep (ConwayCertState era) = Agda.CertState
   toSpecRep ConwayCertState {..} =
     Agda.MkCertState

@@ -12,11 +12,14 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
   commonTests,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BHeaderView (BHeaderView)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
+import Cardano.Ledger.Shelley.Rules (BbodyEnv, LedgerEnv, ShelleyBbodyState, ShelleyLedgersEnv)
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
@@ -28,7 +31,6 @@ import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslatio
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (
@@ -54,8 +56,9 @@ import qualified Test.Tasty.QuickCheck as TQC
 
 commonTests ::
   forall era.
-  ( ShelleyEraImp era
-  , EraGen era
+  ( EraGen era
+  , EraStake era
+  , ShelleyEraAccounts era
   , ApplyBlock era
   , GetLedgerView era
   , Embed (EraRule "BBODY" era) (CHAIN era)
@@ -73,6 +76,17 @@ commonTests ::
   , InstantStake era ~ ShelleyInstantStake era
   , QC.BaseEnv (EraRule "LEDGER" era) ~ Globals
   , QC.HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "TICK" era) ~ ()
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   ) =>
   [TestTree]
 commonTests =

@@ -31,7 +31,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (Identity, LedgerEnv)
 import Cardano.Ledger.Shelley.State
-import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Reader (ReaderT)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Control.State.Transition (STS (..))
@@ -75,6 +74,7 @@ incrStakeComputationTest ::
   forall era.
   ( EraGen era
   , EraStake era
+  , ShelleyEraAccounts era
   , InstantStake era ~ ShelleyInstantStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
@@ -99,6 +99,7 @@ incrStakeComp ::
   , STS (EraRule "LEDGER" era)
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
+  , ShelleyEraAccounts era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -140,14 +141,15 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         where
           utxoBalanace = sumCoinUTxO u'
           instantStakeBalanace = fold (sisCredentialStake is') <> fold (sisPtrStake is')
-          ptrs = ptrsMap $ dp ^. certDStateL
-          ptrs' = ptrsMap $ dp' ^. certDStateL
+          ptrs = dp ^. certDStateL . accountsL . accountsPtrsMapG
+          ptrs' = dp' ^. certDStateL . accountsL . accountsPtrsMapG
 
 incrStakeComparisonTest ::
   forall era.
   ( EraGen era
   , EraGov era
   , EraStake era
+  , ShelleyEraAccounts era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Proxy era ->
@@ -164,7 +166,7 @@ incrStakeComparisonTest Proxy =
 
 checkIncrementalStake ::
   forall era.
-  (EraGov era, EraTxOut era, EraStake era, EraCertState era) =>
+  (EraGov era, EraTxOut era, EraStake era, EraCertState era, ShelleyEraAccounts era) =>
   EpochState era ->
   Property
 checkIncrementalStake es =
@@ -192,24 +194,25 @@ tersediffincremental message (Stake a) (Stake c) =
 --   Now it is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
 stakeDistr ::
   forall era.
-  EraTxOut era =>
+  (EraTxOut era, ShelleyEraAccounts era) =>
   UTxO era ->
   DState era ->
   PState era ->
   SnapShot
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ VMap.fromMap (UM.compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
     (VMap.fromMap poolParams)
   where
-    rewards' :: Map.Map (Credential 'Staking) Coin
-    rewards' = UM.rewardMap (dsUnified ds)
+    accountsMap = ds ^. accountsL . accountsMapL
+    rewards' :: Map.Map (Credential 'Staking) (CompactForm Coin)
+    rewards' = Map.map (^. balanceAccountStateL) accountsMap
     delegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-    delegs = UM.sPoolMap (dsUnified ds)
-    ptrs' = ptrsMap ds
+    delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
+    ptrs' = ds ^. accountsL . accountsPtrsMapG
     PState {psStakePoolParams = poolParams} = ps
-    stakeRelation :: Map (Credential 'Staking) Coin
+    stakeRelation :: Map (Credential 'Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
@@ -221,13 +224,13 @@ aggregateUtxoCoinByCredential ::
   EraTxOut era =>
   Map Ptr (Credential 'Staking) ->
   UTxO era ->
-  Map (Credential 'Staking) Coin ->
-  Map (Credential 'Staking) Coin
+  Map (Credential 'Staking) (CompactForm Coin) ->
+  Map (Credential 'Staking) (CompactForm Coin)
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldl' accum (Map.filter (/= mempty) initial) u
   where
     accum ans out =
-      let c = out ^. coinTxOutL
+      let c = out ^. compactCoinTxOutL
        in case out ^. addrTxOutL of
             Addr _ _ (StakeRefPtr p)
               | Just cred <- Map.lookup p ptrs -> Map.insertWith (<>) cred c ans

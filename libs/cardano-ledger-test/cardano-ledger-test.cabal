@@ -113,7 +113,6 @@ library
     pretty,
     prettyprinter,
     random,
-    set-algebra,
     small-steps:{small-steps, testlib},
     tasty,
     tasty-hunit,

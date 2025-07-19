@@ -23,7 +23,7 @@ instance EraTransition MaryEra where
 
   mkTransitionConfig NoGenesis = MaryTransitionConfig
 
-  injectIntoTestState = registerInitialFundsThenStaking
+  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens mtcAllegraTransitionConfig (\mtc pc -> mtc {mtcAllegraTransitionConfig = pc})

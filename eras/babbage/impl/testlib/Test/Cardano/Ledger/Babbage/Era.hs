@@ -23,6 +23,11 @@ class
 
 instance EraTest BabbageEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV2]
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest BabbageEra
 

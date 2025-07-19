@@ -42,7 +42,8 @@ spec = do
             mkBasicTxBody
               & withdrawalsTxBodyL
                 .~ Withdrawals [(rwdAccount, Coin 20)]
-        notInRewardsFailure = injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, Coin 20)]
+        notInRewardsFailure =
+          injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount, Coin 20)]
        in
         submitBootstrapAware
           (submitTx_ tx)
@@ -64,7 +65,8 @@ spec = do
             mkBasicTxBody
               & withdrawalsTxBodyL
                 .~ Withdrawals [(rwdAccount, zero), (registeredRwdAccount, reward)]
-        notInRewardsFailure = injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, zero)]
+        notInRewardsFailure =
+          injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount, zero)]
        in
         submitBootstrapAware
           (submitTx_ tx)
@@ -95,7 +97,10 @@ spec = do
                   , (rwdAccount2, reward2)
                   ]
         )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount1, reward1 <+> Coin 1)]]
+        [ injectFailure $
+            WithdrawalsNotInRewardsCERTS $
+              Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
+        ]
 
       submitFailingTx
         ( mkBasicTx $
@@ -104,12 +109,12 @@ spec = do
                 .~ Withdrawals
                   [(rwdAccount1, zero)]
         )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount1, zero)]]
+        [injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount1, zero)]]
   where
     setupRewardAccount = do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
       ra <- registerStakeCredential cred
       submitAndExpireProposalToMakeReward cred
-      rw <- getReward cred
-      pure (ra, rw, kh)
+      b <- getBalance cred
+      pure (ra, b, kh)

@@ -14,35 +14,6 @@ module Test.Cardano.Ledger.Generic.Instances () where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core (
-  AllegraEraTxBody (..),
-  AlonzoEraPParams,
-  AlonzoEraScript,
-  AlonzoEraTx (..),
-  AlonzoEraTxWits (..),
-  EraPParams (..),
-  EraScript (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  PParams,
-  PoolCert (..),
-  ScriptHash,
-  ValidityInterval (..),
-  emptyPParams,
-  eraProtVerLow,
-  ppCollateralPercentageL,
-  ppCostModelsL,
-  ppEMaxL,
-  ppKeyDepositL,
-  ppMaxBlockExUnitsL,
-  ppMaxTxExUnitsL,
-  ppMaxTxSizeL,
-  ppMaxValSizeL,
-  ppMinFeeAL,
-  ppMinFeeBL,
-  ppPoolDepositL,
- )
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -53,17 +24,12 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
-  EraTx (..),
-  ScriptIntegrityHash,
-  ShelleyEraTxBody (..),
-  ppMaxCollateralInputsL,
- )
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus (ExUnits (..), Language (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -78,9 +44,9 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.TreeDiff (ToExpr (..))
-import Lens.Micro (Lens', (&), (.~), (<>~), (^.))
+import Lens.Micro (Lens', (&), (.~), (<>~), (?~), (^.))
 import qualified Lens.Micro as L
-import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest, EraTest (..))
+import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest, EraTest (..), registerTestAccount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Tools (EraModel (..))
 import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, choose, chooseInt, elements)
@@ -118,29 +84,37 @@ shelleyGenPParams = do
       & ppKeyDepositL .~ Coin 2
       & ppEMaxL .~ EpochInterval 5
 
-applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
+applyShelleyCert :: forall era. EraTest era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of
-  ShelleyTxCertDelegCert (ShelleyRegCert x) ->
+  ShelleyTxCertDelegCert (ShelleyRegCert cred) ->
     model
-      { mRewards = Map.insert x (Coin 0) (mRewards model)
-      , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
+      { mAccounts =
+          registerTestAccount
+            cred
+            (Just (Ptr minBound minBound minBound))
+            (compactCoinOrError (pp ^. ppKeyDepositL))
+            Nothing
+            Nothing
+            (mAccounts model)
       , mDeposited = mDeposited model <+> pp ^. ppKeyDepositL
       }
     where
       pp = mPParams model
-  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (toExpr x))
-    Just (Coin 0) ->
-      model
-        { mRewards = Map.delete x (mRewards model)
-        , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keyDeposit
-        }
-      where
-        keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
-    Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
-    model {mDelegations = Map.insert cred hash (mDelegations model)}
+  ShelleyTxCertDelegCert (ShelleyUnRegCert cred) ->
+    case unregisterAccount cred (mAccounts model) of
+      (Nothing, _) -> error ("DeRegKey not in rewards: " <> show (toExpr cred))
+      (Just accountState, accounts)
+        | accountState ^. balanceAccountStateL == mempty ->
+            model
+              { mAccounts = accounts
+              , mDeposited = mDeposited model <-> fromCompact (accountState ^. depositAccountStateL)
+              }
+      _ -> error "DeRegKey with non-zero balance"
+  ShelleyTxCertDelegCert (ShelleyDelegCert cred poolId) ->
+    model
+      { mAccounts =
+          adjustAccountState (stakePoolDelegationAccountStateL ?~ poolId) cred (mAccounts model)
+      }
   ShelleyTxCertPool (RegPool poolparams) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
@@ -148,7 +122,7 @@ applyShelleyCert model dcert = case dcert of
           if Map.member hk (mPoolDeposits model)
             then mDeposited model
             else mDeposited model <+> pp ^. ppPoolDepositL
-      , mPoolDeposits -- Only add if it isn't already there
+      , mPoolDeposits -- Only add if it i[sn't already there
         =
           if Map.member hk (mPoolDeposits model)
             then mPoolDeposits model

@@ -281,7 +281,11 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (ShelleyLedgersPredFailure era)
 
-instance EraCertState era => ToExpr (ShelleyCertState era)
+instance (EraCertState era, ToExpr (Accounts era)) => ToExpr (ShelleyCertState era)
+
+instance ToExpr (ShelleyAccountState era)
+
+instance ToExpr (ShelleyAccounts era)
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>

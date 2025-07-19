@@ -30,7 +30,7 @@ instance EraTransition AlonzoEra where
 
   mkTransitionConfig = AlonzoTransitionConfig
 
-  injectIntoTestState = registerInitialFundsThenStaking
+  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens atcMaryTransitionConfig (\atc pc -> atc {atcMaryTransitionConfig = pc})

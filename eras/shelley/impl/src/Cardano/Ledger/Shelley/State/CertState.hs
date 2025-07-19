@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.State.CertState (
@@ -30,8 +33,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.State.Account ()
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
@@ -45,8 +48,16 @@ data ShelleyCertState era = ShelleyCertState
   { shelleyCertPState :: !(PState era)
   , shelleyCertDState :: !(DState era)
   }
-  deriving (Show, Eq, Generic)
-  deriving (ToJSON) via KeyValuePairs (ShelleyCertState era)
+  deriving (Generic)
+
+deriving instance Eq (Accounts era) => Eq (ShelleyCertState era)
+
+deriving instance Show (Accounts era) => Show (ShelleyCertState era)
+
+deriving via
+  KeyValuePairs (ShelleyCertState era)
+  instance
+    ToJSON (Accounts era) => ToJSON (ShelleyCertState era)
 
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
@@ -65,8 +76,7 @@ shelleyCertPStateL = lens shelleyCertPState (\ds u -> ds {shelleyCertPState = u}
 shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
 shelleyObligationCertState certState =
   Obligations
-    { oblStake =
-        UM.fromCompact (UM.sumDepositUView (UM.RewDepUView (certState ^. certDStateL . dsUnifiedL)))
+    { oblStake = sumDepositsAccounts (certState ^. certDStateL . accountsL)
     , oblPool = F.foldl' (<>) (Coin 0) (certState ^. certPStateL . psDepositsL)
     , oblDRep = Coin 0
     , oblProposal = Coin 0
@@ -78,7 +88,7 @@ shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePoolParams shelleyCertPState)
 
 shelleyCertsTotalRefundsTxBody ::
-  EraTxBody era => PParams era -> ShelleyCertState era -> TxBody era -> Coin
+  (EraTxBody era, EraAccounts era) => PParams era -> ShelleyCertState era -> TxBody era -> Coin
 shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
   getTotalRefundsTxBody
     pp
@@ -100,20 +110,20 @@ instance EraCertState ShelleyEra where
 
   certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
-instance ToKeyValuePairs (ShelleyCertState era) where
+instance ToJSON (Accounts era) => ToKeyValuePairs (ShelleyCertState era) where
   toKeyValuePairs certState@(ShelleyCertState _ _) =
     let ShelleyCertState {..} = certState
      in [ "dstate" .= shelleyCertDState
         , "pstate" .= shelleyCertPState
         ]
 
-instance Era era => EncCBOR (ShelleyCertState era) where
+instance EraAccounts era => EncCBOR (ShelleyCertState era) where
   encCBOR ShelleyCertState {shelleyCertPState, shelleyCertDState} =
     encodeListLen 2
       <> encCBOR shelleyCertPState
       <> encCBOR shelleyCertDState
 
-instance Era era => DecShareCBOR (ShelleyCertState era) where
+instance EraAccounts era => DecShareCBOR (ShelleyCertState era) where
   type
     Share (ShelleyCertState era) =
       ( Interns (Credential 'Staking)
@@ -128,9 +138,9 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
     pure ShelleyCertState {..}
 
-instance Default (ShelleyCertState era) where
+instance Default (Accounts era) => Default (ShelleyCertState era) where
   def = ShelleyCertState def def
 
-instance Era era => NoThunks (ShelleyCertState era)
+instance (Era era, NoThunks (Accounts era)) => NoThunks (ShelleyCertState era)
 
-instance Era era => NFData (ShelleyCertState era)
+instance (Era era, NFData (Accounts era)) => NFData (ShelleyCertState era)

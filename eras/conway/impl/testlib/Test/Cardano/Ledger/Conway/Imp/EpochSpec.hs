@@ -103,7 +103,7 @@ proposalsSpec =
       expectMissingGovActionId govActionId
 
       getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL) `shouldReturn` initialValue
-      getRewardAccountAmount rewardAccount `shouldReturn` deposit
+      getAccountBalance rewardAccount `shouldReturn` deposit
 
     it "Proposals are expired and removed as expected" $ whenPostBootstrap $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
@@ -434,14 +434,14 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   submitYesVoteCCs_ committeeHotCreds govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
-    getReward (raCredential rewardAccount) `shouldReturn` mempty
+    getBalance (raCredential rewardAccount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   expectMissingGovActionId govActionId
   treasuryEnd <- getsNES treasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
   impAnn "Withdrawal received by reward account" $
-    getReward (raCredential rewardAccount) `shouldReturn` withdrawalAmount
+    getBalance (raCredential rewardAccount) `shouldReturn` withdrawalAmount
 
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do

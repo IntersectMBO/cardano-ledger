@@ -25,6 +25,12 @@ class
 instance EraTest AllegraEra where
   zeroCostModels = emptyCostModels
 
+  mkTestAccountState = mkShelleyTestAccountState
+
+  accountsFromAccountsMap = shelleyAccountsFromAccountsMap
+
+  accountsToUMap = shelleyAccountsToUMap
+
 instance ShelleyEraTest AllegraEra
 
 instance AllegraEraTest AllegraEra

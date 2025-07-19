@@ -20,29 +20,32 @@ import Cardano.Ledger.Conway.Rules (GovEnv (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Constrained.API
 import Data.Map (Map)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (
+  dRepDelegationsSpec,
+  stakePoolDelegationsSpec,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
   accountStateSpec,
   aggregateDRep,
+  conwayDStateSpec,
   conwayGovStateSpec,
-  dstateSpec,
   epochNoSpec,
   epochStateSpec,
   getMarkSnapShot,
   govEnvSpec,
   ledgerStateSpec,
-  pstateSpec,
+  pStateSpec,
   shelleyGovStateSpec,
   snapShotSpec,
   snapShotsSpec,
   utxoSpecWit,
   utxoStateSpec,
-  vstateSpec,
+  vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (..))
@@ -66,16 +69,17 @@ psX :: forall era. GenScript era => Gen (PState era)
 psX = do
   univ <- genWitUniv 25
   epoch <- genFromSpec @EpochNo epochNoSpec
-  genFromSpec @(PState era) (pstateSpec univ (lit epoch))
+  stakePoolDelegations <- genFromSpec $ stakePoolDelegationsSpec univ
+  genFromSpec @(PState era) (pStateSpec univ (lit stakePoolDelegations) (lit epoch))
 
-dsX :: forall era. EraSpecLedger era => Gen (DState era)
-dsX = do
+conwayDStateGen ::
+  forall era. (EraSpecLedger era, Accounts era ~ ConwayAccounts era) => Gen (DState era)
+conwayDStateGen = do
   univ <- genWitUniv 25
-  acct <- genFromSpec @ChainAccountState accountStateSpec
-  pools <-
-    genFromSpec @(Map (KeyHash 'StakePool) PoolParams)
-      (hasSize (rangeSize 8 8))
-  genFromSpec @(DState era) (dstateSpec @era univ (lit acct) (lit pools))
+  stakePoolDelegations <- genFromSpec $ stakePoolDelegationsSpec univ
+  dRepDelegations <- genFromSpec $ dRepDelegationsSpec univ
+  genFromSpec @(DState era)
+    (conwayDStateSpec @era univ (lit stakePoolDelegations) (lit dRepDelegations))
 
 vsX :: forall era. GenScript era => Gen (VState era)
 vsX = do
@@ -86,7 +90,7 @@ vsX = do
       <$> genFromSpec -- ensures that each credential delegates to exactly one DRep
         @(Map (Credential 'Staking) DRep)
         trueSpec
-  genFromSpec @(VState era) (vstateSpec univ (lit epoch) (lit delegatees))
+  genFromSpec @(VState era) (vStateSpec univ (lit epoch) (lit delegatees))
 
 csX :: forall era. EraSpecLedger era => Gen (CertState era)
 csX = do
@@ -221,12 +225,9 @@ instance
   wff = psX
   wffWithPP _ = psX
 
-instance
-  (EraSpecPParams era, HasSpec (InstantStake era), EraSpecLedger era) =>
-  WellFormed (DState era) era
-  where
-  wff = dsX
-  wffWithPP _ = dsX
+instance WellFormed (DState ConwayEra) ConwayEra where
+  wff = conwayDStateGen
+  wffWithPP _ = conwayDStateGen
 
 instance
   (GenScript era, HasSpec (InstantStake era), EraSpecPParams era) =>

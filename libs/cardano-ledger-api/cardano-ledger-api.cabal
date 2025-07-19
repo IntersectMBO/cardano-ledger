@@ -153,6 +153,7 @@ test-suite cardano-ledger-api-test
   build-depends:
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-api,

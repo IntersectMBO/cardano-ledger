@@ -15,13 +15,13 @@
     "maxBlockHeaderSize": 7370,
     "maxCollateralInputs": 45,
     "maxValueSize": 39,
-    "minPoolCost": 392044,
+    "minPoolCost": 855261,
     "monetaryExpansion": 0.2,
     "poolPledgeInfluence": 6.790200579626650307,
     "poolRetireMaxEpoch": 1676560372,
-    "stakeAddressDeposit": 664860,
-    "stakePoolDeposit": 1.7453986152646146491e19,
+    "stakeAddressDeposit": 11,
+    "stakePoolDeposit": 395789,
     "stakePoolTargetNum": 40749,
     "treasuryCut": 0.34109,
-    "txFeeFixed": 321937
+    "txFeeFixed": 235256
 }
