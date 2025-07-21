@@ -137,7 +137,6 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..), PlutusPurposeTag (..))
