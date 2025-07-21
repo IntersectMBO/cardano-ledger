@@ -57,8 +57,8 @@ alonzoEncodeDecodeTests =
                 SNothing -> False
                 SJust (Update (ProposedPPUpdates ups) _) ->
                   any (\ppu -> isSJust (ppu ^. ppuMinUTxOValueL)) ups
-         in not hasDeprecatedField ==>
-              monadicIO
+         in not hasDeprecatedField
+              ==> monadicIO
                 ( run $ do
                     embedTripAnnExpectation @(TxBody MaryEra) @(TxBody AlonzoEra)
                       (eraProtVerLow @MaryEra)
