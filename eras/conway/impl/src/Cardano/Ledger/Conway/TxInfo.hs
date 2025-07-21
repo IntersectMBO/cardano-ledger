@@ -764,3 +764,26 @@ class
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
+
+-- | Translate a validity interval to POSIX time for Conway era, always using an open upper bound (strictUpperBound).
+transValidityInterval ::
+  Inject (ConwayContextError era) a =>
+  Tx era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  ValidityInterval ->
+  Either a PV1.POSIXTimeRange
+transValidityInterval _ epochInfo systemStart = \case
+  ValidityInterval SNothing SNothing -> pure PV1.always
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
+  ValidityInterval SNothing (SJust i) -> do
+    t <- transSlotToPOSIXTime i
+    pure $ PV1.to t
+  ValidityInterval (SJust i) (SJust j) -> do
+    t1 <- transSlotToPOSIXTime i
+    t2 <- transSlotToPOSIXTime j
+    pure $ PV1.Interval (PV1.lowerBound t1) (PV1.strictUpperBound t2)
+  where
+    transSlotToPOSIXTime =
+      left (inject . BabbageContextError . TimeTranslationPastHorizon)
+        . slotToPOSIXTime epochInfo systemStart

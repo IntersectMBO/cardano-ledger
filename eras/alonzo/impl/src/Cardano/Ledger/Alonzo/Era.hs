@@ -94,6 +94,3 @@ type instance EraRule "TICKF" AlonzoEra = ShelleyTICKF AlonzoEra
 
 type instance EraRule "UPEC" AlonzoEra = ShelleyUPEC AlonzoEra
 
--- | Starting with protocol version 9, we translate the upper bound of validity
--- interval correctly for Plutus scripts.
-
