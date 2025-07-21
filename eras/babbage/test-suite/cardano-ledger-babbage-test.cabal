@@ -16,9 +16,6 @@ source-repository head
   subdir: eras/babbage/test-suite
 
 library
-  exposed-modules:
-    Test.Cardano.Ledger.Babbage.Serialisation.Generators
-
   hs-source-dirs: src
   default-language: Haskell2010
   ghc-options:
@@ -31,21 +28,6 @@ library
     -Wunused-packages
 
   build-depends:
-    base >=4.18 && <5,
-    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.12,
-    cardano-ledger-alonzo-test >=1.1,
-    cardano-ledger-babbage >=1.11,
-    cardano-ledger-core >=1.17,
-    cardano-ledger-mary >=1.4,
-    cardano-ledger-shelley-test >=1.6,
-    cardano-slotting,
-    cardano-strict-containers,
-    containers,
-    microlens,
-    plutus-ledger-api,
-    tasty,
-    tasty-hunit,
-    time,
 
 test-suite cardano-ledger-babbage-test
   type: exitcode-stdio-1.0
