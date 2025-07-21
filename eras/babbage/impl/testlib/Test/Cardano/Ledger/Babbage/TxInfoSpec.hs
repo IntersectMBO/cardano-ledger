@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,9 +7,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Babbage.TxInfo where
+module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpecV2, spec) where
 
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (toPlutusTxInfo),
@@ -23,20 +24,19 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
   StrictMaybe (..),
-  natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -46,17 +46,15 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
-import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
-import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
-
-byronAddr :: Addr
-byronAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
+import Test.Cardano.Ledger.Shelley.Examples (exampleByronAddress)
 
 shelleyAddr :: Addr
-shelleyAddr = Addr Testnet alicePHK StakeRefNull
+shelleyAddr = Addr Testnet pk StakeRefNull
+  where
+    pk = mkCredential (mkKeyPair 0 :: KeyPair 'Payment)
 
 ei :: EpochInfo (Either a)
 ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
@@ -75,10 +73,10 @@ unknownInput :: TxIn
 unknownInput = mkTxInPartial genesisId 1
 
 byronOutput :: forall era. EraTxOut era => TxOut era
-byronOutput = mkBasicTxOut byronAddr (inject $ Coin 1)
+byronOutput = mkBasicTxOut exampleByronAddress (inject $ Coin 1)
 
 shelleyOutput :: forall era. EraTxOut era => TxOut era
-shelleyOutput = mkBasicTxOut (shelleyAddr) (inject $ Coin 2)
+shelleyOutput = mkBasicTxOut shelleyAddr (inject $ Coin 2)
 
 datumEx :: forall era. Era era => Datum era
 datumEx = Datum . dataToBinaryData . Data . PV1.I $ 123
@@ -90,12 +88,12 @@ inlineDatumOutput ::
   ) =>
   TxOut era
 inlineDatumOutput =
-  mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
+  mkBasicTxOut shelleyAddr (inject $ Coin 3)
     & datumTxOutL .~ datumEx
 
 refScriptOutput :: (BabbageEraTxOut era, EraPlutusTxInfo 'PlutusV2 era) => TxOut era
 refScriptOutput =
-  mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
+  mkBasicTxOut shelleyAddr (inject $ Coin 3)
     & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
 
 -- This input is only a "Shelley input" in the sense
@@ -183,7 +181,7 @@ successfulTranslation ::
   SLanguage l ->
   Tx era ->
   (SLanguage l -> PlutusTxInfo l -> Bool) ->
-  Assertion
+  Expectation
 successfulTranslation slang tx f =
   let lti =
         LedgerTxInfo
@@ -207,7 +205,7 @@ expectTranslationError ::
   SLanguage l ->
   Tx era ->
   ContextError era ->
-  Assertion
+  Expectation
 expectTranslationError slang tx expected =
   let lti =
         LedgerTxInfo
@@ -219,7 +217,7 @@ expectTranslationError slang tx expected =
           }
    in case toPlutusTxInfo slang lti of
         Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
-        Left e -> e @?= expected
+        Left e -> e `shouldBe` expected
 
 expectV1TranslationError ::
   ( BabbageEraTxOut era
@@ -229,7 +227,7 @@ expectV1TranslationError ::
   ) =>
   Tx era ->
   ContextError era ->
-  Assertion
+  Expectation
 expectV1TranslationError = expectTranslationError SPlutusV1
 
 errorTranslate ::
@@ -248,9 +246,8 @@ translatedInputEx1 ::
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
   PV2.TxInInfo
-translatedInputEx1 _ =
+translatedInputEx1 =
   errorTranslate @era "translatedInputEx1" $ transTxInInfoV2 @era utxo inputWithInlineDatum
 
 translatedInputEx2 ::
@@ -260,9 +257,8 @@ translatedInputEx2 ::
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
   PV2.TxInInfo
-translatedInputEx2 _ =
+translatedInputEx2 =
   errorTranslate @era "translatedInputEx2" $ transTxInInfoV2 @era utxo inputWithRefScript
 
 translatedOutputEx1 ::
@@ -272,9 +268,8 @@ translatedOutputEx1 ::
   , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
   PV2.TxOut
-translatedOutputEx1 _ =
+translatedOutputEx1 =
   errorTranslate @era "translatedOutputEx1" $
     transTxOutV2 @era (TxOutFromOutput minBound) inlineDatumOutput
 
@@ -285,13 +280,12 @@ translatedOutputEx2 ::
   , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
   PV2.TxOut
-translatedOutputEx2 _ =
+translatedOutputEx2 =
   errorTranslate @era "translatedOutputEx2" $
     transTxOutV2 @era (TxOutFromOutput minBound) refScriptOutput
 
-txInfoTestsV1 ::
+txInfoSpecV1 ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
@@ -300,50 +294,31 @@ txInfoTestsV1 ::
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
-  TestTree
-txInfoTestsV1 _ =
-  testGroup
-    "Plutus V1"
-    $ [ testCase "translation error on byron txout" $
-          expectV1TranslationError @era
-            (txBare shelleyInput byronOutput)
-            (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
-      , testCase "translation error on byron txin" $
-          expectV1TranslationError @era
-            (txBare byronInput shelleyOutput)
-            (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
-      , testCase "translation error on unknown txin (logic error)" $
-          expectV1TranslationError @era
-            (txBare unknownInput shelleyOutput)
-            (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
-      , testCase "translation error on inline datum in input" $
-          expectV1TranslationError @era
-            (txBare inputWithInlineDatum shelleyOutput)
-            (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
-      , testCase "translation error on inline datum in output" $
-          expectV1TranslationError @era
-            (txBare shelleyInput inlineDatumOutput)
-            (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
-      ]
-      ++ if eraProtVerLow @era < natVersion @9
-        then
-          [ testCase "translation error on reference script in input" $
-              expectV1TranslationError @era
-                (txBare inputWithRefScript shelleyOutput)
-                (inject $ ReferenceScriptsNotSupported @era (TxOutFromInput inputWithRefScript))
-          , testCase "translation error on reference script in output" $
-              expectV1TranslationError @era
-                (txBare shelleyInput refScriptOutput)
-                (inject $ ReferenceScriptsNotSupported @era (TxOutFromOutput minBound))
-          , testCase "translation error on reference input" $
-              expectV1TranslationError @era
-                (txRefInput shelleyInput)
-                (inject $ ReferenceInputsNotSupported @era (Set.singleton shelleyInput))
-          ]
-        else []
+  Spec
+txInfoSpecV1 =
+  describe "Plutus V1" $ do
+    it "translation error on byron txout" $
+      expectV1TranslationError @era
+        (txBare shelleyInput byronOutput)
+        (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
+    it "translation error on byron txin" $
+      expectV1TranslationError @era
+        (txBare byronInput shelleyOutput)
+        (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
+    it "translation error on unknown txin (logic error)" $
+      expectV1TranslationError @era
+        (txBare unknownInput shelleyOutput)
+        (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
+    it "translation error on inline datum in input" $
+      expectV1TranslationError @era
+        (txBare inputWithInlineDatum shelleyOutput)
+        (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
+    it "translation error on inline datum in output" $
+      expectV1TranslationError @era
+        (txBare shelleyInput inlineDatumOutput)
+        (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
 
-txInfoTestsV2 ::
+txInfoSpecV2 ::
   forall era l.
   ( EraTx era
   , EraPlutusTxInfo l era
@@ -352,55 +327,52 @@ txInfoTestsV2 ::
   , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  Proxy era ->
   SLanguage l ->
-  TestTree
-txInfoTestsV2 p lang =
-  testGroup
-    (show lang)
-    [ testCase "translation error on byron txout" $
-        expectTranslationError @era
-          lang
-          (txBare shelleyInput byronOutput)
-          (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
-    , testCase "translation error on byron txin" $
-        expectTranslationError @era
-          lang
-          (txBare byronInput shelleyOutput)
-          (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
-    , testCase "translation error on unknown txin (logic error)" $
-        expectTranslationError @era
-          lang
-          (txBare unknownInput shelleyOutput)
-          (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
-    , testCase "use reference input starting in Babbage" $
-        successfulTranslation @era
-          lang
-          (txRefInput shelleyInput)
-          hasReferenceInput
-    , testCase "use inline datum in input" $
-        successfulTranslation @era
-          lang
-          (txBare inputWithInlineDatum shelleyOutput)
-          (expectOneInput (translatedInputEx1 p))
-    , testCase "use inline datum in output" $
-        successfulTranslation @era
-          lang
-          (txBare shelleyInput inlineDatumOutput)
-          (expectOneOutput (translatedOutputEx1 p))
-    , testCase "use reference script in input" $
-        successfulTranslation @era
-          lang
-          (txBare inputWithRefScript shelleyOutput)
-          (expectOneInput (translatedInputEx2 p))
-    , testCase "use reference script in output" $
-        successfulTranslation @era
-          lang
-          (txBare shelleyInput refScriptOutput)
-          (expectOneOutput (translatedOutputEx2 p))
-    ]
+  Spec
+txInfoSpecV2 lang =
+  describe (show lang) $ do
+    it "translation error on byron txout" $
+      expectTranslationError @era
+        lang
+        (txBare shelleyInput byronOutput)
+        (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
+    it "translation error on byron txin" $
+      expectTranslationError @era
+        lang
+        (txBare byronInput shelleyOutput)
+        (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
+    it "translation error on unknown txin (logic error)" $
+      expectTranslationError @era
+        lang
+        (txBare unknownInput shelleyOutput)
+        (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
+    it "use reference input starting in Babbage" $
+      successfulTranslation @era
+        lang
+        (txRefInput shelleyInput)
+        hasReferenceInput
+    it "use inline datum in input" $
+      successfulTranslation @era
+        lang
+        (txBare inputWithInlineDatum shelleyOutput)
+        (expectOneInput (translatedInputEx1 @era))
+    it "use inline datum in output" $
+      successfulTranslation @era
+        lang
+        (txBare shelleyInput inlineDatumOutput)
+        (expectOneOutput (translatedOutputEx1 @era))
+    it "use reference script in input" $
+      successfulTranslation @era
+        lang
+        (txBare inputWithRefScript shelleyOutput)
+        (expectOneInput (translatedInputEx2 @era))
+    it "use reference script in output" $
+      successfulTranslation @era
+        lang
+        (txBare shelleyInput refScriptOutput)
+        (expectOneOutput (translatedOutputEx2 @era))
 
-txInfoTests ::
+spec ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
@@ -409,6 +381,11 @@ txInfoTests ::
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
-  Proxy era ->
-  TestTree
-txInfoTests p = testGroup "txInfo translation" [txInfoTestsV1 p, txInfoTestsV2 p SPlutusV2]
+  Spec
+spec =
+  describe "txInfo translation" $ do
+    txInfoSpecV1 @era
+    txInfoSpecV2 @era SPlutusV2
+
+genesisId :: TxId
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

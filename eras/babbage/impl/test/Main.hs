@@ -3,7 +3,6 @@
 module Main where
 
 import Cardano.Ledger.Babbage (BabbageEra)
-import Data.Proxy (Proxy (..))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
@@ -21,7 +20,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Babbage" $ do
-      TxInfo.spec (Proxy @BabbageEra)
+      TxInfo.spec @BabbageEra
       GoldenTranslation.spec
       Golden.spec
       BinarySpec.spec
