@@ -217,10 +217,12 @@ test-suite tests
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_alonzo
+    Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec
     Test.Cardano.Ledger.Alonzo.Binary.CddlSpec
     Test.Cardano.Ledger.Alonzo.BinarySpec
     Test.Cardano.Ledger.Alonzo.GoldenSpec
     Test.Cardano.Ledger.Alonzo.GoldenTranslation
+    Test.Cardano.Ledger.Alonzo.TxInfoSpec
 
   default-language: Haskell2010
   ghc-options:
