@@ -56,7 +56,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
--- import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
+import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
 -- import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Conway.ImpTest (
   ConwayEraImp,
@@ -149,6 +149,6 @@ conwaySpec = do
   describe "LEDGER" Ledger.spec
   describe "RATIFY" Ratify.spec
   describe "UTXO" Utxo.spec
+  describe "UTXOS" Utxos.spec
 
--- describe "UTXOS" Utxos.spec
 -- describe "UTXOW" Utxow.spec
