@@ -68,7 +68,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
@@ -114,7 +113,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
@@ -161,7 +159,6 @@ extra-packages:
   cardano-ledger-alonzo-1.6.0.0,
   cardano-ledger-alonzo-test-1.2.0.0,
   cardano-ledger-babbage-1.6.0.0,
-  cardano-ledger-babbage-test-1.2.0.0,
   byron-spec-chain-1.0.0.2,
   byron-spec-ledger-1.0.0.2,
   cardano-ledger-byron-1.0.0.4,
@@ -201,7 +198,6 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \
@@ -248,7 +244,6 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \

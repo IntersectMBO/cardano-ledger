@@ -70,6 +70,5 @@ test-suite cardano-ledger-conway-test
 
   build-depends:
     base,
-    cardano-ledger-babbage-test,
     cardano-ledger-conway,
     tasty,
