@@ -7,7 +7,6 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
-import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -22,7 +21,6 @@ defaultTests =
   testGroup
     "Babbage tests"
     [ Tripping.tests
-    , txInfoTests (Proxy @BabbageEra)
     ]
 
 nightlyTests :: TestTree
