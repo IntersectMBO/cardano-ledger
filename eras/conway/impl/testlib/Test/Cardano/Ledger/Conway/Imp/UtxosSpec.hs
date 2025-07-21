@@ -52,7 +52,6 @@ import Test.Cardano.Ledger.Plutus.Examples (
 spec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
@@ -207,7 +206,6 @@ datumAndReferenceInputsSpec = do
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , Inject (ConwayContextError era) (ContextError era)
@@ -271,7 +269,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "ProposalProcedures" $ do
         it "V1" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
@@ -281,7 +279,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ ProposalProceduresFieldNotSupported badField
         it "V2" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
@@ -455,7 +453,6 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 govPolicySpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
@@ -482,7 +479,7 @@ govPolicySpec = do
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
         proposal <- mkProposal govAction
@@ -503,7 +500,7 @@ govPolicySpec = do
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
           committeeMembers'
-      rewardAccount <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
 
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
@@ -530,7 +527,7 @@ govPolicySpec = do
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
         proposal <- mkProposal govAction
@@ -540,7 +537,6 @@ govPolicySpec = do
 costModelsSpec ::
   forall era.
   ( ConwayEraImp era
-  , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
@@ -704,9 +700,7 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     )
 
 enactCostModels ::
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
   Credential 'DRepRole ->
