@@ -53,9 +53,11 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import Control.State.Transition (STS (..))
+import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
+import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
@@ -71,7 +73,8 @@ import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 spec ::
   forall era.
-  ( EraPlutusTxInfo PlutusV2 era
+  ( EraPlutusTxInfo PlutusV1 era
+  , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
   , RuleListEra era
   , ConwayEraImp era
@@ -126,4 +129,6 @@ spec =
     describe "TxWits" $ do
       TxWitsSpec.spec @era
     Regression.spec @era
-    TxInfo.spec @era
+    describe "TxInfo" $ do
+      TxInfo.spec @era
+      BabbageTxInfo.spec (Proxy @era)
