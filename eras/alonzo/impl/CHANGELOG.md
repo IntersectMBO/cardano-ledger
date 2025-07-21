@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `mkBasicBlockBodyAlonzo` and `txSeqBlockBodyAlonzoL` to use in Babbage, Conway and Dijkstra.
 * Added `eraUnsupportedLanguage`
 * Changed return type of `mkPlutusScript` and `mkBinaryPlutusScript` from `Maybe` to `MonadFail`
 * Deprecate `Alonzo.TxSeq` in favour of `Alonzo.BlockBody`. #5156

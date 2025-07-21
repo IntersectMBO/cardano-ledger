@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -26,6 +27,8 @@ module Cardano.Ledger.Alonzo.BlockBody.Internal (
   AlonzoBlockBody (AlonzoBlockBody, ..),
   hashAlonzoSegWits,
   alignedValidFlags,
+  mkBasicBlockBodyAlonzo,
+  txSeqBlockBodyAlonzoL,
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
@@ -89,10 +92,28 @@ data AlonzoBlockBody era = AlonzoBlockBodyInternal
 
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra
-  mkBasicBlockBody = AlonzoBlockBody mempty
-  txSeqBlockBodyL = lens abbTxs (\_ s -> AlonzoBlockBody s)
+  mkBasicBlockBody = mkBasicBlockBodyAlonzo
+  txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = abbHash
   numSegComponents = 4
+
+mkBasicBlockBodyAlonzo ::
+  ( SafeToHash (TxWits era)
+  , BlockBody era ~ AlonzoBlockBody era
+  , AlonzoEraTx era
+  ) =>
+  BlockBody era
+mkBasicBlockBodyAlonzo = AlonzoBlockBody mempty
+{-# INLINEABLE mkBasicBlockBodyAlonzo #-}
+
+txSeqBlockBodyAlonzoL ::
+  ( SafeToHash (TxWits era)
+  , BlockBody era ~ AlonzoBlockBody era
+  , AlonzoEraTx era
+  ) =>
+  Lens' (BlockBody era) (StrictSeq (Tx era))
+txSeqBlockBodyAlonzoL = lens abbTxs (\_ s -> AlonzoBlockBody s)
+{-# INLINEABLE txSeqBlockBodyAlonzoL #-}
 
 pattern AlonzoBlockBody ::
   forall era.

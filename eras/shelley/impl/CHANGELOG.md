@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `mkBasicBlockBodyShelley` and `txSeqBlockBodyShelleyL` to use in Allegra and Mary.
 * Add `Default` instance for `NewEpochState`
 * Remove `epochStateUMapL`, `unifiedL`, `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`
 * Add `ShelleyEraAccounts` with `mkShelleyAccountState`, `accountsPtrsMapG`, `ptrAccountStateG`
