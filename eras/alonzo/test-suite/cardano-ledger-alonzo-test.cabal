@@ -71,7 +71,6 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.ChainTrace
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.TxInfo
 
@@ -94,7 +93,7 @@ test-suite cardano-ledger-alonzo-test
     bytestring,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
