@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Babbage.TxInfoSpec (spec) where
+module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpecV2, spec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (

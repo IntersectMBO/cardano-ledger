@@ -45,6 +45,7 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus (Language (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.API (ApplyTx)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.Rules (
@@ -132,3 +133,6 @@ spec =
     describe "TxInfo" $ do
       TxInfo.spec @era
       BabbageTxInfo.spec (Proxy @era)
+      xdescribe "V2 tests for PlutusV3" $ do
+        -- TOOD: fix
+        BabbageTxInfo.txInfoSpecV2 (Proxy @era) SPlutusV3
