@@ -40,7 +40,6 @@ import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence (Seq)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Binary.Twiddle ()
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Binary.Twiddle ()
 import Test.Cardano.Ledger.Babbage.ImpTest ()
