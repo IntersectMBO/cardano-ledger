@@ -6,14 +6,26 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Protocol.TPraos.Examples (
+  ledgerExamplesShelley,
+  ledgerExamplesAllegra,
+  ledgerExamplesMary,
+  ledgerExamplesAlonzo,
   tPraosLedgerExamples,
+  -- re-export from api
+  ProtocolLedgerExamples (..),
+  LedgerExamples (..),
 ) where
+
 import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto, VRF)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -27,6 +39,8 @@ import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64, Word8)
 import Lens.Micro
+import qualified Test.Cardano.Ledger.Allegra.Examples as Allegra (ledgerExamples)
+import qualified Test.Cardano.Ledger.Alonzo.Examples as Alonzo (ledgerExamples)
 import Test.Cardano.Ledger.Api.Examples (
   LedgerExamples (..),
   ProtocolLedgerExamples (..),
@@ -34,6 +48,7 @@ import Test.Cardano.Ledger.Api.Examples (
  )
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import qualified Test.Cardano.Ledger.Mary.Examples as Mary (ledgerExamples)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.Examples (
   mkDSIGNKeyPair,
@@ -41,6 +56,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   seedFromByte,
   seedFromWords,
  )
+import qualified Test.Cardano.Ledger.Shelley.Examples as Shelley (ledgerExamples)
 import Test.Cardano.Protocol.TPraos.Create (
   AllIssuerKeys (..),
   KESKeyPair (..),
@@ -48,6 +64,19 @@ import Test.Cardano.Protocol.TPraos.Create (
   kesSignKey,
   mkOCert,
  )
+
+ledgerExamplesShelley :: ProtocolLedgerExamples (BHeader StandardCrypto) ChainDepState ShelleyEra
+ledgerExamplesShelley = tPraosLedgerExamples Shelley.ledgerExamples
+
+ledgerExamplesAllegra :: ProtocolLedgerExamples (BHeader StandardCrypto) ChainDepState AllegraEra
+ledgerExamplesAllegra = tPraosLedgerExamples Allegra.ledgerExamples
+
+ledgerExamplesMary :: ProtocolLedgerExamples (BHeader StandardCrypto) ChainDepState MaryEra
+ledgerExamplesMary = tPraosLedgerExamples Mary.ledgerExamples
+
+ledgerExamplesAlonzo :: ProtocolLedgerExamples (BHeader StandardCrypto) ChainDepState AlonzoEra
+ledgerExamplesAlonzo = tPraosLedgerExamples Alonzo.ledgerExamples
+
 tPraosLedgerExamples ::
   forall era.
   EraBlockBody era =>
