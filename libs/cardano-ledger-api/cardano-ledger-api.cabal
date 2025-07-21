@@ -86,6 +86,7 @@ library testlib
     Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra
     Test.Cardano.Ledger.Api.Examples.Consensus.Mary
     Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
+    Test.Cardano.Ledger.Api.Examples
     Test.Cardano.Ledger.Api.State.Query
     Test.Cardano.Ledger.Api.Upgrade
 
