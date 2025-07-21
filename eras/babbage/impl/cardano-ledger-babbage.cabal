@@ -106,6 +106,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Binary.Cddl
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Era
+    Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
@@ -137,7 +138,9 @@ library testlib
     cardano-ledger-babbage,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.17,
+    cardano-slotting,
     cardano-strict-containers,
     containers,
     cuddle >=0.4,
