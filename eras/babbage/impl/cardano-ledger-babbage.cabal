@@ -117,6 +117,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.ImpTest
     Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
     Test.Cardano.Ledger.Babbage.TreeDiff
+    Test.Cardano.Ledger.Babbage.TxInfoSpec
 
   visibility: public
   hs-source-dirs: testlib
@@ -151,6 +152,7 @@ library testlib
     microlens-ghc,
     plutus-ledger-api,
     small-steps >=1.1,
+    time,
 
 executable huddle-cddl
   main-is: Main.hs
