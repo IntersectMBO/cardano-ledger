@@ -2,9 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Alonzo.Golden
--- Description : Golden Tests for the Alonzo era
+-- | Golden Tests for the Alonzo era
 module Test.Cardano.Ledger.Alonzo.Golden (
   tests,
 ) where
@@ -54,8 +52,6 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Api.Examples.Consensus.Alonzo (ledgerExamplesAlonzo)
-import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as SLE
 import Test.Cardano.Ledger.Mary.Golden (
   largestName,
   minUTxO,
@@ -67,6 +63,11 @@ import Test.Cardano.Ledger.Mary.Golden (
  )
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
+import Test.Cardano.Protocol.TPraos.Examples (
+  LedgerExamples (..),
+  ProtocolLedgerExamples (..),
+  ledgerExamplesAlonzo,
+ )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -214,10 +215,10 @@ goldenCborSerialization =
     "golden tests - CBOR serialization"
     [ testCase "Alonzo Block" $ do
         expected <- readDataFile "golden/block.cbor"
-        Plain.serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (pleBlock ledgerExamplesAlonzo) @?= expected
     , testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
-        Plain.serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (leTx $ pleLedgerExamples ledgerExamplesAlonzo) @?= expected
     ]
 
 goldenJsonSerialization :: TestTree
