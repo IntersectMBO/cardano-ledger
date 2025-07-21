@@ -284,7 +284,6 @@ Changes recorded below are for all of the package versions in the list:
   * `cardano-ledger-conway-1.0.0.0`
   * `cardano-ledger-shelley-ma-1.0.0.0`
   * `cardano-ledger-alonzo-test-1.0.0.0`
-  * `cardano-ledger-conway-test-1.0.0.0`
   * `cardano-ledger-shelley-ma-test-1.0.0.0`
   * `cardano-ledger-shelley-test-1.0.0.0`
 
