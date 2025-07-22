@@ -8,6 +8,7 @@
 
 ### `testlib`
 
+* Added `Examples` module with: `ProtocolLedgerExamples` type, `mkProtocolLedgerExamples`, `ledgerExamplesShelley`, `ledgerExamplesAllegra`, `ledgerExamplesMary`, `ledgerExamplesAlonzo`, `ledgerExamplesTPraos`
 * Add `Arbitrary` instance for `ChainDepState`
 
 ## 1.4.0.0

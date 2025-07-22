@@ -14,6 +14,7 @@
 
 ### `testlib`
 
+* Added `Examples` module with: `ledgerExamples`, `exampleAllegraTxBody`, `exampleAllegraTxAuxData`
 * Added `Arbitrary` instance for `TransitionConfig AllegraEra`
 * Added `Era` module with `AllegraEraTest` class
 
