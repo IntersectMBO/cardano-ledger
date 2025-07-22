@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Hide `Cardano.Ledger.Mary.Translation` module
 * Added `COMPLETE` pragma for `TxCert MaryEra`
 * Added `COMPLETE` pragma for `NativeScript MaryEra`
 * Move to `testlib` the `DecCBOR` instance for `TxBody MaryEra`

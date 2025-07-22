@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), hashDataTxWitsL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (

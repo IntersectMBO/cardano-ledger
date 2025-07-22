@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.Rules (FailureDescription (..), TagMismatchDescription (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), alonzoMinFeeTx)
+import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (SlotNo (..), StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)

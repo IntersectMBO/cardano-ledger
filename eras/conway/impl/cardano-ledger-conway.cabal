@@ -41,7 +41,6 @@ library
     Cardano.Ledger.Conway.Scripts
     Cardano.Ledger.Conway.State
     Cardano.Ledger.Conway.Transition
-    Cardano.Ledger.Conway.Translation
     Cardano.Ledger.Conway.Tx
     Cardano.Ledger.Conway.TxBody
     Cardano.Ledger.Conway.TxCert
@@ -78,6 +77,7 @@ library
     Cardano.Ledger.Conway.State.CertState
     Cardano.Ledger.Conway.State.Stake
     Cardano.Ledger.Conway.State.VState
+    Cardano.Ledger.Conway.Translation
     Cardano.Ledger.Conway.TxAuxData
     Cardano.Ledger.Conway.TxOut
 

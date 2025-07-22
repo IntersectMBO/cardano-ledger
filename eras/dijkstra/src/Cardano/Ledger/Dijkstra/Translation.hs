@@ -8,11 +8,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Translation (Tx (..)) where
+module Cardano.Ledger.Dijkstra.Translation () where
 
-import Cardano.Ledger.Alonzo.Core (AlonzoEraTx (..), EraTx (mkBasicTx))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   DRepPulsingState (..),
@@ -30,17 +30,6 @@ import Cardano.Ledger.Conway.Governance (
   translateProposals,
  )
 import Cardano.Ledger.Conway.Governance.DRepPulser (PulsingSnapshot (..))
-import Cardano.Ledger.Core (
-  EraTx (auxDataTxL, bodyTxL, witsTxL),
-  EraTxOut (..),
-  PParams,
-  TranslateEra (..),
-  TranslationContext,
-  translateEra',
-  translateEraThroughCBOR,
-  upgradePParams,
- )
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.Governance ()
@@ -65,11 +54,9 @@ import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
 instance TranslateEra DijkstraEra Tx where
   type TranslationError DijkstraEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -77,12 +64,11 @@ instance TranslateEra DijkstraEra Tx where
     txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
     auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     let isValidTx = tx ^. isValidTxL
-        newTx =
-          mkBasicTx txBody
-            & witsTxL .~ txWits
-            & isValidTxL .~ isValidTx
-            & auxDataTxL .~ auxData
-    pure $ Tx newTx
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & isValidTxL .~ isValidTx
+        & auxDataTxL .~ auxData
 
 instance TranslateEra DijkstraEra NewEpochState where
   translateEra ctxt nes = do

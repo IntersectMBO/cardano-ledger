@@ -4,10 +4,6 @@
 
 * Removed `Test.Cardano.Ledger.Babbage.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
 
-## 1.3.1.1
-
-*
-
 ## 1.3.1.0
 
 * Account for removal of crypto parametrization

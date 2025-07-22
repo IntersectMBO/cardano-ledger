@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.Translation where
+module Cardano.Ledger.Mary.Translation () where
 
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Genesis (NoGenesis (..))
@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
@@ -61,9 +60,9 @@ instance TranslateEra MaryEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance TranslateEra MaryEra ShelleyTx where
-  type TranslationError MaryEra ShelleyTx = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
+instance TranslateEra MaryEra Tx where
+  type TranslationError MaryEra Tx = DecoderError
+  translateEra _ctx = translateEraThroughCBOR "AllegraTx"
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

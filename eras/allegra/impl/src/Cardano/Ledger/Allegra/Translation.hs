@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   returnRedeemAddrsToReserves,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
@@ -72,8 +71,8 @@ instance TranslateEra AllegraEra NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance TranslateEra AllegraEra ShelleyTx where
-  type TranslationError AllegraEra ShelleyTx = DecoderError
+instance TranslateEra AllegraEra Tx where
+  type TranslationError AllegraEra Tx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------

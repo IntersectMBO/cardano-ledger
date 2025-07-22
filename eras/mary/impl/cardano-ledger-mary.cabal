@@ -30,7 +30,6 @@ library
     Cardano.Ledger.Mary.Core
     Cardano.Ledger.Mary.State
     Cardano.Ledger.Mary.Transition
-    Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.TxBody
     Cardano.Ledger.Mary.TxOut
     Cardano.Ledger.Mary.UTxO
@@ -56,6 +55,7 @@ library
     Cardano.Ledger.Mary.State.Account
     Cardano.Ledger.Mary.State.CertState
     Cardano.Ledger.Mary.State.Stake
+    Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Tx
     Cardano.Ledger.Mary.TxAuxData
     Cardano.Ledger.Mary.TxCert

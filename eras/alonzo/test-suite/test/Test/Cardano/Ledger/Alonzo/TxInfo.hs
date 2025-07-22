@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   toPlutusTxInfo,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transValidityInterval)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
 import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))

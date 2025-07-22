@@ -5,10 +5,6 @@
 * Removed `Test.Cardano.Ledger.Allegra.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
 * Removed `Test.Cardano.Ledger.Mary.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
 
-## 1.3.0.1
-
-*
-
 ## 1.3.0.0
 
 * Remove `TestCrypto`

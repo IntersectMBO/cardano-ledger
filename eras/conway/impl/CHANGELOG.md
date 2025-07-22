@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Delete `Tx` newtype wrapper
+* Hide `Cardano.Ledger.Conway.Translation` module and remove its re-exports: `addrPtrNormalize` and `translateDatum`
 * Removed:
   * `maxRefScriptSizePerTx`
   * `maxRefScriptSizePerBlock`

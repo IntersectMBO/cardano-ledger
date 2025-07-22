@@ -57,7 +57,7 @@ import Cardano.Ledger.Alonzo.Rules (
   scriptFailureToFailureDescription,
  )
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))

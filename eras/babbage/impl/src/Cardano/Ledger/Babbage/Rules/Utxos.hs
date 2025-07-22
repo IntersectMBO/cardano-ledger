@@ -46,7 +46,6 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.State
-import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe,

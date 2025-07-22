@@ -1,8 +1,12 @@
 # Version history for `cardano-protocol-tpraos`
 
-## 1.4.0.1
+## 1.4.1.0
 
 * Add `GetLedgerView` instance for `DijkstraEra`
+
+### `testlib`
+
+* Add `Arbitrary` instance for `ChainDepState`
 
 ## 1.4.0.0
 

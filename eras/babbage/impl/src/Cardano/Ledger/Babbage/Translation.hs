@@ -10,15 +10,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Translation where
+module Cardano.Ledger.Babbage.Translation () where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Babbage.Core hiding (Tx)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.State
-import Cardano.Ledger.Babbage.Tx (Tx)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -71,7 +69,7 @@ instance TranslateEra BabbageEra Tx where
     auxData <- case tx ^. auxDataTxL of
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-    let validating = tx ^. Alonzo.isValidTxL
+    let validating = tx ^. isValidTxL
     pure $
       mkBasicTx txBody
         & witsTxL .~ txWits
