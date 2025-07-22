@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Added `Examples` with: ledgerExamples`, `exampleMultiAssetValue`
 * Added `Arbitrary` instance for `TransitionConfig MaryEra`
 * Added `Era` module with `MaryEraTest` class
 

@@ -7,6 +7,7 @@
 
 ### `testlib`
 
+* Added `Examples` with: `ledgerExamplesShelley`, `ledgerExamplesAllegra`, `ledgerExamplesMary`, `ledgerExamplesAlonzo`, `tPraosLedgerExamples`
 * Add `Arbitrary` instance for `ChainDepState`
 
 ## 1.4.0.0
