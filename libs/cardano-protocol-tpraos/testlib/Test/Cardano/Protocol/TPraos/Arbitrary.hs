@@ -25,7 +25,7 @@ import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
-import Cardano.Protocol.TPraos.API (PraosCrypto)
+import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
   BHeader (BHeader),
@@ -44,6 +44,10 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
+
+instance Arbitrary ChainDepState where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 newtype VRFNatVal = VRFNatVal Natural
   deriving (Show)
