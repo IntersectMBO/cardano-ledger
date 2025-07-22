@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transLookupTxOut,
   transTxOut,
   transValidityInterval,
+  transSlotToPOSIXTime,
   transPolicyID,
   transAssetName,
   transMultiAsset,
@@ -214,6 +215,17 @@ transLookupTxOut (UTxO utxo) txIn =
     Nothing -> Left $ inject $ TranslationLogicMissingInput @era txIn
     Just txOut -> Right txOut
 
+-- | This is a variant of `slotToPOSIXTime` that works with `Either` and `Inject`
+transSlotToPOSIXTime ::
+  forall era a.
+  Inject (AlonzoContextError era) a =>
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  SlotNo ->
+  Either a PV1.POSIXTime
+transSlotToPOSIXTime epochInfo systemStart =
+  left (inject . TimeTranslationPastHorizon @era) . slotToPOSIXTime epochInfo systemStart
+
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
   forall proxy era a.
@@ -223,20 +235,23 @@ transValidityInterval ::
   SystemStart ->
   ValidityInterval ->
   Either a PV1.POSIXTimeRange
-transValidityInterval epochInfo systemStart = \case
+transValidityInterval _ pv epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
-  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
-  ValidityInterval SNothing (SJust i) -> do
-    t <- transSlotToPOSIXTime i
-    pure $ PV1.to t
-  ValidityInterval (SJust i) (SJust j) -> do
-    t1 <- transSlotToPOSIXTime i
-    t2 <- transSlotToPOSIXTime j
-    pure $ PV1.Interval (PV1.lowerBound t1) (PV1.strictUpperBound t2)
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> slotToTime i
+  ValidityInterval SNothing (SJust i)
+    | pvMajor pv >= natVersion @9 -> do
+        t <- slotToTime i
+        pure $ PV1.Interval (PV1.lowerBound PV1.NegInf) (PV1.strictUpperBound t)
+    | otherwise -> PV1.to <$> slotToTime i
+  ValidityInterval (SJust i) (SJust j)
+    | pvMajor pv >= natVersion @9 -> do
+        t1 <- slotToTime i
+        t2 <- slotToTime j
+        pure $ PV1.Interval (PV1.lowerBound t1) (PV1.strictUpperBound t2)
+    | otherwise -> PV1.interval <$> slotToTime i <*> slotToTime j
   where
-    transSlotToPOSIXTime =
-      left (inject . TimeTranslationPastHorizon @era)
-        . slotToPOSIXTime epochInfo systemStart
+    slotToTime :: SlotNo -> Either a PV1.POSIXTime
+    slotToTime = transSlotToPOSIXTime epochInfo systemStart
 
 -- | Translate a TxOut. Returns `Nothing` if a Byron address is present in the TxOut.
 transTxOut ::

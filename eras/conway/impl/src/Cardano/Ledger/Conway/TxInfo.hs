@@ -20,7 +20,6 @@ module Cardano.Ledger.Conway.TxInfo (
   ConwayEraPlutusTxInfo (..),
   transTxBodyWithdrawals,
   transTxCert,
-  -- Era-specific translation for Plutus validity interval
   transValidityInterval,
   transDRepCred,
   transColdCommitteeCred,
@@ -52,7 +51,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   toPlutusWithContext,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  AlonzoContextError (..),
+  TxOutSource (..),
+  transSlotToPOSIXTime,
+ )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxOutV2)
@@ -765,25 +768,26 @@ class
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
--- | Translate a validity interval to POSIX time for Conway era, always using an open upper bound (strictUpperBound).
 transValidityInterval ::
-  Inject (ConwayContextError era) a =>
-  Tx era ->
+  forall proxy era a.
+  (Inject (ConwayContextError era) a, EraTx era) =>
+  proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
   Either a PV1.POSIXTimeRange
 transValidityInterval _ epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
-  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> slotToTime i
   ValidityInterval SNothing (SJust i) -> do
-    t <- transSlotToPOSIXTime i
-    pure $ PV1.to t
+    t <- slotToTime i
+    pure $ PV1.Interval (PV1.lowerBound PV1.NegInf) (PV1.strictUpperBound t)
   ValidityInterval (SJust i) (SJust j) -> do
-    t1 <- transSlotToPOSIXTime i
-    t2 <- transSlotToPOSIXTime j
+    t1 <- slotToTime i
+    t2 <- slotToTime j
     pure $ PV1.Interval (PV1.lowerBound t1) (PV1.strictUpperBound t2)
   where
-    transSlotToPOSIXTime =
-      left (inject . BabbageContextError . TimeTranslationPastHorizon)
-        . slotToPOSIXTime epochInfo systemStart
+    slotToTime :: SlotNo -> Either a PV1.POSIXTime
+    slotToTime =
+      left (inject . BabbageContextError . inject . Alonzo.TimeTranslationPastHorizon)
+        . transSlotToPOSIXTime epochInfo systemStart
