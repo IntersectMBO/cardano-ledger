@@ -15,12 +15,14 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  Mismatch (..),
   ProtVer (..),
   StrictMaybe (..),
   addEpochInterval,
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
@@ -98,6 +100,7 @@ spec = do
 
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       Positive n <- arbitrary
       let wrongDeposit = expectedDeposit <+> Coin n
@@ -108,7 +111,16 @@ spec = do
               & bodyTxL . certsTxBodyL
                 .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
           )
-          [injectFailure $ IncorrectDepositDELEG wrongDeposit]
+          [ injectFailure $
+              if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
+                then
+                  DepositIncorrectDELEG
+                    Mismatch
+                      { mismatchSupplied = wrongDeposit
+                      , mismatchExpected = expectedDeposit
+                      }
+                else IncorrectDepositDELEG wrongDeposit
+          ]
         expectNotRegistered (KeyHashObj kh)
 
   describe "Unregister stake credentials" $ do
@@ -137,8 +149,9 @@ spec = do
           [ injectFailure $ StakeKeyNotRegisteredDELEG (KeyHashObj kh)
           ]
 
-    it "With incorrect deposit" $ do
+    it "With incorrect refund" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       cred <- KeyHashObj <$> freshKeyHash
 
@@ -154,7 +167,16 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ [UnRegDepositTxCert cred wrongDeposit]
         )
-        [injectFailure $ IncorrectDepositDELEG wrongDeposit]
+        [ injectFailure $
+            if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
+              then
+                RefundIncorrectDELEG
+                  Mismatch
+                    { mismatchSupplied = wrongDeposit
+                    , mismatchExpected = expectedDeposit
+                    }
+              else IncorrectDepositDELEG wrongDeposit
+        ]
 
       expectRegistered cred
 

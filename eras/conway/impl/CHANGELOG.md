@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Better predicate failures for incorrect deposits and refunds.
+  * Add `hardforkConwayDELEGIncorrectDepositsAndRefunds` for protocol 11 onwards, to `Conway.Era`.
+  * Add `DepositIncorrectDELEG` and `RefundIncorrectDELEG` to `ConwayDelegPredFailure`.
 * Add `ScriptIntegrityHashMismatch`
 * Change the type of `cppDRepDeposit` to `CompactForm Coin`
 * Add `ppDRepDepositCompactL` and `ppuDRepDepositCompactL`
