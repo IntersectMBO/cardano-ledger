@@ -10,6 +10,7 @@ module Cardano.Ledger.Conway (
   ConwayEra,
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
+  hardforkConwayDELEGIncorrectDepositsAndRefunds,
   Tx (..),
 ) where
 
@@ -18,6 +19,7 @@ import Cardano.Ledger.Conway.BlockBody ()
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
   hardforkConwayBootstrapPhase,
+  hardforkConwayDELEGIncorrectDepositsAndRefunds,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
  )
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))

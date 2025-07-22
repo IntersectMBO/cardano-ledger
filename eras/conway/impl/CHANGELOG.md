@@ -2,6 +2,10 @@
 
 ## 1.20.0.0
 
+* Better predicate failures for incorrect deposits and refunds.
+  * Add `hardforkConwayDELEGIncorrectDepositsAndRefunds` for protocol 11 onwards, to `Conway.Era`.
+  * Add `DepositIncorrectDELEG` and `RefundIncorrectDELEG` to `ConwayDelegPredFailure`.
+  * Add `incorrectDeposit` and `incorrectRefund` to `Conway.Rules.Deleg` to reduce to the protocol-wise correct predicate failures.
 * Delete `Tx` newtype wrapper
 * Hide `Cardano.Ledger.Conway.Translation` module and remove its re-exports: `addrPtrNormalize` and `translateDatum`
 * Removed:

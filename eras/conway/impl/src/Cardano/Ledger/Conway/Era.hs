@@ -28,6 +28,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayRATIFY,
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
+  hardforkConwayDELEGIncorrectDepositsAndRefunds,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -182,3 +183,7 @@ hardforkConwayBootstrapPhase pv = pvMajor pv == natVersion @9
 -- members to submit votes.
 hardforkConwayDisallowUnelectedCommitteeFromVoting :: ProtVer -> Bool
 hardforkConwayDisallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion @10
+
+-- | Starting with protocol version 11, we report incorrect deposit and refunds better
+hardforkConwayDELEGIncorrectDepositsAndRefunds :: ProtVer -> Bool
+hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
