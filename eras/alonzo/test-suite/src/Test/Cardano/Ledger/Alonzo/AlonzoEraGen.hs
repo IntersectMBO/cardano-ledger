@@ -40,7 +40,6 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
  )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
-  IsValid (..),
   hashScriptIntegrity,
   totExUnits,
  )

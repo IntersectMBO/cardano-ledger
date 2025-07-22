@@ -22,7 +22,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), hashDataTxWitsL)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Network (..),

@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Hide `Cardano.Ledger.Babbage.Translation` module
 * Fixed `FromJSON` instance for `TransitionConfig BabbageEra`
 * Added `COMPLETE` pragma for `TxCert BabbageEra`
 * Added `COMPLETE` pragma for `NativeScript BabbageEra`

@@ -17,7 +17,6 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)

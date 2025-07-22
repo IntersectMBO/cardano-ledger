@@ -34,7 +34,6 @@ import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
  )
-import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),

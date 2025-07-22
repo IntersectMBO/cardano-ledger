@@ -10,14 +10,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Translation where
+module Cardano.Ledger.Alonzo.Translation () where
 
-import Cardano.Ledger.Alonzo.Core hiding (Tx)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), Tx (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),

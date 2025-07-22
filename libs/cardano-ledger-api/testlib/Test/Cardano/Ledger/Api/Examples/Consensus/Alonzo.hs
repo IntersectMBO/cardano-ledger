@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   Prices (..),
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))

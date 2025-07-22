@@ -11,16 +11,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Translation (
-  Tx (..),
-  addrPtrNormalize,
-  translateDatum,
-) where
+module Cardano.Ledger.Conway.Translation () where
 
-import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Conway.Core hiding (Tx)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
@@ -36,8 +31,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
-import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
@@ -91,11 +84,9 @@ instance TranslateEra ConwayEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
 instance TranslateEra ConwayEra Tx where
   type TranslationError ConwayEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -103,12 +94,11 @@ instance TranslateEra ConwayEra Tx where
     txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
     auxData <- mapM (translateEraThroughCBOR "AuxData") (tx ^. auxDataTxL)
     let isValidTx = tx ^. isValidTxL
-        newTx =
-          mkBasicTx txBody
-            & witsTxL .~ txWits
-            & isValidTxL .~ isValidTx
-            & auxDataTxL .~ auxData
-    pure $ Tx newTx
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & isValidTxL .~ isValidTx
+        & auxDataTxL .~ auxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

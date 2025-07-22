@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Babbage.ImpTest (
   submitTxWithRefInputs,
 ) where
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core

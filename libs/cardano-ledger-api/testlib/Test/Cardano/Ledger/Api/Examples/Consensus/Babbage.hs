@@ -15,12 +15,11 @@ module Test.Cardano.Ledger.Api.Examples.Consensus.Babbage (
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (BabbageEra, Tx (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)

@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Api.Examples.Consensus.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -31,7 +30,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))

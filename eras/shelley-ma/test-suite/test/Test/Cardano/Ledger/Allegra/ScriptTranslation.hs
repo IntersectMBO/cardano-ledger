@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation (
   testScriptPostTranslation,
 ) where
 
-import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -77,12 +77,12 @@ testScriptPostTranslation =
               S.SNothing
               S.SNothing
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
-          txs = S.ShelleyTx txb wits S.SNothing
+          txs = mkBasicTx txb & witsTxL .~ wits
           txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs
           result =
             runShelleyBase $
               applySTSTest @(S.ShelleyLEDGER AllegraEra)
-                (TRC (env, LedgerState utxoStAllegra def, MkAllegraTx txa))
+                (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e
             Right _ -> pure ()

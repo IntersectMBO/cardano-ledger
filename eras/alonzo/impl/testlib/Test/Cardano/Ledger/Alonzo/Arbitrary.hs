@@ -62,7 +62,6 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Transition (TransitionConfig (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
-  IsValid (IsValid),
   ScriptIntegrity (ScriptIntegrity),
   getLanguageView,
  )

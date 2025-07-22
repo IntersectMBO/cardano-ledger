@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Generic.Functions where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, mkSupportedLanguageM)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)

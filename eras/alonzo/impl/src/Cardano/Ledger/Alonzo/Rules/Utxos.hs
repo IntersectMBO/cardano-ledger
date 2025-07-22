@@ -42,7 +42,6 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
  )
 import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.State
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
   Globals,

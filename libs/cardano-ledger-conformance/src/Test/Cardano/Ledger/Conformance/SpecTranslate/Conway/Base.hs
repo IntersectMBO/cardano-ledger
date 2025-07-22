@@ -43,7 +43,6 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
