@@ -481,7 +481,7 @@ spec = do
             .~ [UnRegDepositTxCert cred expectedDeposit]
       expectNotRegistered cred
       expectNotDelegatedVote cred
-    disableImpInitExpectLedgerRuleConformance $
+    disableImpInitPostSubmitTxHook $
       it "Delegate vote and unregister after hardfork" $ do
         let
           bootstrapVer = ProtVer (natVersion @9) 0
@@ -562,7 +562,7 @@ spec = do
   describe "Delegate both stake and vote - separated out for conformance mismatch" $
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/640
     -- TODO: Re-enable after issue is resolved, by removing this override
-    disableImpInitExpectLedgerRuleConformance $ do
+    disableImpInitPostSubmitTxHook $ do
       it "Delegate, retire and re-register pool" $ do
         expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
         cred <- KeyHashObj <$> freshKeyHash

@@ -105,8 +105,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impEraStartEpochNo,
   impSetSeed,
   modifyImpInitProtVer,
-  modifyImpInitExpectLedgerRuleConformance,
-  disableImpInitExpectLedgerRuleConformance,
+  modifyImpInitPostSubmitTxHook,
+  disableImpInitPostSubmitTxHook,
+  modifyImpInitPassEpochBoundaryHook,
+  disableImpInitPassEpochBoundaryHook,
   minorFollow,
   majorFollow,
   cantFollow,
@@ -145,6 +147,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   -- * ImpSpec re-exports
   ImpM,
   ImpInit,
+  itePassEpochBoundaryHookL,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -291,7 +294,8 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
             ImpTestEnv
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
-              , iteExpectLedgerRuleConformance = \_ _ _ _ _ -> pure ()
+              , itePostSubmitTxHook = \_ _ _ _ _ -> pure ()
+              , itePassEpochBoundaryHook = \_ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -588,7 +592,7 @@ modifyImpInitProtVer ver =
               .~ ProtVer ver 0
       }
 
-modifyImpInitExpectLedgerRuleConformance ::
+modifyImpInitPostSubmitTxHook ::
   forall era.
   ( forall t.
     Globals ->
@@ -602,19 +606,39 @@ modifyImpInitExpectLedgerRuleConformance ::
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
-modifyImpInitExpectLedgerRuleConformance f =
+modifyImpInitPostSubmitTxHook f =
   modifyImpInit $ \impInit ->
     impInit
       { impInitEnv =
           impInitEnv impInit
-            & iteExpectLedgerRuleConformanceL .~ f
+            & itePostSubmitTxHookL .~ f
       }
 
-disableImpInitExpectLedgerRuleConformance ::
+disableImpInitPostSubmitTxHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
-disableImpInitExpectLedgerRuleConformance =
-  modifyImpInitExpectLedgerRuleConformance $ \_ _ _ _ _ -> pure ()
+disableImpInitPostSubmitTxHook =
+  modifyImpInitPostSubmitTxHook $ \_ _ _ _ _ -> pure ()
+
+modifyImpInitPassEpochBoundaryHook ::
+  ( forall t.
+    NewEpochState era ->
+    EpochNo ->
+    NewEpochState era ->
+    ImpM t ()
+  ) ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitPassEpochBoundaryHook f =
+  modifyImpInit $ \impInit ->
+    impInit
+      { impInitEnv = impInitEnv impInit & itePassEpochBoundaryHookL .~ f
+      }
+
+disableImpInitPassEpochBoundaryHook ::
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+disableImpInitPassEpochBoundaryHook = modifyImpInitPassEpochBoundaryHook $ \_ _ _ -> pure ()
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -749,7 +773,7 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
-  , iteExpectLedgerRuleConformance ::
+  , itePostSubmitTxHook ::
       forall t.
       Globals ->
       Either
@@ -761,12 +785,18 @@ data ImpTestEnv era = ImpTestEnv
       ImpM t ()
   , iteCborRoundTripFailures :: Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
+  , itePassEpochBoundaryHook ::
+      forall t.
+      NewEpochState era ->
+      EpochNo ->
+      NewEpochState era ->
+      ImpM t ()
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
-iteExpectLedgerRuleConformanceL ::
+itePostSubmitTxHookL ::
   forall era.
   Lens'
     (ImpTestEnv era)
@@ -780,7 +810,11 @@ iteExpectLedgerRuleConformanceL ::
       Tx era ->
       ImpM t ()
     )
-iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
+itePostSubmitTxHookL = lens itePostSubmitTxHook (\x y -> x {itePostSubmitTxHook = y})
+
+itePassEpochBoundaryHookL ::
+  Lens' (ImpTestEnv era) (forall t. NewEpochState era -> EpochNo -> NewEpochState era -> ImpM t ())
+itePassEpochBoundaryHookL = lens itePassEpochBoundaryHook (\x y -> x {itePassEpochBoundaryHook = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1087,7 +1121,7 @@ trySubmitTx tx = do
   globals <- use impGlobalsL
 
   -- Check for conformance
-  asks iteExpectLedgerRuleConformance
+  asks itePostSubmitTxHook
     >>= (\f -> f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
 
   case res of
@@ -1251,9 +1285,15 @@ passEpoch ::
 passEpoch = do
   let
     tickUntilNewEpoch curEpochNo = do
+      initialState <- getsNES id
       passTick @era
+      finalState <- getsNES id
       newEpochNo <- getsNES nesELL
-      unless (newEpochNo > curEpochNo) $ tickUntilNewEpoch curEpochNo
+      if newEpochNo > curEpochNo
+        then do
+          asks itePassEpochBoundaryHook >>= \f ->
+            f initialState newEpochNo finalState
+        else tickUntilNewEpoch curEpochNo
   preNES <- gets impNES
   let startEpoch = preNES ^. nesELL
   logDoc $ "Entering " <> ansiExpr (succ startEpoch)

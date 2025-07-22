@@ -46,7 +46,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
-testImpConformance ::
+submitTxConormanceHook ::
   forall era t.
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
@@ -73,7 +73,7 @@ testImpConformance ::
   ExecState "LEDGER" era ->
   ExecSignal "LEDGER" era ->
   ImpM t ()
-testImpConformance _globals impRuleResult env state signal = do
+submitTxConormanceHook _globals impRuleResult env state signal = do
   let ctx =
         ConwayLedgerExecContext
           { clecPolicyHash =
@@ -136,11 +136,29 @@ testImpConformance _globals impRuleResult env state signal = do
   when (impResponse /= agdaResponse) $
     assertFailure "Conformance failure"
 
+passEpochConformanceHook :: NewEpochState era -> EpochNo -> NewEpochState era -> ImpM t era
+passEpochConformanceHook oldNES newEpochNo newNES = do
+  let
+    ctx = undefined
+  impResponse <-
+    expectRightExpr $
+      runSpecTransM ctx $
+        bimapM
+          (pure . showOpaqueErrorString)
+          (toTestRep . inject @_ @(ExecState "LEDGER" era) . fst)
+          impRuleResult
+  undefined
+
+withConformanceTests :: SpecWith (ImpInit (LedgerSpec era)) -> SpecWith (ImpInit (LedgerSpec era))
+withConformanceTests =
+  modifyImpInitPostSubmitTxHook submitTxConormanceHook
+    . modifyImpInitPassEpochBoundaryHook passEpochConformanceHook
+
 spec :: Spec
 spec =
   withImpInit @(LedgerSpec ConwayEra) $
     modifyImpInitProtVer @ConwayEra (natVersion @10) $
-      modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
+      withConformanceTests $ do
         describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
             _ <- submitConstitution @ConwayEra SNothing

@@ -229,7 +229,7 @@ spec = do
         `shouldReturn` (if isPostV10 protVer then expectedTotalSize else 0)
 
   -- disabled in conformance because submiting phase2-invalid transactions are not supported atm
-  disableImpInitExpectLedgerRuleConformance $
+  disableImpInitPostSubmitTxHook $
     it "Use a reference script in a collateral output" $ do
       protVer <- getsPParams ppProtocolVersionL
 
