@@ -1,9 +1,127 @@
-# How Reward Calculation Works
+# Introduction
 
 This document explains how the Reward Calculation is implemented in the Cardano Ledger. We strongly
 suggest the reader read and understand chapter 11 "Rewards and the Epoch Boundary" in the 
 [Shelley Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf) that
-covers related material on the phases of the reward cycle. The Reward Calculation has 5 parts.
+covers related material on the phases of the reward cycle.  
+[Additional info from the spec](https://intersectmbo.github.io/formal-ledger-specifications/site/Ledger.Conway.Specification.Rewards.html)
+
+
+
+ The Reward Calculation has 5 parts.
+
+# How The Reward Calculation might work if time did not matter
+
+Rewards are analagous to interest on a bank account. If you deposit funds in a bank account, periodically the bank pays you a percentage
+of the amount on deposit as interest. So over time your account balance grows.
+
+In the Cardano Ledger, the UTxO plays the role of bank accounts, and the pool operators play the role of banks. Pools make money by
+making blocks on the chain. For each block they make, they get a fixed percent of the fees collected for processing the
+transactions that make up the block. The probability that a pool is chosen to make a block, is proportional to the amount
+of Coin in the UTxO that has been delegated to that pool. So it is in the interest of each Pool to entice the owners of UTxO entries
+to delegate the Coin in their UTxO entries to that Pool, inorder to increase their percentage of the total delegated Coin. 
+The enticement is the promise of Rewards to the UTxO entry owners that delegate to their Pool. 
+The actual amount of rewards is computed by a computation that involves PoolParameters that can be set differently by each pool.
+Rewards are paid at each epoch boundary. An epoch is roughly 5 days, so rewards are paid out about every 5 days.
+
+What data must be available to compute rewards.
+
+1. The UTxO. Each `UTxO` entry records 
+      - The entry owner. This is a Haskell datatype (Credential 'Staking), which is a cryptographic hash of the owner's identity
+      - The amount of the entry in Coin. This is always non-zero and positive.
+      - Staking information about which Pool (if any) the UTxO entry is delegated to. This may be deliberately left blank, or it is
+        a Haskell datatype (KeyHash 'Pool), which is another cryptographic hash, this time of the Pool owner's identity
+      - Other information not related to the Reward calculation
+
+2. Information about which staking credentials are registered to participate in staking, and which Pool they delegate to.
+This is a Haskell Datatype (Map (Credential 'Staking)  (KeyHash StakePool)), which we will call the `stakeDelegationMap`.
+Only registered credentials will receive rewards.
+
+3. Information about which pool operators are currently registered to operate pools, and the parameters under which the pools operate.
+This is a Haskell Datatype (Map (KeyHash StakePool) PoolParams), which we will call the `poolParamsMap` . Rewards for UTxO entries delegated
+to non registered Pools are distributed to either the Treasury or the Reserves.
+
+4. Information about which pools are currently scheduled to retire, and when.
+This is a Haskell Datatype (Map (KeyHash StakePool) EpochNo), which we will call the `retiringMap` .
+
+If time was not an issue, at the end of each epoch, we would compute the rewards in several steps. For each step, we either give 
+a link to the Ledger code base where that code is illustrated, or we give a short Haskell function that illustrates 
+how it might be computed in the ShelleyEra. Other eras would be very similar, but the TxOut for that Era would have more
+fields than just the Addr and Coin.
+
+
+1. Aggregate the total `Coin` in the `UTxO` for each (Credential 'Staking) that appears somewhere in the UTxO, resulting in
+a (Map (Credential 'Staking) Coin). This only requires the UTxO. At this point we do not care if the Credential is registered
+in the `stakeDelegationMap` . We call this the `aggregateStakeMap` .
+
+```
+-- | Loop through all the TxOut in the UTxO, if the Addr in the TxOut has a `StakeRefBase` credential
+--   then add the (cred,coin) pair to the answer map.
+aggregateStakeMap :: UTxO ShelleyEra -> Map (Credential 'Staking) Coin
+aggregateStakeMap (UTxO utxoMap) = loop (Map.toList utxoMap) Map.empty
+  where loop ((_,ShelleyTxOut @ShelleyEra (Addr _network _payCred stakeRef) coin):more) aggrAns =
+           case stakeRef of
+             StakeRefBase cred -> Map.insertWith (<>) cred coin aggrAns
+             _ -> loop more aggrAns
+        loop _ aggrAns = aggrAns   
+```
+
+
+2. For each pool operator compute the set of Credentials that delegate stake to that pool, resulting in
+a (Map (KeyHash 'StakePool) (Set (Credential 'Staking))). This requires the UTxO and the stakeDelegationMap. 
+At this point we don't care if the pool is registered in the `poolParamsNap`. This is called the `whoPaysMap`.
+
+```
+-- | Loop through all the TxOut in the UTxO, if the Addr in the TxOut has a `StakeRefBase` credential
+--   then lookup if that credential delegates to some Pool, if it does, add the credential 
+--   to the answer map for that Pool.
+whoPaysMap :: UTxO ShelleyEra -> 
+              Map (Credential 'Staking) (KeyHash StakePool) -> 
+              Map (KeyHash 'StakePool) (Set (Credential 'Staking))
+whoPaysMap (UTxO utxoMap) stakeDelegationMap = loop (Map.toList utxoMap) Map.empty
+  where loop ((_,ShelleyTxOut @ShelleyEra (Addr _network _payCred stakeRef) coin):more) aggrAns =
+           case stakeRef of
+             StakeRefBase cred -> case Map.lookup cred stakeDelegationMap of
+                     Nothing -> loop more aggrAns
+                     Just keyHashPool -> Map.insertWith (Set.union) keyHashPool (Set.singleton cred) aggrAns 
+             _ -> loop more aggrAns
+        loop _ aggrAns = aggrAns  
+```        
+
+3. Aggregate the total Coin delegated by registered credentials to each registered Pool, resulting in 
+(Map (KeyHash 'StakePool) Coin). This requires the results from steps 1 and 2. This is called the `stakeDistributionMap`.
+This will not be used in the rest of the Reward calculation, but will be used to compute the ercentage of stake controlled by each pool, to choose Pools to make blocks in a following epoch.
+
+```
+stakeDistrMap :: Map (KeyHash 'StakePool) (Set (Credential 'Staking)) -> 
+                 Map (Credential 'Staking) Coin -> 
+                 Map (KeyHash 'StakePool) Coin
+stakeDistrMap whoPaysMap aggregateStakeMap = Map.map setCredToCoin whoPaysMap
+   where setCredToCoin :: Set (Credential Staking) -> Coin
+         setCredToCoin set = loop (Set.toList set) (Coin 0)
+           where loop [] totalcoin = totalcoin
+                 loop (cred : more) totalcoin = case Map.lookup cred aggregateStakeMap of
+                    Nothing -> loop more totalcoin
+                    Just coin -> loop more (coin <> totalcoin)
+```
+
+
+4. For each Pool in the domain of `whoPaysMap`, and each Credential in the range, compute a Reward owed to that Credential by that Pool,
+resulting in (Set Reward). This requires the `whoPaysMap` the `poolParamMap`, the `stakeDelegationMap`, and the `aggregateStakeMap`, because the amount in the reward depends on the PoolParameters of the Pool and the Coin amount delegated by that Credential to that Pool. We must also check
+that each (Credential 'Staking) and (KeyHash 'StakePool) are currently registered, to make a valid Reward.
+[Source code for computing a Reward from Coin and PoolParam values.](https://github.com/IntersectMBO/cardano-ledger/blob/a7fb33a2b2922933eb6dd7e2420363291f6d4903/eras/shelley/impl/src/Cardano/Ledger/Shelley/Rewards.hs#L260)  
+[Source code for `rewardStakePoolMember`](https://github.com/IntersectMBO/cardano-ledger/blob/a7fb33a2b2922933eb6dd7e2420363291f6d4903/eras/shelley/impl/src/Cardano/Ledger/Shelley/RewardUpdate.hs#L251)
+
+5. Apply the Rewards to the `rewardsBalanceMap`, increasing the balance for each Credential.
+[Source code for applying the Rewards](https://github.com/IntersectMBO/cardano-ledger/blob/a7fb33a2b2922933eb6dd7e2420363291f6d4903/eras/shelley/impl/src/Cardano/Ledger/Shelley/LedgerState/IncrementalStake.hs#L97)
+
+The problem is, as time passes the `UTxO`, the `stakeDelegationMap`, and the `poolParamsMap` are subject to change when a new Block is made.
+So unless the whole calculation can be completed in the time between the last block in an epoch and the first block in the next
+epoch, the calculations could be inaccurate. That is why we snap shot those values, before we begin computing the Rewards. The time to complete the reward calculation is currently in the order of many 10's of seconds, and the time to distribute the rewards several seconds. The time between blocks is an order of magnitude smaller than that, so we must resort to strategies that compute and apply the rewards in parallel with the progress
+of block production.
+
+
+# How Reward Calculation Works in the implementation
 
 1) Random selection of the pool operators who will be assigned the opportunity to mint each block in the next Epoch.
    Each block is assigned a single random StakePool, with likelihood proportional to the stake delegated to that StakePool.
@@ -11,7 +129,7 @@ covers related material on the phases of the reward cycle. The Reward Calculatio
    To get a stable Stake Distribution we need to make a Snapshot at the point in the Epoch, 
    when all blocks have been assigned a StakePool. This point is called the stability point, 
    as no assignment will change from this point to the end of the block. So the idea
-   is to take a snapshot anytime after the stability point, and use it in the the rest of the Reward Calculation.
+   is to take a snapshot anytime after the stability point, and use it in the rest of the Reward Calculation.
 2) Registration (using certificates) of User's Stake credentials and StakePools can take place in the same
    Epoch that the StakePools are assigned blocks. Only registered Users and
    StakePools participate in the Reward Calculation. 
@@ -19,20 +137,20 @@ covers related material on the phases of the reward cycle. The Reward Calculatio
      - the current registration status of Users and StakePools.
      - the Stake Distribution used for selection of which StakePools will make blocks in the next epoch
      - the Fee Pot
-     - other data that cannot change over the Reward Calulation
+     - other data that cannot change over the Reward Calculation
    when the Reward Calculation is computed.
 4) The calculation begins, using the 4 steps outlined below, resulting in a RewardUpdate.
 5) The Reward Update is applied to the current NewEpochState, distributing Rewards to those stake credentials
    that were registered to StakePools, and only where the corresponding StakePool was registered as a pool operator.
 
-The Reward system works as follows. When constructing a new transaction, the transaction author has the opportunity
+The Reward system works as follows. With every transaction, the transaction author has the opportunity
 to delegate the `Stake` (the `Coin` part of each `TxOut` in the transaction) to one of the `StakePools`
 by adding a non null `StakeReference` to the `Addr` part of the `Output`
 
-At the end of an `Epoch`, registered stake, that is delegated in a the address of a TxOut in the UTxO,
+At the end of an `Epoch`, registered stake, that is delegated in the address of a TxOut in the UTxO,
 is marked as deserving a reward in a `RewardUpdate`. Applying a `RewardUpdate`  means increasing the amount of `Coin` associated
 with the `StakeCredential` in the Rewards map. This is similar to earning interest on
-the amount of money in a bank deposit. Here are the basic data stuctures that encode this information
+the amount of money in a bank deposit. Here are the basic data structures that encode this information
 
 
 ```
@@ -123,7 +241,7 @@ Using naive strategies to compute the four steps will far exceed few second budg
 The problem is that the amount of data is very large.
 
 1. The UTxO has tens of millions of entries
-2. The set of staking cerdentials has millions of entries
+2. The set of staking credentials has millions of entries
 3. The number of stake pools numbers in the thousands.
 
 
@@ -176,7 +294,7 @@ maintains an invariant between the `utxosUtxo` and `utxosInstantStake` fields. T
 the aggregation of Coin over the StakeReferences in the UTxO. It can be computed by a pure
 function from the `utxosUtxo` field.  This is captured by the methods of class `EraStake` because the computations
 are slightly different in Eras that support `Ptr` (Shelley, Allegra, Mary, Alonzo, Babbage) from Eras
-that do not support Ptr (Conway, Dikstra).
+that do not support Ptr (Conway, Dijkstra).
 
 ```
 class EraStake era
@@ -202,7 +320,7 @@ The invariant we need to maintain is
 ```
 invariant :: UTxOState era -> Bool
 invariant UTxOState{utxosUtxo, utxosDeposited , utxosFees  , utxosGovState, utxosInstantStake, utxosDonation} =
-    utxosInstantStake == addInstanrStake utxosUtxo mempty
+    utxosInstantStake == addInstantStake utxosUtxo mempty
 ```  
 
 To compute the UTxO and the InstantStake in lockstep, we observing every change to the UTxO, and if that change 
@@ -233,7 +351,7 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
 
 We noted above that the type family InstantStake is different for different Eras. This is because
 Eras before Conway supported `Ptr`s. A `Ptr` is a reference to an `Addr`, and aggregating the `Coin` for each
-Stake address must follow the reference. Unfortuantely, the references may change so the `InstantStake` for
+Stake address must follow the reference. Unfortunately, the references may change so the `InstantStake` for
 Eras with `Ptr`s must store the references and only resolve them when the aggregation is used in step 2. Here
 are the two `EraStake` instances.
 
@@ -311,7 +429,7 @@ instance EraStake ShelleyEra where
   deleteInstantStake = deleteShelleyInstantStake
 ```  
 
-### Conway Dikstra InstantStake
+### Conway Dijkstra InstantStake
 
 The type family `InstantStake` for Eras after Babbage (that have no `Ptr`s)
 is simpler, since it does not need the Map of `Ptrs` that need to be resolved.
@@ -322,7 +440,7 @@ newtype ConwayInstantStake era = ConwayInstantStake
   }
 ```
 
-The application function for `Conway` `functionapplyUTxOConwayInstantStake` is simliar
+The application function for `Conway` `functionapplyUTxOConwayInstantStake` is similar
 to the application function for `Shelley`  `applyUTxOShelleyInstantStake`, except it
 has one fewer cases, as it is not possible for and `Addr` in the `Conway` era to have  
 `StakeRefPtr` `StakeReference`. 
@@ -384,7 +502,7 @@ It also means the Reward calculation must be pipelined, and that requires a queu
 
 ##  Tools for breaking the calculation into many pure steps that can be started and stopped.
 
-The module `Data.Pulse` provovides a library for breaking a large computation to 
+The module `Data.Pulse` provides a library for breaking a large computation to 
 series of smaller ones, which can be scheduled by the library.
 
 ```
@@ -516,8 +634,9 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 ```           
 
 In the STS system, the three phases are packed into one transition funtion `rupdTransisiton`
-which is called on every tick in the STS TICK rule. The three phases
-are ordered by observing the current slot and returning a `RewardTiming` value
+which is called on every call to the STS RUPD rule. The three phases
+are ordered by observing the current slot and returning a `RewardTiming` value.
+[source code](https://github.com/IntersectMBO/cardano-ledger/blob/1b1d6cc83946db56e98e999e07c20e54eca86338/eras/shelley/impl/src/Cardano/Ledger/Shelley/Rules/Rupd.hs#L125)
 
 
 ```
