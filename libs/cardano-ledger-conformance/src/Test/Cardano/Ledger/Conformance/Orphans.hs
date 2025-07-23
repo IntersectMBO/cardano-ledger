@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -17,7 +18,7 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (FixupSpecRep (..), OpaqueErrorString)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (SpecNormalize (..), OpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 
@@ -265,113 +266,117 @@ instance ToExpr LEnv
 
 instance Default (HSMap k v)
 
-instance FixupSpecRep Void
+instance SpecNormalize Void
 
-instance FixupSpecRep a => FixupSpecRep (NonEmpty a)
+instance SpecNormalize a => SpecNormalize (NonEmpty a)
 
-instance FixupSpecRep Text where
-  fixup = id
+instance SpecNormalize Text where
+  specNormalize = id
 
-instance FixupSpecRep OpaqueErrorString
+instance SpecNormalize OpaqueErrorString
 
-instance FixupSpecRep a => FixupSpecRep [a]
+instance SpecNormalize a => SpecNormalize [a]
 
-instance FixupSpecRep Char where
-  fixup = id
+instance SpecNormalize Char where
+  specNormalize = id
 
 instance
   ( Eq v
   , Ord k
-  , FixupSpecRep k
-  , FixupSpecRep v
+  , SpecNormalize k
+  , SpecNormalize v
   ) =>
-  FixupSpecRep (HSMap k v)
+  SpecNormalize (HSMap k v)
   where
-  fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> nub l
+  specNormalize (MkHSMap l) = MkHSMap . sortOn fst $ bimap specNormalize specNormalize <$> nub l
 
-instance (Ord a, FixupSpecRep a) => FixupSpecRep (HSSet a) where
-  fixup (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ fixup <$> l
+instance (Ord a, SpecNormalize a) => SpecNormalize (HSSet a) where
+  specNormalize (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ specNormalize <$> l
 
-instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (a, b)
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (a, b)
 
-instance FixupSpecRep a => FixupSpecRep (Maybe a)
+instance SpecNormalize a => SpecNormalize (Maybe a)
 
-instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (Either a b)
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (Either a b)
 
-instance FixupSpecRep Bool
+instance SpecNormalize Bool
 
-instance FixupSpecRep TxId where
-  fixup = id
+instance SpecNormalize TxId where
+  specNormalize = id
 
-instance FixupSpecRep ()
+instance SpecNormalize ()
 
-instance FixupSpecRep BaseAddr
+instance SpecNormalize BaseAddr
 
-instance FixupSpecRep BootstrapAddr
+instance SpecNormalize BootstrapAddr
 
-instance FixupSpecRep Timelock
+instance SpecNormalize Timelock
 
-instance FixupSpecRep HSTimelock
+instance SpecNormalize HSTimelock
 
-instance FixupSpecRep HSPlutusScript
+instance SpecNormalize HSPlutusScript
 
-instance FixupSpecRep UTxOState
+instance SpecNormalize UTxOState
 
-instance FixupSpecRep Credential
+instance SpecNormalize Credential
 
-instance FixupSpecRep GovRole
+instance SpecNormalize GovRole
 
-instance FixupSpecRep VDeleg
+instance SpecNormalize VDeleg
 
-instance FixupSpecRep DepositPurpose
+instance SpecNormalize DepositPurpose
 
-instance FixupSpecRep DState
+instance SpecNormalize DState
 
-instance FixupSpecRep PoolParams
+instance SpecNormalize PoolParams
 
-instance FixupSpecRep PState
+instance SpecNormalize PState
 
-instance FixupSpecRep GState
+instance SpecNormalize GState
 
-instance FixupSpecRep CertState
+instance SpecNormalize CertState
 
-instance FixupSpecRep Vote
+instance SpecNormalize Vote
 
-instance FixupSpecRep Agda.Rational where
-  fixup = id
+instance SpecNormalize Agda.Rational where
+  specNormalize = id
 
-instance FixupSpecRep PParamsUpdate
+instance SpecNormalize PParamsUpdate
 
-instance FixupSpecRep RwdAddr
+instance SpecNormalize RwdAddr
 
-instance FixupSpecRep GovAction
+instance SpecNormalize GovAction
 
-instance FixupSpecRep GovActionState
+instance SpecNormalize GovActionState
 
-instance FixupSpecRep StakeDistrs
+instance SpecNormalize StakeDistrs
 
-instance FixupSpecRep PoolThresholds
+instance SpecNormalize PoolThresholds
 
-instance FixupSpecRep DrepThresholds
+instance SpecNormalize DrepThresholds
 
-instance FixupSpecRep PParams
+instance SpecNormalize PParams
 
-instance FixupSpecRep EnactState
+instance SpecNormalize EnactState
 
-instance FixupSpecRep RatifyEnv
+instance SpecNormalize RatifyEnv
 
-instance FixupSpecRep RatifyState
+instance SpecNormalize RatifyState
 
-instance FixupSpecRep EpochState
+instance SpecNormalize EpochState
 
-instance FixupSpecRep Snapshots
+instance SpecNormalize Snapshots
 
-instance FixupSpecRep Snapshot
+instance SpecNormalize Snapshot
 
-instance FixupSpecRep Acnt
+instance SpecNormalize Acnt
 
-instance FixupSpecRep LState
+instance SpecNormalize LState
 
-instance FixupSpecRep HsRewardUpdate
+instance SpecNormalize HsRewardUpdate
 
-instance FixupSpecRep NewEpochState
+instance SpecNormalize NewEpochState
+
+deriving instance Semigroup (HSMap k v)
+
+deriving instance Monoid (HSMap k v)
