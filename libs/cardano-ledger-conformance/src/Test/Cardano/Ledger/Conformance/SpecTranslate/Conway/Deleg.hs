@@ -16,7 +16,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules (
   ConwayDelegEnv (..),
-  ConwayDelegPredFailure,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
@@ -77,11 +76,6 @@ instance SpecTranslate ctx ConwayDelegCert where
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
-instance SpecTranslate ctx (ConwayDelegPredFailure era) where
-  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
-
 instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
   type SpecRep (DState era) = Agda.DState
 
@@ -90,8 +84,14 @@ instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
       <$> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
       <*> toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
       <*> toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
-      <*> toSpecRep deposits
+      <*> deposits
     where
       accountsMap = dState ^. accountsL . accountsMapL
-      deposits =
-        Map.mapKeys CredentialDeposit (Map.map (fromCompact . (^. depositAccountStateL)) accountsMap)
+      deposits = do
+        let
+          m = Map.map (fromCompact . (^. depositAccountStateL)) accountsMap
+          transEntry (cred, val) =
+            (,)
+              <$> (Agda.CredentialDeposit <$> toSpecRep cred)
+              <*> toSpecRep val
+        Agda.MkHSMap <$> traverse transEntry (Map.toList m)

@@ -22,24 +22,26 @@ import Cardano.Ledger.Conway.PParams (
   dvtMotionNoConfidenceL,
   pvtMotionNoConfidenceL,
  )
-import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   nesELL,
   nesEsL,
  )
+import Control.State.Transition (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Text as T
 import Lens.Micro ((&), (.~))
 import Lens.Micro.Mtl (use)
-import Test.Cardano.Ledger.Conformance (showOpaqueErrorString)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
-  ConwayRatifyExecContext (..),
+import Test.Cardano.Ledger.Conformance (
+  ConformanceResult (..),
+  ExecSpecRule (..),
+  runConformance,
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (ExecSpecRule (..), runConformance)
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -59,20 +61,13 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     govSt <- getsNES $ nesEsL . epochStateGovStateL
     let ratSt = getRatifyState govSt
     noConfidenceGAS <- getGovActionState noConfidence
-    treasury <- getsNES treasuryL
-    let
-      execCtx =
-        ConwayRatifyExecContext
-          treasury
-          [noConfidenceGAS]
     passNEpochs 2
     getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
-    pure $
-      testConformance @"RATIFY" @ConwayEra
-        execCtx
-        ratEnv
-        ratSt
-        (RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
+    let trc = TRC (ratEnv, ratSt, RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
+    res <- runConformance @"RATIFY" @ConwayEra () trc
+    case res of
+      ConformanceResult Right {} Right {} Right {} -> pure ()
+      failure -> expectationFailure $ "Expected success, got:\n" <> showExpr failure
   it "Duplicate CC hot keys count as separate votes" $ do
     logString "Setting up a DRep"
     let maxTermLength = EpochInterval 10
@@ -126,21 +121,14 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     constitutionGAS <- getGovActionState constitutionId
 
     logString "Testing conformance"
-    treasury <- getsNES treasuryL
-    let execCtx = ConwayRatifyExecContext treasury [constitutionGAS]
     ratEnv <- getRatifyEnv
     govSt <- getsNES $ nesEsL . epochStateGovStateL
     let
       ratSt = getRatifyState govSt
       ratSig = RatifySignal (constitutionGAS SSeq.:<| mempty)
-    (implRes, agdaRes, implRes') <-
-      runConformance @"RATIFY" @ConwayEra
-        execCtx
-        ratEnv
-        ratSt
-        ratSig
-    logString "===context==="
-    logToExpr execCtx
+      trc = TRC (ratEnv, ratSt, ratSig)
+    (ConformanceResult implRes agdaRes implRes') <-
+      runConformance @"RATIFY" @ConwayEra () trc
     logString "===environment==="
     logToExpr ratEnv
     logString "===state==="
@@ -154,12 +142,6 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     logString "Extra information:"
     globals <- use impGlobalsL
     logDoc $
-      extraInfo @"RATIFY" @ConwayEra
-        globals
-        execCtx
-        ratEnv
-        ratSt
-        ratSig
-        (first showOpaqueErrorString implRes')
+      extraInfo @"RATIFY" @ConwayEra globals () trc (first (T.pack . show) implRes')
     impAnn "Conformance failed" $
-      first showOpaqueErrorString implRes `shouldBeExpr` agdaRes
+      first (T.pack . show) implRes `shouldBeExpr` agdaRes
