@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   conformsToImpl,
   generatesWithin,
-  inputsGenerateWithin,
   runConformance,
   checkConformance,
   defaultTestConformance,
@@ -30,15 +29,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 import Cardano.Ledger.BaseTypes (Globals, Inject (..), ShelleyBase)
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core (Era, EraRule, eraProtVerLow)
-import Constrained.API (GE (..))
-import qualified Constrained.API as CV2 (
-  HasSpec,
-  Specification,
-  genFromSpec,
-  genFromSpecT,
-  looseGen,
-  shrinkWithSpec,
- )
 import Control.Monad.Cont (ContT (..))
 import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..))
@@ -91,8 +81,7 @@ type ForAllExecSpecRep (c :: Type -> Constraint) rule era =
   )
 
 class
-  ( ForAllExecTypes CV2.HasSpec rule era
-  , ForAllExecTypes ToExpr rule era
+  ( ForAllExecTypes ToExpr rule era
   , ForAllExecTypes NFData rule era
   , KnownSymbol rule
   , STS (EraRule rule era)
@@ -115,24 +104,6 @@ class
 
   type ExecSignal rule era
   type ExecSignal rule era = Signal (EraRule rule era)
-
-  environmentSpec ::
-    HasCallStack =>
-    ExecContext rule era ->
-    CV2.Specification (ExecEnvironment rule era)
-
-  stateSpec ::
-    HasCallStack =>
-    ExecContext rule era ->
-    ExecEnvironment rule era ->
-    CV2.Specification (ExecState rule era)
-
-  signalSpec ::
-    HasCallStack =>
-    ExecContext rule era ->
-    ExecEnvironment rule era ->
-    ExecState rule era ->
-    CV2.Specification (ExecSignal rule era)
 
   classOf :: ExecSignal rule era -> Maybe String
   classOf _ = Nothing
@@ -420,39 +391,29 @@ conformsToImpl ::
   , NFData (PredicateFailure (EraRule rule era))
   , ToExpr (PredicateFailure (EraRule rule era))
   ) =>
+  ExecEnvironment rule era ->
+  ExecState rule era ->
+  ExecSignal rule era ->
   Property
-conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
-  let
-    deepEvalAnn s = "Deep evaluating " <> s
-    deepEval x s = do
-      _ <- lift $ impAnn (deepEvalAnn s) (liftIO (evaluateDeep x))
-      pure ()
-  ctx <- ContT $ \c ->
-    pure $ forAllShow (genExecContext @rule @era) showExpr c
-  deepEval ctx "context"
-  let
-    forAllSpec spec = do
-      let
-        generator = CV2.looseGen (CV2.genFromSpecT spec)
-        shrinker (Result x) = pure <$> CV2.shrinkWithSpec spec x
-        shrinker _ = []
-      res :: GE a <- ContT $ \c ->
-        pure $ forAllShrinkBlind generator shrinker c
-      case res of
-        Result x -> pure x
-        _ -> ContT . const . pure $ property Discard
-  env <- forAllSpec $ environmentSpec @rule @era ctx
-  deepEval env "environment"
-  st <- forAllSpec $ stateSpec @rule @era ctx env
-  deepEval st "state"
-  sig <- forAllSpec $ signalSpec @rule @era ctx env st
-  deepEval sig "signal"
-  let classification =
-        case classOf @rule @era sig of
-          Nothing -> classify False "None"
-          Just c -> classify True c
-  pure . classification $
-    testConformance @rule @era ctx env st sig
+conformsToImpl env st sig = 
+  property @(ImpTestM era Property) . (`runContT` pure) $ do
+    let
+      deepEvalAnn s = "Deep evaluating " <> s
+      deepEval x s = do
+        _ <- lift $ impAnn (deepEvalAnn s) (liftIO (evaluateDeep x))
+        pure ()
+    ctx <- ContT $ \c ->
+      pure $ forAllShow (genExecContext @rule @era) showExpr c
+    deepEval ctx "context"
+    deepEval env "environment"
+    deepEval st "state"
+    deepEval sig "signal"
+    let classification =
+          case classOf @rule @era sig of
+            Nothing -> classify False "None"
+            Just c -> classify True c
+    pure . classification $
+      testConformance @rule @era ctx env st sig
 
 generatesWithin ::
   forall a.
@@ -470,32 +431,6 @@ generatesWithin gen timeout =
     $ \x -> within timeout $ ioProperty (evaluateDeep x $> ())
   where
     aName = show (typeRep $ Proxy @a)
-
-inputsGenerateWithin ::
-  forall (rule :: Symbol) era.
-  ExecSpecRule rule era =>
-  Int ->
-  Spec
-inputsGenerateWithin timeout =
-  describe (aName <> " input generation time") $ do
-    let
-      genEnv = do
-        ctx <- genExecContext @rule @era
-        CV2.genFromSpec $ environmentSpec @rule @era ctx
-      genSt = do
-        ctx <- genExecContext @rule @era
-        env <- genEnv
-        CV2.genFromSpec $ stateSpec @rule @era ctx env
-      genSig = do
-        ctx <- genExecContext @rule @era
-        env <- genEnv
-        st <- genSt
-        CV2.genFromSpec $ signalSpec @rule @era ctx env st
-    genEnv `generatesWithin` timeout
-    genSt `generatesWithin` timeout
-    genSig `generatesWithin` timeout
-  where
-    aName = show (typeRep $ Proxy @rule)
 
 -- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext :: SpecTranslate ctx a => ctx -> a -> ImpTestM era (SpecRep a)

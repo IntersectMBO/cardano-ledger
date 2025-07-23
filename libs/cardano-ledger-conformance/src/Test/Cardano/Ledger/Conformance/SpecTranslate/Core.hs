@@ -29,7 +29,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
-import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
@@ -41,6 +40,7 @@ import Data.Void (Void)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..), showExpr)
+import Data.List.NonEmpty (NonEmpty)
 
 type SpecTranslationError = Text
 

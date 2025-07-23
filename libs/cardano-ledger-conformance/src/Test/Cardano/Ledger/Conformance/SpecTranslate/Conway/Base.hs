@@ -24,7 +24,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),
   SpecTranslationError,
   ConwayExecEnactEnv (..),
-  DepositPurpose (..),
   ConwayTxBodyTransContext (..),
   vkeyToInteger,
   vkeyFromInteger,
@@ -75,7 +74,6 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
-import Constrained.API (HasSimpleRep, HasSpec)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (MonadError (..))
 import Control.State.Transition.Extended (STS (..))
@@ -111,8 +109,6 @@ import Test.Cardano.Ledger.Conformance (
   hashToInteger,
   showOpaqueErrorString,
  )
-import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..))
-import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance SpecTranslate ctx Void where
@@ -1101,19 +1097,6 @@ instance
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
 
-instance ToExpr (EpochExecEnv era)
-
-instance Era era => NFData (EpochExecEnv era)
-
-instance HasSimpleRep (EpochExecEnv era)
-
-instance Era era => HasSpec (EpochExecEnv era)
-
-instance SpecTranslate ctx (EpochExecEnv era) where
-  type SpecRep (EpochExecEnv era) = ()
-
-  toSpecRep _ = pure ()
-
 -- | This type is used as the Env only in the Agda Spec
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
   { ceeeGid :: GovActionId
@@ -1130,10 +1113,6 @@ instance ToExpr (ConwayExecEnactEnv era)
 
 instance Era era => NFData (ConwayExecEnactEnv era)
 
-instance HasSimpleRep (ConwayExecEnactEnv era)
-
-instance Era era => HasSpec (ConwayExecEnactEnv era)
-
 instance SpecTranslate ctx (ConwayExecEnactEnv era) where
   type SpecRep (ConwayExecEnactEnv era) = Agda.EnactEnv
 
@@ -1148,14 +1127,3 @@ committeeCredentialToStrictMaybe ::
   StrictMaybe (Credential 'HotCommitteeRole)
 committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
 committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
-
-instance SpecTranslate ctx DepositPurpose where
-  type SpecRep DepositPurpose = Agda.DepositPurpose
-  toSpecRep (CredentialDeposit cred) =
-    Agda.CredentialDeposit <$> toSpecRep cred
-  toSpecRep (PoolDeposit kh) =
-    Agda.PoolDeposit <$> toSpecRep kh
-  toSpecRep (DRepDeposit cred) =
-    Agda.DRepDeposit <$> toSpecRep cred
-  toSpecRep (GovActionDeposit gid) =
-    Agda.GovActionDeposit <$> toSpecRep gid

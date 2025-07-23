@@ -410,12 +410,6 @@ instance ExecSpecRule "RATIFY" ConwayEra where
 
   genExecContext = arbitrary
 
-  environmentSpec = ratifyEnvSpec
-
-  stateSpec = ratifyStateSpec
-
-  signalSpec ctx _env _st = ratifySignalSpec ctx
-
   runAgdaRule env st sig = unComputationResult_ $ Agda.ratifyStep env st sig
 
   extraInfo _ ctx env@RatifyEnv {..} st sig@(RatifySignal actions) _ =
@@ -568,9 +562,6 @@ instance ExecSpecRule "ENACT" ConwayEra where
   type ExecState "ENACT" ConwayEra = EnactState ConwayEra
   type ExecSignal "ENACT" ConwayEra = EnactSignal ConwayEra
 
-  environmentSpec _ = trueSpec
-  stateSpec = enactStateSpec
-  signalSpec = enactSignalSpec
   runAgdaRule env st sig = unComputationResult $ Agda.enactStep env st sig
 
   classOf = Just . nameEnact
@@ -594,12 +585,6 @@ instance ExecSpecRule "EPOCH" ConwayEra where
   type ExecContext "EPOCH" ConwayEra = [GovActionState ConwayEra]
   type ExecEnvironment "EPOCH" ConwayEra = EpochExecEnv ConwayEra
 
-  environmentSpec _ = epochEnvSpec
-
-  stateSpec _ = epochStateSpec . lit . eeeEpochNo
-
-  signalSpec _ env _ = epochSignalSpec (eeeEpochNo env)
-
   runAgdaRule env st sig = unComputationResult_ $ Agda.epochStep env st sig
 
   classOf = Just . nameEpoch
@@ -610,12 +595,6 @@ nameEpoch x = show x
 instance ExecSpecRule "NEWEPOCH" ConwayEra where
   type ExecContext "NEWEPOCH" ConwayEra = [GovActionState ConwayEra]
   type ExecEnvironment "NEWEPOCH" ConwayEra = EpochExecEnv ConwayEra
-
-  environmentSpec _ = epochEnvSpec
-
-  stateSpec _ _ = newEpochStateSpec
-
-  signalSpec _ env _ = epochSignalSpec (eeeEpochNo env)
 
   runAgdaRule env st sig = unComputationResult_ $ Agda.newEpochStep env st sig
 
