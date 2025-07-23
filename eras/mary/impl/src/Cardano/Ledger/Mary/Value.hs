@@ -324,8 +324,8 @@ decodeMultiAsset decodeAmount = do
         decodeWithPrunning
   ma <$ unless (isMultiAssetSmallEnough ma) (fail "MultiAsset is too big to compact")
   where
-    decodeConway = MultiAsset <$> (decodeMap decCBOR $ decodeNonEmptyMap decodeNonZeroAmount)
-    decodeDijkstra = MultiAsset <$> (decodeNonEmptyMap $ decodeNonEmptyMap decodeNonZeroAmount)
+    decodeConway = MultiAsset <$> decodeMap decCBOR (decodeNonEmptyMap decodeNonZeroAmount)
+    decodeDijkstra = MultiAsset <$> decodeNonEmptyMap (decodeNonEmptyMap decodeNonZeroAmount)
     decodeWithPrunning =
       pruneZeroMultiAsset . MultiAsset <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
     decodeNonZeroAmount = do

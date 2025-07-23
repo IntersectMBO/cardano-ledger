@@ -11,7 +11,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.Arbitrary (
-  genEmptyMultiAsset,
+  genMultiAssetCompletelyEmpty,
+  genMultiAssetNestedEmpty,
   genMaryValue,
   genMultiAsset,
   genMultiAssetToFail,
@@ -184,8 +185,15 @@ instance Arbitrary MultiAsset where
           , choose (minBound :: Int, -1)
           ]
 
-genEmptyMultiAsset :: Gen MultiAsset
-genEmptyMultiAsset =
+-- | Generate completely empty MultiAsset (empty top-level map)
+-- This should succeed in Conway but fail in Dijkstra
+genMultiAssetCompletelyEmpty :: Gen MultiAsset
+genMultiAssetCompletelyEmpty = pure $ MultiAsset Map.empty
+
+-- | Generate MultiAsset with non-empty top-level map but empty nested asset maps
+-- This should fail in both Conway and Dijkstra
+genMultiAssetNestedEmpty :: Gen MultiAsset
+genMultiAssetNestedEmpty =
   MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
 
 -- | Better generator for a Non-Negative Int that explores more values
