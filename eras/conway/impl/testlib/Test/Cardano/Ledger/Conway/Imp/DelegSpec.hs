@@ -23,7 +23,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..), incorrectDeposit, incorrectRefund)
 import Cardano.Ledger.Conway.State hiding (balance)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
@@ -98,6 +98,7 @@ spec = do
 
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       Positive n <- arbitrary
       let wrongDeposit = expectedDeposit <+> Coin n
@@ -108,7 +109,7 @@ spec = do
               & bodyTxL . certsTxBodyL
                 .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
           )
-          [injectFailure $ IncorrectDepositDELEG wrongDeposit]
+          [injectFailure $ incorrectDeposit pv wrongDeposit expectedDeposit]
         expectNotRegistered (KeyHashObj kh)
 
   describe "Unregister stake credentials" $ do
@@ -139,6 +140,7 @@ spec = do
 
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       cred <- KeyHashObj <$> freshKeyHash
 
@@ -154,7 +156,7 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ [UnRegDepositTxCert cred wrongDeposit]
         )
-        [injectFailure $ IncorrectDepositDELEG wrongDeposit]
+        [injectFailure $ incorrectRefund pv wrongDeposit expectedDeposit]
 
       expectRegistered cred
 
