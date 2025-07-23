@@ -11,6 +11,9 @@ description:
 
 category: Network
 build-type: Simple
+data-files:
+  golden/*.json
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
