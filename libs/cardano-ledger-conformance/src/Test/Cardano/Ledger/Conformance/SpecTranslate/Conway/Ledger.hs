@@ -22,33 +22,24 @@ import Cardano.Ledger.Conway.Core (
   BabbageEraTxBody (..),
   ConwayEraTxBody (..),
   EraPParams (..),
-  EraRule,
   EraTx (..),
   EraTxBody (..),
   ScriptHash,
   txIdTx,
  )
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
+import Cardano.Ledger.Conway.Rules (EnactState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
-import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (
-  OpaqueErrorString (..),
-  askCtx,
-  showOpaqueErrorString,
-  withCtx,
- )
+import Test.Cardano.Ledger.Conformance (askCtx, withCtx)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
-  ConwayTxBodyTransContext (..),
   SpecTranslate (..),
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
 instance
   ( EraPParams era
@@ -70,17 +61,6 @@ instance
       <*> toSpecRep ledgerPp
       <*> toSpecRep enactState
       <*> toSpecRep (casTreasury ledgerAccount)
-
-instance
-  ( ToExpr (PredicateFailure (EraRule "GOV" era))
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
-  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  ) =>
-  SpecTranslate ctx (ConwayLedgerPredFailure era)
-  where
-  type SpecRep (ConwayLedgerPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
 
 instance
   Inject ctx TxId =>
@@ -116,9 +96,7 @@ instance SpecTranslate ctx (Tx ConwayEra) where
 
   toSpecRep tx =
     Agda.MkTx
-      <$> withCtx
-        (ConwayTxBodyTransContext (txIdTx tx))
-        (toSpecRep (tx ^. bodyTxL))
+      <$> withCtx (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
       <*> toSpecRep (tx ^. sizeTxF)
       <*> toSpecRep (tx ^. isValidTxL)

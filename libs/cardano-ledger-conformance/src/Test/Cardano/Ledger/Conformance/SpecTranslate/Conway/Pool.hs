@@ -27,11 +27,6 @@ instance
 
   toSpecRep (PoolEnv _ pp) = toSpecRep pp
 
-instance SpecTranslate ctx (ShelleyPoolPredFailure era) where
-  type SpecRep (ShelleyPoolPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
-
 instance SpecTranslate ctx (PState era) where
   type SpecRep (PState era) = Agda.PState
 
