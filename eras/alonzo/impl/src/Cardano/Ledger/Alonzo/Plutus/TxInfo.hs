@@ -231,6 +231,7 @@ transValidityInterval ::
   forall proxy era a.
   Inject (AlonzoContextError era) a =>
   proxy era ->
+  ProtVer ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
