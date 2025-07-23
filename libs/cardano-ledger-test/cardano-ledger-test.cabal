@@ -35,6 +35,7 @@ library
     Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests
     Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
     Test.Cardano.Ledger.Constrained.Conway.Ledgers
+    Test.Cardano.Ledger.Constrained.Conway.MiniTrace
     Test.Cardano.Ledger.Constrained.Conway.NewEpoch
     Test.Cardano.Ledger.Constrained.Conway.PParams
     Test.Cardano.Ledger.Constrained.Conway.ParametricSpec

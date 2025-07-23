@@ -464,7 +464,7 @@ actionPrioritySpec =
             <*> uniformRM (330, 660)
             <*> uniformRM (660, 1000)
 
-    disableImpInitExpectLedgerRuleConformance $
+    disableImpInitPostSubmitTxHook $
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
       -- TODO: Remove this override once the issue is fixed
       it "proposals of same priority are enacted in order of submission" $ do
@@ -499,7 +499,7 @@ actionPrioritySpec =
         getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
           `shouldReturn` val3
 
-    disableImpInitExpectLedgerRuleConformance $
+    disableImpInitPostSubmitTxHook $
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
       -- TODO: Remove this override once the issue is fixed
       it "only the first action of a transaction gets enacted" $ do

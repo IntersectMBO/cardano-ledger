@@ -19,10 +19,9 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv, UtxoEnv (..), ledgerSlotNoL)
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), ledgerSlotNoL)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
-import Data.Bitraversable (bimapM)
 import Data.List.NonEmpty
 import Lens.Micro
 import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
@@ -46,34 +45,29 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
-testImpConformance ::
+submitTxConformanceHook ::
   forall era t.
   ( ConwayEraImp era
   , ExecSpecRule "LEDGER" era
   , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
-  , ExecSignal "LEDGER" era ~ Tx era
-  , ExecState "LEDGER" era ~ LedgerState era
-  , SpecTranslate (ExecContext "LEDGER" era) (ExecState "LEDGER" era)
-  , SpecTranslate (ExecContext "LEDGER" era) (ExecEnvironment "LEDGER" era)
   , SpecTranslate (ExecContext "LEDGER" era) (TxWits era)
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
-  , ExecEnvironment "LEDGER" era ~ LedgerEnv era
   , SpecTranslate ConwayTxBodyTransContext (TxBody era)
   , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , SpecTranslate (ConwayLedgerExecContext era) (Tx era)
   , ToExpr (SpecRep (Tx era))
+  , FixupSpecRep (SpecState "LEDGER" era)
+  , Eq (SpecState "LEDGER" era)
   ) =>
   Globals ->
+  TRC (EraRule "LEDGER" era) ->
   Either
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-  ExecEnvironment "LEDGER" era ->
-  ExecState "LEDGER" era ->
-  ExecSignal "LEDGER" era ->
   ImpM t ()
-testImpConformance _globals impRuleResult env state signal = do
+submitTxConformanceHook globals trc@(TRC (env, state, signal)) impRuleResult = do
   let ctx =
         ConwayLedgerExecContext
           { clecPolicyHash =
@@ -92,24 +86,14 @@ testImpConformance _globals impRuleResult env state signal = do
                 }
           }
   -- translate inputs
-  (specEnv, specState, specSignal) <-
-    (,,)
-      <$> expectRight (runSpecTransM ctx $ toSpecRep env)
-      <*> expectRight (runSpecTransM ctx $ toSpecRep state)
-      <*> expectRight (runSpecTransM ctx $ toSpecRep signal)
+  specTRC@(SpecTRC specEnv specState specSignal) <-
+    impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
   -- get agda response
-  agdaResponse <-
-    fmap (second fixup) $
-      evaluateDeep $
-        runAgdaRule @"LEDGER" @era specEnv specState specSignal
+  agdaResponse <- fmap (second fixup) . evaluateDeep $ runAgdaRule @"LEDGER" @era specTRC
   -- translate imp response
-  impResponse <-
-    expectRightExpr $
-      runSpecTransM ctx $
-        bimapM
-          (pure . showOpaqueErrorString)
-          (toTestRep . inject @_ @(ExecState "LEDGER" era) . fst)
-          impRuleResult
+  let
+    impRuleResult' = bimap showOpaqueErrorString fst impRuleResult
+    impResponse = first showOpaqueErrorString . translateOutput ctx trc =<< impRuleResult'
 
   logString "implEnv"
   logToExpr env
@@ -126,11 +110,9 @@ testImpConformance _globals impRuleResult env state signal = do
   logString "Extra info:"
   logDoc $
     extraInfo @"LEDGER" @era
-      _globals
+      globals
       ctx
-      env
-      state
-      signal
+      (TRC (env, state, signal))
       (first showOpaqueErrorString impRuleResult)
   logDoc $ diffConformance impResponse agdaResponse
   when (impResponse /= agdaResponse) $
@@ -140,7 +122,7 @@ spec :: Spec
 spec =
   withImpInit @(LedgerSpec ConwayEra) $
     modifyImpInitProtVer @ConwayEra (natVersion @10) $
-      modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
+      modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
         describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
             _ <- submitConstitution @ConwayEra SNothing

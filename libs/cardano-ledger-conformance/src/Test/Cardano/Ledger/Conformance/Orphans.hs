@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -375,3 +376,7 @@ instance FixupSpecRep LState
 instance FixupSpecRep HsRewardUpdate
 
 instance FixupSpecRep NewEpochState
+
+deriving instance Semigroup (HSMap k v)
+
+deriving instance Monoid (HSMap k v)
