@@ -699,7 +699,7 @@ shelleyCertsSpec = do
       expectDelegatedToPool cred poolKh'
       expectDelegatedVote cred (DRepCredential drepCred)
 
-expectRegistered :: HasCallStack => Credential 'Staking -> ImpTestM era ()
+expectRegistered :: (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
 expectRegistered cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -708,28 +708,30 @@ expectRegistered cred = do
   impAnn (show cred <> " expected to be in Accounts with the correct deposit") $ do
     accountState ^. depositAccountStateL `shouldBe` compactCoinOrError expectedDeposit
 
-expectNotRegistered :: HasCallStack => Credential 'Staking -> ImpTestM era ()
+expectNotRegistered :: (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
 expectNotRegistered cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   impAnn (show cred <> " expected to not be in Accounts") $ do
     expectNothingExpr $ lookupAccountState cred accounts
 
 expectDelegatedToPool ::
-  HasCallStack => Credential 'Staking -> KeyHash 'StakePool -> ImpTestM era ()
+  (HasCallStack, ConwayEraImp era) => Credential 'Staking -> KeyHash 'StakePool -> ImpTestM era ()
 expectDelegatedToPool cred poolKh = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   impAnn (show cred <> " expected to have delegated to " <> show poolKh) $ do
     accountState <- expectJust $ lookupAccountState cred accounts
     accountState ^. stakePoolDelegationAccountStateL `shouldBe` Just poolKh
 
-expectNotDelegatedToPool :: HasCallStack => Credential 'Staking -> ImpTestM era ()
+expectNotDelegatedToPool ::
+  (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
 expectNotDelegatedToPool cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   impAnn (show cred <> " expected to not have delegated to a stake pool") $ do
     accountState <- expectJust $ lookupAccountState cred accounts
     expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
 
-expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
+expectDelegatedVote ::
+  (HasCallStack, ConwayEraImp era) => Credential 'Staking -> DRep -> ImpTestM era ()
 expectDelegatedVote cred drep = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   dreps <- getsNES $ nesEsL . epochStateRegDrepL
@@ -749,7 +751,7 @@ expectDelegatedVote cred drep = do
               (cred `Set.member` drepDelegs drepState)
       _ -> pure ()
 
-expectNotDelegatedVote :: HasCallStack => Credential 'Staking -> ImpTestM era ()
+expectNotDelegatedVote :: (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
 expectNotDelegatedVote cred = do
   accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
   impAnn (show cred <> " expected to not have their vote delegated") $
