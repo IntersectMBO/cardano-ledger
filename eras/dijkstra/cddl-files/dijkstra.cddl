@@ -576,7 +576,11 @@ protocol_param_update =
   , ? 30 : coin                   ; governance action deposit
   , ? 31 : coin                   ; drep deposit
   , ? 32 : epoch_interval         ; drep inactivity period
-  , ? 33 : nonnegative_interval   ; minfee refscriptcoinsperbyte
+  , ? 33 : nonnegative_interval   ; minfee refScript coins per byte
+  , ? 34 : uint .size 4           ; max refScript size per block
+  , ? 35 : uint .size 4           ; max refScript size per tx
+  , ? 36 : posWord32              ; refScript cost stride
+  , ? 37 : positive_interval      ; refScript cost multiplier
   }
 
 
@@ -624,6 +628,12 @@ drep_voting_thresholds =
   , unit_interval ; treasury withdrawal
   ]
 
+
+posWord32 = 1 .. maxWord32
+
+maxWord32 = 4294967295
+
+positive_interval = #6.30([positive_int, positive_int])
 
 policy_hash = script_hash
 

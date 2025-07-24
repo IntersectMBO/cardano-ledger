@@ -85,6 +85,7 @@
 
 ### `testlib`
 
+* Add `maxWord32` and `posWord32` rules to CDDL
 * Add `registerTestAccount` and `accountsFromUMap`
 * Add `mkTestAccountState`, `accountsFromAccountsMap` and `accountsToUMap` to `EraTest`
 * Add `expectLeftDeepExpr_` and `expectRightDeepExpr_`
