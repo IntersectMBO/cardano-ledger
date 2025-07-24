@@ -101,7 +101,43 @@ In particular, we should not release our packages to CHaP while we depend on a `
 
 If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the [CHaP README](https://github.com/IntersectMBO/cardano-haskell-packages) for more).
 
-If you do add a `source-repository-package`, you need to provide a `--sha256` comment in `cabal.project` so that Nix knows the hash of the content.
+### How to add a `source-repository-package`
+
+As an example, we show how [constrained-generators](https://github.com/input-output-hk/constrained-generators.git) was added (pinned at commit `45559e07fe1651ddd257f2a1215dfd65e30a963f`).
+
+1. Add the repository as an input to `flake.nix`:
+
+   ```nix
+   constrained-generators = {
+     url = "github:input-output-hk/constrained-generators";
+     flake = false;
+   };
+   ```
+
+2. Add an entry to `inputMap` in `flake.nix`:
+
+    ```nix
+    inputMap = {
+      ...
+      "https://github.com/input-output-hk/constrained-generators.git" = inputs.constrained-generators;
+      ...
+    };
+    ```
+
+3. Add an SRP entry to `cabal.project`:
+
+   ```
+   source-repository-package
+     type: git
+     location: https://github.com/input-output-hk/constrained-generators.git
+     tag: 45559e07fe1651ddd257f2a1215dfd65e30a963f
+   ```
+
+4. Update the nix flake:
+
+   ```
+   nix flake update constrained-generators --override-input constrained-generators github:input-output-hk/constrained-generators/45559e07fe1651ddd257f2a1215dfd65e30a963f
+   ```
 
 ## Warnings
 
