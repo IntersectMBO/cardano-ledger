@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.CDDL (
   module Test.Cardano.Ledger.Dijkstra.CDDL,
+  module Test.Cardano.Ledger.Conway.CDDL,
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -18,53 +19,29 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Babbage.CDDL hiding (
+import Test.Cardano.Ledger.Conway.CDDL hiding (
+  alonzo_auxiliary_data,
   auxiliary_data,
   block,
   certificate,
   certificates,
   cost_models,
-  dns_name,
-  ex_unit_prices,
+  gov_action,
   header,
   header_body,
-  invalid_before,
-  invalid_hereafter,
   language,
-  metadata,
-  mint,
-  multi_host_name,
-  multiasset,
-  native_script,
-  nonempty_set,
-  plutus_v1_script,
-  plutus_v2_script,
-  pool_metadata,
-  pool_params,
-  pool_registration,
-  pool_retirement,
+  parameter_change_action,
+  proposal_procedure,
+  proposal_procedures,
   protocol_param_update,
   protocol_version,
-  redeemer_tag,
-  redeemers,
-  relay,
-  required_signers,
-  script_all,
-  script_any,
   script_data_hash,
-  script_pubkey,
-  set,
-  shelley_transaction_output,
   single_host_name,
   transaction,
   transaction_body,
-  transaction_input,
   transaction_metadatum_label,
   transaction_output,
   transaction_witness_set,
-  url,
-  value,
-  withdrawals,
  )
 import Text.Heredoc
 
@@ -181,14 +158,6 @@ transaction_body =
       , opt (idx 22 ==> positive_coin)
       ]
 
-voting_procedures :: Rule
-voting_procedures =
-  "voting_procedures"
-    =:= mp [1 <+ asKey voter ==> mp [1 <+ asKey gov_action_id ==> voting_procedure]]
-
-voting_procedure :: Rule
-voting_procedure = "voting_procedure" =:= arr [a vote, a (anchor / VNil)]
-
 proposal_procedure :: Rule
 proposal_procedure =
   "proposal_procedure"
@@ -216,9 +185,6 @@ gov_action =
     / arr [a new_constitution]
     / arr [a info_action]
 
-policy_hash :: Rule
-policy_hash = "policy_hash" =:= script_hash
-
 parameter_change_action :: Named Group
 parameter_change_action =
   "parameter_change_action"
@@ -229,85 +195,6 @@ parameter_change_action =
       , a $ policy_hash / VNil
       ]
 
-hard_fork_initiation_action :: Named Group
-hard_fork_initiation_action =
-  "hard_fork_initiation_action"
-    =:~ grp [1, a $ gov_action_id / VNil, a protocol_version]
-
-treasury_withdrawals_action :: Named Group
-treasury_withdrawals_action =
-  "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), a $ policy_hash / VNil]
-
-no_confidence :: Named Group
-no_confidence = "no_confidence" =:~ grp [3, a $ gov_action_id / VNil]
-
-update_committee :: Named Group
-update_committee =
-  "update_committee"
-    =:~ grp
-      [ 4
-      , a $ gov_action_id / VNil
-      , a (set committee_cold_credential)
-      , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
-      , a unit_interval
-      ]
-
-new_constitution :: Named Group
-new_constitution =
-  "new_constitution"
-    =:~ grp [5, a $ gov_action_id / VNil, a constitution]
-
-constitution :: Rule
-constitution =
-  "constitution"
-    =:= arr
-      [ a anchor
-      , a (script_hash / VNil)
-      ]
-
-info_action :: Rule
-info_action = "info_action" =:= int 6
-
-voter :: Rule
-voter =
-  "voter"
-    =:= (arr [0, a addr_keyhash] //- "constitutional committee hot key hash")
-    / (arr [1, a script_hash] //- "consitutional committee script hash")
-    / (arr [2, a addr_keyhash] //- "drep keyhash")
-    / (arr [3, a script_hash] //- "drep script hash")
-    / (arr [4, a addr_keyhash] //- "staking pool key hash")
-
-anchor :: Rule
-anchor =
-  "anchor"
-    =:= arr
-      [ "anchor_url" ==> url
-      , "anchor_data_hash" ==> hash32
-      ]
-
-vote :: Rule
-vote = "vote" =:= (0 :: Integer) ... (2 :: Integer)
-
-gov_action_id :: Rule
-gov_action_id =
-  "gov_action_id"
-    =:= arr
-      [ "transaction_id" ==> transaction_id
-      , "gov_action_index" ==> (VUInt `sized` (2 :: Word64))
-      ]
-
-required_signers :: Rule
-required_signers = "required_signers" =:= nonempty_set addr_keyhash
-
-transaction_input :: Rule
-transaction_input =
-  "transaction_input"
-    =:= arr
-      [ "transaction_id" ==> transaction_id
-      , "index" ==> (VUInt `sized` (2 :: Word64))
-      ]
-
 transaction_output :: Rule
 transaction_output =
   comment
@@ -316,16 +203,9 @@ transaction_output =
         |]
     $ "transaction_output"
       =:= shelley_transaction_output
-      / babbage_transaction_output conway_script
+      / babbage_transaction_output dijkstra_script
 
-shelley_transaction_output :: Rule
-shelley_transaction_output =
-  comment
-    [str|hash32: datum_hash
-        |]
-    $ "shelley_transaction_output"
-      =:= arr [a address, "amount" ==> value, opt $ a hash32]
-
+-- TODO: Update comment with Plutus v4 when necessary
 script_data_hash :: Rule
 script_data_hash =
   comment
@@ -398,6 +278,7 @@ script_data_hash =
         |]
     $ "script_data_hash" =:= hash32
 
+-- TODO: adjust to changes in certificates
 certificate :: Rule
 certificate =
   "certificate"
@@ -419,139 +300,7 @@ certificate =
     / arr [a unreg_drep_cert]
     / arr [a update_drep_cert]
 
--- POOL
-pool_registration :: Named Group
-pool_registration = "pool_registration" =:~ grp [3, a pool_params]
-
-pool_retirement :: Named Group
-pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch_no]
-
--- numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
--- which were deprecated in Conway
-
--- DELEG
-reg_cert :: Named Group
-reg_cert = "reg_cert" =:~ grp [7, a stake_credential, a coin]
-
-unreg_cert :: Named Group
-unreg_cert = "unreg_cert" =:~ grp [8, a stake_credential, a coin]
-
-vote_deleg_cert :: Named Group
-vote_deleg_cert = "vote_deleg_cert" =:~ grp [9, a stake_credential, a drep]
-
-stake_vote_deleg_cert :: Named Group
-stake_vote_deleg_cert =
-  "stake_vote_deleg_cert"
-    =:~ grp [10, a stake_credential, a pool_keyhash, a drep]
-
-stake_reg_deleg_cert :: Named Group
-stake_reg_deleg_cert =
-  "stake_reg_deleg_cert"
-    =:~ grp [11, a stake_credential, a pool_keyhash, a coin]
-
-vote_reg_deleg_cert :: Named Group
-vote_reg_deleg_cert =
-  "vote_reg_deleg_cert"
-    =:~ grp [12, a stake_credential, a drep, a coin]
-
-stake_vote_reg_deleg_cert :: Named Group
-stake_vote_reg_deleg_cert =
-  "stake_vote_reg_deleg_cert"
-    =:~ grp [13, a stake_credential, a pool_keyhash, a drep, a coin]
-
--- GOVCERT
-auth_committee_hot_cert :: Named Group
-auth_committee_hot_cert =
-  "auth_committee_hot_cert"
-    =:~ grp [14, a committee_cold_credential, a committee_hot_credential]
-
-resign_committee_cold_cert :: Named Group
-resign_committee_cold_cert =
-  "resign_committee_cold_cert"
-    =:~ grp [15, a committee_cold_credential, a $ anchor / VNil]
-
-reg_drep_cert :: Named Group
-reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, a $ anchor / VNil]
-
-unreg_drep_cert :: Named Group
-unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
-
-update_drep_cert :: Named Group
-update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
-
-drep :: Rule
-drep =
-  "drep"
-    =:= arr [0, a addr_keyhash]
-    / arr [1, a script_hash]
-    / arr [2] -- always abstain
-    / arr [3] -- always no confidence
-
-drep_credential :: Rule
-drep_credential = "drep_credential" =:= credential
-
-committee_cold_credential :: Rule
-committee_cold_credential = "committee_cold_credential" =:= credential
-
-committee_hot_credential :: Rule
-committee_hot_credential = "committee_hot_credential" =:= credential
-
-pool_params :: Named Group
-pool_params =
-  comment
-    [str|        pool_keyhash: operator
-        |                coin: pledge
-        |                coin: cost
-        |       unit_interval: margin
-        |   set<addr_keyhash>: pool_owners
-        |]
-    $ "pool_params"
-      =:~ grp
-        [ "operator" ==> pool_keyhash
-        , "vrf_keyhash" ==> vrf_keyhash
-        , "pledge" ==> coin
-        , "cost" ==> coin
-        , "margin" ==> unit_interval
-        , "reward_account" ==> reward_account
-        , "pool_owners" ==> set addr_keyhash
-        , "relays" ==> arr [0 <+ a relay]
-        , "pool_metadata" ==> (pool_metadata / VNil)
-        ]
-
-dns_name :: Rule
-dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
-
-single_host_name :: Named Group
-single_host_name =
-  comment
-    [str|dns_name: An A or AAAA DNS record
-        |]
-    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
-
-multi_host_name :: Named Group
-multi_host_name =
-  comment
-    [str|dns_name: An SRV DNS record
-        |]
-    $ "multi_host_name"
-      =:~ grp [2, a dns_name]
-
-relay :: Rule
-relay =
-  "relay"
-    =:= arr [a single_host_addr]
-    / arr [a single_host_name]
-    / arr [a multi_host_name]
-
-url :: Rule
-url = "url" =:= VText `sized` (0 :: Word64, 128 :: Word64)
-
-pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a VBytes]
-
-withdrawals :: Rule
-withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]
-
+-- TODO: adjust with new params
 protocol_param_update :: Rule
 protocol_param_update =
   "protocol_param_update"
@@ -588,33 +337,7 @@ protocol_param_update =
       , opt (idx 33 ==> nonnegative_interval) //- "minfee refscriptcoinsperbyte"
       ]
 
-pool_voting_thresholds :: Rule
-pool_voting_thresholds =
-  "pool_voting_thresholds"
-    =:= arr
-      [ a unit_interval //- "motion no confidence"
-      , a unit_interval //- "committee normal"
-      , a unit_interval //- "committee no confidence"
-      , a unit_interval //- "hard fork initiation"
-      , a unit_interval //- "security relevant parameter voting threshold"
-      ]
-
-drep_voting_thresholds :: Rule
-drep_voting_thresholds =
-  "drep_voting_thresholds"
-    =:= arr
-      [ a unit_interval //- "motion no confidence"
-      , a unit_interval //- "committee normal"
-      , a unit_interval //- "committee no confidence"
-      , a unit_interval //- "update constitution"
-      , a unit_interval //- "hard fork initiation"
-      , a unit_interval //- "PP network group"
-      , a unit_interval //- "PP economic group"
-      , a unit_interval //- "PP technical group"
-      , a unit_interval //- "PP governance group"
-      , a unit_interval //- "treasury withdrawal"
-      ]
-
+-- TODO: add entry for Plutus v4
 transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
@@ -624,61 +347,14 @@ transaction_witness_set =
       , opt $ idx 2 ==> nonempty_set bootstrap_witness
       , opt $ idx 3 ==> nonempty_set plutus_v1_script
       , opt $ idx 4 ==> nonempty_set plutus_data
-      , opt $ idx 5 ==> redeemers conway_redeemer_tag
+      , opt $ idx 5 ==> redeemers dijkstra_redeemer_tag
       , opt $ idx 6 ==> nonempty_set plutus_v2_script
       , opt $ idx 7 ==> nonempty_set plutus_v3_script
       ]
 
-plutus_v1_script :: Rule
-plutus_v1_script =
-  comment
-    [str|The real type of plutus_v1_script, plutus_v2_script and
-        |plutus_v3_script is bytes. However, because we enforce
-        |uniqueness when many scripts are supplied, we need to hack
-        |around for tests in order to avoid generating duplicates, since
-        |the cddl tool we use for roundtrip testing doesn't generate
-        |distinct collections.
-        |]
-    $ "plutus_v1_script" =:= distinct VBytes
-
-plutus_v2_script :: Rule
-plutus_v2_script = "plutus_v2_script" =:= distinct VBytes
-
-plutus_v3_script :: Rule
-plutus_v3_script = "plutus_v3_script" =:= distinct VBytes
-
-redeemers :: Rule -> Rule
-redeemers redeemer_tag =
-  comment
-    [str|Flat Array support is included for backwards compatibility and
-        |will be removed in the next era. It is recommended for tools to
-        |adopt using a Map instead of Array going forward.
-        |]
-    $ "redeemers"
-      =:= sarr
-        [ 1
-            <+ a
-              ( arr
-                  [ "tag" ==> redeemer_tag
-                  , "index" ==> (VUInt `sized` (4 :: Word64))
-                  , "data" ==> plutus_data
-                  , "ex_units" ==> ex_units
-                  ]
-              )
-        ]
-      / smp
-        [ 1
-            <+ asKey
-              ( arr
-                  [ "tag" ==> redeemer_tag
-                  , "index" ==> (VUInt `sized` (4 :: Word64))
-                  ]
-              )
-            ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
-        ]
-
-conway_redeemer_tag :: Rule
-conway_redeemer_tag =
+-- TODO: adjust with new script purpose
+dijkstra_redeemer_tag :: Rule
+dijkstra_redeemer_tag =
   "redeemer_tag"
     =:= (int 0 //- "spend")
     / (int 1 //- "mint")
@@ -687,14 +363,7 @@ conway_redeemer_tag =
     / (int 4 //- "voting")
     / (int 5 //- "proposing")
 
-ex_unit_prices :: Rule
-ex_unit_prices =
-  "ex_unit_prices"
-    =:= arr
-      [ "mem_price" ==> nonnegative_interval
-      , "step_price" ==> nonnegative_interval
-      ]
-
+-- TODO: add Plutus V4
 language :: Rule
 language =
   "language"
@@ -702,9 +371,7 @@ language =
     / int 1 -- Plutus v2
     / int 2 -- Plutus v3
 
-potential_languages :: Rule
-potential_languages = "potential_languages" =:= (0 :: Integer) ... (255 :: Integer)
-
+-- TODO: add entry for Plutus v4
 cost_models :: Rule
 cost_models =
   comment
@@ -725,30 +392,7 @@ cost_models =
         , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
 
-transaction_metadatum_label :: Rule
-transaction_metadatum_label = "transaction_metadatum_label" =:= (VUInt `sized` (8 :: Word64))
-
-metadata :: Rule
-metadata =
-  "metadata"
-    =:= mp
-      [ 0
-          <+ asKey transaction_metadatum_label
-          ==> transaction_metadatum
-      ]
-
-shelley_auxiliary_data :: Rule
-shelley_auxiliary_data =
-  "shelley_auxiliary_data" =:= metadata
-
-shelley_ma_auxiliary_data :: Rule
-shelley_ma_auxiliary_data =
-  "shelley_ma_auxiliary_data"
-    =:= arr
-      [ "transaction_metadata" ==> metadata
-      , "auxiliary_scripts" ==> arr [0 <+ a native_script]
-      ]
-
+-- TODO: add entry for Plutus v4
 alonzo_auxiliary_data :: Rule
 alonzo_auxiliary_data =
   "alonzo_auxiliary_data"
@@ -770,85 +414,11 @@ auxiliary_data =
     / shelley_ma_auxiliary_data
     / alonzo_auxiliary_data
 
-native_script :: Rule
-native_script =
-  "native_script"
-    =:= arr [a script_pubkey]
-    / arr [a script_all]
-    / arr [a script_any]
-    / arr [a script_n_of_k]
-    / arr [a invalid_before]
-    -- Timelock validity intervals are half-open intervals [a, b).
-    -- This field specifies the left (included) endpoint a.
-    / arr [a invalid_hereafter]
-
--- Timelock validity intervals are half-open intervals [a, b).
--- This field specifies the right (excluded) endpoint b.
-
-script_pubkey :: Named Group
-script_pubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
-
-script_all :: Named Group
-script_all = "script_all" =:~ grp [1, a (arr [0 <+ a native_script])]
-
-script_any :: Named Group
-script_any = "script_any" =:~ grp [2, a (arr [0 <+ a native_script])]
-
-script_n_of_k :: Named Group
-script_n_of_k =
-  "script_n_of_k"
-    =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
-
-invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a slot_no]
-
-invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
-
-multiasset :: IsType0 a => a -> GRuleCall
-multiasset = binding $ \x ->
-  "multiasset"
-    =:= mp [0 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
-
-value :: Rule
-value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
-
-mint :: Rule
-mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonZeroInt64]]
-
-epoch_no :: Rule
-epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)
-
-epoch_interval :: Rule
-epoch_interval = "epoch_interval" =:= VUInt `sized` (4 :: Word64)
-
-slot_no :: Rule
-slot_no = "slot_no" =:= VUInt `sized` (8 :: Word64)
-
-block_no :: Rule
-block_no = "block_no" =:= VUInt `sized` (8 :: Word64)
-
-conway_script :: Rule
-conway_script =
+-- TODO: add entry for Plutus v4
+dijkstra_script :: Rule
+dijkstra_script =
   "script"
     =:= arr [0, a native_script]
     / arr [1, a plutus_v1_script]
     / arr [2, a plutus_v2_script]
     / arr [3, a plutus_v3_script]
-
--- | Conway era introduces an optional 258 tag for sets, which will
--- become mandatory in the second era after Conway. We recommend all the
--- tooling to account for this future breaking change sooner rather than
--- later, in order to provide a smooth transition for their users.
-set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) / sarr [0 <+ a x]
-
--- | Conway era introduces an optional 258 tag for sets, which will
--- become mandatory in the second era after Conway. We recommend all the
--- tooling to account for this future breaking change sooner rather than
--- later, in order to provide a smooth transition for their users.
-nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x ->
-  "nonempty_set"
-    =:= tag 258 (arr [1 <+ a x])
-    / sarr [1 <+ a x]
