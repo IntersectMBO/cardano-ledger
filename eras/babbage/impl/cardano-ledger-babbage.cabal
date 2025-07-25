@@ -144,6 +144,7 @@ library testlib
     generic-random,
     heredoc,
     microlens,
+    microlens-ghc,
     plutus-ledger-api,
     small-steps >=1.1,
 
