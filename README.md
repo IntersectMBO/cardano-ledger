@@ -15,8 +15,7 @@
 This repository contains the formal specifications, executable models,
 and implementations of the Cardano Ledger.
 
-The documents are built in our CI and can be readily accessed using the
-following links:
+The documents can be readily accessed using the following links:
 
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
@@ -26,8 +25,17 @@ Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://githu
 Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/mary/impl/cddl/data)
 Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/alonzo/impl/cddl/data)
 Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-secure-range-extension-and-batch-verification-for-ecvrf/ "On UC-Secure Range Extension and Batch Verification for ECVRF"), [CIP-31](https://github.com/cardano-foundation/CIPs/pull/159 "Reference inputs"), [CIP-32](https://github.com/cardano-foundation/CIPs/pull/160 "Inline datums"), [CIP-33](https://github.com/cardano-foundation/CIPs/pull/161 "Reference scripts") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/babbage-ledger.pdf "Formal Specification of the Cardano Ledger for the Babbage era") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/babbage/impl/cddl/data)
-Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec (WIP)](https://github.com/intersectmbo/formal-ledger-specifications) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl/data)
+Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec](https://intersectmbo.github.io/formal-ledger-specifications/site/Ledger.Conway.Specification.html) (but read below) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl/data)
 
+Note that the formal specification documents present the specification in a
+diff-style manner. That is, each document shows specification changes with
+respect to documents of previous eras.
+
+There is an ongoing effort to provide a full [machine-verified formal
+specification of the Cardano
+Ledger](https://intersectmbo.github.io/formal-ledger-specifications/site) that
+will subsume the (formal specification) documents listed above. This effort is
+*complete for Conway* but partially complete for previous eras.
 
 Other Documents:
 - [Non-integer calculations specification](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/non-integer-calculations.pdf): details on the parts of the Shelley specification that use real numbers.
