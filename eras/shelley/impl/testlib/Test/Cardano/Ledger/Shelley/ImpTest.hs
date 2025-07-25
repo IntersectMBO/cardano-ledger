@@ -655,12 +655,12 @@ instance
       gen =
         ShelleyGenesis
           { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
-          , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+          , sgNetworkMagic = 123_456 -- Mainnet value: 764824073
           , sgNetworkId = Testnet
           , sgActiveSlotsCoeff = 20 %! 100 -- Mainnet value: 5 %! 100
           , sgSecurityParam = knownNonZeroBounded @108 -- Mainnet value: 2160
           , sgEpochLength = 4320 -- Mainnet value: 432000
-          , sgSlotsPerKESPeriod = 129600
+          , sgSlotsPerKESPeriod = 129_600
           , sgMaxKESEvolutions = 62
           , sgSlotLength = 1
           , sgUpdateQuorum = 5
@@ -669,8 +669,8 @@ instance
               emptyPParams
                 & ppMinFeeAL .~ Coin 44
                 & ppMinFeeBL .~ Coin 155_381
-                & ppMaxBBSizeL .~ 65536
-                & ppMaxTxSizeL .~ 16384
+                & ppMaxBBSizeL .~ 65_536
+                & ppMaxTxSizeL .~ 16_384
                 & ppKeyDepositL .~ Coin 2_000_000
                 & ppPoolDepositL .~ Coin 500_000_000
                 & ppEMaxL .~ EpochInterval 18
@@ -1165,7 +1165,9 @@ tryRunImpRule = tryRunImpRule' @rule AssertionsAll
 
 tryRunImpRuleNoAssertions ::
   forall rule era.
-  (STS (EraRule rule era), BaseM (EraRule rule era) ~ ShelleyBase) =>
+  ( STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  ) =>
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
@@ -1217,10 +1219,10 @@ runImpRule ::
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
   ImpTestM era (State (EraRule rule era))
-runImpRule stsEnv stsState stsSignal = do
+runImpRule env st sig = do
   let ruleName = symbolVal (Proxy @rule)
   (res, ev) <-
-    tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
+    tryRunImpRule @rule env st sig >>= \case
       Left fs ->
         assertFailure $
           unlines $

@@ -14,7 +14,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
-  SpecTranslationError,
   SpecTranslate (..),
   FixupSpecRep (..),
   OpaqueErrorString (..),
@@ -26,6 +25,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   showOpaqueErrorString,
   unComputationResult,
   unComputationResult_,
+  toSpecRep_,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -34,21 +34,19 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
 import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..), showExpr)
-import Data.List.NonEmpty (NonEmpty)
-
-type SpecTranslationError = Text
 
 newtype SpecTransM ctx a
-  = SpecTransM (ExceptT SpecTranslationError (Reader ctx) a)
-  deriving (Functor, Applicative, Monad, MonadError SpecTranslationError, MonadReader ctx)
+  = SpecTransM (ExceptT Text (Reader ctx) a)
+  deriving (Functor, Applicative, Monad, MonadError Text, MonadReader ctx)
 
-runSpecTransM :: ctx -> SpecTransM ctx a -> Either SpecTranslationError a
+runSpecTransM :: ctx -> SpecTransM ctx a -> Either Text a
 runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
 class SpecTranslate ctx a where
@@ -83,7 +81,9 @@ class FixupSpecRep a where
   default fixup :: (Generic a, GFixupSpecRep (Rep a)) => a -> a
   fixup = to . genericFixupSpecRep . from
 
-toTestRep :: (SpecTranslate ctx a, FixupSpecRep (SpecRep a)) => a -> SpecTransM ctx (SpecRep a)
+toTestRep ::
+  (SpecTranslate ctx a, FixupSpecRep (SpecRep a)) =>
+  a -> SpecTransM ctx (SpecRep a)
 toTestRep = fmap fixup . toSpecRep
 
 askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
@@ -120,3 +120,12 @@ unComputationResult (Agda.Failure e) = Left (OpaqueErrorString $ pure e)
 unComputationResult_ :: Agda.ComputationResult Void a -> Either e a
 unComputationResult_ (Agda.Success x) = Right x
 unComputationResult_ (Agda.Failure x) = case x of {}
+
+toSpecRep_ ::
+  ( SpecTranslate () a
+  ) =>
+  a ->
+  SpecRep a
+toSpecRep_ x = case runSpecTransM () $ toSpecRep x of
+  Right res -> res
+  Left v -> error $ "Failed to translate:\n" <> T.unpack v

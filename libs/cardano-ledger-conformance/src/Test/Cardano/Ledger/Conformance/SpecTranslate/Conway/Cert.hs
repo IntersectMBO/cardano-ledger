@@ -16,23 +16,27 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert () where
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Shelley.LedgerState
+import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)
+import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import qualified Data.VMap as VMap
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
-import Test.Cardano.Ledger.Constrained.Conway.Utxo (depositsMap)
 import Test.Cardano.Ledger.Conway.TreeDiff
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
@@ -71,6 +75,31 @@ instance Era era => SpecTranslate ctx (ConwayTxCert era) where
   toSpecRep (ConwayTxCertGov c) = toSpecRep c
   toSpecRep (ConwayTxCertDeleg x) = toSpecRep x
 
+bimapHSMap :: (k -> k') -> (v -> v') -> Agda.HSMap k v -> Agda.HSMap k' v'
+bimapHSMap f g (Agda.MkHSMap m) = Agda.MkHSMap $ bimap f g <$> m
+
+depositsMap ::
+  ConwayEraCertState era => CertState era -> Proposals era -> Agda.HSMap Agda.DepositPurpose Integer
+depositsMap certState props =
+  undefined
+    [ bimapHSMap
+        (fmap Agda.CredentialDeposit . toSpecRep)
+        (toSpecRep . fromCompact . view depositAccountStateL)
+        (Agda.MkHSMap . Map.toList $ certState ^. certDStateL . accountsL . accountsMapL)
+    , bimapHSMap
+        (fmap Agda.PoolDeposit . toSpecRep)
+        toSpecRep
+        (Agda.MkHSMap . Map.toList $ certState ^. certPStateL . psDepositsL)
+    , bimapHSMap
+        (fmap Agda.DRepDeposit . toSpecRep)
+        (toSpecRep . drepDeposit)
+        (Agda.MkHSMap . Map.toList $ certState ^. certVStateL . vsDRepsL)
+    , bimapHSMap
+        (fmap Agda.GovActionDeposit . toSpecRep)
+        (toSpecRep . gasDeposit)
+        (Agda.MkHSMap . OMap.assocList $ props ^. pPropsL)
+    ]
+
 instance
   ( SpecTranslate ctx (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
@@ -90,7 +119,7 @@ instance
     Agda.MkUTxOState
       <$> toSpecRep utxosUtxo
       <*> toSpecRep utxosFees
-      <*> toSpecRep deposits
+      <*> pure deposits
       <*> toSpecRep utxosDonation
 
 instance

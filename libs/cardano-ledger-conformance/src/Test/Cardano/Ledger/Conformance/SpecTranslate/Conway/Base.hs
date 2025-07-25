@@ -22,7 +22,6 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   committeeCredentialToStrictMaybe,
   SpecTranslate (..),
-  SpecTranslationError,
   ConwayExecEnactEnv (..),
   ConwayTxBodyTransContext (..),
   vkeyToInteger,
@@ -104,7 +103,6 @@ import Test.Cardano.Ledger.Conformance (
   OpaqueErrorString (..),
   SpecTransM,
   SpecTranslate (..),
-  SpecTranslationError,
   askCtx,
   hashToInteger,
   showOpaqueErrorString,
@@ -115,6 +113,10 @@ instance SpecTranslate ctx Void where
   type SpecRep Void = Void
 
   toSpecRep = absurd
+
+instance SpecTranslate ctx () where
+  type SpecRep () = ()
+  toSpecRep = pure
 
 instance SpecTranslate ctx a => SpecTranslate ctx [a] where
   type SpecRep [a] = [SpecRep a]
@@ -472,7 +474,10 @@ instance
   where
   type SpecRep (Map k v) = Agda.HSMap (SpecRep k) (SpecRep v)
 
-  toSpecRep = fmap Agda.MkHSMap . traverse (bimapM toSpecRep toSpecRep) . Map.toList
+  toSpecRep =
+    fmap Agda.MkHSMap
+      . traverse (bimapM toSpecRep toSpecRep)
+      . Map.toList
 
 instance SpecTranslate ctx Word64 where
   type SpecRep Word64 = Integer
@@ -628,8 +633,8 @@ instance SpecTranslate ctx TxAuxDataHash where
 
   toSpecRep (TxAuxDataHash x) = toSpecRep x
 
-data ConwayTxBodyTransContext = ConwayTxBodyTransContext
-  { ctbtcTxId :: !TxId
+newtype ConwayTxBodyTransContext = ConwayTxBodyTransContext
+  { ctbtcTxId :: TxId
   }
 
 instance Inject ConwayTxBodyTransContext TxId where

@@ -133,6 +133,7 @@ test-suite tests
     cardano-ledger-executable-spec,
     cardano-ledger-shelley,
     cardano-ledger-test,
+    constrained-generators,
     cardano-strict-containers,
     containers,
     microlens,

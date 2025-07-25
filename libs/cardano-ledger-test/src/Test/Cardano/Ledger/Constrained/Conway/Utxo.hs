@@ -22,7 +22,6 @@ import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
@@ -31,16 +30,13 @@ import Cardano.Ledger.Conway.Core (
   EraTxAuxData (..),
   EraTxWits (..),
  )
-import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
+import Cardano.Ledger.Conway.Governance (GovActionId)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
-import Data.Bifunctor (Bifunctor (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -208,17 +204,4 @@ correctAddrAndWFCoin txOut =
                 (branch $ \_ -> False)
                 (branch $ \_ -> True)
         )
-    ]
-
-depositsMap ::
-  ConwayEraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
-depositsMap certState props =
-  Map.unions
-    [ Map.mapKeys CredentialDeposit $
-        Map.map
-          (fromCompact . (^. depositAccountStateL))
-          (certState ^. certDStateL . accountsL . accountsMapL)
-    , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
-    , fmap drepDeposit . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
-    , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
     ]
