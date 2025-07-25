@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
  )
-import Data.Foldable (for_)
 import Lens.Micro
 import Lens.Micro.GHC ()
 import qualified PlutusLedgerApi.V1 as PV1
@@ -83,32 +82,50 @@ spec = describe "Valid" $ do
           & inputsTxBodyL .~ [txInAt 0 txInitial]
           & referenceInputsTxBodyL .~ [txInAt 1 txInitial]
 
-  for_ @[] [("without", const Nothing), ("with", Just)] $ \(state, mkState) -> do
-    it ("Reference input with data hash, " <> state <> " data witness") $ do
-      addr <- freshKeyAddr_
-      let
-        datumValue = Data @era $ PV1.B "abcde"
-        datumHash = hashData datumValue
-        txOut =
-          mkBasicTxOut addr mempty
-        txOutDatum =
-          mkBasicTxOut addr mempty
-            & datumTxOutL .~ DatumHash datumHash
-      txInitial <-
-        submitTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
-      let
-        datumWitTxL :: Lens' (Tx era) (Maybe (Data era))
-        datumWitTxL = witsTxL . datsTxWitsL . unTxDatsL . at datumHash
-      tx <-
-        submitTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
-            & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
-            & datumWitTxL .~ mkState datumValue
-      -- Verify that the witness was as we expected
-      tx ^. datumWitTxL `shouldBe` mkState datumValue
+  it "Reference input with data hash, no data witness" $ do
+    addr <- freshKeyAddr_
+    let
+      datumValue = Data @era $ PV1.B "abcde"
+      datumHash = hashData datumValue
+      txOut =
+        mkBasicTxOut addr mempty
+      txOutDatum =
+        mkBasicTxOut addr mempty
+          & datumTxOutL .~ DatumHash datumHash
+    txInitial <-
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
+    tx <-
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+          & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+    -- Verify that a witness wasn't added by fixup
+    tx ^. witsTxL . datsTxWitsL . unTxDatsL . at datumHash `shouldBe` Nothing
+
+  it "Reference input with data hash, with data witness" $ do
+    addr <- freshKeyAddr_
+    let
+      datumValue = Data @era $ PV1.B "abcde"
+      datumHash = hashData datumValue
+      txOut =
+        mkBasicTxOut addr mempty
+      txOutDatum =
+        mkBasicTxOut addr mempty
+          & datumTxOutL .~ DatumHash datumHash
+    txInitial <-
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
+    tx <-
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+          & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+          & witsTxL . datsTxWitsL . unTxDatsL . at datumHash .~ Just datumValue
+    -- Verify that fixup didn't remove our witness
+    tx ^. witsTxL . datsTxWitsL . unTxDatsL . at datumHash `shouldBe` Just datumValue
 
   it "Reference script in output" $ do
     addr <- freshKeyAddr_
