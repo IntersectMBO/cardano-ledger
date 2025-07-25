@@ -825,13 +825,13 @@ invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset = binding $ \x ->
   "multiasset"
-    =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
+    =:= mp [0 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
 
 value :: Rule
 value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
 mint :: Rule
-mint = "mint" =:= multiasset nonZeroInt64
+mint = "mint" =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> nonZeroInt64]]
 
 epoch_no :: Rule
 epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)

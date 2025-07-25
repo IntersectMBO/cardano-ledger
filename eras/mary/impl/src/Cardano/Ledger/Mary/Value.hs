@@ -316,19 +316,24 @@ decodeMultiAsset :: (forall t. Decoder t Integer) -> Decoder s MultiAsset
 decodeMultiAsset decodeAmount = do
   ma <-
     ifDecoderVersionAtLeast
-      (natVersion @9)
-      decodeWithEnforcing
-      decodeWithPrunning
+      (natVersion @12)
+      decodeDijkstra
+      $ ifDecoderVersionAtLeast
+        (natVersion @9)
+        decodeConway
+        decodeWithPrunning
   ma <$ unless (isMultiAssetSmallEnough ma) (fail "MultiAsset is too big to compact")
   where
-    decodeWithEnforcing =
-      fmap MultiAsset $ decodeMap decCBOR $ do
-        m <- decodeMap decCBOR $ do
-          amount <- decodeAmount
-          amount <$ when (amount == 0) (fail "MultiAsset cannot contain zeros")
-        m <$ when (Map.null m) (fail "Empty Assets are not allowed")
+    decodeConway = MultiAsset <$> decodeMap decCBOR (decodeNonEmptyMap decodeNonZeroAmount)
+    decodeDijkstra = MultiAsset <$> decodeNonEmptyMap (decodeNonEmptyMap decodeNonZeroAmount)
     decodeWithPrunning =
       pruneZeroMultiAsset . MultiAsset <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
+    decodeNonZeroAmount = do
+      amount <- decodeAmount
+      amount <$ when (amount == 0) (fail "MultiAsset cannot contain zeros")
+    decodeNonEmptyMap valueDecoder = do
+      m <- decodeMap decCBOR valueDecoder
+      m <$ when (Map.null m) (fail "Empty Assets are not allowed")
 
 instance EncCBOR MaryValue where
   encCBOR (MaryValue c ma@(MultiAsset m)) =
