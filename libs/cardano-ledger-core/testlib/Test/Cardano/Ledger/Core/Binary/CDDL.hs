@@ -173,6 +173,12 @@ int64 = "int64" =:= minInt64 ... maxInt64
 positive_int :: Rule
 positive_int = "positive_int" =:= (1 :: Integer) ... maxWord64
 
+maxWord32 :: Rule
+maxWord32 = "maxWord32" =:= (4294967295 :: Integer)
+
+posWord32 :: Rule
+posWord32 = "posWord32" =:= (1 :: Integer) ... maxWord32
+
 unit_interval :: Rule
 unit_interval =
   comment
