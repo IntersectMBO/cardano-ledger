@@ -28,13 +28,13 @@ Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-
 Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec](https://intersectmbo.github.io/formal-ledger-specifications/conway-ledger.pdf) (but read below) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl-files)
 
 Note that the formal specification documents present the specification in a
-diff-style manner. That is, each document shows specification changes wrt
-previous documents.
+diff-style manner. That is, each document shows specification changes with
+respect to documents of previous eras.
 
-There is an ongoing effort to provide a full [machine-verified formal specification
-of the Cardano Ledger]() that will subsume the (formal specification) documents
-listed above. This effort is currently complete for Conway but partial for
-previous eras.
+**There is an ongoing effort to provide a full [machine-verified formal
+specification of the Cardano Ledger]() that will subsume the (formal
+specification) documents listed above. This effort is complete for Conway but
+partially complete for previous eras.**
 
 Other Documents:
 - [Non-integer calculations specification](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/non-integer-calculations.pdf): details on the parts of the Shelley specification that use real numbers.
