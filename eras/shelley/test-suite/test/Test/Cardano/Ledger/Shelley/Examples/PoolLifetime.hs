@@ -8,11 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
--- Description : Pool Lifetime Example
---
--- Example demonstrating the creation of a new stake pool,
+-- | Example demonstrating the creation of a new stake pool,
 -- block production under Praos, rewards, and pool retirement.
 module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   makePulser,
@@ -92,8 +88,8 @@ import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,

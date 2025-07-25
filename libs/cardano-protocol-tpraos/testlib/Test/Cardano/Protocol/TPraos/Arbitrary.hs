@@ -29,7 +29,6 @@ import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
   BHeader (BHeader),
-  HashHeader (HashHeader),
   PrevHash (BlockHash, GenesisHash),
  )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))

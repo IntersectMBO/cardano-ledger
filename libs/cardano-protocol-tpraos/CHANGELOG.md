@@ -1,11 +1,13 @@
 # Version history for `cardano-protocol-tpraos`
 
-## 1.4.1.0
+## 1.5.0.0
 
+* Remove `HashHeader` definition (move to `cardano-ledger-core`) and reexport it from `API`
 * Add `GetLedgerView` instance for `DijkstraEra`
 
 ### `testlib`
 
+* Added `Examples` with: `ledgerExamplesShelley`, `ledgerExamplesAllegra`, `ledgerExamplesMary`, `ledgerExamplesAlonzo`, `tPraosLedgerExamples`
 * Add `Arbitrary` instance for `ChainDepState`
 
 ## 1.4.0.0

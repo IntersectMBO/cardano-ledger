@@ -75,7 +75,6 @@ import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
-  HashHeader,
   LastAppliedBlock (..),
   bhHash,
   bhbody,

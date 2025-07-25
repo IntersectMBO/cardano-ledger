@@ -15,7 +15,7 @@
 
 ### `testlib`
 
-* Add Consensus example modules (moved from test-packages): `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage`, `Conway`, `Dijkstra`
+* Added `Examples` with: `ProtocolLedgerExamples`, `protocolLedgerExamples` and re-export `LedgerExamples`
 * Re-export all Ledger `Arbitrary` instances from `Test.Cardano.Ledger.Api.Arbitrary`
 
 ## 1.11.0.0

@@ -96,7 +96,6 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
-  HashHeader (..),
   PrevHash (..),
   bhash,
   bheaderBlockNo,
@@ -137,10 +136,10 @@ import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
 import qualified Prettyprinter as Pretty
-import qualified Test.Cardano.Ledger.Api.Examples.Consensus.Shelley as Ex
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
+import Test.Cardano.Ledger.Shelley.Examples (leNewEpochState, ledgerExamples)
 import Test.Cardano.Ledger.Shelley.Generator.Core (KESKeyPair (..), VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
@@ -1080,7 +1079,7 @@ tests =
                 <> S tx5MD
             )
     , let actual =
-            Plain.serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
+            Plain.serialize' $ leNewEpochState ledgerExamples
           expected = either error id $ B16.decode expectedHex
           actualHex = B16.encode actual
           expectedHex =

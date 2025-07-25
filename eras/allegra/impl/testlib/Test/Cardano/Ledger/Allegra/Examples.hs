@@ -5,10 +5,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Api.Examples.Consensus.Allegra (
-  ledgerExamplesAllegra,
+module Test.Cardano.Ledger.Allegra.Examples (
+  ledgerExamples,
   exampleAllegraTxBody,
-  exampleTimelock,
   exampleAllegraTxAuxData,
 ) where
 
@@ -25,14 +24,26 @@ import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
-import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Shelley.Examples (
+  LedgerExamples,
+  exampleAuxDataMap,
+  exampleCerts,
+  exampleCoin,
+  examplePayKey,
+  exampleProposedPPUpdates,
+  exampleStakeKey,
+  exampleTxIns,
+  exampleWithdrawals,
+  mkKeyHash,
+  mkLedgerExamples,
+  mkWitnessesPreAlonzo,
+ )
 
--- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples AllegraEra
-ledgerExamplesAllegra =
-  defaultShelleyLedgerExamples
+ledgerExamples :: LedgerExamples AllegraEra
+ledgerExamples =
+  mkLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @AllegraEra))
     exampleCoin
     (exampleAllegraTxBody exampleCoin)

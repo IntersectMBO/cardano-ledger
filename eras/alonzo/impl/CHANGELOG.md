@@ -44,6 +44,8 @@
 
 ### `testlib`
 
+* Added `Examples` with: `ledgerExamples`, `mkLedgerExamples`, `exampleTx`, `exampleDatum`, `exampleAlonzoGenesis`
+* Added `Twiddle` instances for Alonzo core types
 * Added `TxInfoPV4` to `VersionedTxInfo`
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:

@@ -68,13 +68,11 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
-   '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
    '.#"ghc96/cardano-ledger-shelley/1.9.0.0"' \
    '.#"ghc96/cardano-ledger-shelley-test/1.3.0.1"' \
@@ -114,13 +112,11 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
-   '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
    '.#"ghc96/cardano-ledger-shelley/1.9.0.0"' \
    '.#"ghc96/cardano-ledger-shelley-test/1.3.0.1"' \
@@ -161,13 +157,11 @@ extra-packages:
   cardano-ledger-alonzo-1.6.0.0,
   cardano-ledger-alonzo-test-1.2.0.0,
   cardano-ledger-babbage-1.6.0.0,
-  cardano-ledger-babbage-test-1.2.0.0,
   byron-spec-chain-1.0.0.2,
   byron-spec-ledger-1.0.0.2,
   cardano-ledger-byron-1.0.0.4,
   cardano-crypto-wrapper-1.5.1.1,
   cardano-ledger-conway-1.12.0.0,
-  cardano-ledger-conway-test-1.2.1.3,
   cardano-ledger-mary-1.5.0.0,
   cardano-ledger-shelley-1.9.0.0,
   cardano-ledger-shelley-test-1.3.0.1,
@@ -201,13 +195,11 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \
    cardano-crypto-wrapper \
    cardano-ledger-conway \
-   cardano-ledger-conway-test \
    cardano-ledger-mary \
    cardano-ledger-shelley \
    cardano-ledger-shelley-test \
@@ -248,13 +240,11 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \
    cardano-crypto-wrapper \
    cardano-ledger-conway \
-   cardano-ledger-conway-test \
    cardano-ledger-mary \
    cardano-ledger-shelley \
    cardano-ledger-shelley-test \

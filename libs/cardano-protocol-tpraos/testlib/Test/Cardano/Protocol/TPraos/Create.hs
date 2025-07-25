@@ -43,7 +43,6 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
-  HashHeader,
   PrevHash (BlockHash),
   mkSeed,
   seedEta,

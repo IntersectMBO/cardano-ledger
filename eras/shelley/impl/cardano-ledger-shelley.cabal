@@ -143,6 +143,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.CDDL
     Test.Cardano.Ledger.Shelley.Constants
     Test.Cardano.Ledger.Shelley.Era
+    Test.Cardano.Ledger.Shelley.Examples
     Test.Cardano.Ledger.Shelley.Imp
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec
     Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
@@ -171,6 +172,9 @@ library testlib
     ImpSpec,
     base,
     bytestring,
+    cardano-crypto,
+    cardano-crypto-class,
+    cardano-crypto-wrapper,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron:{cardano-ledger-byron, testlib},

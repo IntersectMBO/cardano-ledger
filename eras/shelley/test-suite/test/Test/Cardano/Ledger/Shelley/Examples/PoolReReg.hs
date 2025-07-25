@@ -5,11 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.PoolReReg
--- Description : Pool Re-Registration
---
--- Example demonstrating the adoption of of pool parameters
+-- | Example demonstrating the adoption of of pool parameters
 -- when re-registratiing.
 module Test.Cardano.Ledger.Shelley.Examples.PoolReReg (
   poolReRegExample,
@@ -45,8 +41,8 @@ import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (coreNodeKeysBySchedule)
 import Test.Cardano.Ledger.Shelley.Examples.Init (
