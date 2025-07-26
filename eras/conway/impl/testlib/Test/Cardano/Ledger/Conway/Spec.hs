@@ -18,18 +18,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Binary (DecCBOR)
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraScript (..),
-  AsIx,
-  EraRule,
-  EraTx (..),
-  EraTxBody (..),
-  EraTxCert (..),
-  EraTxWits (..),
-  InjectRuleEvent,
-  InjectRuleFailure,
-  SafeToHash,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
   ConwayCertsPredFailure,
@@ -108,6 +97,7 @@ spec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , ShelleyEraTxCert era
   , TxCert era ~ ConwayTxCert era
   ) =>
   Spec
@@ -119,8 +109,9 @@ spec =
     CommitteeRatify.spec @era
     SPORatifySpec.spec @era
     roundTripJsonEraSpec @era
-    describe "Imp" $
+    describe "Imp" $ do
       Imp.spec @era
+      Imp.shelleyCertsSpec @era
     describe "CostModels" $ do
       CostModelsSpec.spec @era
     describe "TxWits" $ do

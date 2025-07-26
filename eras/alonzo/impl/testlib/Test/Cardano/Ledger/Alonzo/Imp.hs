@@ -28,7 +28,6 @@ import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
@@ -42,3 +41,17 @@ spec = do
     Utxo.spec
     Utxos.spec
     Utxow.spec
+
+shelleyCertsSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  ) =>
+  Spec
+shelleyCertsSpec = do
+  describe "AlonzoImp - certificates without deposit" . withImpInit @(LedgerSpec era) $ do
+    Utxow.shelleyCertsSpec
