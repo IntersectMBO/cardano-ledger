@@ -22,7 +22,6 @@
 module Test.Cardano.Ledger.Generic.TxGen (
   alonzoMkRedeemers,
   alonzoMkRedeemersFromTags,
-  alonzoNewScriptIntegrityHash,
   mkAlonzoPlutusPurposePointer,
   mkConwayPlutusPurposePointer,
   genAlonzoTx,
@@ -141,7 +140,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   UtxoEntry,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (alonzoNewScriptIntegrityHash)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
