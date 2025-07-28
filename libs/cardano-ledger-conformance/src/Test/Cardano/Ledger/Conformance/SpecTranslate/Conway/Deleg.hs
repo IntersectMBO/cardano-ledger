@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
