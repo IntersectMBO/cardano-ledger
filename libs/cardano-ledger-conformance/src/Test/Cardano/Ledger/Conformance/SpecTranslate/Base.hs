@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   SpecNormalize (..),
   OpaqueErrorString (..),

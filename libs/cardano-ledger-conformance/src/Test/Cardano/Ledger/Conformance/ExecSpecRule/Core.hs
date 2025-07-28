@@ -52,7 +52,7 @@ import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))
 import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecNormalize (..),
   SpecTranslate (..),
   runSpecTransM,

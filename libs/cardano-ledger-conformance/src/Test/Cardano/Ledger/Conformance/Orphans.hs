@@ -18,7 +18,7 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (OpaqueErrorString, SpecNormalize (..))
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (OpaqueErrorString, SpecNormalize (..))
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 

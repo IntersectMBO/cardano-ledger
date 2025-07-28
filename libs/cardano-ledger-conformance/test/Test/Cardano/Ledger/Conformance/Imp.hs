@@ -31,7 +31,7 @@ import Lens.Micro
 import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
 import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as Certs
