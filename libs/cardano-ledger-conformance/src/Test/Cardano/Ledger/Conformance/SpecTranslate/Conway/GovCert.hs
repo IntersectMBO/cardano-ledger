@@ -28,7 +28,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 
 instance SpecTranslate ctx ConwayGovCert where
   type SpecRep ConwayGovCert = Agda.DCert
