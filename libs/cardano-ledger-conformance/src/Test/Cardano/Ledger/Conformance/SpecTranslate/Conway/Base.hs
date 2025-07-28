@@ -43,7 +43,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (Sized (..))
@@ -464,9 +464,9 @@ instance SpecTranslate ctx (WitVKey k) where
   toSpecRep (WitVKey vk sk) = toSpecRep (vk, sk)
 
 instance Era era => SpecTranslate ctx (TxDats era) where
-  type SpecRep (TxDats era) = Agda.HSMap Agda.DataHash Agda.Datum
+  type SpecRep (TxDats era) = Agda.HSSet Agda.Datum
 
-  toSpecRep (TxDats x) = toSpecRep x
+  toSpecRep = fmap Agda.MkHSSet . traverse (toSpecRep . snd) . Map.toList . unTxDats
 
 instance
   ( SpecTranslate ctx k
