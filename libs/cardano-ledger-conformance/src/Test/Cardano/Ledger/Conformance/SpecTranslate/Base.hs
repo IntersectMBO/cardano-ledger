@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslationError,
   SpecTranslate (..),
   FixupSpecRep (..),
