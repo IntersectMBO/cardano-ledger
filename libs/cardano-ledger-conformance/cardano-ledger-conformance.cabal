@@ -42,6 +42,7 @@ library
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow
     Test.Cardano.Ledger.Conformance.Orphans
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Core
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
