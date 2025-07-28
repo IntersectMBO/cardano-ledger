@@ -23,8 +23,8 @@ library
     Test.Cardano.Ledger.Conformance
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
-    Test.Cardano.Ledger.Conformance.SpecTranslate.Core
     Test.Cardano.Ledger.Conformance.Utils
 
   hs-source-dirs: src
