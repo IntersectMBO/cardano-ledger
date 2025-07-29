@@ -155,7 +155,7 @@ getPools ::
   Set (KeyHash 'StakePool)
 getPools = Map.keysSet . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -167,7 +167,9 @@ getPoolParameters ::
   Map (KeyHash 'StakePool) PoolParams
 getPoolParameters = Map.restrictKeys . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes =
+      Map.mapWithKey stakePoolStateToPoolParams $
+        nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
 
 -- | Get pool sizes, but in terms of total stake
 --

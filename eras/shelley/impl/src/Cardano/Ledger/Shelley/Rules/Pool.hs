@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.Era (
  )
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..))
+import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), mkStakePoolState)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
@@ -199,7 +199,7 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring}
+      , ps@PState {psStakePoolState, psFutureStakePoolState, psRetiring}
       , poolCert
       ) <-
     judgmentContext
@@ -234,13 +234,13 @@ poolDelegationTransition = do
               , mismatchExpected = minPoolCost
               }
 
-      if eval (ppId ∉ dom psStakePoolParams)
+      if eval (ppId ∉ dom psStakePoolState)
         then do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps {psStakePoolParams = eval (psStakePoolParams ⨃ singleton ppId poolParams)}
+              ps {psStakePoolState = eval (psStakePoolState ⨃ singleton ppId (mkStakePoolState poolParams))}
         else do
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
@@ -254,11 +254,12 @@ poolDelegationTransition = do
           -- the if statement.
           pure $
             ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ⨃ singleton ppId poolParams)
+              { psFutureStakePoolState =
+                  eval (psFutureStakePoolState ⨃ singleton ppId (mkStakePoolState poolParams))
               , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
               }
     RetirePool hk e -> do
-      eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
+      eval (hk ∈ dom psStakePoolState) ?! StakePoolNotRegisteredOnKeyPOOL hk
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)

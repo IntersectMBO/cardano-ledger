@@ -35,7 +35,7 @@ totalTxDeposits pp dpstate txb =
   where
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegStakeTxCert certs
-    regpools = psStakePoolParams (dpstate ^. certPStateL)
+    regpools = Map.mapWithKey stakePoolStateToPoolParams $ psStakePoolState (dpstate ^. certPStateL)
     accum (!pools, !ans) (RegPoolTxCert poolparam) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
@@ -111,12 +111,16 @@ genTxBodyFrom certState (UTxO u) = do
   txBody <- arbitrary
   inputs <- sublistOf (Map.keys u)
   unDelegCreds <- sublistOf (Map.keys (certState ^. certDStateL . accountsL . accountsMapL))
-  deRegKeys <- sublistOf (Map.elems (certState ^. certPStateL . psStakePoolParamsL))
+  deRegKeys <- sublistOf (Map.keys (certState ^. certPStateL . psStakePoolStateL))
+  let deReg =
+        Map.elems $
+          Map.mapWithKey stakePoolStateToPoolParams $
+            Map.restrictKeys (certState ^. certPStateL . psStakePoolStateL) (Set.fromList deRegKeys)
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
         <> (UnRegTxCert <$> unDelegCreds)
-        <> (RegPoolTxCert <$> deRegKeys)
+        <> (RegPoolTxCert <$> deReg)
   pure
     ( txBody
         & inputsTxBodyL .~ Set.fromList inputs
@@ -136,7 +140,7 @@ propEvalBalanceTxBody pp certState utxo =
         `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
+    isRegPoolId = (`Map.member` psStakePoolState (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
   (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
@@ -151,7 +155,7 @@ propEvalBalanceShelleyTxBody pp certState utxo =
         `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
+    isRegPoolId = (`Map.member` psStakePoolState (certState ^. certPStateL))
 
 -- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.
 -- This property test only exists to confirm that the old and new implementations for the evalBalanceTxBody` API matched,

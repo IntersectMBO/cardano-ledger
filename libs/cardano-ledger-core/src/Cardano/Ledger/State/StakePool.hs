@@ -78,7 +78,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
@@ -102,10 +101,7 @@ import NoThunks.Class (NoThunks (..))
 -- | State representation of a stake pool. This type contains all the same
 -- information as 'PoolParams' except for the pool ID, which is stored
 -- separately as the key in state maps.
---
--- This type is era-parametric to allow for future extensions without
--- breaking existing code.
-data StakePoolState era = StakePoolState
+data StakePoolState = StakePoolState
   { spsVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   -- ^ VRF verification key hash for leader election
   , spsPledge :: !Coin
@@ -125,15 +121,15 @@ data StakePoolState era = StakePoolState
   }
   deriving (Show, Generic, Eq, Ord)
 
-deriving instance NoThunks (StakePoolState era)
+deriving instance NoThunks StakePoolState
 
-deriving instance NFData (StakePoolState era)
+deriving instance NFData StakePoolState
 
-deriving instance ToJSON (StakePoolState era)
+deriving instance ToJSON StakePoolState
 
-deriving instance FromJSON (StakePoolState era)
+deriving instance FromJSON StakePoolState
 
-instance Era era => EncCBOR (StakePoolState era) where
+instance EncCBOR StakePoolState where
   encCBOR sps =
     encode $
       Rec StakePoolState
@@ -146,7 +142,7 @@ instance Era era => EncCBOR (StakePoolState era) where
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
 
-instance Era era => DecCBOR (StakePoolState era) where
+instance DecCBOR StakePoolState where
   decCBOR =
     decode $
       RecD StakePoolState
@@ -159,10 +155,10 @@ instance Era era => DecCBOR (StakePoolState era) where
         <! From
         <! From
 
-instance Era era => DecShareCBOR (StakePoolState era) where
+instance DecShareCBOR StakePoolState where
   decShareCBOR _ = decCBOR
 
-instance Default (StakePoolState era) where
+instance Default StakePoolState where
   def =
     StakePoolState
       { spsVrf = def
@@ -178,7 +174,7 @@ instance Default (StakePoolState era) where
 -- | Convert 'PoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: PoolParams -> StakePoolState era
+mkStakePoolState :: PoolParams -> StakePoolState
 mkStakePoolState pp =
   StakePoolState
     { spsVrf = ppVrf pp
@@ -194,7 +190,7 @@ mkStakePoolState pp =
 -- | Convert 'StakePoolState' back to 'PoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToPoolParams :: KeyHash 'StakePool -> StakePoolState era -> PoolParams
+stakePoolStateToPoolParams :: KeyHash 'StakePool -> StakePoolState -> PoolParams
 stakePoolStateToPoolParams poolId sps =
   PoolParams
     { ppId = poolId

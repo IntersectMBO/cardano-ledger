@@ -135,7 +135,7 @@ specSuite n = do
     univ <- genWitUniv @era 200
     context <- genCertContext @era univ
     poolreg <- genFromSpec (poolRegSpec univ)
-    pure (conwayDStateSpec @era univ context (lit poolreg))
+    pure (conwayDStateSpec @era univ context (lit $ mkStakePoolState <$> poolreg))
 
   soundSpecWith @(VState era) (10 * n) $ do
     univ <- genWitUniv @era 200

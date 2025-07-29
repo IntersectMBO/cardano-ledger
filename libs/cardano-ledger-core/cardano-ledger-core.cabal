@@ -273,6 +273,7 @@ test-suite tests
     Test.Cardano.Ledger.BinarySpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
+    Test.Cardano.Ledger.State.StakePoolSpec
     Test.Cardano.Ledger.ToolsSpec
 
   default-language: Haskell2010

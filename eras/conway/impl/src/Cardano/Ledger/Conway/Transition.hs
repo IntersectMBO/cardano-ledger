@@ -130,7 +130,7 @@ conwayRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
     & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
       foldr registerAndDelegate initAccounts $ ListMap.toList sgsStake
   where
-    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
     deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
     registerAndDelegate (stakeKeyHash, stakePool) !accounts
       | stakePool `Map.member` stakePools =

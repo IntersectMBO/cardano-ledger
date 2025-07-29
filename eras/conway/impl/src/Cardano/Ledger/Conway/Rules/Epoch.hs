@@ -302,11 +302,11 @@ epochTransition = do
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
   -- Activate future StakePools
-  let newStakePoolParams = eval (psStakePoolParams pState0 ⨃ psFutureStakePoolParams pState0)
+  let newStakePoolState = eval (psStakePoolState pState0 ⨃ psFutureStakePoolState pState0)
       pState1 =
         pState0
-          { psStakePoolParams = newStakePoolParams
-          , psFutureStakePoolParams = Map.empty
+          { psStakePoolState = newStakePoolState
+          , psFutureStakePoolState = Map.empty
           }
   PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
