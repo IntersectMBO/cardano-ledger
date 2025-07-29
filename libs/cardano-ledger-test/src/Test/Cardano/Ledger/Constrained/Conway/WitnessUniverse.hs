@@ -72,7 +72,7 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
-import Cardano.Ledger.State (PoolParams (..))
+import Cardano.Ledger.State (PoolParams (..), StakePoolState)
 import Constrained.API
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)
@@ -420,9 +420,19 @@ witPoolParamsSpec univ =
       , satisfies (owners_ poolparams) (hasSize (rangeSize 1 3))
       ]
 
+witPoolStateSpec ::
+  forall era.
+  WitUniv era -> Specification StakePoolState
+witPoolStateSpec univ =
+  explainWit "poolstate :: StakePoolState" univ $
+    constrained $ \ [var|poolparams|] ->
+      [ forAll (sel @5 poolparams) $ \ [var|ownerKeyHash|] -> satisfies ownerKeyHash (witKeyHashSpec univ)
+      , satisfies (sel @5 poolparams) (hasSize (rangeSize 1 3))
+      ]
+
 witGenDelegPairSpec ::
   forall era.
-  WitUniv era -> Specification (GenDelegPair)
+  WitUniv era -> Specification GenDelegPair
 witGenDelegPairSpec univ =
   explainWit "gdpair :: (GenDelegPair  c)" univ $
     constrained $ \ [var|gdpair|] ->
@@ -683,6 +693,9 @@ instance Era era => Witnessed era RewardAccount where
 
 instance Era era => Witnessed era PoolParams where
   witness univ t = satisfies t (witPoolParamsSpec univ)
+
+instance Era era => Witnessed era StakePoolState where
+  witness univ t = satisfies t (witPoolStateSpec univ)
 
 instance Era era => Witnessed era GenDelegPair where
   witness univ t = satisfies t (witGenDelegPairSpec univ)

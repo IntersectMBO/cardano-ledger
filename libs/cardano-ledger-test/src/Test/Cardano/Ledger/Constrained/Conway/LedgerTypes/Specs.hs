@@ -272,7 +272,7 @@ conwayDStateSpec ::
   era ~ ConwayEra =>
   WitUniv era ->
   (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map RewardAccount Coin) ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolState) ->
   Specification (DState era)
 conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
   constrained $ \ [var| ds |] ->
@@ -301,7 +301,7 @@ conwayAccountMapSpec ::
   Era era =>
   WitUniv era ->
   Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolState) ->
   Map RewardAccount Coin ->
   Specification (Map (Credential 'Staking) (ConwayAccountState era))
 conwayAccountMapSpec univ whoDelegates poolreg wdrl =
@@ -407,7 +407,7 @@ conwayCertStateSpec ::
 conwayCertStateSpec univ (whodelegates, wdrl) epoch = constrained $ \ [var|convCertState|] ->
   match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pStateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
+    , reify pState psStakePoolState $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
         , satisfies dState (conwayDStateSpec univ (whodelegates, wdrl) poolreg)
         ]
@@ -529,7 +529,11 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
     markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
     markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
-    markPoolParams = VMap.fromMap (psStakePoolParams (ls ^. lsCertStateL . certPStateL))
+    markPoolParams =
+      VMap.fromMap $
+        Map.mapWithKey stakePoolStateToPoolParams $
+          psStakePoolState $
+            ls ^. lsCertStateL . certPStateL
 
 -- ====================================================================
 -- Specs for EpochState and NewEpochState

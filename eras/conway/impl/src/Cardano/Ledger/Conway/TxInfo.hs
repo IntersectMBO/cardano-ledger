@@ -92,6 +92,7 @@ import Cardano.Ledger.Conway.Governance (
   unGovActionIx,
  )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
@@ -114,7 +115,6 @@ import Cardano.Ledger.Plutus.TxInfo (
   transScriptHash,
  )
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
-import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)

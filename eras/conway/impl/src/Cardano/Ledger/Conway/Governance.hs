@@ -219,7 +219,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
   epochStateGovStateL,
-  epochStatePoolParamsL,
+  epochStatePoolStateL,
   esLStateL,
   lsCertState,
   lsUTxOState,
@@ -512,7 +512,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     , dpProposals = proposalsActions props
                     , dpProposalDeposits = proposalsDeposits props
                     , dpGlobals = globals
-                    , dpPoolParams = epochState ^. epochStatePoolParamsL
+                    , dpPoolState = epochState ^. epochStatePoolStateL
                     }
                 )
   pure $ epochState & epochStateGovStateL .~ govState'
@@ -560,14 +560,14 @@ defaultStakePoolVote ::
   -- | Specify the key hash of the pool whose default vote should be returned.
   KeyHash 'StakePool ->
   -- | Registered Stake Pools
-  Map (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash 'StakePool) StakePoolState ->
   -- | Delegations of staking credneitals to a DRep
   Accounts era ->
   DefaultVote
 defaultStakePoolVote poolId poolParams accounts =
   toDefaultVote $ do
     spp <- Map.lookup poolId poolParams
-    accountState <- Map.lookup (raCredential $ ppRewardAccount spp) (accounts ^. accountsMapL)
+    accountState <- Map.lookup (raCredential $ spsRewardAccount spp) (accounts ^. accountsMapL)
     accountState ^. dRepDelegationAccountStateL
   where
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain

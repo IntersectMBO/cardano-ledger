@@ -567,7 +567,7 @@ data RatifyEnv era = RatifyEnv
   , reCurrentEpoch :: EpochNo
   , reCommitteeState :: CommitteeState era
   , reAccounts :: Accounts era
-  , rePoolParams :: Map (KeyHash 'StakePool) PoolParams
+  , rePoolState :: Map (KeyHash 'StakePool) StakePoolState
   }
   deriving (Generic)
 
@@ -651,7 +651,7 @@ instance
             !> To reCurrentEpoch
             !> To reCommitteeState
             !> To reAccounts
-            !> To rePoolParams
+            !> To rePoolState
 
 instance
   (Era era, DecCBOR (InstantStake era), DecCBOR (Accounts era)) =>

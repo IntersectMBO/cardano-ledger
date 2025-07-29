@@ -179,7 +179,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutus
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   epochStateGovStateL,
-  epochStatePoolParamsL,
+  epochStatePoolStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -976,7 +976,7 @@ getRatifyEnv = do
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
-  poolPs <- getsNES $ nesEsL . epochStatePoolParamsL
+  poolPs <- getsNES $ nesEsL . epochStatePoolStateL
   pure
     RatifyEnv
       { reStakePoolDistr = poolDistr
@@ -986,7 +986,7 @@ getRatifyEnv = do
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
       , reAccounts = accounts
-      , rePoolParams = poolPs
+      , rePoolState = poolPs
       }
 
 ccShouldNotBeExpired ::
@@ -1693,7 +1693,7 @@ showConwayTxBalance pp certState utxo tx =
         (lookupDepositDState $ certState ^. certDStateL)
         (lookupDepositVState $ certState ^. certVStateL)
         txBody
-    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolParamsL))
+    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolStateL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 logConwayTxBalance ::
@@ -1777,10 +1777,10 @@ delegateSPORewardAddressToDRep_ ::
   DRep ->
   ImpTestM era ()
 delegateSPORewardAddressToDRep_ kh stake drep = do
-  pp <- getRatifyEnv >>= expectJust . Map.lookup kh . rePoolParams
+  sps <- getRatifyEnv >>= expectJust . Map.lookup kh . rePoolState
   void $
     delegateToDRep
-      (raCredential . ppRewardAccount $ pp)
+      (raCredential . spsRewardAccount $ sps)
       stake
       drep
 

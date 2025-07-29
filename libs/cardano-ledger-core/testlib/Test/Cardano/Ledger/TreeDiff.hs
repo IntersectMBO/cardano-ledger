@@ -201,6 +201,8 @@ instance ToExpr PoolMetadata
 
 instance ToExpr PoolParams
 
+instance ToExpr StakePoolState
+
 instance ToExpr StakePoolRelay
 
 instance ToExpr PoolCert

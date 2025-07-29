@@ -82,7 +82,7 @@ import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
-  , cdePools :: Map (KeyHash 'StakePool) PoolParams
+  , cdePools :: Map (KeyHash 'StakePool) StakePoolState
   }
   deriving (Generic)
 

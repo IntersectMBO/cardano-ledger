@@ -161,8 +161,8 @@ dStateZero =
 pStateZero :: PState era
 pStateZero =
   PState
-    { psStakePoolParams = Map.empty
-    , psFutureStakePoolParams = Map.empty
+    { psStakePoolState = Map.empty
+    , psFutureStakePoolState = Map.empty
     , psRetiring = Map.empty
     , psDeposits = Map.empty
     }
@@ -263,7 +263,12 @@ instance Extract (DState era) era where
       instantaneousRewardsZero
 
 instance Extract (PState era) era where
-  extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
+  extract x =
+    PState
+      (mkStakePoolState <$> mPoolParams x)
+      (mkStakePoolState <$> mFPoolParams x)
+      (mRetiring x)
+      Map.empty
 
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
@@ -318,7 +323,15 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
 abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
-    { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+    { mPoolParams =
+        ( Map.mapWithKey stakePoolStateToPoolParams
+            . psStakePoolState
+            . certPState
+            . lsCertState
+            . esLState
+            . nesEs
+        )
+          x
     , mPoolDeposits = (fmap fromCompact . psDeposits . certPState . lsCertState . esLState . nesEs) x
     , mAccounts = (dsAccounts . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
@@ -331,7 +344,15 @@ abstract x =
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = (psFutureStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+      mFPoolParams =
+        ( Map.mapWithKey stakePoolStateToPoolParams
+            . psFutureStakePoolState
+            . certPState
+            . lsCertState
+            . esLState
+            . nesEs
+        )
+          x
     , mRetiring = (psRetiring . certPState . lsCertState . esLState . nesEs) x
     , mSnapshots = esSnapshots (nesEs x)
     , mEL = nesEL x

@@ -212,12 +212,12 @@ epochTransition = do
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
-  let PState pParams fPParams _ _ = pstate
-      ppp = eval (pParams ⨃ fPParams)
+  let PState pState fPState _ _ = pstate
+      ppp = eval (pState ⨃ fPState)
       pstate' =
         pstate
-          { psStakePoolParams = ppp
-          , psFutureStakePoolParams = Map.empty
+          { psStakePoolState = ppp
+          , psFutureStakePoolState = Map.empty
           }
   PoolreapState utxoSt' chainAccountState' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $
