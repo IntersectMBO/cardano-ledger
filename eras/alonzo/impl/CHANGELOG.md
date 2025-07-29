@@ -49,6 +49,7 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec AlonzoEra` instance
 * Added `Examples` module with: `ledgerExamples`, `mkLedgerExamples`, `exampleTx`, `exampleDatum`, `exampleAlonzoGenesis`
 * Added `Twiddle` instances for Alonzo core types
 * Add `Arbitrary` instance for `LangDepView`

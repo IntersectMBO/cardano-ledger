@@ -4,9 +4,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.Imp (spec) where
 
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
@@ -17,6 +19,7 @@ import Test.Cardano.Ledger.Mary.ImpTest
 spec ::
   forall era.
   ( MaryEraImp era
+  , EraSpecificSpec era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
@@ -26,3 +29,5 @@ spec = do
   describe "MaryImpSpec" $
     withEachEraVersion @era $
       Utxo.spec
+
+instance EraSpecificSpec MaryEra
