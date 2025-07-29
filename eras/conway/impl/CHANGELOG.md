@@ -92,6 +92,7 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec ConwayEra` instance
 * Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:

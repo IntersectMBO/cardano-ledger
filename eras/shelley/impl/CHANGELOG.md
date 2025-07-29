@@ -68,6 +68,8 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec ShelleyEra` instance
+* Added `EraSpecificSpec` class
 * Hoisted `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:
   * `registerStakeCredential`
   * `delegateStake`

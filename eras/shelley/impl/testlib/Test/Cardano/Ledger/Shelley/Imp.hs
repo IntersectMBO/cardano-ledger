@@ -3,10 +3,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
@@ -19,11 +21,13 @@ import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Insta
 spec ::
   forall era.
   ( ShelleyEraImp era
+  , EraSpecificSpec era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
 spec = do
+  describe "Era specific tests" . withEachEraVersion @era $ eraSpecific
   describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
     Ledger.spec
     Epoch.spec
@@ -31,3 +35,5 @@ spec = do
     Utxo.spec
   describe "ShelleyPureTests" $ do
     Instant.spec @era
+
+instance EraSpecificSpec ShelleyEra
