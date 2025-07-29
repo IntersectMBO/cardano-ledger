@@ -4,9 +4,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
@@ -14,21 +16,20 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
+import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , EraSpecificSpec era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
@@ -42,3 +43,7 @@ spec = do
     Utxo.spec
     Utxos.spec
     Utxow.spec
+    eraSpec
+
+instance EraSpecificSpec AlonzoEra where
+  eraSpec = Utxow.shelleyCertsSpec

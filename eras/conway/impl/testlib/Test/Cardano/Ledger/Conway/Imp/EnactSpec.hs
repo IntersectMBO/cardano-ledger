@@ -80,7 +80,7 @@ treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
     it "Modify EnactState as expected" $ whenPostBootstrap $ do
-      rewardAcount1 <- registerRewardAccount
+      rewardAcount1 <- registerRewardAccountWithDeposit
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
       let govAction = gasAction gas
@@ -97,7 +97,7 @@ treasuryWithdrawalsSpec =
       enactState' <- runImpRule @"ENACT" () enactState signal
       ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
 
-      rewardAcount2 <- registerRewardAccount
+      rewardAcount2 <- registerRewardAccountWithDeposit
       let withdrawals' =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
@@ -188,7 +188,7 @@ treasuryWithdrawalsSpec =
     sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
-      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccountWithDeposit
     checkNoWithdrawal initialTreasury withdrawals = do
       getsNES treasuryL `shouldReturn` initialTreasury
       sumRewardAccounts withdrawals `shouldReturn` zero
@@ -285,7 +285,8 @@ hardForkInitiationNoDRepsSpec =
           ]
     getProtVer `shouldReturn` nextProtVer
 
-pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+pparamPredictionSpec ::
+  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -306,7 +307,8 @@ pparamPredictionSpec =
     passEpoch
     getProtVer `shouldReturn` nextProtVer
 
-noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+noConfidenceSpec ::
+  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
