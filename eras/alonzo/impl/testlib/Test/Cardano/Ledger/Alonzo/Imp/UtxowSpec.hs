@@ -44,6 +44,6 @@ shelleyCertsSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 shelleyCertsSpec = do
-  describe "UTXOW" $ do
+  describe "UTXOW - certificates without deposits" $ do
     Valid.shelleyCertsSpec
     Invalid.shelleyCertsSpec
