@@ -203,7 +203,7 @@ stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
-    (VMap.fromMap poolParams)
+    (VMap.fromMap $ Map.mapWithKey stakePoolStateToPoolParams poolState)
   where
     accountsMap = ds ^. accountsL . accountsMapL
     rewards' :: Map.Map (Credential 'Staking) (CompactForm Coin)
@@ -211,11 +211,11 @@ stakeDistr u ds ps =
     delegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
-    PState {psStakePoolParams = poolParams} = ps
+    PState {psStakePoolState = poolState} = ps
     stakeRelation :: Map (Credential 'Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolState)
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'

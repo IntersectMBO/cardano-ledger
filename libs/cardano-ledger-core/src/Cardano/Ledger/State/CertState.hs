@@ -40,8 +40,8 @@ module Cardano.Ledger.State.CertState (
   dsGenDelegsL,
   dsIRewardsL,
   dsFutureGenDelegsL,
-  psStakePoolParamsL,
-  psFutureStakePoolParamsL,
+  psStakePoolStateL,
+  psFutureStakePoolStateL,
   psRetiringL,
   psDepositsL,
   psDepositsCompactL,
@@ -78,7 +78,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (PoolParams)
+import Cardano.Ledger.State.StakePool (StakePoolState)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -225,10 +225,10 @@ lookupRewardDState DState {dsAccounts} cred = do
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
-  -- ^ The stake pool parameters.
-  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
-  -- ^ The future stake pool parameters.
+  { psStakePoolState :: !(Map (KeyHash 'StakePool) StakePoolState)
+  -- ^ The stake pool state.
+  , psFutureStakePoolState :: !(Map (KeyHash 'StakePool) StakePoolState)
+  -- ^ The future stake pool state.
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
   -- See section 11.2, "Example Illustration of the Reward Cycle",
@@ -252,19 +252,19 @@ instance Era era => EncCBOR (PState era) where
 instance DecShareCBOR (PState era) where
   type Share (PState era) = Interns (KeyHash 'StakePool)
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
-    psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psStakePoolState <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psFutureStakePoolState <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
+    pure PState {psStakePoolState, psFutureStakePoolState, psRetiring, psDeposits}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
 instance ToKeyValuePairs (PState era) where
   toKeyValuePairs PState {..} =
-    [ "stakePoolParams" .= psStakePoolParams
-    , "futureStakePoolParams" .= psFutureStakePoolParams
+    [ "stakePoolState" .= psStakePoolState
+    , "futureStakePoolState" .= psFutureStakePoolState
     , "retiring" .= psRetiring
     , "deposits" .= psDeposits
     ]
@@ -481,11 +481,11 @@ dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u}
 -- ===================================
 -- PState
 
-psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) PoolParams)
-psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
+psStakePoolStateL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
+psStakePoolStateL = lens psStakePoolState (\ds u -> ds {psStakePoolState = u})
 
-psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) PoolParams)
-psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
+psFutureStakePoolStateL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
+psFutureStakePoolStateL = lens psFutureStakePoolState (\ds u -> ds {psFutureStakePoolState = u})
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})

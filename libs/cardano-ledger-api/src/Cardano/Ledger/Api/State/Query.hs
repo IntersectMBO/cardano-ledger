@@ -380,5 +380,5 @@ queryStakePoolDefaultVote ::
   KeyHash 'StakePool ->
   DefaultVote
 queryStakePoolDefaultVote nes poolId =
-  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) $
+  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolStateL) $
     nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL

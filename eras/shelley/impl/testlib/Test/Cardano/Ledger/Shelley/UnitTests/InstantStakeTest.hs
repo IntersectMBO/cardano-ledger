@@ -85,7 +85,7 @@ instantStakeIncludesRewards = do
 
     instantStake = addInstantStake utxo1 mempty
     poolparamMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
-  pState <- arbitraryLens psStakePoolParamsL poolparamMap
+  pState <- arbitraryLens psStakePoolStateL $ mkStakePoolState <$> poolparamMap
   let snapShot = snapShotFromInstantStake instantStake dState pState
       computedStakeDistr = VMap.toMap (unStake (ssStake snapShot))
 

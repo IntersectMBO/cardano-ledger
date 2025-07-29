@@ -675,6 +675,10 @@ instance HasSimpleRep PoolParams
 
 instance HasSpec PoolParams
 
+instance HasSimpleRep StakePoolState
+
+instance HasSpec StakePoolState
+
 instance HasSimpleRep PoolMetadata
 
 instance HasSpec PoolMetadata
@@ -1441,7 +1445,7 @@ type DRepPulserTypes =
    , EnactState ConwayEra
    , StrictSeq (GovActionState ConwayEra)
    , Map (Credential 'Staking) (CompactForm Coin)
-   , Map (KeyHash 'StakePool) PoolParams
+   , Map (KeyHash 'StakePool) StakePoolState
    ]
 
 instance
@@ -1465,7 +1469,7 @@ instance
       dpEnactState
       dpProposals
       dpProposalDeposits
-      dpPoolParams
+      dpPoolState
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep

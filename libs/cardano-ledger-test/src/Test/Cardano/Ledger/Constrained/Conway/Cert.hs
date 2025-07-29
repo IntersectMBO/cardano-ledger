@@ -111,7 +111,7 @@ conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
       (branchW 2 $ \govCert -> satisfies govCert $ govCertSpec univ govCertEnv certState)
   where
     certPState = certState ^. certPStateL
-    delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
+    delegEnv = ConwayDelegEnv pp (psStakePoolState certPState)
     poolEnv = PoolEnv ce pp
     govCertEnv = ConwayGovCertEnv pp ce cc cp
 
@@ -174,7 +174,7 @@ shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstat
             deleg
             ( shelleyDelegCertSpec @era
                 univ
-                (ConwayDelegEnv pp (psStakePoolParams pstate))
+                (ConwayDelegEnv pp (psStakePoolState pstate))
                 dstate
             )
       )
