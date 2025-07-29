@@ -47,8 +47,8 @@ import Lens.Micro (Lens', (&), (.~), (<>~), (?~), (^.))
 import qualified Lens.Micro as L
 import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest, EraTest (..), registerTestAccount)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Alonzo.Tools (EraModel (..))
 import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, choose, chooseInt, elements)
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTxBody, applyTxFail, applyTxSimple, epochBoundary)
 import Test.Cardano.Ledger.Generic.GenState (
   EraGenericGen (..),

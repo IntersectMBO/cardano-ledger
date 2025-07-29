@@ -8,10 +8,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Tools (
-  EraModel (..),
   exUnitsTranslationRoundTrip,
-  testSystemStart,
-  testExUnitCalculation,
   exampleExUnitCalc,
   exampleInvalidExUnitCalc,
 ) where
