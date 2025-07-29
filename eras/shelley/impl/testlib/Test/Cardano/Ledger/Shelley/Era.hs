@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -9,6 +10,8 @@ module Test.Cardano.Ledger.Shelley.Era (
   module Test.Cardano.Ledger.Era,
   ShelleyEraTest,
   mkShelleyTestAccountState,
+  nativeAlwaysFails,
+  nativeAlwaysSucceeds,
   shelleyAccountsFromAccountsMap,
   shelleyAccountsToUMap,
 ) where
@@ -101,3 +104,11 @@ shelleyAccountsToUMap accounts =
         (Set.singleton (accountState ^. ptrAccountStateG))
         (maybeToStrictMaybe (accountState ^. stakePoolDelegationAccountStateL))
         SNothing
+
+-- Minimal native scripts that can be used in all post-Shelley eras
+
+nativeAlwaysFails :: forall era. ShelleyEraScript era => Script era
+nativeAlwaysFails = fromNativeScript $ RequireAnyOf []
+
+nativeAlwaysSucceeds :: forall era. ShelleyEraScript era => Script era
+nativeAlwaysSucceeds = fromNativeScript $ RequireAllOf []
