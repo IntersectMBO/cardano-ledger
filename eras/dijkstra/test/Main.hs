@@ -15,13 +15,10 @@ import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
 main =
-  ledgerTestMain $ do
-    describe "Dijkstra era-generic" $ do
-      TxInfo.spec -- @DijkstraEra
+  ledgerTestMain $
+    describe "Dijkstra" $ do
+      GoldenSpec.spec
+      roundTripJsonShelleyEraSpec @DijkstraEra
+      TxInfo.spec
       describe "Imp" $ do
         Imp.spec @DijkstraEra
-    describe "Dijkstra era-specific" $ do
-      -- TODO
-      pure ()
-    roundTripJsonShelleyEraSpec @DijkstraEra
-    GoldenSpec.spec
