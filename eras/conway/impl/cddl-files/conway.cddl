@@ -232,6 +232,9 @@ positive_coin = 1 .. maxWord64
 
 maxWord64 = 18446744073709551615
 
+; NEW starting with babbage
+;   datum_option
+;   script_ref
 babbage_transaction_output = 
   {0 : address, 1 : value, ? 2 : datum_option, ? 3 : script_ref}
 

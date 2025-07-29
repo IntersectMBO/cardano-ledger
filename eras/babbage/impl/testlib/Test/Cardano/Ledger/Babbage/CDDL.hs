@@ -226,7 +226,7 @@ transaction_output =
         |]
     $ "transaction_output"
       =:= shelley_transaction_output
-      / babbage_transaction_output
+      / babbage_transaction_output babbage_script
 
 -- TODO: Make it possible to override names in Cuddle to obviate the need for
 -- this redefinition here.
@@ -235,10 +235,10 @@ shelley_transaction_output =
   "shelley_transaction_output"
     =:= arr [a address, "amount" ==> value, opt ("datum_hash" ==> hash32)]
 
-babbage_transaction_output :: Rule
-babbage_transaction_output =
+babbage_transaction_output :: Rule -> Rule
+babbage_transaction_output script =
   comment
-    [str|NEW
+    [str|NEW starting with babbage
         |  datum_option
         |  script_ref
         |]
@@ -247,7 +247,7 @@ babbage_transaction_output =
         [ idx 0 ==> address
         , idx 1 ==> value
         , opt $ idx 2 ==> datum_option
-        , opt $ idx 3 ==> script_ref
+        , opt $ idx 3 ==> ("script_ref" =:= tag 24 (VBytes `cbor` script))
         ]
 
 transaction_witness_set :: Rule
@@ -335,11 +335,8 @@ data' = "data" =:= tag 24 (VBytes `cbor` plutus_data)
 datum_option :: Rule
 datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data']
 
-script_ref :: Rule
-script_ref = "script_ref" =:= tag 24 (VBytes `cbor` script)
-
-script :: Rule
-script =
+babbage_script :: Rule
+babbage_script =
   "script"
     =:= arr [0, a native_script]
     / arr [1, a plutus_v1_script]

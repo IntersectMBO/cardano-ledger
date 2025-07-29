@@ -21,7 +21,6 @@ import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Babbage.CDDL hiding (
   auxiliary_data,
-  babbage_transaction_output,
   block,
   certificate,
   certificates,
@@ -51,12 +50,10 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   redeemers,
   relay,
   required_signers,
-  script,
   script_all,
   script_any,
   script_data_hash,
   script_pubkey,
-  script_ref,
   set,
   shelley_transaction_output,
   single_host_name,
@@ -320,7 +317,7 @@ transaction_output =
         |]
     $ "transaction_output"
       =:= shelley_transaction_output
-      / babbage_transaction_output
+      / babbage_transaction_output conway_script
 
 shelley_transaction_output :: Rule
 shelley_transaction_output =
@@ -329,16 +326,6 @@ shelley_transaction_output =
         |]
     $ "shelley_transaction_output"
       =:= arr [a address, "amount" ==> value, opt $ a hash32]
-
-babbage_transaction_output :: Rule
-babbage_transaction_output =
-  "babbage_transaction_output"
-    =:= mp
-      [ idx 0 ==> address
-      , idx 1 ==> value
-      , opt $ idx 2 ==> datum_option
-      , opt $ idx 3 ==> script_ref
-      ]
 
 script_data_hash :: Rule
 script_data_hash =
@@ -638,7 +625,7 @@ transaction_witness_set =
       , opt $ idx 2 ==> nonempty_set bootstrap_witness
       , opt $ idx 3 ==> nonempty_set plutus_v1_script
       , opt $ idx 4 ==> nonempty_set plutus_data
-      , opt $ idx 5 ==> redeemers
+      , opt $ idx 5 ==> redeemers conway_redeemer_tag
       , opt $ idx 6 ==> nonempty_set plutus_v2_script
       , opt $ idx 7 ==> nonempty_set plutus_v3_script
       ]
@@ -661,8 +648,8 @@ plutus_v2_script = "plutus_v2_script" =:= distinct VBytes
 plutus_v3_script :: Rule
 plutus_v3_script = "plutus_v3_script" =:= distinct VBytes
 
-redeemers :: Rule
-redeemers =
+redeemers :: Rule -> Rule
+redeemers redeemer_tag =
   comment
     [str|Flat Array support is included for backwards compatibility and
         |will be removed in the next era. It is recommended for tools to
@@ -691,8 +678,8 @@ redeemers =
             ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
         ]
 
-redeemer_tag :: Rule
-redeemer_tag =
+conway_redeemer_tag :: Rule
+conway_redeemer_tag =
   "redeemer_tag"
     =:= (int 0 //- "spend")
     / (int 1 //- "mint")
@@ -808,9 +795,6 @@ script_all = "script_all" =:~ grp [1, a (arr [0 <+ a native_script])]
 script_any :: Named Group
 script_any = "script_any" =:~ grp [2, a (arr [0 <+ a native_script])]
 
-script_ref :: Rule
-script_ref = "script_ref" =:= tag 24 (VBytes `cbor` script)
-
 script_n_of_k :: Named Group
 script_n_of_k =
   "script_n_of_k"
@@ -845,8 +829,8 @@ slot_no = "slot_no" =:= VUInt `sized` (8 :: Word64)
 block_no :: Rule
 block_no = "block_no" =:= VUInt `sized` (8 :: Word64)
 
-script :: Rule
-script =
+conway_script :: Rule
+conway_script =
   "script"
     =:= arr [0, a native_script]
     / arr [1, a plutus_v1_script]
