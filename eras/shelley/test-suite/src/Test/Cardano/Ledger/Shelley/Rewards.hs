@@ -59,7 +59,6 @@ import Cardano.Ledger.Shelley (
   hardforkBabbageForgoRewardPrefilter,
  )
 import Cardano.Ledger.Shelley.API (NonMyopic)
-import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),

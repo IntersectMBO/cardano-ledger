@@ -7,7 +7,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | This module is deprecated and will be removed in a future version.
+-- Please import these types from "Cardano.Ledger.State.StakePool" instead.
+--
+-- The contents of this module have been moved to provide better separation
+-- between pool registration parameters and pool state management.
 module Cardano.Ledger.PoolParams (
+  -- {-# DEPRECATED "Use `Cardano.Ledger.State.StakePool` instead." #-}
   PoolParams (..),
   PoolMetadata (..),
   StakePoolRelay (..),

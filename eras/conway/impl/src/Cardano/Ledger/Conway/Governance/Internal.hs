@@ -110,7 +110,6 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.LedgerState (epochStateStakeDistrL)
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (ToJSON (..), (.=))

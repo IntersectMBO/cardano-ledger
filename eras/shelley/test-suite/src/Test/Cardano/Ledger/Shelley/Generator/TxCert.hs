@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.API (
   GenDelegPair (..),
   GenDelegs (..),
   Network (..),
-  PoolParams (..),
   StrictMaybe (..),
   VKey,
  )

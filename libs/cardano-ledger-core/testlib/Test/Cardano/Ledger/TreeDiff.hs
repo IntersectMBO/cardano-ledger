@@ -28,7 +28,6 @@ import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap
