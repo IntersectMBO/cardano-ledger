@@ -31,7 +31,6 @@ main =
       Golden.spec
       describe "Imp" $ do
         Imp.spec @AlonzoEra
-        Imp.shelleyCertsSpec @AlonzoEra
       describe "CostModels" $ do
         CostModelsSpec.spec @AlonzoEra
       describe "TxWits" $ do
