@@ -40,9 +40,7 @@ packages:
   eras/alonzo/impl
   eras/alonzo/test-suite
   eras/babbage/impl
-  eras/babbage/test-suite
   eras/conway/impl
-  eras/conway/test-suite
   eras/dijkstra
   eras/mary/impl
   eras/shelley/impl

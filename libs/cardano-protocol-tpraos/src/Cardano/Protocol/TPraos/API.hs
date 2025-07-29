@@ -38,6 +38,8 @@ module Cardano.Protocol.TPraos.API (
   -- Leader Schedule
   checkLeaderValue,
   getLeaderSchedule,
+  -- HashHeader
+  HashHeader (..),
 ) where
 
 import qualified Cardano.Crypto.KES as KES

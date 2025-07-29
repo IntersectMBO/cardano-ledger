@@ -6,11 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Combinators
--- Description : Chain State Combinators
---
--- A collection of combinators for manipulating Chain State.
+-- | A collection of combinators for manipulating Chain State.
 -- The idea is to provide a clear way of describing the
 -- changes to the chain state when a block is processed.
 module Test.Cardano.Ledger.Shelley.Examples.Combinators (
