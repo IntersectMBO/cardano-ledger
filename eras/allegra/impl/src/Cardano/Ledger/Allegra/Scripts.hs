@@ -73,7 +73,7 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra)
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, DijkstraEra, MaryEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   MemoBytes (Memo),
@@ -342,6 +342,16 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
   , RequireTimeExpire
   , RequireTimeStart ::
     ConwayEra
+  #-}
+
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  , RequireTimeExpire
+  , RequireTimeStart ::
+    DijkstraEra
   #-}
 
 mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
