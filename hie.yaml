@@ -135,6 +135,12 @@ cradle:
     - path: "eras/dijkstra/testlib"
       component: "cardano-ledger-dijkstra:lib:testlib"
 
+    - path: "eras/dijkstra/huddle-cddl/Main.hs"
+      component: "cardano-ledger-dijkstra:exe:huddle-cddl"
+
+    - path: "eras/dijkstra/huddle-cddl/Paths_cardano_ledger_dijkstra.hs"
+      component: "cardano-ledger-dijkstra:exe:huddle-cddl"
+
     - path: "eras/dijkstra/test"
       component: "cardano-ledger-dijkstra:test:tests"
 

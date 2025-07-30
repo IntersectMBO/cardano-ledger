@@ -165,7 +165,7 @@ hash28 = bytes .size 28
 
 asset_name = bytes .size (0 .. 32)
 
-; NEW
+; NEW starting with babbage
 ;   datum_option
 ;   script_ref
 babbage_transaction_output = 
