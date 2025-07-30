@@ -16,7 +16,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
   SlotNo (..),
-  getVersion
+  getVersion,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (Hash, KeyHash (..), ScriptHash (..))
