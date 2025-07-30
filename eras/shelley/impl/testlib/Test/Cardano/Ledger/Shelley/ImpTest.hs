@@ -304,7 +304,8 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
   impPrepAction = passTick
 
 class EraTest era => EraSpecificSpec era where
-  eraSpec :: SpecWith (ImpInit (LedgerSpec era))
+  eraSpecific :: SpecWith (ImpInit (LedgerSpec era))
+  eraSpecific = pure ()
 
 data SomeSTSEvent era
   = forall (rule :: Symbol).

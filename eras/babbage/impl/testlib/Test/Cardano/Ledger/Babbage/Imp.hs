@@ -14,8 +14,6 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
--- ShelleyDelegPredFailure,
-
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
@@ -50,12 +48,10 @@ spec ::
   Spec
 spec = do
   AlonzoImp.spec @era
-  withImpInit @(LedgerSpec era) $
-    describe "BabbageImpSpec" $ do
-      Utxo.spec
-      Utxow.spec
-      Utxos.spec @era
-      eraSpec
+  describe "BabbageImpSpec - era generic tests" . withImpInit @(LedgerSpec era) $ do
+    Utxo.spec
+    Utxow.spec
+    Utxos.spec @era
 
 instance EraSpecificSpec BabbageEra where
-  eraSpec = AlonzoUtxow.shelleyCertsSpec
+  eraSpecific = AlonzoUtxow.shelleyCertsSpec

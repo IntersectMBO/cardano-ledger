@@ -21,9 +21,8 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import Test.Cardano.Ledger.Dijkstra.ImpTest
-import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
@@ -57,11 +56,6 @@ spec ::
   , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   Spec
-spec = do
-  ConwayImp.spec @era
-  withImpInit @(LedgerSpec era) $ do
-    eraSpec
+spec = ConwayImp.spec @era
 
-instance EraSpecificSpec DijkstraEra where
-  -- TODO
-  eraSpec = pure ()
+instance EraSpecificSpec DijkstraEra

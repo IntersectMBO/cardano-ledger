@@ -43,7 +43,6 @@ spec = do
     Utxo.spec
     Utxos.spec
     Utxow.spec
-    eraSpec
 
 instance EraSpecificSpec AlonzoEra where
-  eraSpec = Utxow.shelleyCertsSpec
+  eraSpecific = Utxow.shelleyCertsSpec

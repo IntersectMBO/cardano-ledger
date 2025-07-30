@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
+module Test.Cardano.Ledger.Conway.Imp (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (ContextError))
 import Cardano.Ledger.Alonzo.Rules (
@@ -99,10 +99,9 @@ spec = do
     forM_ (eraProtVersions @era) $ \protVer ->
       describe ("ConwayImpSpec - " <> show protVer) $
         modifyImpInitProtVer protVer $ do
-          conwaySpec @era
-          eraSpec
+          conwayEraGenericSpec @era
 
-conwaySpec ::
+conwayEraGenericSpec ::
   forall era.
   ( ConwayEraImp era
   , Inject (BabbageContextError era) (ContextError era)
@@ -130,7 +129,7 @@ conwaySpec ::
   , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-conwaySpec = do
+conwayEraGenericSpec = do
   describe "BBODY" Bbody.spec
   describe "CERTS" Certs.spec
   describe "DELEG" Deleg.spec
@@ -143,17 +142,17 @@ conwaySpec = do
   describe "UTXO" Utxo.spec
   describe "UTXOS" Utxos.spec
 
-conwayEraSpec ::
+conwayEraSpecificSpec ::
   ( ConwayEraImp era
   , ShelleyEraTxCert era
   , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-conwayEraSpec = do
-  describe "DELEG" Deleg.shelleyCertsSpec
-  describe "UTXO" Utxo.shelleyCertsSpec
+conwayEraSpecificSpec = do
+  describe "DELEG - certificates without deposits" Deleg.shelleyCertsSpec
+  describe "UTXO - certificates without deposits" Utxo.shelleyCertsSpec
 
 instance EraSpecificSpec ConwayEra where
-  eraSpec = do
+  eraSpecific =
     AlonzoUtxow.shelleyCertsSpec
-    conwayEraSpec
+      >> conwayEraSpecificSpec
