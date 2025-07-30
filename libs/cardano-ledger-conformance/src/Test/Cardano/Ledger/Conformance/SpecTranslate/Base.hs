@@ -28,8 +28,8 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   unComputationResult_,
 ) where
 
-import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.BaseTypes (Inject (..), NonNegativeInterval, UnitInterval, unboundRational)
+import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Compactible (Compactible (..), fromCompact)
 import Constrained.API (NonEmpty)
 import Control.DeepSeq (NFData)
@@ -38,9 +38,9 @@ import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
 import Data.Bitraversable (bimapM)
 import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
-import Data.Maybe.Strict (StrictMaybe (..), strictMaybeToMaybe)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe.Strict (StrictMaybe (..), strictMaybeToMaybe)
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet)

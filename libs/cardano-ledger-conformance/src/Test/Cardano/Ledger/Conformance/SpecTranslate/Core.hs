@@ -6,20 +6,29 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Core () where
+
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), Network (..), ProtVer (..), SlotNo (..), getVersion)
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
+  Network (..),
+  ProtVer (..),
+  SlotNo (..),
+  getVersion
+  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Conway.Core (Hash, KeyHash (..), ScriptHash (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
+import Control.Monad.Except (throwError)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   hashToInteger,
  )
-import Control.Monad.Except (throwError)
 
 instance SpecTranslate ctx StakeReference where
   type SpecRep StakeReference = Maybe Agda.Credential

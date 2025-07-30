@@ -34,12 +34,12 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
+import Cardano.Ledger.Address (raCredential)
 import Cardano.Ledger.Allegra.Scripts (
   Timelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Address (raCredential)
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
@@ -329,7 +329,6 @@ instance SpecTranslate ctx ValidityInterval where
   type SpecRep ValidityInterval = (Maybe Integer, Maybe Integer)
 
   toSpecRep (ValidityInterval lo hi) = toSpecRep (lo, hi)
-
 
 vkeyToInteger :: VKey kd -> Integer
 vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
