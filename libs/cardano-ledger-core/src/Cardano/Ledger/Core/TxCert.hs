@@ -1,13 +1,11 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -33,8 +31,8 @@ import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State.StakePool (PoolParams (ppId))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Kind (Type)
@@ -153,7 +151,8 @@ instance ToJSON PoolCert where
     RegPool poolParams ->
       kindObject "RegPool" ["poolParams" .= toJSON poolParams]
     RetirePool poolId epochNo ->
-      kindObject "RetirePool" $
+      kindObject
+        "RetirePool"
         [ "poolId" .= toJSON poolId
         , "epochNo" .= toJSON epochNo
         ]

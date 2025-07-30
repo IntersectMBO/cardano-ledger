@@ -55,7 +55,7 @@ import Cardano.Ledger.Keys (
   VRFVerKeyHash,
   hashKey,
  )
-import Cardano.Ledger.PoolParams (
+import Cardano.Ledger.State (
   PoolMetadata (..),
   PoolParams (..),
  )
