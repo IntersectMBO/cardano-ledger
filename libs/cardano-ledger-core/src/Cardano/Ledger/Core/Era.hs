@@ -75,9 +75,6 @@ class
     -- protocol version for the era, otherwise we can never upgrade to the next version:
     CmpNat (ProtVerLow era) MaxVersion ~ 'LT
   , CmpNat (ProtVerHigh era) MaxVersion ~ 'LT
-  , -- These two are redundant and can be removed once support for GHC-8.10 is dropped:
-    ProtVerLow era <= MaxVersion
-  , ProtVerHigh era <= MaxVersion
   ) =>
   Era era
   where
