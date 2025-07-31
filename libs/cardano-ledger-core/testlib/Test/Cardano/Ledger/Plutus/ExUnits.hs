@@ -9,13 +9,28 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 
 spec :: Spec
 spec = do
-  prop "Round-trip to ExBudget" exUnitsTranslationRoundTrip
+  prop "Round-trip to ExBudget" exUnitsToExBudgetRoundTrip
+  prop "Round-trip from ExBudget" exBudgetToExUnitsRoundTrip
 
--- ExUnits should remain intact when translating to and from the plutus type
-exUnitsTranslationRoundTrip :: Gen Property
-exUnitsTranslationRoundTrip = do
+-- ExUnits should remain intact when translating to and from the Plutus ExBudget type
+exUnitsToExBudgetRoundTrip :: Gen Property
+exUnitsToExBudgetRoundTrip = do
   e <- arbitrary
-  let result = exBudgetToExUnits (transExUnits e)
+  let result = exBudgetToExUnits $ transExUnits e
+  pure
+    $ counterexample
+      ( "Before: "
+          <> show e
+          <> "\n After: "
+          <> show result
+      )
+    $ result == Just e
+
+-- Plutus ExBudget should remain intact when translating to and from the ExUnits type
+exBudgetToExUnitsRoundTrip :: Gen Property
+exBudgetToExUnitsRoundTrip = do
+  e <- arbitrary
+  let result = transExUnits <$> exBudgetToExUnits e
   pure
     $ counterexample
       ( "Before: "
