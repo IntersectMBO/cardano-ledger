@@ -22,7 +22,14 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   processDelegation,
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  ProtVer (..),
+  Relation (RelEQ),
+  ShelleyBase,
+  StrictMaybe (..),
+  natVersion,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -35,7 +42,12 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra, hardforkConwayBootstrapPhase)
+import Cardano.Ledger.Conway.Era (
+  ConwayDELEG,
+  ConwayEra,
+  hardforkConwayBootstrapPhase,
+  hardforkConwayDELEGIncorrectDepositsAndRefunds,
+ )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
@@ -96,6 +108,8 @@ data ConwayDelegPredFailure era
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
   | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole)
   | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool)
+  | DepositIncorrectDELEG (Mismatch 'RelEQ Coin)
+  | RefundIncorrectDELEG (Mismatch 'RelEQ Coin)
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEra
@@ -123,6 +137,10 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (DelegateeDRepNotRegisteredDELEG @era) 5 !> To delegatee
       DelegateeStakePoolNotRegisteredDELEG delegatee ->
         Sum (DelegateeStakePoolNotRegisteredDELEG @era) 6 !> To delegatee
+      DepositIncorrectDELEG mm ->
+        Sum (DepositIncorrectDELEG @era) 7 !> To mm
+      RefundIncorrectDELEG mm ->
+        Sum (RefundIncorrectDELEG @era) 8 !> To mm
 
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
@@ -132,6 +150,8 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
     5 -> SumD DelegateeDRepNotRegisteredDELEG <! From
     6 -> SumD DelegateeStakePoolNotRegisteredDELEG <! From
+    7 -> SumD DepositIncorrectDELEG <! From
+    8 -> SumD RefundIncorrectDELEG <! From
     n -> Invalid n
 
 instance
@@ -169,7 +189,16 @@ conwayDelegTransition = do
     ppKeyDepositCompact = compactCoinOrError ppKeyDeposit
     pv = pp ^. ppProtocolVersionL
     checkDepositAgainstPParams deposit =
-      deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
+      deposit
+        == ppKeyDeposit
+          ?! if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
+            then
+              DepositIncorrectDELEG
+                Mismatch
+                  { mismatchSupplied = deposit
+                  , mismatchExpected = ppKeyDeposit
+                  }
+            else IncorrectDepositDELEG deposit
     checkStakeKeyNotRegistered stakeCred =
       not (isAccountRegistered stakeCred accounts) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred = do
@@ -207,14 +236,23 @@ conwayDelegTransition = do
             -- we don't want to report invalid refund when stake credential is not registered:
             accountState <- mAccountState
             -- we return offending refund only when it doesn't match the expected one:
-            guard (suppliedRefund /= fromCompact (accountState ^. depositAccountStateL))
-            Just suppliedRefund
+            let expectedRefund = fromCompact $ accountState ^. depositAccountStateL
+            guard (suppliedRefund /= expectedRefund)
+            Just $
+              if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
+                then
+                  RefundIncorrectDELEG
+                    Mismatch
+                      { mismatchSupplied = suppliedRefund
+                      , mismatchExpected = expectedRefund
+                      }
+                else IncorrectDepositDELEG suppliedRefund
           checkStakeKeyHasZeroRewardBalance = do
             accountState <- mAccountState
             let balanceCompact = accountState ^. balanceAccountStateL
             guard (balanceCompact /= mempty)
             Just $ fromCompact balanceCompact
-      failOnJust checkInvalidRefund IncorrectDepositDELEG
+      failOnJust checkInvalidRefund id
       isJust mAccountState ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
       pure $
