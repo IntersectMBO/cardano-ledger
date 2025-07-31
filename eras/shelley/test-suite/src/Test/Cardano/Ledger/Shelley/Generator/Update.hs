@@ -154,8 +154,8 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
 -- Note: we keep the lower bound high enough so that we can more likely
 -- generate valid transactions and blocks
 low, hi :: Word32
-low = 50000
-hi = 200000
+low = 70000 -- Using the EraGen machinery, we have found that at least one block had a size of 59271
+hi = 200000 -- This caused a rare, but annoying failure, Since these are arbitrary we set `low` to 70000
 
 -- poolDeposit
 -- NOTE: we need to keep these deposits small, otherwise

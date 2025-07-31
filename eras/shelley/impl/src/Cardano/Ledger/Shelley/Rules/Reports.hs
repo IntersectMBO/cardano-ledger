@@ -41,7 +41,9 @@ showCerts :: Show (TxCert era) => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . show) certs)
 
 showTxCerts :: EraTxBody era => TxBody era -> String
-showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
+showTxCerts txb = case (toList (txb ^. certsTxBodyL)) of
+  [] -> ("No TxCerts in this TxBody\n" ++ show txb)
+  certs -> showCerts certs
 
 -- | Display a synopsis of a map to Coin
 synopsisCoinMap :: Maybe (Map.Map k Coin) -> String
