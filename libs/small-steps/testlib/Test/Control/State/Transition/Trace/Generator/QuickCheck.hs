@@ -278,7 +278,7 @@ onlyValidSignalsAreGeneratedFromInitState baseEnv maxTraceLength traceGenEnv gen
       where
         signalIsValid signal =
           case interpretSTS @sts @traceGenEnv baseEnv (Trace.applySTSTest @sts (TRC (env, lastState, signal))) of
-            Left pf -> QuickCheck.counterexample (show (signal, pf)) False
+            Left pf -> QuickCheck.counterexample (show pf) False
             Right _ -> QuickCheck.property True
         env = Trace._traceEnv someTrace
         lastState = Trace.lastState someTrace
