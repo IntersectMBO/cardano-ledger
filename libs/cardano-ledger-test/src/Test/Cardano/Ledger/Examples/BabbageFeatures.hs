@@ -54,7 +54,6 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Tools (
-  exUnitsTranslationRoundTrip,
   exampleExUnitCalc,
   exampleInvalidExUnitCalc,
  )
@@ -74,7 +73,6 @@ import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Cardano.Ledger.TreeDiff (ToExpr, showExpr)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
-import Test.Tasty.QuickCheck (testProperty)
 
 someKeys :: KeyPair 'Payment
 someKeys = KeyPair vk sk
@@ -322,8 +320,7 @@ toolTests :: TestTree
 toolTests =
   testGroup
     "ExUnit tools"
-    [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
-    , testGroup
+    [ testGroup
         "Alonzo"
         [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
         , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)

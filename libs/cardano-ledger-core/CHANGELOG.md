@@ -110,6 +110,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Plutus.ExUnits`
 * Added `genericShrinkMemo`
 * Add `maxWord32` and `posWord32` rules to CDDL
 * Add `registerTestAccount` and `accountsFromUMap`

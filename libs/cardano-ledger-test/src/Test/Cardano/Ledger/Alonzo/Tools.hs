@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Tools (
-  exUnitsTranslationRoundTrip,
   exampleExUnitCalc,
   exampleInvalidExUnitCalc,
 ) where
@@ -30,8 +29,6 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
-  exBudgetToExUnits,
-  transExUnits,
  )
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
@@ -63,21 +60,6 @@ import Test.Cardano.Ledger.Generic.GenState (EraGenericGen (..))
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (assertFailure, (@=?))
-import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample)
-
--- ExUnits should remain intact when translating to and from the plutus type
-exUnitsTranslationRoundTrip :: Gen Property
-exUnitsTranslationRoundTrip = do
-  e <- arbitrary
-  let result = exBudgetToExUnits (transExUnits e)
-  pure
-    $ counterexample
-      ( "Before: "
-          <> show e
-          <> "\n After: "
-          <> show result
-      )
-    $ result == Just e
 
 testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
