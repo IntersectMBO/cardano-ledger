@@ -26,7 +26,6 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),

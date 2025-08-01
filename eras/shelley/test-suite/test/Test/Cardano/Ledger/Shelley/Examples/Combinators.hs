@@ -59,7 +59,6 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),

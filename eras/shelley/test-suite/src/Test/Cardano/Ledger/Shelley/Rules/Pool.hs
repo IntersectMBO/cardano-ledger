@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Block (bheader)
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams (ppId)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),

@@ -52,7 +52,6 @@ import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
-  PoolParams (..),
   RewardAccount (..),
   ShelleyDelegCert (..),
  )

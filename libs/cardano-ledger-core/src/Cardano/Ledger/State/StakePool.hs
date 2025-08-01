@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.PoolParams (
+module Cardano.Ledger.State.StakePool (
   PoolParams (..),
   PoolMetadata (..),
   StakePoolRelay (..),

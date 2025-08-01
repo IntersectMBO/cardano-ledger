@@ -176,7 +176,6 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   epochStateGovStateL,

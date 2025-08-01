@@ -69,10 +69,10 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value ()
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
+import Cardano.Ledger.State (PoolParams (..))
 import Constrained.API
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)

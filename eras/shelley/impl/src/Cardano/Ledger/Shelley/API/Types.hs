@@ -60,11 +60,6 @@ import Cardano.Ledger.Keys as X (
 import Cardano.Ledger.Keys.Bootstrap as X (
   BootstrapWitness (..),
  )
-import Cardano.Ledger.PoolParams as X (
-  PoolMetadata (..),
-  PoolParams (..),
-  StakePoolRelay (..),
- )
 import Cardano.Ledger.Shelley.BlockBody as X
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
@@ -134,9 +129,12 @@ import Cardano.Ledger.Shelley.TxWits as X (
  )
 import Cardano.Ledger.State as X (
   PoolDistr (..),
+  PoolMetadata (..),
+  PoolParams (..),
   SnapShot (..),
   SnapShots (..),
   Stake (..),
+  StakePoolRelay (..),
   UTxO (..),
   balance,
   individualPoolStake,

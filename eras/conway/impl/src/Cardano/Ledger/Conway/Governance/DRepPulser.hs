@@ -71,7 +71,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Conway.State hiding (balance)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended

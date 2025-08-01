@@ -20,7 +20,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
@@ -28,7 +27,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (SnapShot (ssPoolParams), UTxO (..), emptySnapShot)
+import Cardano.Ledger.State (PoolParams (..), SnapShot (ssPoolParams), UTxO (..), emptySnapShot)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val

@@ -45,7 +45,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
