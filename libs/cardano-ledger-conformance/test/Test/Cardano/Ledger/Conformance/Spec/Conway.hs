@@ -5,19 +5,25 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
+module Test.Cardano.Ledger.Conformance.Spec.Conway (
+  spec,
+  genFromBundle,
+  genFromBundle_,
+) where
 
 import Cardano.Ledger.Core (EraRule)
 import Constrained.API
 import Control.Monad.Cont (ContT (..))
 import Control.Monad.Trans (MonadTrans (..))
-import Control.State.Transition.Extended (TRC (..))
+import Control.State.Transition.Extended (STS (..), TRC (..))
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), ForAllExecTypes, testConformance)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conformance.Imp qualified as Imp (spec)
 import Test.Cardano.Ledger.Conformance.Imp.Ratify qualified as RatifyImp
+import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConstrainedGeneratorBundle (..),
   constrainedCert,
@@ -53,45 +59,78 @@ conformsToImpl genInputs = property @(ImpTestM era Property) . (`runContT` pure)
   deepEval sig "signal"
   pure $ testConformance @rule @era ctx trc
 
+genFromBundle_ ::
+  ( HasSpec (Environment (EraRule rule era))
+  , HasSpec (State (EraRule rule era))
+  , HasSpec (Signal (EraRule rule era))
+  , Arbitrary (ExecContext rule era)
+  ) =>
+  ConstrainedGeneratorBundle ctx rule era ->
+  Gen (ExecContext rule era, TRC (EraRule rule era))
+genFromBundle_ x = genFromBundle x $ \_ _ _ _ -> arbitrary
+
 genFromBundle ::
   ForAllExecTypes HasSpec rule era =>
   ConstrainedGeneratorBundle ctx rule era ->
+  ( ctx ->
+    Environment (EraRule rule era) ->
+    State (EraRule rule era) ->
+    Signal (EraRule rule era) ->
+    Gen (ExecContext rule era)
+  ) ->
   Gen (ExecContext rule era, TRC (EraRule rule era))
-genFromBundle ConstrainedGeneratorBundle {..} = do
+genFromBundle ConstrainedGeneratorBundle {..} genExecContext = do
   ctx <- cgbContextGen
   env <- genFromSpec $ cgbEnvironmentSpec ctx
   st <- genFromSpec $ cgbStateSpec ctx env
   sig <- genFromSpec $ cgbSignalSpec ctx env st
-  pure (undefined, TRC (env, st, sig))
+  (,TRC (env, st, sig)) <$> genExecContext ctx env st sig
 
 conformsToImplConstrained ::
   forall ctx rule era.
   ( ExecSpecRule rule era
   , ForAllExecTypes HasSpec rule era
   ) =>
-  ConstrainedGeneratorBundle ctx rule era -> Property
-conformsToImplConstrained = conformsToImpl @rule @era . genFromBundle
+  ConstrainedGeneratorBundle ctx rule era ->
+  ( ctx ->
+    Environment (EraRule rule era) ->
+    State (EraRule rule era) ->
+    Signal (EraRule rule era) ->
+    Gen (ExecContext rule era)
+  ) ->
+  Property
+conformsToImplConstrained bundle genExecContext =
+  conformsToImpl @rule @era $ genFromBundle bundle genExecContext
+
+conformsToImplConstrained_ ::
+  ( ExecSpecRule rule era
+  , ForAllExecTypes HasSpec rule era
+  , Arbitrary (ExecContext rule era)
+  ) =>
+  ConstrainedGeneratorBundle ctx rule era ->
+  Property
+conformsToImplConstrained_ bundle = conformsToImplConstrained bundle $ \_ _ _ _ -> arbitrary
 
 spec :: Spec
 spec = do
   describe "Conformance with constrained generators" $ do
     describe "Ticks transition graph" $ do
-      prop "ENACT" $ conformsToImplConstrained constrainedEnact
-      prop "RATIFY" $ conformsToImplConstrained constrainedRatify
-      xprop "EPOCH" $ conformsToImplConstrained constrainedEpoch
-      xprop "NEWEPOCH" $ conformsToImplConstrained constrainedEpoch
+      prop "ENACT" $ conformsToImplConstrained_ constrainedEnact
+      prop "RATIFY" $ conformsToImplConstrained_ constrainedRatify
+      xprop "EPOCH" $ conformsToImplConstrained_ constrainedEpoch
+      xprop "NEWEPOCH" $ conformsToImplConstrained_ constrainedEpoch
     describe "Blocks transition graph" $ do
-      prop "DELEG" $ conformsToImplConstrained constrainedDeleg
-      prop "GOVCERT" $ conformsToImplConstrained constrainedGovCert
-      prop "POOL" $ conformsToImplConstrained constrainedPool
-      prop "CERT" $ conformsToImplConstrained constrainedCert
-      prop "CERTS" $ conformsToImplConstrained constrainedCerts
-      prop "GOV" $ conformsToImplConstrained constrainedGov
+      prop "DELEG" $ conformsToImplConstrained_ constrainedDeleg
+      prop "GOVCERT" $ conformsToImplConstrained_ constrainedGovCert
+      prop "POOL" $ conformsToImplConstrained_ constrainedPool
+      prop "CERT" $ conformsToImplConstrained_ constrainedCert
+      prop "CERTS" $ conformsToImplConstrained_ constrainedCerts
+      prop "GOV" $ conformsToImplConstrained_ constrainedGov
       -- UTXO is disabled due to: https://github.com/IntersectMBO/cardano-ledger/issues/4876
-      xprop "UTXO" $ conformsToImplConstrained constrainedUtxo
-      xprop "UTXOW" $ conformsToImplConstrained constrainedUtxo
-      xprop "LEDGER" $ conformsToImplConstrained constrainedUtxo
-      xprop "LEDGERS" $ conformsToImplConstrained constrainedUtxo
+      xprop "UTXO" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "UTXOW" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "LEDGER" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "LEDGERS" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
     describe "ImpTests" $ do
       RatifyImp.spec
       Imp.spec
