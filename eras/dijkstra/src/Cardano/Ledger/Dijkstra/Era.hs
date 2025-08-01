@@ -11,27 +11,12 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraCERT,
 ) where
 
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (
-  Era (..),
-  EraRule,
-  EraRuleEvent,
-  EraRuleFailure,
-  Value,
-  VoidEraRule,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules
-
-instance Era DijkstraEra where
-  type PreviousEra DijkstraEra = ConwayEra
-  type ProtVerLow DijkstraEra = 12
-  type ProtVerHigh DijkstraEra = 12
-
-  eraName = "Dijkstra"
 
 -------------------------------------------------------------------------------
 -- Deprecated rules

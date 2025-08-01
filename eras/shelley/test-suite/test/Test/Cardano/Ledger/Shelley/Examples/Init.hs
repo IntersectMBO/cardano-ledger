@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
 import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash, unsafeBoundRational)
 
 -- | Initial Protocol Parameters
-ppEx :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
+ppEx :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => PParams era
 ppEx =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
@@ -80,8 +80,8 @@ initSt ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   UTxO era ->

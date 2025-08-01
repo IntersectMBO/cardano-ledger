@@ -153,7 +153,7 @@ instance
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ TxCert era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
   , Crypto c
   ) =>

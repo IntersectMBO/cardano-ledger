@@ -61,7 +61,7 @@ instance
   ( EraGov era
   , Default (PParams era)
   , GovState era ~ ShelleyGovState era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   STS (ShelleyUPEC era)
   where

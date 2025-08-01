@@ -84,8 +84,8 @@ initStGenesisDeleg ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era

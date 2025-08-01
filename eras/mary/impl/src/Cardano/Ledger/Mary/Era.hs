@@ -12,19 +12,12 @@
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
-
-instance Era MaryEra where
-  type PreviousEra MaryEra = AllegraEra
-  type ProtVerLow MaryEra = 4
-
-  eraName = "Mary"
 
 instance EraGenesis MaryEra
 

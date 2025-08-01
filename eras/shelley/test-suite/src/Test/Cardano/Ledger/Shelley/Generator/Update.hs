@@ -103,7 +103,7 @@ genIntervalInThousands lower upper =
 
 genPParams ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
   Constants ->
   Gen (PParams era)
 genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
@@ -238,7 +238,7 @@ genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 -- | This is only good in the Shelley Era, used to define the genShelleyEraPParamsUpdate method for (EraGen (ShelleyEra c))
 genShelleyPParamsUpdate ::
   forall era.
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
+  (AtMostEra "Mary" era, AtMostEra "Alonzo" era, AtMostEra "Babbage" era, EraPParams era) =>
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)

@@ -474,7 +474,7 @@ utxoTransition ::
   forall era.
   ( EraUTxO era
   , AlonzoEraTx era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
@@ -571,7 +571,7 @@ instance
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
   , SafeToHash (TxWits era)
   ) =>

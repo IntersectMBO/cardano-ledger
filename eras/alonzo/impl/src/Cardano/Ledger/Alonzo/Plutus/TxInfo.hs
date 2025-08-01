@@ -320,7 +320,7 @@ transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
 
-transTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+transTxCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> PV1.DCert
 transTxCert txCert =
   case transTxCertCommon txCert of
     Just cert -> cert

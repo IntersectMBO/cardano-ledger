@@ -563,7 +563,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (ProtVerAtMost era 6, EraGov era) =>
+  (AtMostEra "Alonzo" era, EraGov era) =>
   Block (BHeader MockCrypto) era ->
   ChainState era ->
   ChainState era

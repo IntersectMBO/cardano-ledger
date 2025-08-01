@@ -108,8 +108,8 @@ genTriple ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Proxy era ->
   Int ->

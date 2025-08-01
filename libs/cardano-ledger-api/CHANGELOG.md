@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `EraHasName` type class and add `EraName` type family to the `Era` type class.
 * Add `queryPoolState` and bring back `queryPoolParameters` state query.
 * Add `queryDRepDelegations` state query
 * Remove `filterStakePoolDelegsAndRewards` as unnecessary. Use `queryStakePoolDelegsAndRewards` instead
