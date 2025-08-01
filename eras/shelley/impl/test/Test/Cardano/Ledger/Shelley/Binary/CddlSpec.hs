@@ -8,7 +8,6 @@ module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.PoolParams (StakePoolRelay)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Credential,
@@ -16,6 +15,7 @@ import Cardano.Ledger.Shelley.API (
   ProposedPPUpdates,
   Update,
  )
+import Cardano.Ledger.State (StakePoolRelay)
 import Cardano.Ledger.TxIn (TxIn)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,

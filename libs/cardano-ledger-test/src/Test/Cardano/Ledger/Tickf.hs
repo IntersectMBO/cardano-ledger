@@ -10,11 +10,11 @@ module Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr, calcPoolDistOldEqualsNe
 import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
 import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
 import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
+  PoolParams (ppVrf),
   SnapShot (..),
   Stake (..),
   sumAllStake,

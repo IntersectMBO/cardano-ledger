@@ -98,7 +98,6 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeC
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),

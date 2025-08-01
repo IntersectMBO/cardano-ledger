@@ -39,11 +39,9 @@ import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.PoolParams (PoolMetadata (..))
 import Cardano.Ledger.Shelley.API (
   GenDelegs (..),
   LedgerState (..),
-  PoolParams (..),
   ProtVer (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)

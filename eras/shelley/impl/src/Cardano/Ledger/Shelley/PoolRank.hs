@@ -57,9 +57,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
-import Cardano.Ledger.State (maxPool)
+import Cardano.Ledger.State (PoolParams (..), maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans

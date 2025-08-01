@@ -76,9 +76,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
+import Cardano.Ledger.State.StakePool (PoolParams)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))

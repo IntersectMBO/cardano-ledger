@@ -75,9 +75,8 @@ import Cardano.Ledger.Plutus.Language (
   SLanguage (..),
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (PoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
