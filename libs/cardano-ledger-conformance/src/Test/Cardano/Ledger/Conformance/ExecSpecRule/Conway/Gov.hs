@@ -21,12 +21,8 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Imp.Common
 
-instance
-  NFData (SpecRep (ConwayGovPredFailure ConwayEra)) =>
-  ExecSpecRule "GOV" ConwayEra
-  where
+instance ExecSpecRule "GOV" ConwayEra where
   type ExecContext "GOV" ConwayEra = EnactState ConwayEra
 
   runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.govStep env st sig

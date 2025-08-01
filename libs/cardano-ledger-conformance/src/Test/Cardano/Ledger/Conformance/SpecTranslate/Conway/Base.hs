@@ -22,8 +22,6 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   committeeCredentialToStrictMaybe,
   SpecTranslate (..),
-  ConwayExecEnactEnv (..),
-  ConwayTxBodyTransContext (..),
   vkeyToInteger,
   vkeyFromInteger,
   signatureToInteger,
@@ -55,11 +53,7 @@ import Cardano.Ledger.Compactible (Compactible, fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..), THKD (..))
-import Cardano.Ledger.Conway.Rules (
-  ConwayCertPredFailure,
-  ConwayGovPredFailure,
-  EnactSignal (..),
- )
+import Cardano.Ledger.Conway.Rules (EnactSignal (..))
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -78,9 +72,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData)
 import Control.Monad.Except (MonadError (..))
-import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.Containers.ListUtils (nubOrdOn)
@@ -101,17 +93,14 @@ import Data.Traversable (forM)
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64)
 import qualified GHC.Exts as Exts
-import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
-  OpaqueErrorString (..),
   SpecTransM,
   SpecTranslate (..),
   askCtx,
   hashToInteger,
-  showOpaqueErrorString,
  )
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
@@ -475,6 +464,7 @@ instance Era era => SpecTranslate ctx (TxDats era) where
 instance
   ( SpecTranslate ctx k
   , SpecTranslate ctx v
+  , Ord k
   ) =>
   SpecTranslate ctx (Map k v)
   where
@@ -483,6 +473,7 @@ instance
   toSpecRep =
     fmap Agda.MkHSMap
       . traverse (bimapM toSpecRep toSpecRep)
+      . sortOn fst
       . Map.toList
 
 instance SpecTranslate ctx Word64 where
@@ -639,27 +630,10 @@ instance SpecTranslate ctx TxAuxDataHash where
 
   toSpecRep (TxAuxDataHash x) = toSpecRep x
 
-newtype ConwayTxBodyTransContext = ConwayTxBodyTransContext
-  { ctbtcTxId :: TxId
-  }
-
-instance Inject ConwayTxBodyTransContext TxId where
-  inject = ctbtcTxId
-
 instance SpecTranslate ctx IsValid where
   type SpecRep IsValid = Bool
 
   toSpecRep (IsValid b) = pure b
-
-instance
-  ( EraPParams era
-  , ToExpr (PParamsHKD StrictMaybe era)
-  ) =>
-  SpecTranslate ctx (ConwayGovPredFailure era)
-  where
-  type SpecRep (ConwayGovPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (GovPurposeId r) where
   type SpecRep (GovPurposeId r) = (Agda.TxId, Integer)
@@ -962,17 +936,6 @@ instance SpecTranslate ctx MaryValue where
 
   toSpecRep = toSpecRep . coin
 
-instance
-  ( ToExpr (PredicateFailure (EraRule "DELEG" era))
-  , ToExpr (PredicateFailure (EraRule "GOVCERT" era))
-  , ToExpr (PredicateFailure (EraRule "POOL" era))
-  ) =>
-  SpecTranslate ctx (ConwayCertPredFailure era)
-  where
-  type SpecRep (ConwayCertPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
-
 instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
   type SpecRep (CompactForm a) = SpecRep a
 
@@ -1098,31 +1061,6 @@ instance
   type SpecRep (EnactSignal era) = SpecRep (GovAction era)
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
-
--- | This type is used as the Env only in the Agda Spec
-data ConwayExecEnactEnv era = ConwayExecEnactEnv
-  { ceeeGid :: GovActionId
-  , ceeeTreasury :: Coin
-  , ceeeEpoch :: EpochNo
-  }
-  deriving (Generic, Eq, Show)
-
--- | Here we inject the Agda Spec Env into the STS rule Environment, which is ().
-instance Inject (ConwayExecEnactEnv era) () where
-  inject _ = ()
-
-instance ToExpr (ConwayExecEnactEnv era)
-
-instance Era era => NFData (ConwayExecEnactEnv era)
-
-instance SpecTranslate ctx (ConwayExecEnactEnv era) where
-  type SpecRep (ConwayExecEnactEnv era) = Agda.EnactEnv
-
-  toSpecRep ConwayExecEnactEnv {..} =
-    Agda.MkEnactEnv
-      <$> toSpecRep ceeeGid
-      <*> toSpecRep ceeeTreasury
-      <*> toSpecRep ceeeEpoch
 
 committeeCredentialToStrictMaybe ::
   CommitteeAuthorization ->

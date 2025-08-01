@@ -39,13 +39,13 @@ import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   runFromAgdaFunction,
-  showOpaqueErrorString,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
+import qualified Data.Text as T
 
 data ConwayLedgerExecContext era
   = ConwayLedgerExecContext
@@ -104,5 +104,5 @@ instance ExecSpecRule "LEDGER" ConwayEra where
     where
       utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
       stFinal =
-        first showOpaqueErrorString $
+        first (T.pack . show) $
           runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig

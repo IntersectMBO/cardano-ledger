@@ -20,14 +20,15 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), ledgerSlotNoL)
+import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.List.NonEmpty
+import Data.Text qualified as T
 import Lens.Micro
 import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (ConwayTxBodyTransContext)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
@@ -54,11 +55,10 @@ submitTxConformanceHook ::
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
-  , SpecTranslate ConwayTxBodyTransContext (TxBody era)
-  , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
+  , SpecTranslate TxId (TxBody era)
   , SpecTranslate (ConwayLedgerExecContext era) (Tx era)
   , ToExpr (SpecRep (Tx era))
-  , FixupSpecRep (SpecState "LEDGER" era)
+  , SpecNormalize (SpecState "LEDGER" era)
   , Eq (SpecState "LEDGER" era)
   ) =>
   Globals ->
@@ -89,11 +89,11 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) impRuleResult = d
   specTRC@(SpecTRC specEnv specState specSignal) <-
     impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
   -- get agda response
-  agdaResponse <- fmap (second fixup) . evaluateDeep $ runAgdaRule @"LEDGER" @era specTRC
+  agdaResponse <- fmap (second specNormalize) . evaluateDeep $ runAgdaRule @"LEDGER" @era specTRC
   -- translate imp response
   let
-    impRuleResult' = bimap showOpaqueErrorString fst impRuleResult
-    impResponse = first showOpaqueErrorString . translateOutput ctx trc =<< impRuleResult'
+    impRuleResult' = bimap (T.pack . show) fst impRuleResult
+    impResponse = first (T.pack . show) . translateOutput ctx trc =<< impRuleResult'
 
   logString "implEnv"
   logToExpr env
@@ -113,7 +113,7 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) impRuleResult = d
       globals
       ctx
       (TRC (env, state, signal))
-      (first showOpaqueErrorString impRuleResult)
+      (first (T.pack . show) impRuleResult)
   logDoc $ diffConformance impResponse agdaResponse
   when (impResponse /= agdaResponse) $
     assertFailure "Conformance failure"

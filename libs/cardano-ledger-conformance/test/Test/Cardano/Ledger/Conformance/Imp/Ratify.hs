@@ -33,13 +33,13 @@ import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Text as T
 import Lens.Micro ((&), (.~))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conformance (
   ConformanceResult (..),
   ExecSpecRule (..),
   runConformance,
-  showOpaqueErrorString,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -142,6 +142,6 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     logString "Extra information:"
     globals <- use impGlobalsL
     logDoc $
-      extraInfo @"RATIFY" @ConwayEra globals () trc (first showOpaqueErrorString implRes')
+      extraInfo @"RATIFY" @ConwayEra globals () trc (first (T.pack . show) implRes')
     impAnn "Conformance failed" $
-      first showOpaqueErrorString implRes `shouldBeExpr` agdaRes
+      first (T.pack . show) implRes `shouldBeExpr` agdaRes

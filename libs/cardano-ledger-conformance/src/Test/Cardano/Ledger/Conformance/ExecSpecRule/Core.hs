@@ -39,6 +39,8 @@ import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty)
 import Data.String (fromString)
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.TreeDiff.Pretty (ansiWlExpr)
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, Symbol, Type)
 import GHC.Generics (Generic)
@@ -51,11 +53,9 @@ import System.FilePath ((<.>))
 import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
-  FixupSpecRep (..),
-  OpaqueErrorString (..),
+  SpecNormalize (..),
   SpecTranslate (..),
   runSpecTransM,
-  showOpaqueErrorString,
   unComputationResult,
  )
 import Test.Cardano.Ledger.Imp.Common
@@ -107,9 +107,8 @@ class
   , ForAllExecTypes ToExpr rule era
   , ForAllExecTypes EncCBOR rule era
   , EncCBOR (ExecContext rule era)
-  , Eq (SpecRep (PredicateFailure (EraRule rule era)))
   , Eq (SpecState rule era)
-  , FixupSpecRep (SpecState rule era)
+  , SpecNormalize (SpecState rule era)
   , NFData (ExecContext rule era)
   , NFData (PredicateFailure (EraRule rule era))
   , NFData (SpecTRC rule era)
@@ -133,7 +132,7 @@ class
   runAgdaRule ::
     HasCallStack =>
     SpecTRC rule era ->
-    Either OpaqueErrorString (SpecState rule era)
+    Either Text (SpecState rule era)
 
   translateInputs ::
     HasCallStack =>
@@ -175,7 +174,7 @@ class
     Globals ->
     ExecContext rule era ->
     TRC (EraRule rule era) ->
-    Either OpaqueErrorString (State (EraRule rule era), [Event (EraRule rule era)]) ->
+    Either Text (State (EraRule rule era), [Event (EraRule rule era)]) ->
     Doc AnsiStyle
   extraInfo _ _ _ _ = mempty
 
@@ -192,8 +191,8 @@ dumpCbor path x name = do
   fullPath <- makeAbsolute $ path <> "/" <> name <.> "cbor"
   writeCBOR (eraProtVerLow @era) fullPath x
 
-diffConformance :: ToExpr a => a -> a -> Doc AnsiStyle
-diffConformance implRes agdaRes =
+diffConformance :: ToExpr a => Either Text a -> Either Text a -> Doc AnsiStyle
+diffConformance (Right implRes) (Right agdaRes) =
   ppEditExpr conformancePretty (ediff implRes agdaRes)
   where
     delColor = Red
@@ -203,6 +202,27 @@ diffConformance implRes agdaRes =
         { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
         , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
         }
+diffConformance implRes agdaRes =
+  let
+    prettyRes True x = "Success):\n" <> annotate (colorDull White) (ansiWlExpr $ toExpr x)
+    prettyRes False x = "Failure):\n" <> annotate (color Red) (ansiWlExpr $ toExpr x)
+   in
+    vsep
+      [ "Impl ("
+          <> nest
+            2
+            ( case implRes of
+                Right x -> prettyRes True x
+                Left x -> prettyRes False x
+            )
+      , "Agda ("
+          <> nest
+            2
+            ( case agdaRes of
+                Right x -> prettyRes True x
+                Left x -> "Failure):\n" <> annotate (color Red) (pretty x)
+            )
+      ]
 
 checkConformance ::
   forall rule era.
@@ -214,35 +234,43 @@ checkConformance ::
   , EncCBOR (Signal (EraRule rule era))
   , ToExpr (SpecState rule era)
   , Eq (SpecState rule era)
+  , SpecNormalize (SpecState rule era)
   ) =>
   ExecContext rule era ->
   TRC (EraRule rule era) ->
-  Either OpaqueErrorString (SpecState rule era) ->
-  Either OpaqueErrorString (SpecState rule era) ->
+  Either Text (SpecState rule era) ->
+  Either Text (SpecState rule era) ->
   ImpTestM era ()
 checkConformance ctx (TRC (env, st, sig)) implResTest agdaResTest = do
   let
-    failMsg =
-      annotate (color Yellow) . vsep $
-        [ "===== DIFF ====="
-        , diffConformance implResTest agdaResTest
-        ]
-  unless (implResTest == agdaResTest) $ do
-    let envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
-    mbyCborDumpPath <- lookupEnv envVarName
-    case mbyCborDumpPath of
-      Just path -> do
-        dumpCbor path ctx "conformance_dump_ctx"
-        dumpCbor path env "conformance_dump_env"
-        dumpCbor path st "conformance_dump_st"
-        dumpCbor path sig "conformance_dump_sig"
-        logDoc $ "Dumped the CBOR files to " <> ansiExpr path
-      Nothing ->
-        logDoc $
-          "Run the test again with "
-            <> fromString envVarName
-            <> "=<path> to get a CBOR dump of the test data"
-    expectationFailure . ansiDocToString $ failMsg
+    implResNorm = specNormalize <$> implResTest
+    agdaResNorm = specNormalize <$> agdaResTest
+  case (implResNorm, agdaResNorm) of
+    (Right agda, Right impl)
+      | agda == impl -> pure ()
+    (Left _, Left _) -> pure ()
+    (agda, impl) -> do
+      let
+        envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
+        failMsg =
+          annotate (color Yellow) . vsep $
+            [ "===== DIFF ====="
+            , diffConformance agda impl
+            ]
+      mbyCborDumpPath <- lookupEnv envVarName
+      case mbyCborDumpPath of
+        Just path -> do
+          dumpCbor path ctx "conformance_dump_ctx"
+          dumpCbor path env "conformance_dump_env"
+          dumpCbor path st "conformance_dump_st"
+          dumpCbor path sig "conformance_dump_sig"
+          logDoc $ "Dumped the CBOR files to " <> ansiExpr path
+        Nothing ->
+          logDoc $
+            "Run the test again with "
+              <> fromString envVarName
+              <> "=<path> to get a CBOR dump of the test data"
+      expectationFailure . ansiDocToString $ failMsg
 
 testConformance ::
   forall rule era.
@@ -255,11 +283,8 @@ testConformance ::
 testConformance ctx trc = property $ do
   ConformanceResult implResTest agdaResTest implRes <- runConformance @rule @era ctx trc
   globals <- use impGlobalsL
-  let
-    extra =
-      extraInfo @rule @era globals ctx trc (first showOpaqueErrorString implRes)
-  logDoc extra
-  checkConformance @rule @_ ctx trc (first showOpaqueErrorString implResTest) agdaResTest
+  logDoc $ extraInfo @rule @era globals ctx trc (first (T.pack . show) implRes)
+  checkConformance @rule @_ ctx trc (first (T.pack . show) implResTest) agdaResTest
 
 data ConformanceResult rule era = ConformanceResult
   { crTranslationResult ::
@@ -268,7 +293,7 @@ data ConformanceResult rule era = ConformanceResult
         (SpecState rule era)
   , crSpecificationResult ::
       Either
-        OpaqueErrorString
+        Text
         (SpecState rule era)
   , crImplementationResult ::
       Either
@@ -312,7 +337,7 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
   logDoc $ "specSt:\n" <> ansiExpr specSt
   logDoc $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
-    fmap (second fixup) $
+    fmap (second specNormalize) $
       impAnn "Deep evaluating Agda output" $
         evaluateDeep $
           runAgdaRule @rule @era (SpecTRC specEnv specSt specSig)
@@ -320,7 +345,9 @@ runConformance execContext trc@(TRC (env, st, sig)) = do
   implResTest <-
     impAnn "Translating implementation values to SpecRep" $
       case implRes of
-        Right (st', _) -> fmap Right . expectRightExpr $ translateOutput @rule @era execContext trc st'
+        Right (st', _) ->
+          fmap (Right . specNormalize) . expectRightExpr $
+            translateOutput @rule @era execContext trc st'
         Left err -> pure $ Left err
   pure $ ConformanceResult implResTest agdaResTest implRes
 
@@ -353,5 +380,5 @@ runFromAgdaFunction ::
     Agda.ComputationResult Text (SpecState rule era)
   ) ->
   SpecTRC rule era ->
-  Either OpaqueErrorString (SpecState rule era)
+  Either Text (SpecState rule era)
 runFromAgdaFunction f (SpecTRC env st sig) = unComputationResult $ f env st sig

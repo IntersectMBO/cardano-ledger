@@ -16,7 +16,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules (
   ConwayDelegEnv (..),
-  ConwayDelegPredFailure,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
@@ -76,11 +75,6 @@ instance SpecTranslate ctx ConwayDelegCert where
       <*> toSpecRep (getDRepDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
-
-instance SpecTranslate ctx (ConwayDelegPredFailure era) where
-  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
 
 instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
   type SpecRep (DState era) = Agda.DState

@@ -17,14 +17,9 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovCertEnv (..),
-  ConwayGovCertPredFailure,
- )
+import Cardano.Ledger.Conway.Rules (ConwayGovCertEnv (..))
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.TxCert (
-  ConwayGovCert (..),
- )
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
@@ -89,11 +84,6 @@ instance
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
       <*> toSpecRep ccColdCreds
-
-instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
-  type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (VState era) where
   type SpecRep (VState era) = Agda.GState
