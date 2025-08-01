@@ -15,14 +15,14 @@
 module Cardano.Ledger.Api.Era (
   -- * Eras
   Era (
+    EraName,
     PreviousEra,
     ProtVerLow,
     ProtVerHigh
   ),
   EraApi (..),
   eraName,
-  ToEraName,
-  FromEraName,
+  HasEraName (EraFromName),
 
   -- ** Byron
   ByronEra,
@@ -93,7 +93,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
-import Cardano.Ledger.Internal.Era (FromEraName)
+import Cardano.Ledger.Internal.Era (HasEraName (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.MemoBytes (mkMemoizedEra)
