@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,8 +11,7 @@
 
 module Cardano.Ledger.Internal.Definition.Era (
   Era (..),
-  ToEraName,
-  FromEraName,
+  HasEraName (..),
   ByronEra,
   ShelleyEra,
   AllegraEra,
@@ -22,7 +22,6 @@ module Cardano.Ledger.Internal.Definition.Era (
   DijkstraEra,
 ) where
 
-import Data.Proxy
 import Cardano.Ledger.Binary (MaxVersion, MinVersion)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
@@ -44,13 +43,10 @@ class
     -- protocol version for the era, otherwise we can never upgrade to the next version:
     CmpNat (ProtVerLow era) MaxVersion ~ 'LT
   , CmpNat (ProtVerHigh era) MaxVersion ~ 'LT
-  , KnownSymbol (EraName era)
-  , FromEraName (ToEraName era) ~ era
   ) =>
   Era era
   where
-
-  type EraName era = (r :: Symbol) | r -> era
+  type EraName era :: Symbol
 
   -- | Map an era to its predecessor.
   --
@@ -74,6 +70,7 @@ class
   -- >>> eraName @ByronEra
   -- "Byron"
   eraName :: String
+  default eraName :: KnownSymbol (EraName era) => String
   eraName = symbolVal' (proxy# :: Proxy# (EraName era))
 
 -- | This is a non-existent era and is defined for satisfying the `PreviousEra` type family injectivity
@@ -82,11 +79,6 @@ data VoidEra
 -- | This is the era that preceded Shelley era. It cannot have any other class instances,
 -- except for `Era` type class.
 data ByronEra
-
-fromEraName :: (Era era, EraName era ~ name) => Proxy (name :: Symbol) -> Proxy era
-fromEraName _ = Proxy
-
-blah = fromEraName (Proxy :: Proxy "Allegr")
 
 instance Era ByronEra where
   type EraName ByronEra = "Byron"
@@ -147,29 +139,39 @@ instance Era DijkstraEra where
   type ProtVerLow DijkstraEra = 12
   type ProtVerHigh DijkstraEra = 12
 
-type family ToEraName (era :: Type) :: Symbol where
-  ToEraName ByronEra = "Byron"
-  ToEraName ShelleyEra = "Shelley"
-  ToEraName AllegraEra = "Allegra"
-  ToEraName MaryEra = "Mary"
-  ToEraName AlonzoEra = "Alonzo"
-  ToEraName BabbageEra = "Babbage"
-  ToEraName ConwayEra = "Conway"
-  ToEraName DijkstraEra = "Dijkstra"
-  ToEraName era = TypeError ('Text "Unrecognized era " ':<>: 'ShowType era)
+-- This type class cannot be exported from any of the era packages and is only safe to export from
+-- cardano-ledger-api, or any  other package that can depend on all of the cardano-ledegr-[era] packages.
 
-type family FromEraName (name :: Symbol) :: Type where
-  FromEraName "Byron" = ByronEra
-  FromEraName "Shelley" = ShelleyEra
-  FromEraName "Allegra" = AllegraEra
-  FromEraName "Mary" = MaryEra
-  FromEraName "Alonzo" = AlonzoEra
-  FromEraName "Babbage" = BabbageEra
-  FromEraName "Conway" = ConwayEra
-  FromEraName "Dijkstra" = DijkstraEra
-  FromEraName name =
-    TypeError
-      ( 'Text "Era with name "
-          ':<>: 'Text name
-          ':<>: 'Text " is unknown"
-      )
+-- | This class exists in order to be able to derive the era type from its name.
+class
+  ( KnownSymbol eraName
+  , Era (EraFromName eraName)
+  , EraName (EraFromName eraName) ~ eraName
+  ) =>
+  HasEraName eraName
+  where
+  type EraFromName eraName = (era :: Type) | era -> eraName
+
+instance HasEraName "Byron" where
+  type EraFromName "Byron" = ByronEra
+
+instance HasEraName "Shelley" where
+  type EraFromName "Shelley" = ShelleyEra
+
+instance HasEraName "Allegra" where
+  type EraFromName "Allegra" = AllegraEra
+
+instance HasEraName "Mary" where
+  type EraFromName "Mary" = MaryEra
+
+instance HasEraName "Alonzo" where
+  type EraFromName "Alonzo" = AlonzoEra
+
+instance HasEraName "Babbage" where
+  type EraFromName "Babbage" = BabbageEra
+
+instance HasEraName "Conway" where
+  type EraFromName "Conway" = ConwayEra
+
+instance HasEraName "Dijkstra" where
+  type EraFromName "Dijkstra" = DijkstraEra

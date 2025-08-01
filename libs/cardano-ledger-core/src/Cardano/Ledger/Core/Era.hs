@@ -22,8 +22,6 @@ module Cardano.Ledger.Core.Era (
   -- * Era
   Era (..),
   ByronEra,
-  ToEraName,
-  -- It is not safe to re-export FromEraName from core, only ToEraName.
 
   -- ** Rules
   EraRule,
@@ -57,7 +55,7 @@ module Cardano.Ledger.Core.Era (
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Internal.Era (ByronEra, Era (..), FromEraName, ToEraName)
+import Cardano.Ledger.Internal.Era (ByronEra, Era (..), EraFromName)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition.Extended (PredicateFailure, STS (..))
 import qualified Data.ByteString.Lazy as BSL
@@ -177,11 +175,11 @@ type ExactEra inEra era =
 
 -- | Restrict the @era@ to equal to @atLeastEra@ or come after it
 type AtLeastEra (atLeastEra :: Symbol) era =
-  ProtVerAtLeast era (ProtVerLow (FromEraName atLeastEra))
+  ProtVerAtLeast era (ProtVerLow (EraFromName atLeastEra))
 
 -- | Restrict the @era@ to equal to @eraName@ or come before it.
 type AtMostEra (eraMostEra :: Symbol) era =
-  ProtVerAtMost era (ProtVerHigh (FromEraName eraMostEra))
+  ProtVerAtMost era (ProtVerHigh (EraFromName eraMostEra))
 
 -- | Get the value level `Version` of the lowest major protocol version for the supplied @era@.
 eraProtVerLow :: forall era. Era era => Version
