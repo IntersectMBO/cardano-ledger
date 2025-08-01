@@ -91,7 +91,7 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , Crypto c
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)
@@ -124,7 +124,7 @@ instance
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv c era)
   where

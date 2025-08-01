@@ -47,8 +47,8 @@ initStEx1 ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -58,8 +58,8 @@ blockEx1 ::
   forall era.
   ( HasCallStack
   , EraBlockBody era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Block (BHeader MockCrypto) era
 blockEx1 =
@@ -80,8 +80,8 @@ blockNonce ::
   forall era.
   ( HasCallStack
   , EraBlockBody era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
@@ -92,8 +92,8 @@ expectedStEx1 ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -111,8 +111,8 @@ exEmptyBlock ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   CHAINExample era

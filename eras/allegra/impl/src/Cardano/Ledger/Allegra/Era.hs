@@ -19,15 +19,8 @@ module Cardano.Ledger.Allegra.Era (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (AllegraEra)
-import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
-
-instance Era AllegraEra where
-  type PreviousEra AllegraEra = ShelleyEra
-  type ProtVerLow AllegraEra = 3
-
-  eraName = "Allegra"
 
 instance EraGenesis AllegraEra
 

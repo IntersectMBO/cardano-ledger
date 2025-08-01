@@ -31,7 +31,6 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
 ) where
 
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
@@ -45,13 +44,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 -- =====================================================
-
-instance Era ConwayEra where
-  type PreviousEra ConwayEra = BabbageEra
-  type ProtVerLow ConwayEra = 9
-  type ProtVerHigh ConwayEra = 11
-
-  eraName = "Conway"
 
 type instance Value ConwayEra = MaryValue
 

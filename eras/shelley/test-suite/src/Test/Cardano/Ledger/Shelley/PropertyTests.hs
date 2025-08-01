@@ -71,7 +71,7 @@ commonTests ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Signal (EraRule "TICKN" era) ~ Bool
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , GovState era ~ ShelleyGovState era
   , InstantStake era ~ ShelleyInstantStake era
   , QC.BaseEnv (EraRule "LEDGER" era) ~ Globals

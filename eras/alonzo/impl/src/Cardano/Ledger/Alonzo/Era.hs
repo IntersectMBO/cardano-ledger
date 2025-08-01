@@ -19,18 +19,11 @@ module Cardano.Ledger.Alonzo.Era (
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Internal.Era (AlonzoEra)
-import Cardano.Ledger.Mary (MaryEra, MaryValue)
+import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
 -- =====================================================
-
-instance Era AlonzoEra where
-  type PreviousEra AlonzoEra = MaryEra
-  type ProtVerLow AlonzoEra = 5
-  type ProtVerHigh AlonzoEra = 6
-
-  eraName = "Alonzo"
 
 type instance Value AlonzoEra = MaryValue
 

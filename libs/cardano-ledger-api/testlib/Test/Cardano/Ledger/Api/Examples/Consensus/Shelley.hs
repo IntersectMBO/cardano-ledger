@@ -160,7 +160,7 @@ defaultShelleyLedgerExamples ::
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
-  , ProtVerAtMost era 4
+  , AtMostEra "Mary" era
   ) =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   Value era ->
@@ -497,7 +497,7 @@ exampleTxIns =
     [ TxIn (TxId (mkDummySafeHash @EraIndependentTxBody 1)) minBound
     ]
 
-exampleCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => StrictSeq (TxCert era)
+exampleCerts :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => StrictSeq (TxCert era)
 exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)

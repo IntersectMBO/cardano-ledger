@@ -121,7 +121,7 @@ newtype PpupEvent era = PpupNewEpoch EpochNo
 
 instance NFData (PpupEvent era)
 
-instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
+instance (EraPParams era, AtMostEra "Babbage" era) => STS (ShelleyPPUP era) where
   type State (ShelleyPPUP era) = ShelleyGovState era
   type Signal (ShelleyPPUP era) = StrictMaybe (Update era)
   type Environment (ShelleyPPUP era) = PpupEnv era
@@ -147,7 +147,8 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
     2 -> SumD PVCannotFollowPPUP <! From
     k -> Invalid k
 
-ppupTransitionNonEmpty :: (EraPParams era, ProtVerAtMost era 8) => TransitionRule (ShelleyPPUP era)
+ppupTransitionNonEmpty ::
+  (EraPParams era, AtMostEra "Babbage" era) => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs genDelegs)

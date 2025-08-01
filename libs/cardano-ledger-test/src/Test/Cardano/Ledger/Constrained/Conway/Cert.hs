@@ -118,10 +118,10 @@ conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
 -- ==============================================================
 -- Shelley Certs
 
--- | Genesis delegations only work through the Babbage era. Hence the (AtMostEra BabbageEra era)
+-- | Genesis delegations only work through the Babbage era. Hence the (AtMostEra "Babbage" era)
 genesisDelegCertSpec ::
   forall era.
-  (AtMostEra BabbageEra era, Era era) =>
+  (AtMostEra "Babbage" era, Era era) =>
   DState era -> Specification GenesisDelegCert
 genesisDelegCertSpec ds =
   let (vrfKeyHashes, coldKeyHashes) = computeSets ds
@@ -159,7 +159,7 @@ computeSets ds =
 
 shelleyTxCertSpec ::
   forall era.
-  (AtMostEra BabbageEra era, EraSpecPParams era, EraAccounts era) =>
+  (AtMostEra "Babbage" era, EraSpecPParams era, EraAccounts era) =>
   WitUniv era ->
   CertEnv era ->
   ShelleyCertState era ->
@@ -269,7 +269,7 @@ shelleyTxCertKey (ShelleyTxCertMir (MIRCert p _)) = MirKey p
 
 testGenesisCert ::
   forall era.
-  (AtMostEra BabbageEra era, EraSpecDeleg era, EraSpecPParams era, GenScript era) => Gen Property
+  (AtMostEra "Babbage" era, EraSpecDeleg era, EraSpecPParams era, GenScript era) => Gen Property
 testGenesisCert = do
   univ <- genWitUniv @era 200
   wdrls <- genFromSpec (constrained $ \x -> witness univ x)
@@ -281,7 +281,7 @@ testGenesisCert = do
 testShelleyCert ::
   forall era.
   ( Era era
-  , AtMostEra BabbageEra era
+  , AtMostEra "Babbage" era
   , EraSpecPParams era
   , EraSpecDeleg era
   , GenScript era

@@ -14,7 +14,6 @@ module Cardano.Ledger.Babbage.Era (
   BabbageLEDGER,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
@@ -33,13 +32,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 -- =====================================================
-
-instance Era BabbageEra where
-  type PreviousEra BabbageEra = AlonzoEra
-  type ProtVerLow BabbageEra = 7
-  type ProtVerHigh BabbageEra = 8
-
-  eraName = "Babbage"
 
 instance EraGenesis BabbageEra
 

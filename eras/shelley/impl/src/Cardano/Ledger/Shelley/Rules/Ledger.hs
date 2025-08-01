@@ -260,7 +260,7 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   STS (ShelleyLEDGER era)
   where

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +12,6 @@ module Test.Cardano.Protocol.Binary.Cddl (
   praosBlockHuddleSpec,
 ) where
 
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (StandardCrypto)
@@ -51,7 +51,7 @@ cddlBlockSpec = do
 praosBlockCddlSpec ::
   forall era c bh bhbody.
   ( Era era
-  , AtLeastEra BabbageEra era
+  , AtLeastEra "Babbage" era
   , Eq (bh c)
   , Show (bh c)
   , DecCBOR (bh c)
@@ -68,7 +68,7 @@ praosBlockCddlSpec = do
   cddlBlockSpec @era @c @bh @bhbody
   cddlRoundTripCborSpec @(OCert StandardCrypto) v "operational_cert"
   where
-    _atLeastBabbage = atLeastEra @BabbageEra @era
+    _atLeastBabbage = atLeastEra @"Babbage" @era
 
 huddleBlockSpec ::
   forall era c bh bhbody.
@@ -96,7 +96,7 @@ huddleBlockSpec = do
 praosBlockHuddleSpec ::
   forall era c bh bhbody.
   ( Era era
-  , AtLeastEra BabbageEra era
+  , AtLeastEra "Babbage" era
   , Eq (bh c)
   , Show (bh c)
   , DecCBOR (bh c)
@@ -113,4 +113,4 @@ praosBlockHuddleSpec = do
   huddleBlockSpec @era @c @bh @bhbody
   huddleRoundTripCborSpec @(OCert StandardCrypto) v "operational_cert"
   where
-    _atLeastBabbage = atLeastEra @BabbageEra @era
+    _atLeastBabbage = atLeastEra @"Babbage" @era

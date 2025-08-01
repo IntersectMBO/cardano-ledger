@@ -52,7 +52,7 @@ data NewppEnv era = NewppEnv
 instance
   ( EraGov era
   , GovState era ~ ShelleyGovState era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   STS (ShelleyNEWPP era)
   where
@@ -70,7 +70,7 @@ newPpTransition ::
   forall era.
   ( GovState era ~ ShelleyGovState era
   , EraGov era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -89,7 +89,7 @@ newPpTransition = do
 updatePpup ::
   ( EraPParams era
   , GovState era ~ ShelleyGovState era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   Word64 ->
   GovState era ->

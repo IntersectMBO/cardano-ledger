@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Changed the type of `AtMostEra` and `AtLeastEra` to accept a type level string instead of an actual era type.
 * Add `drepDepositCompactL`
 * Change the type of `drepDeposit` to `CompactForm Coin`
 * Remove `AccountState` type synonym for `ChainAccountState`
