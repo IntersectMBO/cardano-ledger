@@ -10,7 +10,6 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.State
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda

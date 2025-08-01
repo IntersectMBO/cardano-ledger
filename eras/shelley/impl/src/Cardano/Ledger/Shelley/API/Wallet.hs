@@ -63,7 +63,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (WitVKey (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   totalAdaES,

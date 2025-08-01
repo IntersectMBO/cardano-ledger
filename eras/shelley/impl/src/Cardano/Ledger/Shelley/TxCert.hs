@@ -103,9 +103,9 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Internal.Era (AllegraEra, AlonzoEra, BabbageEra, MaryEra)
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))

@@ -79,11 +79,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
-import Cardano.Ledger.State (UTxO (UTxO))
+import Cardano.Ledger.State (PoolParams (..), UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)

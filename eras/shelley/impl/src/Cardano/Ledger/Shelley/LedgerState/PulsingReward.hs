@@ -39,7 +39,6 @@ import Cardano.Ledger.Coin (
   toDeltaCoin,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (hardforkBabbageForgoRewardPrefilter)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PoolRank (
