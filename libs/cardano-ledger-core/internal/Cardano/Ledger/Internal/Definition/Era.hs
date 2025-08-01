@@ -22,6 +22,7 @@ module Cardano.Ledger.Internal.Definition.Era (
   DijkstraEra,
 ) where
 
+import Data.Proxy
 import Cardano.Ledger.Binary (MaxVersion, MinVersion)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
@@ -43,11 +44,14 @@ class
     -- protocol version for the era, otherwise we can never upgrade to the next version:
     CmpNat (ProtVerLow era) MaxVersion ~ 'LT
   , CmpNat (ProtVerHigh era) MaxVersion ~ 'LT
-  , KnownSymbol (ToEraName era)
+  , KnownSymbol (EraName era)
   , FromEraName (ToEraName era) ~ era
   ) =>
   Era era
   where
+
+  type EraName era = (r :: Symbol) | r -> era
+
   -- | Map an era to its predecessor.
   --
   -- For example:
@@ -70,7 +74,7 @@ class
   -- >>> eraName @ByronEra
   -- "Byron"
   eraName :: String
-  eraName = symbolVal' (proxy# :: Proxy# (ToEraName era))
+  eraName = symbolVal' (proxy# :: Proxy# (EraName era))
 
 -- | This is a non-existent era and is defined for satisfying the `PreviousEra` type family injectivity
 data VoidEra
@@ -79,7 +83,13 @@ data VoidEra
 -- except for `Era` type class.
 data ByronEra
 
+fromEraName :: (Era era, EraName era ~ name) => Proxy (name :: Symbol) -> Proxy era
+fromEraName _ = Proxy
+
+blah = fromEraName (Proxy :: Proxy "Allegr")
+
 instance Era ByronEra where
+  type EraName ByronEra = "Byron"
   type PreviousEra ByronEra = VoidEra
   type ProtVerLow ByronEra = 0
   type ProtVerHigh ByronEra = 1
@@ -87,24 +97,28 @@ instance Era ByronEra where
 data ShelleyEra
 
 instance Era ShelleyEra where
+  type EraName ShelleyEra = "Shelley"
   type PreviousEra ShelleyEra = ByronEra
   type ProtVerLow ShelleyEra = 2
 
 data AllegraEra
 
 instance Era AllegraEra where
+  type EraName AllegraEra = "Allegra"
   type PreviousEra AllegraEra = ShelleyEra
   type ProtVerLow AllegraEra = 3
 
 data MaryEra
 
 instance Era MaryEra where
+  type EraName MaryEra = "Mary"
   type PreviousEra MaryEra = AllegraEra
   type ProtVerLow MaryEra = 4
 
 data AlonzoEra
 
 instance Era AlonzoEra where
+  type EraName AlonzoEra = "Alonzo"
   type PreviousEra AlonzoEra = MaryEra
   type ProtVerLow AlonzoEra = 5
   type ProtVerHigh AlonzoEra = 6
@@ -112,6 +126,7 @@ instance Era AlonzoEra where
 data BabbageEra
 
 instance Era BabbageEra where
+  type EraName BabbageEra = "Babbage"
   type PreviousEra BabbageEra = AlonzoEra
   type ProtVerLow BabbageEra = 7
   type ProtVerHigh BabbageEra = 8
@@ -119,6 +134,7 @@ instance Era BabbageEra where
 data ConwayEra
 
 instance Era ConwayEra where
+  type EraName ConwayEra = "Conway"
   type PreviousEra ConwayEra = BabbageEra
   type ProtVerLow ConwayEra = 9
   type ProtVerHigh ConwayEra = 11
@@ -126,6 +142,7 @@ instance Era ConwayEra where
 data DijkstraEra
 
 instance Era DijkstraEra where
+  type EraName DijkstraEra = "Dijkstra"
   type PreviousEra DijkstraEra = ConwayEra
   type ProtVerLow DijkstraEra = 12
   type ProtVerHigh DijkstraEra = 12
