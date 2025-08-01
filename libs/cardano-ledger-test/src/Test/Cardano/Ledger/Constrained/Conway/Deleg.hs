@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -32,6 +33,7 @@ import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
+import Data.Foldable (Foldable (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -137,12 +139,17 @@ dRepDelegationsSpec univ =
           (branchW 1 $ const True)
     ]
 
+mapMaybeSet :: Ord b => (a -> Maybe b) -> Set a -> Set b
+mapMaybeSet f = foldr' helper mempty
+  where
+    helper x = maybe id Set.insert (f x)
+
 dStateSpec ::
-  (Era era, HasSpec (Accounts era)) =>
-  WitUniv era ->
-  Map RewardAccount Coin ->
+  ( Era era
+  , HasSpec (Accounts era)
+  ) =>
   Specification (DState era)
-dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
+dStateSpec = constrained $ \ [var| dstate |] ->
   match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
       assert $ sizeOf_ futureGenDelegs ==. 0

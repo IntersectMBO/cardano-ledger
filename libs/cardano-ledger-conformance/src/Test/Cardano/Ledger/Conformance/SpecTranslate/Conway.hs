@@ -1,11 +1,9 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
   vkeyFromInteger,
   vkeyToInteger,
-  ConwayTxBodyTransContext,
 ) where
 
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
-  ConwayTxBodyTransContext,
   vkeyFromInteger,
   vkeyToInteger,
  )
