@@ -10,6 +10,7 @@
 -- for the CERTS rule
 module Test.Cardano.Ledger.Constrained.Conway.Certs where
 
+import Cardano.Ledger.Address (Withdrawals)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
@@ -18,6 +19,7 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq, fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
@@ -33,11 +35,11 @@ txZero = mkBasicTx mkBasicTxBody
 
 certsEnvSpec ::
   (EraSpecPParams era, HasSpec (Tx era)) =>
-  Specification (CertsEnv era)
-certsEnvSpec = constrained $ \ce ->
+  Withdrawals -> Specification (CertsEnv era)
+certsEnvSpec withdawals = constrained $ \ce ->
   match ce $ \tx pp _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
-    , assert $ tx ==. lit txZero
+    , assert $ tx ==. lit (txZero & bodyTxL . withdrawalsTxBodyL .~ withdawals)
     , genHint 3 commproposals
     ]
 

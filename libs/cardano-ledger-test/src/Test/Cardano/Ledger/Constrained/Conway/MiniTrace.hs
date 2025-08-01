@@ -18,6 +18,7 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   spec,
+  ConwayCertGenContext (..),
   ConstrainedGeneratorBundle (..),
   constrainedCert,
   constrainedCerts,
@@ -32,7 +33,7 @@ module Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   constrainedUtxo,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Address (RewardAccount, Withdrawals (..))
 import Cardano.Ledger.BaseTypes (
   EpochNo,
   Network (..),
@@ -466,13 +467,13 @@ conwayCertExecContextSpec univ wdrlsize = constrained' $
   \ [var|withdrawals|] _voteProcs [var|delegatees|] ->
     [ dependsOn withdrawals delegatees
     , satisfies delegatees (whoDelegatesSpec univ)
-    , assert
-        [ assert $ sizeOf_ withdrawals <=. lit wdrlsize
-        , reify delegatees delegators $ \ [var|credStakeSet|] ->
-            [ forAll' withdrawals $ \ [var|rewAccount|] [var|_wCoin|] ->
-                match rewAccount $ \ [var|network|] [var|rewcred|] ->
-                  [network ==. lit Testnet, member_ rewcred credStakeSet]
-            ]
+    , assert $ sizeOf_ withdrawals <=. lit wdrlsize
+    , reify delegatees delegators $ \ [var|credStakeSet|] ->
+        [ forAll' withdrawals $ \ [var|rewAccount|] [var|_wCoin|] ->
+            match rewAccount $ \ [var|network|] [var|rewcred|] ->
+              [ network ==. lit Testnet
+              , member_ rewcred credStakeSet
+              ]
         ]
     ]
 
@@ -530,7 +531,7 @@ constrainedCerts ::
 constrainedCerts =
   ConstrainedGeneratorBundle
     genDelegCtx
-    (const certsEnvSpec)
+    (\(_, ConwayCertGenContext {ccccWithdrawals}) -> certsEnvSpec $ Withdrawals ccccWithdrawals)
     (\ctx _ -> certStateSpec_ ctx)
     (\(u, _) -> txCertsSpec u)
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,13 +20,15 @@ import Constrained.API
 import Control.Monad.Cont (ContT (..))
 import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..), TRC (..))
+import Data.Map.Strict qualified as Map
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), ForAllExecTypes, testConformance)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
 import Test.Cardano.Ledger.Conformance.Imp qualified as Imp (spec)
 import Test.Cardano.Ledger.Conformance.Imp.Ratify qualified as RatifyImp
 import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConstrainedGeneratorBundle (..),
+  ConwayCertGenContext (..),
   constrainedCert,
   constrainedCerts,
   constrainedDeleg,
@@ -115,16 +118,21 @@ spec :: Spec
 spec = do
   describe "Conformance with constrained generators" $ do
     describe "Ticks transition graph" $ do
-      prop "ENACT" $ conformsToImplConstrained_ constrainedEnact
+      prop "ENACT" $ conformsToImplConstrained constrainedEnact $ \ctx _ _ _ -> pure ctx
       prop "RATIFY" $ conformsToImplConstrained_ constrainedRatify
       xprop "EPOCH" $ conformsToImplConstrained_ constrainedEpoch
       xprop "NEWEPOCH" $ conformsToImplConstrained_ constrainedEpoch
     describe "Blocks transition graph" $ do
-      prop "DELEG" $ conformsToImplConstrained_ constrainedDeleg
+      prop "DELEG" $
+        conformsToImplConstrained constrainedDeleg $
+          \(_, ConwayCertGenContext {ccccDelegatees}) _ _ _ -> pure $ Map.keysSet ccccDelegatees
       prop "GOVCERT" $ conformsToImplConstrained_ constrainedGovCert
       prop "POOL" $ conformsToImplConstrained_ constrainedPool
       prop "CERT" $ conformsToImplConstrained_ constrainedCert
-      prop "CERTS" $ conformsToImplConstrained_ constrainedCerts
+      prop "CERTS" $
+        conformsToImplConstrained constrainedCerts $
+          \(_, ConwayCertGenContext {..}) _ _ _ ->
+            pure $ ConwayCertExecContext ccccWithdrawals ccccVotes
       prop "GOV" $ conformsToImplConstrained_ constrainedGov
       -- UTXO is disabled due to: https://github.com/IntersectMBO/cardano-ledger/issues/4876
       xprop "UTXO" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext

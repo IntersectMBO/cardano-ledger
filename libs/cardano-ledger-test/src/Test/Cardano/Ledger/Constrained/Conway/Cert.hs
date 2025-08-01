@@ -66,31 +66,35 @@ delegateeSpec univ = constrained $ \x ->
 
 shelleyCertStateSpec ::
   forall era.
-  (EraSpecDeleg era, EraCertState era) =>
+  ( EraSpecDeleg era
+  , EraCertState era
+  ) =>
   WitUniv era ->
-  Set (Credential 'DRepRole) ->
-  Map RewardAccount Coin ->
   Specification (ShelleyCertState era)
-shelleyCertStateSpec univ _delegatees wdrls =
+shelleyCertStateSpec univ =
   constrained $ \cs ->
     match cs $ \pState dState ->
       [ satisfies pState (pStateSpec @era univ)
-      , satisfies dState (dStateSpec @era univ wdrls)
+      , satisfies dState (dStateSpec @era)
       ]
 
 conwayCertStateSpec ::
   forall era.
-  (EraSpecDeleg era, EraCertState era, ConwayEraCertState era) =>
+  ( EraSpecDeleg era
+  , EraCertState era
+  , ConwayEraCertState era
+  , Accounts era ~ ConwayAccounts era
+  ) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Map RewardAccount Coin ->
   Specification (ConwayCertState era)
-conwayCertStateSpec univ delegatees wdrls =
+conwayCertStateSpec univ delegatees poolreg =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
       [ satisfies pState (pStateSpec @era univ)
-      , satisfies dState (dStateSpec @era univ wdrls)
+      , satisfies dState (dStateSpec @era)
       , satisfies vState (vStateSpec univ delegatees)
+      , match dState $ \accounts _ _ _ -> satisfies accounts (conwayAccountsSpec univ poolreg)
       ]
 
 conwayTxCertSpec ::
@@ -197,33 +201,32 @@ class
   certStateSpec ::
     WitUniv era ->
     Set (Credential 'DRepRole) ->
-    Map RewardAccount Coin ->
     Specification (CertState era)
 
 instance EraSpecCert ShelleyEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec wituniv _ = shelleyCertStateSpec wituniv
 
 instance EraSpecCert AllegraEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec wituniv _ = shelleyCertStateSpec wituniv
 
 instance EraSpecCert MaryEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec wituniv _ = shelleyCertStateSpec wituniv
 
 instance EraSpecCert AlonzoEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec wituniv _ = shelleyCertStateSpec wituniv
 
 instance EraSpecCert BabbageEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec wituniv _ = shelleyCertStateSpec wituniv
 
 instance EraSpecCert ConwayEra where
   txCertSpec = conwayTxCertSpec
