@@ -131,7 +131,7 @@ newtype ShelleyDelegEvent era = DelegNewEpoch EpochNo
 instance NFData (ShelleyDelegEvent era)
 
 instance
-  (EraPParams era, ShelleyEraAccounts era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   STS (ShelleyDELEG era)
   where
   type State (ShelleyDELEG era) = DState era
@@ -245,7 +245,7 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
+  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, AtMostEra "Babbage" era) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot epochNo ptr chainAccountState pp, ds, c) <- judgmentContext
@@ -369,7 +369,7 @@ delegationTransition = do
       pure ds
 
 checkSlotNotTooLate ::
-  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
+  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, AtMostEra "Babbage" era) =>
   SlotNo ->
   EpochNo ->
   Rule (ShelleyDELEG era) 'Transition ()

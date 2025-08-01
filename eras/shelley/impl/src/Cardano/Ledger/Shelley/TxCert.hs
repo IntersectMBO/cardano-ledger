@@ -160,11 +160,11 @@ class EraTxCert era => ShelleyEraTxCert era where
   mkDelegStakeTxCert :: StakeCredential -> KeyHash 'StakePool -> TxCert era
   getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash 'StakePool)
 
-  mkGenesisDelegTxCert :: ProtVerAtMost era 8 => GenesisDelegCert -> TxCert era
-  getGenesisDelegTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe GenesisDelegCert
+  mkGenesisDelegTxCert :: AtMostEra "Babbage" era => GenesisDelegCert -> TxCert era
+  getGenesisDelegTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe GenesisDelegCert
 
-  mkMirTxCert :: ProtVerAtMost era 8 => MIRCert -> TxCert era
-  getMirTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe MIRCert
+  mkMirTxCert :: AtMostEra "Babbage" era => MIRCert -> TxCert era
+  getMirTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe MIRCert
 
 instance ShelleyEraTxCert ShelleyEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
@@ -212,13 +212,13 @@ pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
     DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
 pattern MirTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert -> TxCert era
+  (ShelleyEraTxCert era, AtMostEra "Babbage" era) => MIRCert -> TxCert era
 pattern MirTxCert d <- (getMirTxCert -> Just d)
   where
     MirTxCert d = mkMirTxCert d
 
 pattern GenesisDelegTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   KeyHash 'Genesis ->
   KeyHash 'GenesisDelegate ->
   VRFVerKeyHash 'GenDelegVRF ->
@@ -543,7 +543,7 @@ isDelegation (DelegStakeTxCert _ _) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isGenesisDelegation :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isGenesisDelegation = isJust . getGenesisDelegTxCert
 
 -- | Check for 'RegPool' constructor
@@ -556,15 +556,15 @@ isRetirePool :: EraTxCert era => TxCert era -> Bool
 isRetirePool (RetirePoolTxCert _ _) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isInstantaneousRewards :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isInstantaneousRewards = isJust . getMirTxCert
 
-isReservesMIRCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isReservesMIRCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isReservesMIRCert x = case getMirTxCert x of
   Just (MIRCert ReservesMIR _) -> True
   _ -> False
 
-isTreasuryMIRCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isTreasuryMIRCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isTreasuryMIRCert x = case getMirTxCert x of
   Just (MIRCert TreasuryMIR _) -> True
   _ -> False

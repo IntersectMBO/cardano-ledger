@@ -87,7 +87,6 @@ library testlib
     base,
     bytestring,
     cardano-crypto-class >=2.1.1,
-    cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},

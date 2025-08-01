@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -45,7 +46,7 @@ spec =
 
 specForEra ::
   forall era.
-  (Era era, AtMostEra AlonzoEra era) =>
+  (Era era, AtMostEra "Alonzo" era) =>
   IO [BSL.ByteString] ->
   Huddle ->
   Int ->
@@ -67,4 +68,4 @@ specForEra readCddlFiles cddlFiles n = do
             (eraProtVerLow @era)
             "[ operational_cert ]"
   where
-    _atMostAlonzo = atMostEra @AlonzoEra @era
+    _atMostAlonzo = atMostEra @"Alonzo" @era

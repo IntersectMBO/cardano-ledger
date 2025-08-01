@@ -232,7 +232,7 @@ instance
   ( ShelleyEraAccounts era
   , ShelleyEraTxCert era
   , EraPParams era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   , Event (EraRule "DELEG" era) ~ ShelleyDelegEvent era
   ) =>

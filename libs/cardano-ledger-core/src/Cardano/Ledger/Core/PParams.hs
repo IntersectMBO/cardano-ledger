@@ -9,7 +9,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -104,7 +103,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Field, decode, field, invalidField)
 import Cardano.Ledger.Coin (Coin (..), partialCompactCoinL)
 import Cardano.Ledger.Compactible (Compactible (..), partialCompactFL)
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost, fromEraCBOR, toEraCBOR)
+import Cardano.Ledger.Core.Era (AtMostEra, Era (..), PreviousEra, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
@@ -392,30 +391,30 @@ class
   hkdTauL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
   -- | Decentralization parameter
-  hkdDL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f UnitInterval)
+  hkdDL :: (HKDFunctor f, AtMostEra "Alonzo" era) => Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
   -- | Decentralization parameter getter
   ppDG :: SimpleGetter (PParams era) UnitInterval
-  default ppDG :: ProtVerAtMost era 6 => SimpleGetter (PParams era) UnitInterval
+  default ppDG :: AtMostEra "Alonzo" era => SimpleGetter (PParams era) UnitInterval
   ppDG = ppLensHKD . hkdDL @era @Identity
 
   -- | Extra entropy
-  hkdExtraEntropyL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f Nonce)
+  hkdExtraEntropyL :: (HKDFunctor f, AtMostEra "Alonzo" era) => Lens' (PParamsHKD f era) (HKD f Nonce)
 
   -- | Protocol version
   hkdProtocolVersionL ::
-    (HKDFunctor f, ProtVerAtMost era 8) => Lens' (PParamsHKD f era) (HKD f ProtVer)
+    (HKDFunctor f, AtMostEra "Babbage" era) => Lens' (PParamsHKD f era) (HKD f ProtVer)
 
   ppProtocolVersionL :: Lens' (PParams era) ProtVer
-  default ppProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParams era) ProtVer
+  default ppProtocolVersionL :: AtMostEra "Babbage" era => Lens' (PParams era) ProtVer
   ppProtocolVersionL = ppLensHKD . hkdProtocolVersionL @era @Identity
 
   -- | PParamsUpdate Protocol version
-  ppuProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+  ppuProtocolVersionL :: AtMostEra "Babbage" era => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
   ppuProtocolVersionL = ppuLensHKD . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value
-  hkdMinUTxOValueL :: HKDFunctor f => ProtVerAtMost era 4 => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinUTxOValueL :: (HKDFunctor f, AtMostEra "Mary" era) => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
@@ -489,15 +488,15 @@ ppTauL :: forall era. EraPParams era => Lens' (PParams era) UnitInterval
 ppTauL = ppLensHKD . hkdTauL @era @Identity
 
 -- | Decentralization parameter
-ppDL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) UnitInterval
+ppDL :: forall era. (EraPParams era, AtMostEra "Alonzo" era) => Lens' (PParams era) UnitInterval
 ppDL = ppLensHKD . hkdDL @era @Identity
 
 -- | Extra entropy
-ppExtraEntropyL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) Nonce
+ppExtraEntropyL :: forall era. (EraPParams era, AtMostEra "Alonzo" era) => Lens' (PParams era) Nonce
 ppExtraEntropyL = ppLensHKD . hkdExtraEntropyL @era @Identity
 
 -- | Minimum UTxO value
-ppMinUTxOValueL :: forall era. (EraPParams era, ProtVerAtMost era 4) => Lens' (PParams era) Coin
+ppMinUTxOValueL :: forall era. (EraPParams era, AtMostEra "Mary" era) => Lens' (PParams era) Coin
 ppMinUTxOValueL = ppLensHKD . hkdMinUTxOValueL @era @Identity
 
 -- | Minimum Stake Pool Cost
@@ -564,21 +563,21 @@ ppuTauL = ppuLensHKD . hkdTauL @era @StrictMaybe
 -- | Decentralization parameter
 ppuDL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Alonzo" era) =>
   Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
 ppuDL = ppuLensHKD . hkdDL @era @StrictMaybe
 
 -- | Extra entropy
 ppuExtraEntropyL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Alonzo" era) =>
   Lens' (PParamsUpdate era) (StrictMaybe Nonce)
 ppuExtraEntropyL = ppuLensHKD . hkdExtraEntropyL @era @StrictMaybe
 
 -- | Minimum UTxO value
 ppuMinUTxOValueL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 4) =>
+  (EraPParams era, AtMostEra "Mary" era) =>
   Lens' (PParamsUpdate era) (StrictMaybe Coin)
 ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueL @era @StrictMaybe
 

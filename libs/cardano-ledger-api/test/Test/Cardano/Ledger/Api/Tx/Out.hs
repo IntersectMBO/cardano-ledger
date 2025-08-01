@@ -25,7 +25,7 @@ propSetShelleyMinTxOut ::
   ( EraTxOut era
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (TxOut era)
-  , AtMostEra MaryEra era
+  , AtMostEra "Mary" era
   ) =>
   Spec
 propSetShelleyMinTxOut =
@@ -39,7 +39,7 @@ propSetShelleyMinTxOut =
             | otherwise = (27 + Val.size val) * (minUTxOValue `quot` 27)
        in Val.coin val `shouldBe` Coin (max minVal minUTxOValue)
   where
-    _atMostMary = atMostEra @MaryEra @era
+    _atMostMary = atMostEra @"Mary" @era
 
 propSetAlonzoMinTxOut :: Spec
 propSetAlonzoMinTxOut =

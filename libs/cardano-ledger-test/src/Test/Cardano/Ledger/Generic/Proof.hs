@@ -80,6 +80,7 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..))
 import Cardano.Ledger.Conway.State (ConwayCertState, ConwayEraCertState)
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
 import Cardano.Ledger.Core (
+  AtMostEra,
   EraPParams,
   EraRule,
   EraScript,
@@ -87,7 +88,6 @@ import Cardano.Ledger.Core (
   EraTxAuxData,
   EraTxOut,
   PParamsHKD,
-  ProtVerAtMost,
   Script,
   TxCert,
   TxOut,
@@ -336,9 +336,9 @@ instance Shaped Proof any where
 
 data TxOutWit era where
   TxOutShelleyToMary ::
-    (TxOut era ~ ShelleyTxOut era, EraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+    (TxOut era ~ ShelleyTxOut era, EraTxOut era, AtMostEra "Babbage" era) => TxOutWit era
   TxOutAlonzoToAlonzo ::
-    (TxOut era ~ AlonzoTxOut era, AlonzoEraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+    (TxOut era ~ AlonzoTxOut era, AlonzoEraTxOut era, AtMostEra "Babbage" era) => TxOutWit era
   TxOutBabbageToConway :: (TxOut era ~ BabbageTxOut era, BabbageEraTxOut era) => TxOutWit era
 
 whichTxOut :: Proof era -> TxOutWit era
@@ -351,7 +351,7 @@ whichTxOut Conway = TxOutBabbageToConway
 
 data TxCertWit era where
   TxCertShelleyToBabbage ::
-    (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
+    (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCertWit era
   TxCertConwayToConway ::
     (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era, ConwayEraPParams era) => TxCertWit era
 
