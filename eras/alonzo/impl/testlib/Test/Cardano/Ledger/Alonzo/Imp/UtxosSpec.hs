@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,19 +12,22 @@
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (NoCostModel))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (NoCostModel), evalTxExUnits)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), eraLanguages)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers, unRedeemersL)
+import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~), (<>~))
+import Lens.Micro (over, (%~), (&), (.~), (<>~))
+import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -42,63 +46,97 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = describe "UTXOS" $
-  forM_ (eraLanguages @era) $ \lang ->
-    withSLanguage lang $ \slang ->
-      describe (show lang) $ do
-        let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
-            alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+spec =
+  describe "UTXOS" $ do
+    describe "Scripts" $
+      forM_ (eraLanguages @era) $ \lang ->
+        withSLanguage lang $ \slang ->
+          describe (show lang) $ do
+            let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
+                alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
 
-        let scripts =
-              [ ("redeemerSameAsDatum", redeemerSameAsDatum)
-              , ("purposeIsWellformedWithDatum", purposeIsWellformedWithDatum)
-              , ("datumIsWellformed", datumIsWellformed)
-              , ("inputsOutputsAreNotEmptyWithDatum", inputsOutputsAreNotEmptyWithDatum)
-              ]
+            let scripts =
+                  [ ("redeemerSameAsDatum", redeemerSameAsDatum)
+                  , ("purposeIsWellformedWithDatum", purposeIsWellformedWithDatum)
+                  , ("datumIsWellformed", datumIsWellformed)
+                  , ("inputsOutputsAreNotEmptyWithDatum", inputsOutputsAreNotEmptyWithDatum)
+                  ]
 
-        describe "Spending scripts with a Datum" $ do
-          forM_ scripts $ \(name, script) -> do
-            it name $ do
-              let sHash = hashPlutusScript (script slang)
-              txIn0 <- produceScript sHash
-              submitTxAnn_ "Submit a transaction that consumes the script output" $
-                mkBasicTx mkBasicTxBody
-                  & bodyTxL . inputsTxBodyL
-                    .~ Set.singleton txIn0
-              passEpoch
+            describe "ExUnits" $ do
+              it "Calculate ExUnits" $ do
+                let
+                  overrideUnits :: Tx era -> ImpTestM era (Tx era)
+                  overrideUnits tx = do
+                    pp <- getsNES $ nesEsL . curPParamsEpochStateL
+                    utxo <- getUTxO
+                    Globals {systemStart, epochInfo} <- use impGlobalsL
+                    units <-
+                      either (fail . show) pure . sequence $
+                        evalTxExUnits pp tx utxo epochInfo systemStart
+                    pure $ tx & witsTxL . rdmrsTxWitsL %~ updateRedeemerUnits units
+                  redoAddrWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
+                  updateRedeemerUnits :: Map.Map (PlutusPurpose AsIx era) ExUnits -> Redeemers era -> Redeemers era
+                  updateRedeemerUnits units =
+                    over unRedeemersL $
+                      Map.merge
+                        Map.dropMissing -- Ignore purposes not already in the redeemers
+                        Map.preserveMissing -- Don't touch purposes not being updated
+                        (Map.zipWithMatched $ \_p u (d, _u) -> (d, u))
+                        units
 
-        it "Valid transaction marked as invalid" $ do
-          let tx = mkBasicTx mkBasicTxBody & isValidTxL .~ IsValid False
-          submitFailingTx tx [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
+                txIn <- produceScript alwaysSucceedsWithDatumHash
+                withPostFixup (overrideUnits >=> fixupPPHash >=> redoAddrWits) $
+                  submitTx_ $
+                    mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
-        it "Invalid transaction marked as valid" $ do
-          txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
-          submitPhase2Invalid_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+              it "Attempt to calculate ExUnits with an invalid tx" $ do
+                -- exampleInvalidExUnitCalc @era -- TODO: Enhance?
+                -- pure ()
+                const $ pendingWith "not implemented yet"
 
-        it "Invalid plutus script fails in phase 2" $ do
-          txIn0 <- produceScript redeemerSameAsDatumHash
-          exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-          submitTxAnn_ "Submitting consuming transaction" $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-              & isValidTxL .~ IsValid False
-              & witsTxL . rdmrsTxWitsL . unRedeemersL
-                .~ Map.singleton (mkSpendingPurpose $ AsIx 0) (Data $ P.I 32, exUnits)
+            describe "Spending scripts with a Datum" $ do
+              forM_ scripts $ \(name, script) -> do
+                it name $ do
+                  let sHash = hashPlutusScript (script slang)
+                  txIn0 <- produceScript sHash
+                  submitTxAnn_ "Submit a transaction that consumes the script output" $
+                    mkBasicTx mkBasicTxBody
+                      & bodyTxL . inputsTxBodyL
+                        .~ Set.singleton txIn0
+                  passEpoch
 
-        describe "Scripts pass in phase 2" $ do
-          let scripts' = drop 1 scripts
-          forM_ scripts' $ \(name, script) -> do
-            it name $ do
-              let sHash = hashPlutusScript (script slang)
-              txIn0 <- produceScript sHash
+            it "Valid transaction marked as invalid" $ do
+              let tx = mkBasicTx mkBasicTxBody & isValidTxL .~ IsValid False
+              submitFailingTx tx [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
+
+            it "Invalid transaction marked as valid" $ do
+              txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
+              submitPhase2Invalid_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+
+            it "Invalid plutus script fails in phase 2" $ do
+              txIn0 <- produceScript redeemerSameAsDatumHash
+              exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
               submitTxAnn_ "Submitting consuming transaction" $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+                  & isValidTxL .~ IsValid False
+                  & witsTxL . rdmrsTxWitsL . unRedeemersL
+                    .~ Map.singleton (mkSpendingPurpose $ AsIx 0) (Data $ P.I 32, exUnits)
 
-        it "No cost model" $ do
-          txIn <- produceScript alwaysSucceedsWithDatumHash
-          let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL <>~ [txIn]
-          modifyPParams $ ppCostModelsL .~ mempty
-          submitFailingTx
-            tx
-            [injectFailure (CollectErrors [NoCostModel lang])]
+            describe "Scripts pass in phase 2" $ do
+              let scripts' = drop 1 scripts
+              forM_ scripts' $ \(name, script) -> do
+                it name $ do
+                  let sHash = hashPlutusScript (script slang)
+                  txIn0 <- produceScript sHash
+                  submitTxAnn_ "Submitting consuming transaction" $
+                    mkBasicTx mkBasicTxBody
+                      & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+
+            it "No cost model" $ do
+              txIn <- produceScript alwaysSucceedsWithDatumHash
+              let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL <>~ [txIn]
+              modifyPParams $ ppCostModelsL .~ mempty
+              submitFailingTx
+                tx
+                [injectFailure (CollectErrors [NoCostModel lang])]
