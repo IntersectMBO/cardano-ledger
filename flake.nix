@@ -60,7 +60,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc966";
+        defaultCompiler = "ghc967";
         fourmoluVersion = "0.16.2.0";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
