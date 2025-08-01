@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,20 +12,30 @@
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (NoCostModel))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  CollectError (NoCostModel),
+  TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
+  evalTxExUnits,
+ )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Control.Monad.Reader (asks)
+import Data.Either (isLeft)
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~), (<>~))
+import Lens.Micro (set, (%~), (&), (.~), (<>~), (^.), _2)
+import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (
@@ -44,8 +55,8 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $
   forM_ (eraLanguages @era) $ \lang ->
-    withSLanguage lang $ \slang ->
-      describe (show lang) $ do
+    describe (show lang) $
+      withSLanguage lang $ \slang -> do
         let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
             alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
 
@@ -55,6 +66,57 @@ spec = describe "UTXOS" $
               , ("datumIsWellformed", datumIsWellformed)
               , ("inputsOutputsAreNotEmptyWithDatum", inputsOutputsAreNotEmptyWithDatum)
               ]
+
+        describe "ExUnits" $ do
+          it "Calculate ExUnits" $ do
+            let
+              overrideExUnits tx = do
+                pp <- getsNES $ nesEsL . curPParamsEpochStateL
+                utxo <- getUTxO
+                Globals {epochInfo, systemStart} <- use impGlobalsL
+                purposeUnits <-
+                  either (fail . show) pure . sequence $
+                    evalTxExUnits pp tx utxo epochInfo systemStart
+                pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ spliceUnits purposeUnits
+              spliceUnits =
+                Map.merge
+                  Map.dropMissing -- Ignore purposes not already in the redeemers
+                  Map.preserveMissing -- Don't touch purposes not being updated
+                  (Map.zipWithMatched $ \_ -> set _2) -- Replace the units, keep the datum
+              redoAddrWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
+
+            txIn <- produceScript alwaysSucceedsWithDatumHash
+            withPostFixup (overrideExUnits >=> fixupPPHash >=> redoAddrWits) $
+              submitTx_ $
+                mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+
+          it "Attempt to calculate ExUnits with an invalid tx" $ do
+            txIn <- produceScript alwaysSucceedsWithDatumHash
+            let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+
+            txFixed <- (tx &) =<< asks iteFixup
+            logToExpr txFixed
+
+            let
+              twiddleIx (SJust (SpendingPurpose (AsIx 0))) = SpendingPurpose (AsIx 1)
+              twiddleIx _ = SpendingPurpose (AsIx 0)
+              badPurpose =
+                twiddleIx $
+                  redeemerPointer (txFixed ^. bodyTxL) (SpendingPurpose $ AsItem txIn)
+              du = (Data $ PV1.I 42, ExUnits 5000 5000)
+              txBorked =
+                txFixed
+                  & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert badPurpose du
+            logToExpr txBorked
+
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            utxo <- getUTxO
+            Globals {epochInfo, systemStart} <- use impGlobalsL
+            let report = evalTxExUnits pp txBorked utxo epochInfo systemStart
+            logToExpr report
+
+            Map.filter isLeft report
+              `shouldBe` Map.singleton badPurpose (Left (RedeemerPointsToUnknownScriptHash badPurpose))
 
         describe "Spending scripts with a Datum" $ do
           forM_ scripts $ \(name, script) -> do

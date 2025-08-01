@@ -48,6 +48,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScriptsWithLogs,
@@ -119,6 +120,8 @@ class
   , AlonzoEraTest era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , TxAuxData era ~ AlonzoTxAuxData era
+  , ToExpr (ContextError era)
+  , ToExpr (PlutusPurpose AsItem era)
   ) =>
   AlonzoEraImp era
   where

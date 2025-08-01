@@ -18,7 +18,6 @@
 
 module Test.Cardano.Ledger.Examples.BabbageFeatures (
   babbageFeatures,
-  toolTests,
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
@@ -53,10 +52,6 @@ import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
-import Test.Cardano.Ledger.Alonzo.Tools (
-  exampleExUnitCalc,
-  exampleInvalidExUnitCalc,
- )
 import Test.Cardano.Ledger.Conway.Era ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -315,19 +310,3 @@ defaultPParams =
     & ppProtocolVersionL .~ ProtVer (eraProtVerLow @era) 0
     & ppCollateralPercentageL .~ 1
     & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 5)
-
-toolTests :: TestTree
-toolTests =
-  testGroup
-    "ExUnit tools"
-    [ testGroup
-        "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc @AlonzoEra)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @AlonzoEra)
-        ]
-    , testGroup
-        "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc @BabbageEra)
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc @BabbageEra)
-        ]
-    ]
