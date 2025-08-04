@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid (spec) where
+module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid (spec, babbageEraSpecificSpec) where
 
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Babbage.Core
@@ -171,6 +171,17 @@ spec = describe "Valid" $ do
                 & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
 
+babbageEraSpecificSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , BabbageEraTxBody era
+  , ShelleyEraTxCert era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+babbageEraSpecificSpec = describe "Valid" $ do
+  forM_ @[] [PlutusV2 .. eraMaxLanguage @era] $ \slang -> do
+    describe (show slang) $ do
+      withSLanguage slang $ \lang -> do
         it "Use a reference script to authorize a delegation certificate" $ do
           addr <- freshKeyAddr_
           plutus <- mkPlutusScript $ alwaysSucceedsNoDatum lang
