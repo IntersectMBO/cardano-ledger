@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Rules
 import Data.Typeable (Typeable)
@@ -43,6 +44,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
@@ -54,6 +56,7 @@ spec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , EraPlutusTxInfo PlutusV2 era
   ) =>
   Spec
 spec = ConwayImp.spec @era
