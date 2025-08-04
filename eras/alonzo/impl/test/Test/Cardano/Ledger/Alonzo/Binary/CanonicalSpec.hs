@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
+module Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
@@ -26,20 +26,18 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (Language)
-import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS
 import Data.Functor.Compose (Compose (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Common
 import qualified Test.QuickCheck.Property as QCP
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
-tests :: TestTree
-tests = testProperty "LangDepView encoding is canonical" canonicalLangDepView
+spec :: Spec
+spec = describe "LangDepView encoding" $ do
+  prop "is canonical" canonicalLangDepView
 
 canonicalLangDepView :: PParams AlonzoEra -> Set Language -> Property
 canonicalLangDepView pparams langs =
@@ -95,7 +93,6 @@ checkCanonicalTerm = do
    -  If two keys have the same length, the one with the lower value
       in (byte-wise) lexical order sorts earlier.
 -}
-
 shortLex :: ByteString -> ByteString -> Ordering
 shortLex x y = case compare (LBS.length x) (LBS.length y) of
   LT -> LT

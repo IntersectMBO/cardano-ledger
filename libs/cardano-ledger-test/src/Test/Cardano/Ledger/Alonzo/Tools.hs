@@ -49,8 +49,6 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Common (ToExpr, showExpr)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (

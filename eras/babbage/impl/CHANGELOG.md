@@ -18,6 +18,9 @@
 
 ### `testlib`
 
+* Added `Examples` module with: `ledgerExamples`, `exampleBabbageNewEpochState`, `exampleCollateralOutput`
+* Added `Twiddle` instances for Babbage core types
+* Added `TxInfoSpec` (moved from `cardano-ledger-babbage-test`)
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `Era` module with `BabbageEraTest` class
 

@@ -48,6 +48,8 @@
 
 ### `testlib`
 
+* Added `Examples` module with: `ledgerExamples`, `mkLedgerExamples`, `exampleTx`, `exampleDatum`, `exampleAlonzoGenesis`
+* Added `Twiddle` instances for Alonzo core types
 * Add `Arbitrary` instance for `LangDepView`
 * Add `computeScriptIntegrityPure`, `computeScriptIntegrity` and `computeScriptIntegrityHash`
 * Added `TxInfoPV4` to `VersionedTxInfo`

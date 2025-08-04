@@ -5,11 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Mir
--- Description : MIR Example
---
--- Example demonstrating the Move Instantaneous Rewards mechanism
+-- | Example demonstrating the Move Instantaneous Rewards mechanism
 module Test.Cardano.Ledger.Shelley.Examples.Mir (
   mirExample,
 ) where
@@ -47,8 +43,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,

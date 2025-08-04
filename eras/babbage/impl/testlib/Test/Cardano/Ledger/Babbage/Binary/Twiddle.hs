@@ -1,15 +1,10 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
+module Test.Cardano.Ledger.Babbage.Binary.Twiddle () where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
@@ -19,9 +14,9 @@ import Cardano.Ledger.Binary (Sized, Term (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Data.Maybe (catMaybes)
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.Binary.Twiddle ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
-import Test.QuickCheck
+import Test.Cardano.Ledger.Common
 
 instance EraPParams era => Twiddle (Update era) where
   twiddle v = twiddle v . toTerm v

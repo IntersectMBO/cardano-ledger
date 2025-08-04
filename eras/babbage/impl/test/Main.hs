@@ -11,6 +11,7 @@ import qualified Test.Cardano.Ledger.Babbage.GoldenSpec as Golden
 import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Babbage.Imp as Imp
 import Test.Cardano.Ledger.Babbage.ImpTest ()
+import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -19,6 +20,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Babbage" $ do
+      TxInfo.spec @BabbageEra
       GoldenTranslation.spec
       Golden.spec
       BinarySpec.spec

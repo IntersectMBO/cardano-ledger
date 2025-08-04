@@ -4,11 +4,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.TxInfo (
-  tests,
-) where
+module Test.Cardano.Ledger.Alonzo.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -24,9 +22,10 @@ import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
 import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -37,17 +36,15 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
-import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
-
-byronAddr :: Addr
-byronAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
+import Test.Cardano.Ledger.Shelley.Examples (exampleByronAddress)
 
 shelleyAddr :: Addr
-shelleyAddr = Addr Testnet alicePHK StakeRefNull
+shelleyAddr = Addr Testnet pk StakeRefNull
+  where
+    pk = mkCredential (mkKeyPair 0 :: KeyPair 'Payment)
 
 ei :: EpochInfo (Either a)
 ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
@@ -66,7 +63,7 @@ shelleyInput :: TxIn
 shelleyInput = mkTxInPartial genesisId 1
 
 byronOutput :: TxOut AlonzoEra
-byronOutput = AlonzoTxOut byronAddr (Val.inject $ Coin 1) SNothing
+byronOutput = AlonzoTxOut exampleByronAddress (Val.inject $ Coin 1) SNothing
 
 shelleyOutput :: TxOut AlonzoEra
 shelleyOutput = AlonzoTxOut shelleyAddr (Val.inject $ Coin 2) SNothing
@@ -94,7 +91,7 @@ txb i o =
 txEx :: TxIn -> TxOut AlonzoEra -> Tx AlonzoEra
 txEx i o = MkAlonzoTx $ AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
-silentlyIgnore :: Tx AlonzoEra -> Assertion
+silentlyIgnore :: Tx AlonzoEra -> Expectation
 silentlyIgnore tx =
   let lti =
         LedgerTxInfo
@@ -106,7 +103,7 @@ silentlyIgnore tx =
           }
    in case toPlutusTxInfo SPlutusV1 lti of
         Right _ -> pure ()
-        Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+        Left e -> expectationFailure $ "no translation error was expected, but got: " <> show e
 
 -- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
 -- by returning close upper bound of the validaty interval.
@@ -115,18 +112,18 @@ transVITimeUpperBoundIsClosed ::
   ( EraPlutusContext era
   , BT.Inject (AlonzoContextError era) (ContextError era)
   ) =>
-  Assertion
+  Expectation
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transValidityInterval (Proxy @era) (BT.ProtVer (eraProtVerLow @era) 0) ei ss interval of
+      pv = BT.ProtVer (eraProtVerLow @era) 0
+  case transValidityInterval (Proxy @era) pv ei ss interval of
     Left (e :: ContextError era) ->
-      assertFailure $ "no translation error was expected, but got: " <> show e
+      expectationFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
       t
-        @?= ( PV1.Interval
-                (PV1.LowerBound PV1.NegInf True)
-                (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
-            )
+        `shouldBe` PV1.Interval
+          (PV1.LowerBound PV1.NegInf True)
+          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
 
 -- | The test checks that since protocol version 9 'transVITime' works correctly,
 -- by returning open upper bound of the validaty interval.
@@ -135,42 +132,32 @@ transVITimeUpperBoundIsOpen ::
   ( EraPlutusContext era
   , BT.Inject (AlonzoContextError era) (ContextError era)
   ) =>
-  Assertion
+  Expectation
 transVITimeUpperBoundIsOpen = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transValidityInterval
-    (Proxy @era)
-    (BT.ProtVer (natVersion @9) 0)
-    ei
-    ss
-    interval of
+      pv = BT.ProtVer (natVersion @9) 0
+  case transValidityInterval (Proxy @era) pv ei ss interval of
     Left (e :: ContextError era) ->
-      assertFailure $ "no translation error was expected, but got: " <> show e
+      expectationFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
       t
-        @?= ( PV1.Interval
-                (PV1.LowerBound PV1.NegInf True)
-                (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
-            )
+        `shouldBe` PV1.Interval
+          (PV1.LowerBound PV1.NegInf True)
+          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
 
-tests :: TestTree
-tests =
-  testGroup
-    "txInfo translation"
-    [ testGroup
-        "Plutus V1"
-        [ testCase "silently ignore byron txout" $
-            silentlyIgnore (txEx shelleyInput byronOutput)
-        , testCase "silently ignore byron txin" $
-            silentlyIgnore (txEx byronInput shelleyOutput)
-        ]
-    , testGroup
-        "transVITime"
-        [ testCase
-            "validity interval's upper bound is close when protocol < 9"
-            (transVITimeUpperBoundIsClosed @AlonzoEra)
-        , testCase
-            "validity interval's upper bound is open when protocol >= 9"
-            (transVITimeUpperBoundIsOpen @AlonzoEra)
-        ]
-    ]
+spec :: Spec
+spec = describe "txInfo translation" $ do
+  -- TODO: convert to Imp: https://github.com/IntersectMBO/cardano-ledger/issues/5210
+  describe "Plutus V1" $ do
+    it "silently ignore byron txout" $
+      silentlyIgnore (txEx shelleyInput byronOutput)
+    it "silently ignore byron txin" $
+      silentlyIgnore (txEx byronInput shelleyOutput)
+  describe "transVITime" $ do
+    it "validity interval's upper bound is closed when protocol < 9" $
+      transVITimeUpperBoundIsClosed @AlonzoEra
+    it "validity interval's upper bound is open when protocol >= 9" $
+      transVITimeUpperBoundIsOpen @AlonzoEra
+
+genesisId :: TxId
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

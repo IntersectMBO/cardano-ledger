@@ -62,6 +62,7 @@
 
 ### `testlib`
 
+* Added `Examples` module with: `LedgerExamples`, `ledgerExamples`, `mkLedgerExamples`, `exampleCerts`,`exampleWithdrawals`, `exampleAuxDataMap`, `exampleNonMyopicRewards`, `exampleCoin`, `examplePayKey`, `exampleStakeKey`, `exampleNewEpochState`, `examplePoolDistr`, `examplePoolParams`, `exampleTxIns`, `exampleProposedPPUpdates`, `exampleByronAddress`, `testShelleyGenesis`, `keyToCredential`, `mkDSIGNKeyPair`, `mkKeyHash`, `mkScriptHash`, `mkWitnessesPreAlonzo`, `seedFromByte`, `seedFromWords`
 * Add `nativeAlwaysFails`, `nativeAlwaysSucceeds`
 * Deprecated `getRewardAccountAmount`, `lookupReward` and `getReward`
 * Add `getBalance`, `lookupBalance`, `getAccountBalance`, `lookupAccountBalance`

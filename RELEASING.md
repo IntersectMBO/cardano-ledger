@@ -333,13 +333,11 @@ but the changelog _only_ needs to indicate if breaking changes have been made:
 * `cardano-ledger-shelley-test`
 * `cardano-ledger-shelley-ma-test`
 * `cardano-ledger-alonzo-test`
-* `cardano-ledger-babbage-test`
-* `cardano-ledger-conway-test`
 
 A changelog which indicates that no changes have been made will have the form:
 
 ```
-# Version history for `cardano-ledger-conway-test`
+# Version history for `cardano-ledger-conway`
 
 ## 1.2.0.1
 
@@ -349,7 +347,7 @@ A changelog which indicates that no changes have been made will have the form:
 A changelog which indicates that changes have been made will have the form:
 
 ```
-# Version history for `cardano-ledger-conway-test`
+# Version history for `cardano-ledger-conway`
 
 ## 1.3.0.0
 

@@ -92,8 +92,6 @@ import Data.Word (Word16, Word32)
 import GHC.Stack
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 import qualified Lens.Micro.Extras as L
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..))
 import Test.Cardano.Ledger.Generic.ApplyTx (

@@ -68,6 +68,9 @@ module Cardano.Ledger.Hashes (
   SafeHash,
   SafeToHash (..),
 
+  -- * Header Hash
+  HashHeader (..),
+
   -- ** Creating SafeHash
   HashAnnotated,
   hashAnnotated,
@@ -402,6 +405,17 @@ class SafeToHash x => HashAnnotated x i | x -> i where
   hashAnnotated :: x -> SafeHash i
   hashAnnotated = makeHashWithExplicitProxys (Proxy @i)
   {-# INLINE hashAnnotated #-}
+
+--------------------------------------------------------------------------------
+-- Block Header Hash
+--------------------------------------------------------------------------------
+newtype HashHeader = HashHeader {unHashHeader :: Hash.Hash HASH EraIndependentBlockHeader}
+  deriving stock (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoThunks)
+
+deriving newtype instance EncCBOR HashHeader
+
+deriving newtype instance DecCBOR HashHeader
 
 -- OTHER
 

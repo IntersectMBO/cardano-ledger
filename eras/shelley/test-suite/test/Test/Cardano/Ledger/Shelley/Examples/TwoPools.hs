@@ -9,11 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.TwoPools
--- Description : Two Pools Example
---
--- Example demonstrating a particular delegation scenario involving
+-- | Example demonstrating a particular delegation scenario involving
 -- two pools. Both pools select a reward account which is *not*
 -- a pool owner, and which delegates to one of the pools.
 module Test.Cardano.Ledger.Shelley.Examples.TwoPools (
@@ -99,8 +95,8 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeKeysBySchedule,

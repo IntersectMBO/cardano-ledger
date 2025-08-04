@@ -104,8 +104,10 @@ library testlib
     Test.Cardano.Ledger.Babbage.Arbitrary
     Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
+    Test.Cardano.Ledger.Babbage.Binary.Twiddle
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Era
+    Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec
     Test.Cardano.Ledger.Babbage.Imp.UtxosSpec
@@ -115,6 +117,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.ImpTest
     Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
     Test.Cardano.Ledger.Babbage.TreeDiff
+    Test.Cardano.Ledger.Babbage.TxInfoSpec
 
   visibility: public
   hs-source-dirs: testlib
@@ -135,9 +138,11 @@ library testlib
     bytestring,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.17,
+    cardano-slotting,
     cardano-strict-containers,
     containers,
     cuddle >=0.4,
@@ -147,6 +152,7 @@ library testlib
     microlens-ghc,
     plutus-ledger-api,
     small-steps >=1.1,
+    time,
 
 executable huddle-cddl
   main-is: Main.hs

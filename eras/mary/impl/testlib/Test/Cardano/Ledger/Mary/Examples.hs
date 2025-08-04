@@ -1,13 +1,13 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Api.Examples.Consensus.Mary (
-  ledgerExamplesMary,
+module Test.Cardano.Ledger.Mary.Examples (
+  ledgerExamples,
   exampleMultiAssetValue,
-  exampleMultiAsset,
 ) where
 
 import Cardano.Ledger.Coin
@@ -18,16 +18,22 @@ import Cardano.Ledger.Mary.Value
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Lens.Micro
-import Test.Cardano.Ledger.Api.Examples.Consensus.Allegra
-import Test.Cardano.Ledger.Api.Examples.Consensus.Shelley
+import Test.Cardano.Ledger.Allegra.Examples (exampleAllegraTxAuxData, exampleAllegraTxBody)
+import Test.Cardano.Ledger.Shelley.Examples (
+  LedgerExamples,
+  mkLedgerExamples,
+  mkScriptHash,
+  mkWitnessesPreAlonzo,
+ )
 
--- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesMary :: ShelleyLedgerExamples MaryEra
-ledgerExamplesMary =
-  defaultShelleyLedgerExamples
+ledgerExamples :: LedgerExamples MaryEra
+ledgerExamples =
+  mkLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @MaryEra))
     (exampleMultiAssetValue 1)
-    (exampleAllegraTxBody (exampleMultiAssetValue 1) & mintTxBodyL .~ exampleMultiAsset 1)
+    ( exampleAllegraTxBody (exampleMultiAssetValue 1)
+        & mintTxBodyL .~ exampleMultiAsset 1
+    )
     exampleAllegraTxAuxData
     NoGenesis
 

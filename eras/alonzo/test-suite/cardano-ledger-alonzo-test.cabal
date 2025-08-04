@@ -26,7 +26,6 @@ library
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
     Test.Cardano.Ledger.Alonzo.EraMapping
     Test.Cardano.Ledger.Alonzo.Scripts
-    Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.Trace
 
   hs-source-dirs: src
@@ -55,7 +54,6 @@ library
     cardano-protocol-tpraos >=1.0,
     cardano-slotting,
     cardano-strict-containers,
-    cborg,
     containers,
     microlens,
     plutus-ledger-api >=1.33,
@@ -71,10 +69,6 @@ test-suite cardano-ledger-alonzo-test
     Paths_cardano_ledger_alonzo_test
     Test.Cardano.Ledger.Alonzo.ChainTrace
     Test.Cardano.Ledger.Alonzo.Golden
-    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-    Test.Cardano.Ledger.Alonzo.Translation
-    Test.Cardano.Ledger.Alonzo.TxInfo
 
   default-language: Haskell2010
   ghc-options:
@@ -95,10 +89,9 @@ test-suite cardano-ledger-alonzo-test
     bytestring,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
-    cardano-ledger-api:testlib,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-mary:{cardano-ledger-mary, testlib},
+    cardano-ledger-mary,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-test,

@@ -63,12 +63,6 @@ cradle:
     - path: "eras/babbage/impl/test"
       component: "cardano-ledger-babbage:test:tests"
 
-    - path: "eras/babbage/test-suite/src"
-      component: "lib:cardano-ledger-babbage-test"
-
-    - path: "eras/babbage/test-suite/test"
-      component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
-
     - path: "eras/byron/chain/executable-spec/src"
       component: "lib:byron-spec-chain"
 
@@ -122,12 +116,6 @@ cradle:
 
     - path: "eras/conway/impl/test"
       component: "cardano-ledger-conway:test:tests"
-
-    - path: "eras/conway/test-suite/src"
-      component: "lib:cardano-ledger-conway-test"
-
-    - path: "eras/conway/test-suite/test"
-      component: "cardano-ledger-conway-test:test:cardano-ledger-conway-test"
 
     - path: "eras/dijkstra/src"
       component: "lib:cardano-ledger-dijkstra"

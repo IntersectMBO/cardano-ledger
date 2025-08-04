@@ -2,10 +2,13 @@
 
 ## 1.4.1.0
 
+* Remove `HashHeader` definition (move to `cardano-ledger-core`)
+* Re-export `HashHeader` from `API`
 * Add `GetLedgerView` instance for `DijkstraEra`
 
 ### `testlib`
 
+* Added `Examples` module with: `ProtocolLedgerExamples` type, `mkProtocolLedgerExamples`, `ledgerExamplesShelley`, `ledgerExamplesAllegra`, `ledgerExamplesMary`, `ledgerExamplesAlonzo`, `ledgerExamplesTPraos`
 * Add `Arbitrary` instance for `ChainDepState`
 
 ## 1.4.0.0

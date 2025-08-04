@@ -135,6 +135,7 @@ library testlib
     Test.Cardano.Ledger.Conway.CommitteeRatifySpec
     Test.Cardano.Ledger.Conway.DRepRatifySpec
     Test.Cardano.Ledger.Conway.Era
+    Test.Cardano.Ledger.Conway.Examples
     Test.Cardano.Ledger.Conway.Genesis
     Test.Cardano.Ledger.Conway.GenesisSpec
     Test.Cardano.Ledger.Conway.GovActionReorderSpec
@@ -185,7 +186,7 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-mary,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-slotting:testlib,
     cardano-strict-containers,
