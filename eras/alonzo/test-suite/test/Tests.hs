@@ -14,7 +14,6 @@ import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
-import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import qualified Test.Cardano.Ledger.Alonzo.TxInfo as TxInfo
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
@@ -33,7 +32,6 @@ defaultTests =
   testGroup
     "Alonzo tests"
     [ AdaPreservation.tests @AlonzoEra 50
-    , Translation.tests
     , Canonical.tests
     , Golden.tests
     , TxInfo.tests
