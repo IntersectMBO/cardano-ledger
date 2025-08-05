@@ -1,8 +1,8 @@
 # Version history for `cardano-data`
 
-## 1.2.4.1
+## 1.2.5.0
 
-*
+* Add `decodeOSet`
 
 ## 1.2.4.0
 

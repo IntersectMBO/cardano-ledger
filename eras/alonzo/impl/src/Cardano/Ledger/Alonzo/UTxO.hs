@@ -327,5 +327,5 @@ getAlonzoWitsVKeyNeeded ::
   Set.Set (KeyHash 'Witness)
 getAlonzoWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeeded certState utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
+    `Set.union` (txBody ^. reqSignerHashesTxBodyG)
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}

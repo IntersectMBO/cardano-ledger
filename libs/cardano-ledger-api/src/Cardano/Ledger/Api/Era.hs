@@ -84,9 +84,11 @@ import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (TxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCertUpgradeError)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
+import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.MemoBytes (mkMemoizedEra)
@@ -107,6 +109,7 @@ import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Lens.Micro
 
@@ -577,7 +580,7 @@ instance EraApi DijkstraEra where
         , dtbAdHash = ctbAdHash
         , dtbMint = ctbMint
         , dtbCollateralInputs = ctbCollateralInputs
-        , dtbReqSignerHashes = ctbReqSignerHashes
+        , dtbGuards = OSet.fromSet $ Set.map (KeyHashObj . coerceKeyRole) ctbReqSignerHashes
         , dtbScriptIntegrityHash = ctbScriptIntegrityHash
         , dtbTxNetworkId = ctbTxNetworkId
         , dtbReferenceInputs = ctbReferenceInputs
