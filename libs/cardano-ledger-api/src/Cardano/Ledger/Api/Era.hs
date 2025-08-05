@@ -577,7 +577,7 @@ instance EraApi DijkstraEra where
         , dtbAdHash = ctbAdHash
         , dtbMint = ctbMint
         , dtbCollateralInputs = ctbCollateralInputs
-        , dtbReqSignerHashes = ctbReqSignerHashes
+        , dtbGuards = mempty
         , dtbScriptIntegrityHash = ctbScriptIntegrityHash
         , dtbTxNetworkId = ctbTxNetworkId
         , dtbReferenceInputs = ctbReferenceInputs

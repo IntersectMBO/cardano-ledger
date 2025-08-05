@@ -163,6 +163,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
+  liftST,
 ) where
 
 import Cardano.Ledger.Binary.Plain (
@@ -246,12 +247,14 @@ import qualified Codec.CBOR.Decoding as C (
   decodeWordCanonical,
   decodeWordCanonicalOf,
   decodeWordOf,
+  liftST,
   peekAvailable,
   peekByteOffset,
   peekTokenType,
  )
 import qualified Codec.CBOR.Term as C (Term (..), decodeTerm)
 import Control.Monad
+import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
@@ -1522,3 +1525,6 @@ peekByteOffset = fromPlainDecoder C.peekByteOffset
 peekTokenType :: Decoder s C.TokenType
 peekTokenType = fromPlainDecoder C.peekTokenType
 {-# INLINE peekTokenType #-}
+
+liftST :: ST s a -> Decoder s a
+liftST st = Decoder $ \_ _ -> C.liftST st
