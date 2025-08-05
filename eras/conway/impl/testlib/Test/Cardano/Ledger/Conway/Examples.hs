@@ -54,8 +54,8 @@ import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   examplePayKey,
-  examplePoolParams,
   exampleStakeKey,
+  exampleStakePoolParams,
   keyToCredential,
   mkKeyHash,
  )
@@ -115,7 +115,7 @@ exampleTxBodyConway =
 exampleConwayCerts :: OSet.OSet (ConwayTxCert era)
 exampleConwayCerts =
   OSet.fromList -- TODO add all possible certificates
-    [ConwayTxCertPool (RegPool examplePoolParams)]
+    [ConwayTxCertPool (RegPool exampleStakePoolParams)]
 
 exampleConwayGenesis :: ConwayGenesis
 exampleConwayGenesis = expectedConwayGenesis

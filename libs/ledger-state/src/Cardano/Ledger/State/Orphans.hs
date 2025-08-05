@@ -19,7 +19,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.State.UTxO
@@ -146,9 +146,9 @@ deriving via Enc GenDelegs instance PersistField GenDelegs
 
 deriving via Enc GenDelegs instance PersistFieldSql GenDelegs
 
-deriving via Enc PoolParams instance PersistField PoolParams
+deriving via Enc StakePoolParams instance PersistField StakePoolParams
 
-deriving via Enc PoolParams instance PersistFieldSql PoolParams
+deriving via Enc StakePoolParams instance PersistFieldSql StakePoolParams
 
 instance DecCBOR NonMyopic where
   decCBOR = decNoShareCBOR

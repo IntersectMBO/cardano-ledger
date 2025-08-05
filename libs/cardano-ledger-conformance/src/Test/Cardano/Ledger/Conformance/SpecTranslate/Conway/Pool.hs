@@ -37,13 +37,13 @@ instance SpecTranslate ctx (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep psStakePoolParams
+      <$> toSpecRep psStakeStakePoolParams
       <*> toSpecRep psRetiring
 
 instance SpecTranslate ctx PoolCert where
   type SpecRep PoolCert = Agda.DCert
 
-  toSpecRep (RegPool p@PoolParams {ppId = KeyHash ppHash}) =
+  toSpecRep (RegPool p@StakePoolParams {ppId = KeyHash ppHash}) =
     Agda.Regpool
       <$> toSpecRep ppHash
       <*> toSpecRep p

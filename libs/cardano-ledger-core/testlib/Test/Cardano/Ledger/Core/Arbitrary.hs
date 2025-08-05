@@ -97,9 +97,9 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
-  PoolParams (..),
   SizeOfPoolOwners (..),
   SizeOfPoolRelays (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
  )
 import Cardano.Ledger.State
@@ -457,12 +457,12 @@ instance Arbitrary Reward where
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.PoolParams -------------------------------------------------------------
+-- Cardano.Ledger.StakePoolParams -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary PoolParams where
+instance Arbitrary StakePoolParams where
   arbitrary =
-    PoolParams
+    StakePoolParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

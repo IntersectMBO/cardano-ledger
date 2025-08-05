@@ -209,14 +209,14 @@ raiseMockError ::
   GenState era ->
   String
 raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
-  let _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+  let _ssStakePoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
       _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
    in show
         [ toExpr $ adaPots reify epochstate
         , toExpr slot
         , toExpr next
         , -- ppString "===================================",
-          -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
+          -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcStakePoolParams poolParams,
           toExpr (epochstate ^. curPParamsEpochStateL)
         ]
 

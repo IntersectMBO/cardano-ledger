@@ -695,9 +695,9 @@ epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = treasuryL
 {-# DEPRECATED epochStateTreasuryL "In favor of `treasuryL`" #-}
 
-epochStatePoolParamsL ::
-  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
-epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+epochStateStakePoolParamsL ::
+  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolParams)
+epochStateStakePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))

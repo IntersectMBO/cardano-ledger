@@ -216,8 +216,8 @@ epochTransition = do
       ppp = eval (pParams ⨃ fPParams)
       pstate' =
         pstate
-          { psStakePoolParams = ppp
-          , psFutureStakePoolParams = Map.empty
+          { psStakeStakePoolParams = ppp
+          , psFutureStakeStakePoolParams = Map.empty
           }
   PoolreapState utxoSt' chainAccountState' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $

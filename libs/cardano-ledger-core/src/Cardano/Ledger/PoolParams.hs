@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.PoolParams (
-  PoolParams (..),
+  StakePoolParams (..),
   PoolMetadata (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
@@ -191,7 +191,7 @@ instance DecCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data PoolParams = PoolParams
+data StakePoolParams = StakePoolParams
   { ppId :: !(KeyHash 'StakePool)
   , ppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   , ppPledge :: !Coin
@@ -203,17 +203,17 @@ data PoolParams = PoolParams
   , ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup PoolParams
-  deriving (DecCBOR) via CBORGroup PoolParams
+  deriving (EncCBOR) via CBORGroup StakePoolParams
+  deriving (DecCBOR) via CBORGroup StakePoolParams
 
-instance Default PoolParams where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
+instance Default StakePoolParams where
+  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance NoThunks PoolParams
+instance NoThunks StakePoolParams
 
-deriving instance NFData PoolParams
+deriving instance NFData StakePoolParams
 
-instance ToJSON PoolParams where
+instance ToJSON StakePoolParams where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
@@ -227,10 +227,10 @@ instance ToJSON PoolParams where
       , "metadata" .= ppMetadata pp
       ]
 
-instance FromJSON PoolParams where
+instance FromJSON StakePoolParams where
   parseJSON =
-    Aeson.withObject "PoolParams" $ \obj ->
-      PoolParams
+    Aeson.withObject "StakePoolParams" $ \obj ->
+      StakePoolParams
         <$> obj .: "publicKey" -- TODO publicKey is an unfortunate name, should be poolId
         <*> obj .: "vrf"
         <*> obj .: "pledge"
@@ -252,20 +252,20 @@ instance DecCBOR PoolMetadata where
     decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> decCBOR <*> decCBOR)
 
 -- | The size of the 'ppOwners' 'Set'.  Only used to compute size of encoded
--- 'PoolParams'.
+-- 'StakePoolParams'.
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance EncCBOR SizeOfPoolOwners where
   encCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
 -- | The size of the 'ppRelays' 'Set'.  Only used to compute size of encoded
--- 'PoolParams'.
+-- 'StakePoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBORGroup PoolParams where
+instance EncCBORGroup StakePoolParams where
   encCBORGroup poolParams =
     encCBOR (ppId poolParams)
       <> encCBOR (ppVrf poolParams)
@@ -302,7 +302,7 @@ instance EncCBORGroup PoolParams where
   listLen _ = 9
   listLenBound _ = 9
 
-instance DecCBORGroup PoolParams where
+instance DecCBORGroup StakePoolParams where
   decCBORGroup = do
     hk <- decCBOR
     vrf <- decCBOR
@@ -314,7 +314,7 @@ instance DecCBORGroup PoolParams where
     relays <- decCBOR
     md <- decodeNullMaybe decCBOR
     pure $
-      PoolParams
+      StakePoolParams
         { ppId = hk
         , ppVrf = vrf
         , ppPledge = pledge

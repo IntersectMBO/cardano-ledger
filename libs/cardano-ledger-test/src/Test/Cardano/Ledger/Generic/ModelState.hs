@@ -40,7 +40,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Hashes (GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -85,7 +85,7 @@ type MUtxo era = Map TxIn (TxOut era)
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+    mStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
   , mPoolDeposits :: !(Map (KeyHash 'StakePool) Coin)
   , -- DState state fields
     mAccounts :: !(Accounts era)
@@ -112,7 +112,7 @@ data ModelNewEpochState era = ModelNewEpochState
   , mCount :: !Int
   , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+    mFStakePoolParams :: !(Map (KeyHash 'StakePool) StakePoolParams)
   , mRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   , mSnapshots :: !SnapShots
   , mEL :: !EpochNo -- The current epoch,
@@ -162,8 +162,8 @@ dStateZero =
 pStateZero :: PState era
 pStateZero =
   PState
-    { psStakePoolParams = Map.empty
-    , psFutureStakePoolParams = Map.empty
+    { psStakeStakePoolParams = Map.empty
+    , psFutureStakeStakePoolParams = Map.empty
     , psRetiring = Map.empty
     , psDeposits = Map.empty
     }
@@ -222,7 +222,7 @@ stashedAVVMAddressesZero Allegra = ()
 mNewEpochStateZero :: (EraPParams era, EraAccounts era) => ModelNewEpochState era
 mNewEpochStateZero =
   ModelNewEpochState
-    { mPoolParams = Map.empty
+    { mStakePoolParams = Map.empty
     , mPoolDeposits = Map.empty
     , mAccounts = def
     , mUTxO = Map.empty
@@ -235,7 +235,7 @@ mNewEpochStateZero =
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = Map.empty
+      mFStakePoolParams = Map.empty
     , mRetiring = Map.empty
     , mSnapshots = emptySnapShots
     , mEL = EpochNo 0
@@ -264,7 +264,7 @@ instance Extract (DState era) era where
       instantaneousRewardsZero
 
 instance Extract (PState era) era where
-  extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
+  extract x = PState (mStakePoolParams x) (mFStakePoolParams x) (mRetiring x) Map.empty
 
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
@@ -319,7 +319,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
 abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
-    { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+    { mStakePoolParams = (psStakeStakePoolParams . certPState . lsCertState . esLState . nesEs) x
     , mPoolDeposits = (fmap fromCompact . psDeposits . certPState . lsCertState . esLState . nesEs) x
     , mAccounts = (dsAccounts . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
@@ -332,7 +332,7 @@ abstract x =
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = (psFutureStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+      mFStakePoolParams = (psFutureStakeStakePoolParams . certPState . lsCertState . esLState . nesEs) x
     , mRetiring = (psRetiring . certPState . lsCertState . esLState . nesEs) x
     , mSnapshots = esSnapshots (nesEs x)
     , mEL = nesEL x

@@ -83,5 +83,5 @@ goldenNewEpochStateExpectation
           [ E (TkListLen 3)
           , mapEnc (VMap.toMap (unStake ssStake))
           , Ev ver ssDelegations
-          , Ev ver ssPoolParams
+          , Ev ver ssStakePoolParams
           ]

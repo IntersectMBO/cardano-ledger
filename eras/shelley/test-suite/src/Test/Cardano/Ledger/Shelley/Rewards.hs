@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley (
   hardforkBabbageForgoRewardPrefilter,
  )
 import Cardano.Ledger.Shelley.API (NonMyopic)
-import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
+import Cardano.Ledger.Shelley.API.Types (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -225,7 +225,7 @@ emptySetupArgs =
     }
 
 data PoolInfo = PoolInfo
-  { params :: PoolParams
+  { params :: StakePoolParams
   , coldKey :: KeyPair 'StakePool
   , ownerKey :: KeyPair 'Staking
   , ownerStake :: Coin
@@ -267,7 +267,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   -- here we are forcing the pool to meet the pledeg, later we may want flexibility
   let members = Map.insert (KeyHashObj . hashKey . vKey $ ownerKey) ownerStake members'
       params =
-        PoolParams
+        StakePoolParams
           { ppId = hashKey . vKey $ coldKey
           , ppVrf = hashVerKeyVRF @MockCrypto $ snd vrfKey
           , ppPledge = pledge
@@ -293,7 +293,7 @@ genRewardPPs = do
   where
     g xs = unsafeBoundRational <$> elements xs
 
-genBlocksMade :: [PoolParams] -> Gen BlocksMade
+genBlocksMade :: [StakePoolParams] -> Gen BlocksMade
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
     f p = (ppId p,) <$> genNatural 0 maxPoolBlocks
@@ -376,7 +376,7 @@ rewardOnePool ::
   Coin ->
   Natural ->
   Natural ->
-  PoolParams ->
+  StakePoolParams ->
   Stake ->
   Rational ->
   Rational ->
@@ -450,7 +450,7 @@ rewardOld ::
   BlocksMade ->
   Coin ->
   Set.Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->
@@ -743,7 +743,7 @@ reward ::
   BlocksMade ->
   Coin ->
   Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->

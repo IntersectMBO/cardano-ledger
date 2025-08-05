@@ -132,30 +132,30 @@ poolRegistrationProp
     , target = targetSt
     } =
     let hk = ppId poolParams
-        reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
+        reRegistration = eval (hk ∈ dom (psStakeStakePoolParams sourceSt))
      in if reRegistration
           then
             conjoin
               [ counterexample
-                  "Pre-existing PoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+                  "Pre-existing StakePoolParams must still be registered in pParams"
+                  (eval (hk ∈ dom (psStakeStakePoolParams targetSt)) :: Bool)
               , counterexample
-                  "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (psFutureStakePoolParams targetSt) === Just poolParams)
+                  "New StakePoolParams are registered in future Params map"
+                  (Map.lookup hk (psFutureStakeStakePoolParams targetSt) === Just poolParams)
               , counterexample
-                  "PoolParams are removed in 'retiring'"
+                  "StakePoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
           else -- first registration
             conjoin
               [ counterexample
-                  "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePoolParams targetSt) === Just poolParams)
+                  "New StakePoolParams are registered in pParams"
+                  (Map.lookup hk (psStakeStakePoolParams targetSt) === Just poolParams)
               , counterexample
-                  "PoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
+                  "StakePoolParams are not present in 'future pool params'"
+                  (eval (hk ∉ dom (psFutureStakeStakePoolParams targetSt)) :: Bool)
               , counterexample
-                  "PoolParams are removed in 'retiring'"
+                  "StakePoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
 poolRegistrationProp _ = property ()
@@ -175,10 +175,10 @@ poolRetirementProp
           (currentEpoch < e && e < EpochNo (ce + fromIntegral maxEpoch))
       , counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool)
+          (eval (hk ∈ dom (psStakeStakePoolParams sourceSt)) :: Bool)
       , counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+          (eval (hk ∈ dom (psStakeStakePoolParams targetSt)) :: Bool)
       , counterexample
           "hk must be in target's retiring"
           (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
@@ -186,7 +186,7 @@ poolRetirementProp
 poolRetirementProp _ _ _ = property ()
 
 poolStateIsInternallyConsistentProp :: PState c -> Property
-poolStateIsInternallyConsistentProp PState {psStakePoolParams = pParams_, psRetiring = retiring_} = do
+poolStateIsInternallyConsistentProp PState {psStakeStakePoolParams = pParams_, psRetiring = retiring_} = do
   let poolKeys = Map.keysSet pParams_
       pParamKeys = Map.keysSet pParams_
       retiringKeys = Map.keysSet retiring_

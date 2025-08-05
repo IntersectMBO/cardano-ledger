@@ -110,7 +110,7 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.PoolParams (StakePoolParams)
 import Cardano.Ledger.Shelley.LedgerState (epochStateStakeDistrL)
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (ToJSON (..), (.=))
@@ -568,7 +568,7 @@ data RatifyEnv era = RatifyEnv
   , reCurrentEpoch :: EpochNo
   , reCommitteeState :: CommitteeState era
   , reAccounts :: Accounts era
-  , rePoolParams :: Map (KeyHash 'StakePool) PoolParams
+  , reStakePoolParams :: Map (KeyHash 'StakePool) StakePoolParams
   }
   deriving (Generic)
 
@@ -652,7 +652,7 @@ instance
             !> To reCurrentEpoch
             !> To reCommitteeState
             !> To reAccounts
-            !> To rePoolParams
+            !> To reStakePoolParams
 
 instance
   (Era era, DecCBOR (InstantStake era), DecCBOR (Accounts era)) =>

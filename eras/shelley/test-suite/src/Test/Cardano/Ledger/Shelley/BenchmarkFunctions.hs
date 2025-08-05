@@ -36,7 +36,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
-  PoolParams (..),
+  StakePoolParams (..),
   ppCost,
   ppId,
   ppMargin,
@@ -362,9 +362,9 @@ firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
-mkPoolParameters :: KeyPair 'StakePool -> PoolParams
+mkPoolParameters :: KeyPair 'StakePool -> StakePoolParams
 mkPoolParameters keys =
-  PoolParams
+  StakePoolParams
     { ppId = hashKey (vKey keys)
     , ppVrf = vrfKeyHash
     , ppPledge = Coin 0

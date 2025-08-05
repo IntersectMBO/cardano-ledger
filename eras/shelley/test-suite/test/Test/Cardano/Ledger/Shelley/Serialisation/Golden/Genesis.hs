@@ -142,7 +142,7 @@ golden_cbor_ShelleyGenesis =
         . TkMapLen 1 -- sgsPools
         . TkBytes
           "\245\131\164^IG\193\STX\t\ESC\150\ETB\SO\245\SO\240\207\142\219bfa\147\162\SYN2G\187"
-        . TkListLen 9 -- PoolParams
+        . TkListLen 9 -- StakePoolParams
         . TkBytes
           "N\DC3\f\v\222\183v\142\223.\143\133\NUL\DEL\213 s\227\220\CANq\244\196\DEL\157\252\169."
         . TkBytes
@@ -247,9 +247,9 @@ exampleShelleyGenesis =
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
-    poolParams :: L.PoolParams
+    poolParams :: L.StakePoolParams
     poolParams =
-      L.PoolParams
+      L.StakePoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
         , L.ppVrf =
             hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)

@@ -57,7 +57,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
 import Cardano.Ledger.State (maxPool)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -271,7 +271,7 @@ desirability ::
   NonNegativeInterval ->
   NonZero Word16 ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -298,7 +298,7 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash 'StakePool) StakePoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
   Set (KeyHash 'StakePool)
 getTopRankedPools rPot totalStake pp poolParams aps =
@@ -310,7 +310,7 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   PParams era ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) StakePoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
   Set (KeyHash 'StakePool)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
@@ -322,7 +322,7 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   PParams era ->
-  [(KeyHash 'StakePool, (PoolParams, PerformanceEstimate))] ->
+  [(KeyHash 'StakePool, (StakePoolParams, PerformanceEstimate))] ->
   Set (KeyHash 'StakePool)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
@@ -376,7 +376,7 @@ nonMyopicMemberRew ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   StakeShare ->

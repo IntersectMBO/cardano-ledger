@@ -30,7 +30,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -273,7 +273,7 @@ conwayDStateSpec ::
   era ~ ConwayEra =>
   WitUniv era ->
   (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map RewardAccount Coin) ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolParams) ->
   Specification (DState era)
 conwayDStateSpec univ (whoDelegates, wdrl) poolreg =
   constrained $ \ [var| ds |] ->
@@ -302,7 +302,7 @@ conwayAccountMapSpec ::
   Era era =>
   WitUniv era ->
   Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolParams) ->
   Map RewardAccount Coin ->
   Specification (Map (Credential 'Staking) (ConwayAccountState era))
 conwayAccountMapSpec univ whoDelegates poolreg wdrl =
@@ -375,27 +375,27 @@ pStateSpec ::
   Term EpochNo ->
   Specification (PState era)
 pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
-  match pState $ \ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
-    [ witness univ (dom_ stakePoolParams)
-    , witness univ (rng_ stakePoolParams)
-    , witness univ (dom_ futureStakePoolParams)
-    , witness univ (rng_ futureStakePoolParams)
+  match pState $ \ [var|stakeStakePoolParams|] [var|futureStakeStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
+    [ witness univ (dom_ stakeStakePoolParams)
+    , witness univ (rng_ stakeStakePoolParams)
+    , witness univ (dom_ futureStakeStakePoolParams)
+    , witness univ (rng_ futureStakeStakePoolParams)
     , witness univ (dom_ retiring)
     , witness univ (dom_ pooldeposits)
-    , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
-        dom_ retiring `subset_` dom_ stakePoolParams
-    , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
-        dom_ pooldeposits ==. dom_ stakePoolParams
+    , assertExplain (pure "dom of retiring is a subset of dom of stakeStakePoolParams") $
+        dom_ retiring `subset_` dom_ stakeStakePoolParams
+    , assertExplain (pure "dom of deposits is dom of stakeStakePoolParams") $
+        dom_ pooldeposits ==. dom_ stakeStakePoolParams
     , assertExplain (pure "no deposit is 0") $
         not_ $
           lit (CompactCoin 0) `elem_` rng_ pooldeposits
-    , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
-        dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
+    , assertExplain (pure "dom of stakeStakePoolParams is disjoint from futureStakeStakePoolParams") $
+        dom_ stakeStakePoolParams `disjoint_` dom_ futureStakeStakePoolParams
     , assertExplain (pure "retiring after current epoch") $
         forAll (rng_ retiring) (\ [var|epoch|] -> currepoch <=. epoch)
-    , assert $ sizeOf_ (futureStakePoolParams) <=. 4
-    , assert $ 3 <=. sizeOf_ stakePoolParams
-    , assert $ sizeOf_ stakePoolParams <=. 8
+    , assert $ sizeOf_ (futureStakeStakePoolParams) <=. 4
+    , assert $ 3 <=. sizeOf_ stakeStakePoolParams
+    , assert $ sizeOf_ stakeStakePoolParams <=. 8
     ]
 
 -- ===================== Put PState, DState, and VState together to form a CertState =================
@@ -408,7 +408,7 @@ conwayCertStateSpec ::
 conwayCertStateSpec univ (whodelegates, wdrl) epoch = constrained $ \ [var|convCertState|] ->
   match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pStateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
+    , reify pState psStakeStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
         , satisfies dState (conwayDStateSpec univ (whodelegates, wdrl) poolreg)
         ]
@@ -523,14 +523,14 @@ snapShotsSpec marksnap =
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
-getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
+getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markStakePoolParams
   where
     markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
     markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
     markDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap $ getDelegs (ls ^. lsCertStateL)
-    markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
-    markPoolParams = VMap.fromMap (psStakePoolParams (ls ^. lsCertStateL . certPStateL))
+    markStakePoolParams :: VMap VB VB (KeyHash 'StakePool) StakePoolParams
+    markStakePoolParams = VMap.fromMap (psStakeStakePoolParams (ls ^. lsCertStateL . certPStateL))
 
 -- ====================================================================
 -- Specs for EpochState and NewEpochState

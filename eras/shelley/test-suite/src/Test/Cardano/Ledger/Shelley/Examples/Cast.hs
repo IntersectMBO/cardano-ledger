@@ -19,14 +19,14 @@ module Test.Cardano.Ledger.Shelley.Examples.Cast (
   aliceAddr,
   alicePtrAddr,
   alicePoolKeys,
-  alicePoolParams,
+  aliceStakePoolParams,
   aliceVRFKeyHash,
   bobPay,
   bobStake,
   bobSHK,
   bobAddr,
   bobPoolKeys,
-  bobPoolParams,
+  bobStakePoolParams,
   bobVRFKeyHash,
   carlPay,
   carlStake,
@@ -57,7 +57,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
  )
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -120,9 +120,9 @@ alicePtrAddr :: Addr
 alicePtrAddr = mkAddr alicePHK (Ptr 10 minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: PoolParams
-alicePoolParams =
-  PoolParams
+aliceStakePoolParams :: StakePoolParams
+aliceStakePoolParams =
+  StakePoolParams
     { ppId = hashKey . vKey $ aikCold alicePoolKeys
     , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
     , ppPledge = Coin 1
@@ -175,9 +175,9 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: PoolParams
-bobPoolParams =
-  PoolParams
+bobStakePoolParams :: StakePoolParams
+bobStakePoolParams =
+  StakePoolParams
     { ppId = hashKey . vKey $ aikCold bobPoolKeys
     , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
     , ppPledge = Coin 2

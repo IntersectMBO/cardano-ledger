@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
@@ -140,7 +140,7 @@ genChainInEpoch epoch = do
               [ (aikColdKeyHash, pp)
               | (AllIssuerKeys {aikVrf, aikColdKeyHash}, (owner : _)) <- stakeMap
               , let pp =
-                      PoolParams
+                      StakePoolParams
                         { ppId = aikColdKeyHash
                         , ppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
                         , ppPledge = Coin 1

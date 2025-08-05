@@ -52,9 +52,9 @@ import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
-  PoolParams (..),
   RewardAccount (..),
   ShelleyDelegCert (..),
+  StakePoolParams (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
@@ -608,7 +608,7 @@ genTxCerts slot = do
           RetirePoolTxCert kh _ -> do
             -- We need to make sure that the pool is registered before
             -- we try to retire it
-            modelPools <- gets $ mPoolParams . gsModel
+            modelPools <- gets $ mStakePoolParams . gsModel
             case Map.lookup kh modelPools of
               Just _ -> pure (dc : dcs, ss, regCreds)
               Nothing -> pure (dcs, ss, regCreds)
@@ -782,13 +782,13 @@ getShelleyTxCertCredential = \case
       ShelleyDelegCert dk _ -> Just dk
   ShelleyTxCertPool pc ->
     case pc of
-      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
+      RegPool StakePoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
   ShelleyTxCertGenesisDeleg _g -> Nothing
   ShelleyTxCertMir _m -> Nothing
 
 getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking)
-getConwayTxCertCredential (ConwayTxCertPool (RegPool PoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
+getConwayTxCertCredential (ConwayTxCertPool (RegPool StakePoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
 getConwayTxCertCredential (ConwayTxCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayUnRegCert cred _)) = Just cred

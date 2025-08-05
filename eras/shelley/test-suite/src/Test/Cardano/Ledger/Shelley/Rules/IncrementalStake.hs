@@ -211,7 +211,7 @@ stakeDistr u ds ps =
     delegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
     delegs = Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap
     ptrs' = ds ^. accountsL . accountsPtrsMapG
-    PState {psStakePoolParams = poolParams} = ps
+    PState {psStakeStakePoolParams = poolParams} = ps
     stakeRelation :: Map (Credential 'Staking) (CompactForm Coin)
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)

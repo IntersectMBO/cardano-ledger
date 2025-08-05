@@ -63,7 +63,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (WitVKey (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   totalAdaES,
@@ -156,7 +156,7 @@ getPools ::
   Set (KeyHash 'StakePool)
 getPools = Map.keysSet . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -165,10 +165,10 @@ getPoolParameters ::
   EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) PoolParams
+  Map (KeyHash 'StakePool) StakePoolParams
 getPoolParameters = Map.restrictKeys . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -263,7 +263,7 @@ getNonMyopicMemberRewards globals ss =
           let ostake = sumPoolOwnersStake pool stake
            in ppPledge poolp <= ostake
 
-sumPoolOwnersStake :: PoolParams -> EB.Stake -> Coin
+sumPoolOwnersStake :: StakePoolParams -> EB.Stake -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)

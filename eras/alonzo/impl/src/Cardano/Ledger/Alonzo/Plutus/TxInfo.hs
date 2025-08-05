@@ -75,7 +75,7 @@ import Cardano.Ledger.Plutus.Language (
   SLanguage (..),
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
@@ -349,7 +349,7 @@ transTxCertCommon = \case
     Just $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
     Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
-  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+  RegPoolTxCert (StakePoolParams {ppId, ppVrf}) ->
     Just $
       PV1.DCertPoolRegister
         (transKeyHash ppId)

@@ -197,10 +197,10 @@ instance ToExpr Withdrawals
 
 instance ToExpr CompactAddr
 
--- PoolParams
+-- StakePoolParams
 instance ToExpr PoolMetadata
 
-instance ToExpr PoolParams
+instance ToExpr StakePoolParams
 
 instance ToExpr StakePoolRelay
 

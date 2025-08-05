@@ -72,7 +72,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getRewardAccountFor,
   getReward,
   lookupReward,
-  freshPoolParams,
+  freshStakePoolParams,
   registerPool,
   registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
@@ -170,7 +170,7 @@ import Cardano.Ledger.Keys (
   makeBootstrapWitness,
   witVKeyHash,
  )
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
@@ -1516,19 +1516,19 @@ getReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM
 getReward = getBalance
 {-# DEPRECATED getReward "In favor of `getBalance`" #-}
 
-freshPoolParams ::
+freshStakePoolParams ::
   ShelleyEraImp era =>
   KeyHash 'StakePool ->
   RewardAccount ->
-  ImpTestM era PoolParams
-freshPoolParams khPool rewardAccount = do
+  ImpTestM era StakePoolParams
+freshStakePoolParams khPool rewardAccount = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let minCost = pp ^. ppMinPoolCostL
   poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
   pledge <- uniformRM (Coin 0, Coin 100_000_000)
   pure
-    PoolParams
+    StakePoolParams
       { ppVrf = vrfHash
       , ppRewardAccount = rewardAccount
       , ppRelays = mempty
@@ -1552,7 +1552,7 @@ registerPoolWithRewardAccount ::
   RewardAccount ->
   ImpTestM era ()
 registerPoolWithRewardAccount khPool rewardAccount = do
-  pps <- freshPoolParams khPool rewardAccount
+  pps <- freshStakePoolParams khPool rewardAccount
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)

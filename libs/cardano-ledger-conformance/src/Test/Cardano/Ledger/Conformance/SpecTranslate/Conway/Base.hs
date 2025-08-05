@@ -65,7 +65,7 @@ import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -591,10 +591,10 @@ instance SpecTranslate ctx RewardAccount where
 
   toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
 
-instance SpecTranslate ctx PoolParams where
-  type SpecRep PoolParams = Agda.PoolParams
+instance SpecTranslate ctx StakePoolParams where
+  type SpecRep StakePoolParams = Agda.PoolParams
 
-  toSpecRep PoolParams {..} =
+  toSpecRep StakePoolParams {..} =
     Agda.PoolParams
       <$> toSpecRep ppOwners
       <*> toSpecRep ppCost
@@ -1029,7 +1029,7 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
-      <*> toSpecRep rePoolParams
+      <*> toSpecRep reStakePoolParams
       <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance SpecTranslate ctx Bool where
