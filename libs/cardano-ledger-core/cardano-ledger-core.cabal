@@ -59,6 +59,7 @@ library
     Cardano.Ledger.Plutus.ToPlutusData
     Cardano.Ledger.Plutus.TxInfo
     Cardano.Ledger.PoolDistr
+    Cardano.Ledger.PoolParams
     Cardano.Ledger.Rewards
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
