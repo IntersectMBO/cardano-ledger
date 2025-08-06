@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Deprecate `PoolParams` in favor of `StakePoolState`. #5196
+  * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
 * Better predicate failures for incorrect deposits and refunds.
   * Add `hardforkConwayDELEGIncorrectDepositsAndRefunds` for protocol 11 onwards, to `Conway.Era`.
   * Add `DepositIncorrectDELEG` and `RefundIncorrectDELEG` to `ConwayDelegPredFailure`.
