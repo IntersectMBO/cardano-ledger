@@ -100,7 +100,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad (guard)
 import Data.Foldable (foldMap')
@@ -170,9 +170,17 @@ queryDRepDelegationState ::
   -- empty, states for all of the DReps will be returned.
   Set DRep ->
   Map DRep (Set (Credential 'Staking))
-queryDRepDelegationState nes creds
-  | null creds = getDelegationStateRestricting Nothing dState
-  | otherwise = getDelegationStateRestricting (Just creds) dState
+queryDRepDelegationState nes dreps =
+  case getCreds dreps of
+    Just creds ->
+      if Set.null creds
+        then
+          getDelegationStateRestricting Nothing dState
+        else
+          fmap drepDelegs $
+            Map.mapKeys credToDRep $
+              updateDormantDRepExpiry' (vStateFiltered creds) ^. vsDRepsL
+    Nothing -> getDelegationStateRestricting (Just dreps) dState
   where
     getDelegationStateRestricting ::
       Maybe (Set DRep) -> DState era -> Map DRep (Set (Credential 'Staking))
@@ -189,6 +197,17 @@ queryDRepDelegationState nes creds
         Map.empty
         (ds ^. accountsL . accountsMapL)
     dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
+    vStateFiltered creds = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
+    updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+    getCreds = fmap Set.fromList . traverse drepToCred . Set.elems
+    drepToCred drep = case drep of
+      DRepKeyHash k -> Just (KeyHashObj k)
+      DRepScriptHash s -> Just (ScriptHashObj s)
+      _ -> Nothing
+    credToDRep cred = case cred of
+      KeyHashObj k -> DRepKeyHash k
+      ScriptHashObj s -> DRepScriptHash s
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
