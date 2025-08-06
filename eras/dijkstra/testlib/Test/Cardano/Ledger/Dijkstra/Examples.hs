@@ -7,6 +7,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Examples (
   ledgerExamples,
+  exampleDijkstraGenesis,
 ) where
 
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
