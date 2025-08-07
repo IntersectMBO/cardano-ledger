@@ -91,7 +91,8 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      (KeyHash 'StakePool) -- KeyHash which cannot be retired since it is not registered
+      -- | KeyHash which cannot be retired since it is not registered
+      (KeyHash 'StakePool)
   | StakePoolRetirementWrongEpochPOOL
       (Mismatch 'RelGT EpochNo)
       (Mismatch 'RelLTEQ EpochNo)
@@ -99,10 +100,18 @@ data ShelleyPoolPredFailure era
       (Mismatch 'RelGTEQ Coin)
   | WrongNetworkPOOL
       (Mismatch 'RelEQ Network)
-      (KeyHash 'StakePool) -- Stake Pool ID
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
   | PoolMedataHashTooBig
-      (KeyHash 'StakePool) -- Stake Pool ID
-      Int -- Size of the metadata hash
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
+      -- | Size of the metadata hash
+      Int
+  | VRFKeyHashAlreadyRegistered
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
+      -- | VRF key attempted to use, that has already been registered
+      (VRFVerKeyHash 'StakePoolVRF)
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra
@@ -149,6 +158,8 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
       encodeListLen 4 <> encCBOR (4 :: Word8) <> encCBOR expected <> encCBOR supplied <> encCBOR c
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
+    VRFKeyHashAlreadyRegistered a b ->
+      encodeListLen 3 <> encCBOR (6 :: Word8) <> encCBOR a <> encCBOR b
 
 -- `ShelleyPoolPredFailure` is used in Conway POOL rule, so we need to keep the serialization unchanged
 instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
@@ -181,6 +192,10 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         poolID <- decCBOR
         s <- decCBOR
         pure (3, PoolMedataHashTooBig poolID s)
+      6 -> do
+        poolID <- decCBOR
+        vrfKeyHash <- decCBOR
+        pure (3, VRFKeyHashAlreadyRegistered poolID vrfKeyHash)
       k -> invalidKey k
 
 poolDelegationTransition ::

@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `VRFKeyHashAlreadyRegistered` to `ShelleyPoolPredFailure` type
 * Add `NFData` for `NominalDiffTimeMicro`, `ShelleyGenesisStaking` and `ShelleyGenesis`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Deprecate the API `getPoolParameters` in favor of `getStakePools`.
