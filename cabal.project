@@ -22,7 +22,7 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/constrained-generators.git
   tag: 45559e07fe1651ddd257f2a1215dfd65e30a963f
-  commit: 9c72b29a43a604fd87238cf688a9ae624a32f4aa 
+  commit: 6758e0e2c616ee612f80737323ce1f1ffd25f765 
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
