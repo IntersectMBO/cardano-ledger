@@ -11,6 +11,7 @@ import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Common (hspec)
 import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
+import qualified Test.Cardano.Ledger.Constrained.Conway.MiniTrace as MiniTrace
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
@@ -27,6 +28,7 @@ main :: IO ()
 main = do
   hSetEncoding stdout utf8
   nightly <- lookupEnv "NIGHTLY"
+  hspec MiniTrace.spec
   case nightly of
     Nothing -> defaultMain $ testGroup "cardano-core" defaultTests
     Just _ -> do

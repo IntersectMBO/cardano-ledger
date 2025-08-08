@@ -10,18 +10,15 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
-import Constrained.API ()
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
-  unComputationResult,
+  runFromAgdaFunction,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conway.ImpTest ()
 
 instance ExecSpecRule "LEDGERS" ConwayEra where
   type ExecContext "LEDGERS" ConwayEra = EnactState ConwayEra
 
-  environmentSpec _ = mempty
-  stateSpec _ _ = mempty
-  signalSpec _ _ _ = mempty
-  runAgdaRule env st sig = unComputationResult $ Agda.ledgersStep env st sig
+  runAgdaRule = runFromAgdaFunction Agda.ledgersStep

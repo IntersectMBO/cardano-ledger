@@ -10,6 +10,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -22,7 +23,6 @@ import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
@@ -30,27 +30,35 @@ import Cardano.Ledger.Conway.Core (
   EraTx (..),
   EraTxAuxData (..),
   EraTxWits (..),
+  ppMaxTxSizeL,
  )
-import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
+import Cardano.Ledger.Conway.Governance (GovActionId)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
-import Data.Bifunctor (Bifunctor (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import Data.Word
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr, oneof)
+import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, ToExpr, oneof)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenSize (..),
+  GenState (..),
+  initialLedgerState,
+  runGenRS,
+ )
+import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
+import Test.Cardano.Ledger.Generic.Instances ()
+import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 
 instance HasSimpleRep DepositPurpose
 
@@ -210,15 +218,24 @@ correctAddrAndWFCoin txOut =
         )
     ]
 
-depositsMap ::
-  ConwayEraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
-depositsMap certState props =
-  Map.unions
-    [ Map.mapKeys CredentialDeposit $
-        Map.map
-          (fromCompact . (^. depositAccountStateL))
-          (certState ^. certDStateL . accountsL . accountsMapL)
-    , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
-    , fmap (fromCompact . drepDeposit) . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
-    , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
-    ]
+genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
+genUtxoExecContext = do
+  ueSlot <- arbitrary
+  let
+    genSize =
+      GenSize.small
+        { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
+        , regCertFreq = 0
+        , delegCertFreq = 0
+        }
+  ((uecUTxO, uecTx), gs) <- runGenRS genSize $ genAlonzoTx ueSlot
+  let
+    txSize = uecTx ^. sizeTxF
+    lState = initialLedgerState gs
+    ueCertState = lsCertState lState
+    uePParams =
+      gePParams (gsGenEnv gs)
+        & ppMaxTxSizeL .~ fromIntegral txSize
+        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+    uecUtxoEnv = UtxoEnv {..}
+  pure UtxoExecContext {..}

@@ -13,12 +13,11 @@ import Data.List (isInfixOf)
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance (
-  FixupSpecRep,
+  SpecNormalize (..),
   SpecTranslate (..),
   hashToInteger,
   integerToHash,
   runSpecTransM,
-  toTestRep,
  )
 import Test.Cardano.Ledger.Conformance.Spec.Conway ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger, vkeyToInteger)
@@ -28,7 +27,7 @@ hashDisplayProp ::
   ( Typeable a
   , Arbitrary a
   , SpecTranslate () a
-  , FixupSpecRep (SpecRep a)
+  , SpecNormalize (SpecRep a)
   , ToExpr (SpecRep a)
   , ToExpr a
   ) =>
@@ -37,7 +36,7 @@ hashDisplayProp = prop (show $ typeRep (Proxy @a)) $ do
   someHash <- arbitrary @a
   let
     specRes =
-      case runSpecTransM () (toTestRep someHash) of
+      case runSpecTransM () (specNormalize <$> toSpecRep someHash) of
         Left e -> error $ "Failed to translate hash: " <> show e
         Right x -> x
   pure
