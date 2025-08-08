@@ -201,10 +201,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_set proposal_procedure
+proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_set certificate
+certificates = "certificates" =:= nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
@@ -853,3 +853,11 @@ nonempty_set = binding $ \x ->
   "nonempty_set"
     =:= tag 258 (arr [1 <+ a x])
     / sarr [1 <+ a x]
+
+-- | An OSet is a Set that preserves the order of its elements.
+oset :: IsType0 t0 => t0 -> GRuleCall
+oset = binding $ \x -> "oset" =:= tag 258 (arr [0 <+ a x])
+
+-- | An NonEmpty OSet is a NonEmpty Set that preserves the order of its elements.
+nonempty_oset :: IsType0 t0 => t0 -> GRuleCall
+nonempty_oset = binding $ \x -> "nonempty_oset" =:= tag 258 (arr [1 <+ a x])
