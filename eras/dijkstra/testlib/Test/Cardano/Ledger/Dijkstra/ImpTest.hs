@@ -13,12 +13,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   DijkstraEraImp,
 ) where
 
-import Cardano.Ledger.BaseTypes (
-  BoundedRational (..),
-  EpochInterval (..),
-  addEpochInterval,
-  knownNonZeroBounded,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
@@ -26,18 +21,21 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure (..),
   ConwayLedgerPredFailure (..),
  )
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
-import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.Maybe (fromJust)
-import Lens.Micro ((%~), (&))
+import qualified Data.Sequence.Strict as SSeq
+import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
+import Test.Cardano.Ledger.Imp.Common
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -65,7 +63,24 @@ instance AlonzoEraImp DijkstraEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
 
-instance ConwayEraImp DijkstraEra
+instance ConwayEraImp DijkstraEra where
+  delegateToDRep cred stake dRep = do
+    deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+    (_, spendingKP) <- freshKeyPair
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.fromList
+                [ RegDepositDelegTxCert
+                    cred
+                    (DelegVote dRep)
+                    deposit
+                ]
+    submitTx_ tx
+    ra <- getRewardAccountFor cred
+    pure (spendingKP, ra)
 
 class
   ( ConwayEraImp era
