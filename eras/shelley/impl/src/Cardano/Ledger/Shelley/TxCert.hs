@@ -103,7 +103,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Internal.Era (AllegraEra, AlonzoEra, BabbageEra, MaryEra)
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val ((<+>), (<×>))
@@ -619,7 +619,7 @@ shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
     numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (F.foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
-      RegPoolTxCert (PoolParams {ppId})
+      RegPoolTxCert (StakePoolParams {ppId})
         -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
         | not (isRegPoolRegistered ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
       _ -> regPoolIds

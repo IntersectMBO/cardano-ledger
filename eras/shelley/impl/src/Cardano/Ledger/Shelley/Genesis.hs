@@ -79,7 +79,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
@@ -121,7 +121,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
 data ShelleyGenesisStaking = ShelleyGenesisStaking
-  { sgsPools :: LM.ListMap (KeyHash 'StakePool) PoolParams
+  { sgsPools :: LM.ListMap (KeyHash 'StakePool) StakePoolParams
   -- ^ Pools to register
   --
   --   The key in this map is the hash of the public key of the _pool_. This

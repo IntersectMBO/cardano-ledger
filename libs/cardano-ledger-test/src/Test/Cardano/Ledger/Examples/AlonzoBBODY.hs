@@ -43,8 +43,8 @@ import Cardano.Ledger.PoolParams (PoolMetadata (..))
 import Cardano.Ledger.Shelley.API (
   GenDelegs (..),
   LedgerState (..),
-  PoolParams (..),
   ProtVer (..),
+  StakePoolParams (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -498,7 +498,7 @@ poolMDHTooBigTx =
       where
         tooManyBytes = BS.replicate (standardHashSize + 1) 0
         poolParams =
-          PoolParams
+          StakePoolParams
             { ppId = coerceKeyRole . hashKey $ vKey someKeys
             , ppVrf =
                 hashVerKeyVRF @MockCrypto . vrfVerKey @MockCrypto . mkVRFKeyPair @MockCrypto $

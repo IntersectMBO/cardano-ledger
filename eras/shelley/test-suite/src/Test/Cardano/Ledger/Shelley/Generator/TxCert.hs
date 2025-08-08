@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.API (
   GenDelegPair (..),
   GenDelegs (..),
   Network (..),
-  PoolParams (..),
+  StakePoolParams (..),
   StrictMaybe (..),
   VKey,
  )
@@ -300,7 +300,7 @@ genDelegation
       availableDelegates = filter (registeredDelegate . mkCredential . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = psStakePoolParams (dpState ^. certPStateL)
+      registeredPools = psStakeStakePoolParams (dpState ^. certPStateL)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
@@ -344,7 +344,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . aikCold) allDelegateKeys
 
--- | Generate PoolParams and the key witness.
+-- | Generate StakePoolParams and the key witness.
 genStakePool ::
   forall c.
   Crypto c =>
@@ -354,9 +354,9 @@ genStakePool ::
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams, KeyPair 'StakePool)
+  Gen (StakePoolParams, KeyPair 'StakePool)
 genStakePool poolKeys skeys (Coin minPoolCost) =
-  mkPoolParams
+  mkStakePoolParams
     <$> QC.elements poolKeys
     <*> ( Coin -- pledge
             <$> QC.frequency
@@ -370,17 +370,17 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
   where
     getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
-    mkPoolParams ::
+    mkStakePoolParams ::
       AllIssuerKeys c 'StakePool ->
       Coin ->
       Coin ->
       Natural ->
       VKey 'Staking ->
-      (PoolParams, KeyPair 'StakePool)
-    mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
+      (StakePoolParams, KeyPair 'StakePool)
+    mkStakePoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
           pps =
-            PoolParams
+            StakePoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
               (hashVerKeyVRF @c . vrfVerKey $ aikVrf allPoolKeys)
               pledge
@@ -430,7 +430,7 @@ genRetirePool _pp poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = psStakePoolParams pState
+    stakePools = psStakeStakePoolParams pState
     registered_ = eval (dom stakePools)
     retiring_ = domain (psRetiring pState)
     retireable = Set.toList (registered_ \\ retiring_)

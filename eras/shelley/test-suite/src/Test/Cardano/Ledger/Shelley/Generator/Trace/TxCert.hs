@@ -239,7 +239,7 @@ genTxCerts
             (const Nothing)
             certs
 
-        deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams certPState) certs
+        deposits = getTotalDepositsTxCerts pp (`Map.member` psStakeStakePoolParams certPState) certs
 
         certWits = concat (keyCredAsWitness <$> keyCreds')
         certScripts = extractScriptCred <$> scriptCreds

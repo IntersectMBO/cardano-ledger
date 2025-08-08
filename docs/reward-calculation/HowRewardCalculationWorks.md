@@ -38,7 +38,7 @@ This is a Haskell Datatype (Map (Credential 'Staking)  (KeyHash StakePool)), whi
 Only registered credentials will receive rewards.
 
 3. Information about which pool operators are currently registered to operate pools, and the parameters under which the pools operate.
-This is a Haskell Datatype (Map (KeyHash StakePool) PoolParams), which we will call the `poolParamsMap` . Rewards for UTxO entries delegated
+This is a Haskell Datatype (Map (KeyHash StakePool) StakePoolParams), which we will call the `poolParamsMap` . Rewards for UTxO entries delegated
 to non registered Pools are distributed to either the Treasury or the Reserves.
 
 4. Information about which pools are currently scheduled to retire, and when.
@@ -193,7 +193,7 @@ The actual values are stored in internal maps found in the type family `CertStat
 
 Map (Credential 'Staking) (StrictMaybe (KeyHash 'StakePool)) -- The User registration map
 Map (Credential 'Staking) Coin                               -- The User Rewards map
-Map (KeyHash 'StakePool) PoolParams                          -- The StakePool registration map
+Map (KeyHash 'StakePool) StakePoolParams                          -- The StakePool registration map
 ```
 
 A `Reward` contains information about a computed reward, that has yet to be applied to the internal Rewards map.

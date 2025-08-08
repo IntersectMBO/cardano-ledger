@@ -394,7 +394,7 @@ registerInitialStakePools ::
   NewEpochState era
 registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
-    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
       .~ ListMap.toMap sgsPools
 
 -- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
@@ -410,7 +410,7 @@ shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
     & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL %~ \initAccounts ->
       foldr registerAndDelegate initAccounts $ zip (ListMap.toList sgsStake) ptrs
   where
-    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakeStakePoolParamsL
     deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
     registerAndDelegate ((stakeKeyHash, stakePool), ptr) !accounts
       | stakePool `Map.member` stakePools =

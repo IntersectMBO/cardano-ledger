@@ -21,7 +21,7 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), Stak
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
   pmHash,
   pmUrl,
   ppCost,
@@ -600,9 +600,9 @@ alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-alicePoolParamsSmallCost :: PoolParams
-alicePoolParamsSmallCost =
-  PoolParams
+aliceStakePoolParamsSmallCost :: StakePoolParams
+aliceStakePoolParamsSmallCost =
+  StakePoolParams
     { ppId = hashKey $ vKey alicePoolColdKeys
     , ppVrf = hashVerKeyVRF @MockCrypto vkVrf
     , ppPledge = Coin 1
@@ -628,7 +628,7 @@ testPoolCostTooSmall =
         DelplFailure $
           PoolFailure $
             StakePoolCostTooLowPOOL $
-              Mismatch (ppCost alicePoolParamsSmallCost) (pp @ShelleyEra ^. ppMinPoolCostL)
+              Mismatch (ppCost aliceStakePoolParamsSmallCost) (pp @ShelleyEra ^. ppMinPoolCostL)
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -637,7 +637,7 @@ testPoolCostTooSmall =
       , fee = Coin 997
       , deposits = Coin 250
       , refunds = Coin 0
-      , certs = [ShelleyTxCertPool $ RegPool alicePoolParamsSmallCost]
+      , certs = [ShelleyTxCertPool $ RegPool aliceStakePoolParamsSmallCost]
       , ttl = SlotNo 0
       , signers =
           ( [ asWitness alicePay

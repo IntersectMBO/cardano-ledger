@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Shelley.Examples (
   exampleStakeKey,
   exampleNewEpochState,
   examplePoolDistr,
-  examplePoolParams,
+  exampleStakePoolParams,
   exampleTxIns,
   exampleProposedPPUpdates,
   exampleByronAddress,
@@ -364,7 +364,7 @@ exampleCerts ::
 exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)
-    , RegPoolTxCert examplePoolParams
+    , RegPoolTxCert exampleStakePoolParams
     , MirTxCert $
         MIRCert ReservesMIR $
           StakeAddressesMIR $
@@ -389,9 +389,9 @@ exampleProposedPPUpdates =
       (mkKeyHash 1)
       (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
 
-examplePoolParams :: PoolParams
-examplePoolParams =
-  PoolParams
+exampleStakePoolParams :: StakePoolParams
+exampleStakePoolParams =
+  StakePoolParams
     { ppId = hashKey $ vKey $ mkDSIGNKeyPair 1
     , ppVrf = exampleVrfVerKeyHash
     , ppPledge = Coin 1

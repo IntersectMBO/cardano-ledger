@@ -62,7 +62,7 @@ import Cardano.Ledger.Keys.Bootstrap as X (
  )
 import Cardano.Ledger.PoolParams as X (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
  )
 import Cardano.Ledger.Shelley.BlockBody as X

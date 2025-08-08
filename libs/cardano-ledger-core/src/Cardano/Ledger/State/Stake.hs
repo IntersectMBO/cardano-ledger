@@ -84,11 +84,11 @@ class
 
 snapShotFromInstantStake ::
   forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
-snapShotFromInstantStake iStake dState PState {psStakePoolParams} =
+snapShotFromInstantStake iStake dState PState {psStakeStakePoolParams} =
   SnapShot
     { ssStake = resolveInstantStake iStake accounts
     , ssDelegations = VMap.fromDistinctAscListN delegsCount delegsAscList
-    , ssPoolParams = VMap.fromMap psStakePoolParams
+    , ssStakePoolParams = VMap.fromMap psStakeStakePoolParams
     }
   where
     accounts = dsAccounts dState

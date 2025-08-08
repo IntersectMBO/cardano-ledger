@@ -63,7 +63,7 @@ spec = do
       cred3 <- KeyHashObj <$> freshKeyHash @'Staking
       cred4 <- KeyHashObj <$> freshKeyHash @'Staking
       poolId <- freshKeyHash
-      poolParams <- freshPoolParams poolId (RewardAccount Testnet cred0)
+      poolParams <- freshStakePoolParams poolId (RewardAccount Testnet cred0)
       dRepCred <- KeyHashObj <$> freshKeyHash @'DRepRole
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary

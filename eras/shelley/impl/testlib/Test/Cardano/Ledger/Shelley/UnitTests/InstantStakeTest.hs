@@ -11,7 +11,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm, fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.State hiding (balance)
 import Cardano.Ledger.TxIn (TxIn)
 import Data.Default (def)
@@ -26,7 +26,7 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-ppIdL :: Lens' PoolParams (KeyHash 'StakePool)
+ppIdL :: Lens' StakePoolParams (KeyHash 'StakePool)
 ppIdL = lens ppId (\x y -> x {ppId = y})
 
 -- | Generate an arbitrary value and overwrite the specified value using the supplied lens.
@@ -37,7 +37,7 @@ arbitraryLens l b = (l .~ b) <$> arbitrary
 
 instantStakeIncludesRewards :: forall era. ShelleyEraImp era => Gen Property
 instantStakeIncludesRewards = do
-  (pool1, pool2) <- arbitrary @(TupleN 2 PoolParams)
+  (pool1, pool2) <- arbitrary @(TupleN 2 StakePoolParams)
   let
     poolId1 = pool1 ^. ppIdL
     poolId2 = pool2 ^. ppIdL
@@ -86,7 +86,7 @@ instantStakeIncludesRewards = do
 
     instantStake = addInstantStake utxo1 mempty
     poolparamMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
-  pState <- arbitraryLens psStakePoolParamsL poolparamMap
+  pState <- arbitraryLens psStakeStakePoolParamsL poolparamMap
   let snapShot = snapShotFromInstantStake instantStake dState pState
       computedStakeDistr = VMap.toMap (unStake (ssStake snapShot))
 

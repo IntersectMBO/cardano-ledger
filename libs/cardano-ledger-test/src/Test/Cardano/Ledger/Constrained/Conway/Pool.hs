@@ -44,21 +44,21 @@ pStateSpec ::
   WitUniv era ->
   Specification (PState era)
 pStateSpec univ = constrained $ \ps ->
-  match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
-    [ witness univ (dom_ stakePoolParams)
-    , witness univ (rng_ stakePoolParams)
-    , witness univ (dom_ futureStakePoolParams)
-    , witness univ (rng_ futureStakePoolParams)
+  match ps $ \stakeStakePoolParams futureStakeStakePoolParams retiring deposits ->
+    [ witness univ (dom_ stakeStakePoolParams)
+    , witness univ (rng_ stakeStakePoolParams)
+    , witness univ (dom_ futureStakeStakePoolParams)
+    , witness univ (rng_ futureStakeStakePoolParams)
     , witness univ (dom_ retiring)
     , witness univ (dom_ deposits)
-    , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
-        dom_ retiring `subset_` dom_ stakePoolParams
-    , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
-        dom_ deposits ==. dom_ stakePoolParams
+    , assertExplain (pure "dom of retiring is a subset of dom of stakeStakePoolParams") $
+        dom_ retiring `subset_` dom_ stakeStakePoolParams
+    , assertExplain (pure "dom of deposits is dom of stakeStakePoolParams") $
+        dom_ deposits ==. dom_ stakeStakePoolParams
     , forAll' (rng_ deposits) $ \ [var|dep|] ->
         assertExplain (pure "all deposits are greater then (Coin 0)") $ dep >=. lit 0
-    , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
-        dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
+    , assertExplain (pure "dom of stakeStakePoolParams is disjoint from futureStakeStakePoolParams") $
+        dom_ stakeStakePoolParams `disjoint_` dom_ futureStakeStakePoolParams
     ]
 
 poolCertSpec ::
@@ -71,7 +71,7 @@ poolCertSpec ::
 poolCertSpec univ (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)
-      -- RegPool !(PoolParams c)
+      -- RegPool !(StakePoolParams c)
       ( branchW 1 $ \poolParams ->
           match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata ->
             [ witness univ poolParams
@@ -93,5 +93,5 @@ poolCertSpec univ (PoolEnv e pp) ps =
   where
     EpochInterval maxEp = pp ^. ppEMaxL
     maxEpochNo = EpochNo (fromIntegral maxEp)
-    rpools = Map.keys $ psStakePoolParams ps
+    rpools = Map.keys $ psStakeStakePoolParams ps
     maxMetaLen = fromIntegral (Hash.sizeHash ([] @HASH))

@@ -42,7 +42,7 @@ module Cardano.Ledger.State.SnapShots (
   ssStakeL,
   ssStakeDistrL,
   ssDelegationsL,
-  ssPoolParamsL,
+  ssStakePoolParamsL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -82,7 +82,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
+import Cardano.Ledger.PoolParams (StakePoolParams (ppVrf))
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
@@ -182,7 +182,7 @@ maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
 data SnapShot = SnapShot
   { ssStake :: !Stake
   , ssDelegations :: !(VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
-  , ssPoolParams :: !(VMap VB VB (KeyHash 'StakePool) PoolParams)
+  , ssStakePoolParams :: !(VMap VB VB (KeyHash 'StakePool) StakePoolParams)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
@@ -192,26 +192,26 @@ instance NoThunks SnapShot
 instance NFData SnapShot
 
 instance EncCBOR SnapShot where
-  encCBOR SnapShot {ssStake, ssDelegations, ssPoolParams} =
+  encCBOR SnapShot {ssStake, ssDelegations, ssStakePoolParams} =
     encodeListLen 3
       <> encCBOR ssStake
       <> encCBOR ssDelegations
-      <> encCBOR ssPoolParams
+      <> encCBOR ssStakePoolParams
 
 instance DecShareCBOR SnapShot where
   type Share SnapShot = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
   decSharePlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
     ssStake <- decSharePlusLensCBOR _1
     ssDelegations <- decSharePlusCBOR
-    ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
-    pure SnapShot {ssStake, ssDelegations, ssPoolParams}
+    ssStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
+    pure SnapShot {ssStake, ssDelegations, ssStakePoolParams}
 
 instance ToKeyValuePairs SnapShot where
   toKeyValuePairs ss@(SnapShot _ _ _) =
     let SnapShot {..} = ss
      in [ "stake" .= ssStake
         , "delegations" .= ssDelegations
-        , "poolParams" .= ssPoolParams
+        , "poolParams" .= ssStakePoolParams
         ]
 
 -- | Snapshots of the stake distribution.
@@ -348,5 +348,5 @@ ssStakeDistrL = lens (unStake . ssStake) (\ds u -> ds {ssStake = Stake u})
 ssDelegationsL :: Lens' SnapShot (VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
 ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
 
-ssPoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash 'StakePool) PoolParams)
-ssPoolParamsL = lens ssPoolParams (\ds u -> ds {ssPoolParams = u})
+ssStakePoolParamsL :: Lens' SnapShot (VMap VB VB (KeyHash 'StakePool) StakePoolParams)
+ssStakePoolParamsL = lens ssStakePoolParams (\ds u -> ds {ssStakePoolParams = u})

@@ -44,7 +44,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
+import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
@@ -199,12 +199,12 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring}
+      , ps@PState {psStakeStakePoolParams, psFutureStakeStakePoolParams, psRetiring}
       , poolCert
       ) <-
     judgmentContext
   case poolCert of
-    RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
+    RegPool poolParams@StakePoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
       let pv = pp ^. ppProtocolVersionL
       when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
@@ -234,13 +234,13 @@ poolDelegationTransition = do
               , mismatchExpected = minPoolCost
               }
 
-      if eval (ppId ∉ dom psStakePoolParams)
+      if eval (ppId ∉ dom psStakeStakePoolParams)
         then do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps {psStakePoolParams = eval (psStakePoolParams ⨃ singleton ppId poolParams)}
+              ps {psStakeStakePoolParams = eval (psStakeStakePoolParams ⨃ singleton ppId poolParams)}
         else do
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
@@ -254,11 +254,11 @@ poolDelegationTransition = do
           -- the if statement.
           pure $
             ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ⨃ singleton ppId poolParams)
+              { psFutureStakeStakePoolParams = eval (psFutureStakeStakePoolParams ⨃ singleton ppId poolParams)
               , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
               }
     RetirePool hk e -> do
-      eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
+      eval (hk ∈ dom psStakeStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
