@@ -50,8 +50,8 @@ epochStateSpec epochNo = constrained $ \es ->
                   match pulser $ \_size _stakeMap _index _stakeDistr _stakePoolDistr _drepDistr _drepState pulseEpoch _committeeState _enactState pulseProposals _proposalDeposits _poolParams ->
                     [ assert $ pulseEpoch ==. epochNo
                     , forAll pulseProposals $ \gas ->
-                        match gas $ \gasId _ _ _ _ _ _ ->
-                          proposalExists gasId proposals
+                        match gas $ \gasIdPulse _ _ _ _ _ _ ->
+                          proposalExists gasIdPulse proposals
                     , -- TODO: something is wrong in this case and I haven't figured out what yet
                       assert False
                     ]
@@ -67,8 +67,9 @@ epochStateSpec epochNo = constrained $ \es ->
                             (expired ==. mempty)
                             (sizeOf_ expired <. sz)
                         ]
-                    , forAll expired $ \ [var| gasId |] ->
-                        proposalExists gasId proposals
+                    , assert $ sizeOf_ expired <=. 30
+                    , forAll expired $ \ [var| gasIdExpire |] ->
+                        proposalExists gasIdExpire proposals
                     , -- TODO: this isn't enough, we need to ensure it's at most
                       -- one of each type of action that's being enacted
                       forAll enacted $ \ [var|govact|] ->
