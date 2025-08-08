@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec, shelleyCertsSpec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
@@ -269,7 +269,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "ProposalProcedures" $ do
         it "V1" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
@@ -279,7 +279,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ ProposalProceduresFieldNotSupported badField
         it "V2" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
+          rewardAccount <- registerRewardAccountWithDeposit
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
@@ -362,21 +362,6 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                             CertificateNotSupported badCert
                       ]
                 )
-        describe "DelegTxCert" $ do
-          it "V1" $ do
-            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
-            let delegTxCert =
-                  DelegTxCert @era
-                    delegator
-                    (DelegVote (DRepCredential drep))
-            testCertificateNotSupportedV1 delegTxCert
-          it "V2" $ do
-            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
-            let delegTxCert =
-                  DelegTxCert @era
-                    delegator
-                    (DelegVote (DRepCredential drep))
-            testCertificateNotSupportedV2 delegTxCert
         describe "RegDepositDelegTxCert" $ do
           it "V1" $ do
             (drep, _, _) <- setupSingleDRep 1_000_000_000
@@ -479,7 +464,7 @@ govPolicySpec = do
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
         proposal <- mkProposal govAction
@@ -500,7 +485,7 @@ govPolicySpec = do
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
           committeeMembers'
-      rewardAccount <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
 
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
@@ -527,7 +512,7 @@ govPolicySpec = do
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
         proposal <- mkProposal govAction
@@ -719,3 +704,52 @@ enactCostModels prevGovId cms dRep committeeMembers' = do
 
 spendDatum :: P1.Data
 spendDatum = P1.I 3
+
+shelleyCertsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyCertsSpec = do
+  describe "Conway features fail in Plutusdescribe v1 and v2" $ do
+    describe "Certificates" $ do
+      describe "Unsupported" $ do
+        let testCertificateNotSupportedV1 badCert =
+              testCertificateNotSupported badCert
+                =<< produceScript @era (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
+            testCertificateNotSupportedV2 badCert =
+              testCertificateNotSupported badCert
+                =<< produceScript @era (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
+            testCertificateNotSupported badCert txIn = do
+              submitFailingTx
+                ( mkBasicTx mkBasicTxBody
+                    & bodyTxL . inputsTxBodyL
+                      .~ Set.singleton txIn
+                    & bodyTxL . certsTxBodyL
+                      .~ SSeq.singleton badCert
+                )
+                ( pure . injectFailure $
+                    CollectErrors
+                      [ BadTranslation $
+                          inject $
+                            CertificateNotSupported badCert
+                      ]
+                )
+        describe "DelegTxCert" $ do
+          it "V1" $ do
+            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
+            let delegTxCert =
+                  DelegTxCert @era
+                    delegator
+                    (DelegVote (DRepCredential drep))
+            testCertificateNotSupportedV1 delegTxCert
+          it "V2" $ do
+            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
+            let delegTxCert =
+                  DelegTxCert @era
+                    delegator
+                    (DelegVote (DRepCredential drep))
+            testCertificateNotSupportedV2 delegTxCert

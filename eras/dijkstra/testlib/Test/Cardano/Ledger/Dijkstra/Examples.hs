@@ -19,6 +19,7 @@ import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), Co
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
+import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
   Datum (..),
@@ -33,6 +34,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
@@ -42,7 +44,6 @@ import Test.Cardano.Ledger.Alonzo.Examples (
   mkLedgerExamples,
  )
 import Test.Cardano.Ledger.Babbage.Examples (exampleBabbageNewEpochState, exampleCollateralOutput)
-import Test.Cardano.Ledger.Conway.Examples (exampleConwayCerts)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era ()
@@ -51,6 +52,7 @@ import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   examplePayKey,
+  examplePoolParams,
   exampleStakeKey,
   keyToCredential,
   mkKeyHash,
@@ -88,7 +90,7 @@ exampleTxBodyDijkstra =
     )
     (SJust $ mkSized (eraProtVerHigh @DijkstraEra) exampleCollateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    exampleConwayCerts
+    exampleDijkstraCerts
     ( Withdrawals $
         Map.singleton
           (RewardAccount Testnet (keyToCredential exampleStakeKey))
@@ -107,3 +109,9 @@ exampleTxBodyDijkstra =
     mempty
   where
     MaryValue _ exampleMultiAsset = exampleMultiAssetValue 3
+
+exampleDijkstraCerts :: OSet.OSet (DijkstraTxCert era)
+exampleDijkstraCerts =
+  OSet.fromList -- TODO should I add the new certs here?
+    [ DijkstraTxCertPool (RegPool examplePoolParams)
+    ]
