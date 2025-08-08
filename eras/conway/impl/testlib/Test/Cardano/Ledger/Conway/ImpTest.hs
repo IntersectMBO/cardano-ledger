@@ -20,7 +20,7 @@
 
 module Test.Cardano.Ledger.Conway.ImpTest (
   module Test.Cardano.Ledger.Babbage.ImpTest,
-  ConwayEraImp,
+  ConwayEraImp (..),
   conwayModifyImpInitProtVer,
   enactConstitution,
   enactTreasuryWithdrawals,
@@ -51,9 +51,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerDRep,
   unRegisterDRep,
   updateDRep,
-  delegateToDRep,
   setupSingleDRep,
-  regDelegToDRep,
   setupDRepWithoutStake,
   setupPoolWithStake,
   setupPoolWithoutStake,
@@ -346,8 +344,26 @@ class
   , GovState era ~ ConwayGovState era
   ) =>
   ConwayEraImp era
+  where
+  delegateToDRep ::
+    Credential 'Staking ->
+    Coin ->
+    DRep ->
+    ImpTestM era (KeyPair 'Payment, RewardAccount)
 
-instance ConwayEraImp ConwayEra
+instance ConwayEraImp ConwayEra where
+  delegateToDRep cred stake dRep = do
+    ra <- registerStakeCredential cred
+    (_, spendingKP) <- freshKeyPair
+
+    submitTxAnn_ "Delegate to DRep" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
+        & bodyTxL . certsTxBodyL
+          .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
+
+    pure (spendingKP, ra)
 
 registerInitialCommittee ::
   (HasCallStack, ConwayEraImp era) =>
@@ -471,49 +487,9 @@ setupSingleDRep ::
 setupSingleDRep stake = impAnn "Set up a single DRep" $ do
   drepKH <- registerDRep
   kh <- freshKeyHash
-  (delegatorKH, spendingKP) <-
-    regDelegToDRep (KeyHashObj kh) (Coin stake) (DRepCredential (KeyHashObj drepKH))
-  pure (KeyHashObj drepKH, delegatorKH, spendingKP)
-
-regDelegToDRep ::
-  ConwayEraImp era =>
-  Credential 'Staking ->
-  Coin ->
-  DRep ->
-  ImpTestM era (Credential 'Staking, KeyPair 'Payment)
-regDelegToDRep cred stake dRep = do
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-  (_, spendingKP) <- freshKeyPair
-  let tx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL
-            .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.fromList
-              [ RegDepositDelegTxCert
-                  cred
-                  (DelegVote dRep)
-                  deposit
-              ]
-  submitTx_ tx
-  pure (cred, spendingKP)
-
-delegateToDRep ::
-  ConwayEraImp era =>
-  Credential 'Staking ->
-  Coin ->
-  DRep ->
-  ImpTestM era (KeyPair 'Payment)
-delegateToDRep cred stake dRep = do
-  (_, spendingKP) <- freshKeyPair
-
-  submitTxAnn_ "Delegate to DRep" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
-  pure spendingKP
+  (spendingKP, _) <-
+    delegateToDRep (KeyHashObj kh) (Coin stake) (DRepCredential (KeyHashObj drepKH))
+  pure (KeyHashObj drepKH, KeyHashObj kh, spendingKP)
 
 getDRepState ::
   (HasCallStack, ConwayEraCertState era) =>

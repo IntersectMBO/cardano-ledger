@@ -198,7 +198,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    void $ regDelegToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
+    void $ delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
