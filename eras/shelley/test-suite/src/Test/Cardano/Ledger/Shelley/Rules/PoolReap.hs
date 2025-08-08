@@ -94,8 +94,8 @@ removedAfterPoolreap p p' e =
       && Set.null (eval (retire ∩ dom stp'))
       && Set.null (eval (retire ∩ dom retiring'))
   where
-    stp = psStakePoolParams p
-    stp' = psStakePoolParams p'
+    stp = psStakePoolState p
+    stp' = psStakePoolState p'
     retiring = psRetiring p
     retiring' = psRetiring p'
     retire :: Set.Set (KeyHash 'StakePool) -- This declaration needed to disambiguate 'eval'

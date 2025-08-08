@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+* Deprecate `PoolParams` in favor of `StakePoolState`. #5196
+  * Deprecate the API `getPoolParameters` in favor of `getPoolState`.
+  * Deprecate the lens `epochStatePoolParamsL` in favor of `epochStatePoolStateL`.
+  * Rename
+    * `psStakePoolParamsL` to `psStatePoolStateL`
+    * `psFutureStakePoolParamsL` to `psFutureStatePoolStateL`
 * Add `mkBasicBlockBodyShelley` and `txSeqBlockBodyShelleyL` to use in Allegra and Mary.
 * Add `Default` instance for `NewEpochState`
 * Remove `epochStateUMapL`, `unifiedL`, `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`

@@ -35,18 +35,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (
-  PoolParams (..),
-  ppCost,
-  ppId,
-  ppMargin,
-  ppMetadata,
-  ppOwners,
-  ppPledge,
-  ppRelays,
-  ppRewardAccount,
-  ppVrf,
- )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

@@ -22,7 +22,6 @@ import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.API (
   Addr,
@@ -51,6 +50,7 @@ import Cardano.Ledger.Shelley.TxWits (
  )
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.State (PoolMetadata (..), StakePoolRelay (..))
 import Cardano.Ledger.Tools (estimateMinFeeTx)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val

@@ -297,7 +297,7 @@ govProceduresSpec ge@GovEnv {..} ps =
         ]
       committeeState = geCertState ^. certVStateL . vsCommitteeStateL
       knownDReps = Map.keysSet $ geCertState ^. certVStateL . vsDRepsL
-      knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolParamsL
+      knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolStateL
       knownCommitteeAuthorizations = authorizedHotCommitteeCredentials committeeState
       committeeVotableActionIds =
         actions (isCommitteeVotingAllowed geEpoch committeeState)

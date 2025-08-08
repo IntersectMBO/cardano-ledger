@@ -31,7 +31,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus (ExUnits (..), Language (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))

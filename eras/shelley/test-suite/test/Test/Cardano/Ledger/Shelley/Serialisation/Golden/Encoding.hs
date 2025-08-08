@@ -69,11 +69,6 @@ import Cardano.Ledger.Keys (
   asWitness,
   signedDSIGN,
  )
-import Cardano.Ledger.PoolParams (
-  PoolMetadata (..),
-  PoolParams (..),
-  StakePoolRelay (..),
- )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
 import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
@@ -91,6 +86,11 @@ import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import Cardano.Ledger.State (
+  PoolMetadata (..),
+  PoolParams (..),
+  StakePoolRelay (..),
+ )
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (

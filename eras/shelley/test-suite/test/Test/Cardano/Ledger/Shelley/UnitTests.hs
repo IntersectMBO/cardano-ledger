@@ -19,21 +19,6 @@ import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (
-  PoolMetadata (..),
-  PoolParams (..),
-  pmHash,
-  pmUrl,
-  ppCost,
-  ppId,
-  ppMargin,
-  ppMetadata,
-  ppOwners,
-  ppPledge,
-  ppRelays,
-  ppRewardAccount,
-  ppVrf,
- )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),

@@ -170,7 +170,6 @@ import Cardano.Ledger.Keys (
   makeBootstrapWitness,
   witVKeyHash,
  )
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)

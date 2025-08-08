@@ -95,13 +95,6 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Data (BinaryData, Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.PoolParams (
-  PoolMetadata (..),
-  PoolParams (..),
-  SizeOfPoolOwners (..),
-  SizeOfPoolRelays (..),
-  StakePoolRelay (..),
- )
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
@@ -465,6 +458,18 @@ instance Arbitrary PoolParams where
     PoolParams
       <$> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary StakePoolState where
+  arbitrary =
+    StakePoolState
+      <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

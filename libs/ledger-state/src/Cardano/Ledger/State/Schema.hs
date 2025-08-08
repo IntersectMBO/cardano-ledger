@@ -23,9 +23,9 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (PParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
-import qualified Cardano.Ledger.PoolParams as Shelley
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
+import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.State.Orphans (Enc, SnapShotType (..))
 import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.TxIn as TxIn

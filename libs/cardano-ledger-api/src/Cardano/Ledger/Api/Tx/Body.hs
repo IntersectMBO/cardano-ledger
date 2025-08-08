@@ -113,7 +113,7 @@ import Lens.Micro (Lens', lens)
 -- In case when full `Cardano.Ledger.CertState` is available then this can be simplified to:
 --
 -- > let lookupRefund = lookupDepositDState (certDState dpState)
--- > let isRegPoolId = (`Map.member` psStakePoolParams (certPState dpState))
+-- > let isRegPoolId = (`Map.member` psStakePoolState (certPState dpState))
 -- > evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody
 evalBalanceTxBody ::
   EraUTxO era =>
