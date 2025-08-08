@@ -97,16 +97,13 @@ whoDelegatesSpec univ = constrained $ \m ->
   ]
 
 wdrlSpec ::
-  Era era =>
   Map (Credential 'DRepRole) (Set (Credential 'Staking)) ->
-  WitUniv era ->
   Specification (Map RewardAccount Coin)
-wdrlSpec whodelegates univ = constrained $ \m ->
+wdrlSpec whodelegates = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) <=. lit 5
   , forAll' m $ \ [var|rewacct|] _ ->
       match rewacct $ \ [var|_network|] [var|credStake|] ->
         [ assert $ _network ==. lit Testnet
-        , witness univ credStake
         , assert $ member_ credStake (lit (delegators whodelegates))
         ]
   ]
@@ -137,7 +134,7 @@ type CertContext = (Map (Credential 'DRepRole) (Set (Credential 'Staking)), Map 
 genCertContext :: forall era. Era era => WitUniv era -> Gen CertContext
 genCertContext univ = do
   whodelegates <- genFromSpec (whoDelegatesSpec univ)
-  wdrl <- genFromSpec (wdrlSpec whodelegates univ)
+  wdrl <- genFromSpec (wdrlSpec whodelegates)
   pure (whodelegates, wdrl)
 
 -- This is a hack, neccessitated by the fact that conwayGovStateSpec,
