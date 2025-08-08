@@ -98,7 +98,7 @@ exampleTxBodyDijkstra =
     )
     (Coin 999) -- txfee
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    (OSet.singleton . KeyHashObj $ mkKeyHash 212) -- reqSignerHashes
+    (OSet.singleton . KeyHashObj $ mkKeyHash 212) -- guards
     exampleMultiAsset -- mint
     (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
     (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash

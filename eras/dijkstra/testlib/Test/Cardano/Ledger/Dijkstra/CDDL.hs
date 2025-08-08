@@ -162,9 +162,7 @@ guards :: Rule
 guards =
   "guards"
     =:= nonempty_set addr_keyhash
-
--- TODO add this once `nonempty_oset` is added back
--- / nonempty_oset undefined
+    / nonempty_oset credential
 
 proposal_procedure :: Rule
 proposal_procedure =

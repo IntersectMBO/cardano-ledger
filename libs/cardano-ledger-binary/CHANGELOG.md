@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `liftST`
 * Bump `MaxVersion` to `12`
 * Add `decodeFullFromHexText`
 * Moved `Annotator` orphan instance for plutus `Data` into `testlib`

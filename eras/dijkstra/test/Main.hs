@@ -7,6 +7,7 @@ import Cardano.Ledger.Dijkstra.Rules ()
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import qualified Test.Cardano.Ledger.Dijkstra.Binary.Compatibility as BinaryCompatibility
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
@@ -19,3 +20,4 @@ main =
       ConwaySpec.spec @DijkstraEra
     roundTripJsonShelleyEraSpec @DijkstraEra
     GoldenSpec.spec
+    BinaryCompatibility.spec

@@ -601,15 +601,19 @@ instance DijkstraEraTxBody DijkstraEra where
     lensMemoRawType @DijkstraEra dtbrGuards $
       \txb x -> txb {dtbrGuards = x}
 
+-- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
+-- the first element and if it's a credential, it decodes the rest of the
+-- elements as credentials. If the first element is a plain keyhash, it will
+-- decode rest of the elements as keyhashes.
 decodeGuards :: Decoder s (OSet (Credential Guard))
 decodeGuards = do
-  ref <- liftST $ newSTRef Nothing
+  elementsAreCredentials <- liftST $ newSTRef Nothing
   let
     decodeElement = do
-      liftST (readSTRef ref) >>= \case
+      liftST (readSTRef elementsAreCredentials) >>= \case
         Nothing -> do
           tokenType <- peekTokenType
-          liftST . writeSTRef ref . Just $ case tokenType of
+          liftST . writeSTRef elementsAreCredentials . Just $ case tokenType of
             TypeListLen -> True
             TypeListLen64 -> True
             TypeListLenIndef -> True

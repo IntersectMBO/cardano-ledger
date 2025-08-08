@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `reqSignerHashesTxBodyG`
 * Add `mkScriptIntegrity`
 * Changed the type of `hashScriptIntegrity`
 * Add `ScriptIntegrityHashMismatch`
