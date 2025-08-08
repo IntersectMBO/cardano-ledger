@@ -169,10 +169,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_set proposal_procedure
+proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_set certificate
+certificates = "certificates" =:= nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
