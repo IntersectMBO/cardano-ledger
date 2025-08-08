@@ -113,8 +113,7 @@ spec = do
     setupRewardAccount stake dRep = do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
-      void $ regDelegToDRep cred stake dRep
-      ra <- getRewardAccountFor cred
+      (_, ra) <- delegateToDRep cred stake dRep
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
