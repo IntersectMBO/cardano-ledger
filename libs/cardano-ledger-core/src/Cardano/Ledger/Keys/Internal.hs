@@ -75,6 +75,7 @@ data KeyRole
   | DRepRole
   | HotCommitteeRole
   | ColdCommitteeRole
+  | Guard
   deriving (Show)
 
 class HasKeyRole (a :: KeyRole -> Type) where

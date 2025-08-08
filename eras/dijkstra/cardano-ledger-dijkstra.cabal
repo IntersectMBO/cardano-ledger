@@ -108,6 +108,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Arbitrary
     Test.Cardano.Ledger.Dijkstra.Binary.Annotator
     Test.Cardano.Ledger.Dijkstra.Binary.Cddl
+    Test.Cardano.Ledger.Dijkstra.Binary.Compatibility
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
     Test.Cardano.Ledger.Dijkstra.CDDL
     Test.Cardano.Ledger.Dijkstra.Era
@@ -129,6 +130,7 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-alonzo:testlib,
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
@@ -144,6 +146,7 @@ library testlib
     heredoc,
     microlens,
     small-steps,
+    transformers,
 
 executable huddle-cddl
   main-is: Main.hs

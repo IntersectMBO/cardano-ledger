@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,10 +13,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody (..),
   TxBody (
     MkDijkstraTxBody,
     DijkstraTxBody,
@@ -29,7 +32,6 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbWithdrawals,
     dtbTxfee,
     dtbVldt,
-    dtbReqSignerHashes,
     dtbMint,
     dtbScriptIntegrityHash,
     dtbAdHash,
@@ -37,7 +39,8 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbVotingProcedures,
     dtbProposalProcedures,
     dtbCurrentTreasuryValue,
-    dtbTreasuryDonation
+    dtbTreasuryDonation,
+    dtbGuards
   ),
   upgradeProposals,
   upgradeGovAction,
@@ -53,10 +56,14 @@ import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..), fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
+  Decoder,
   EncCBOR (..),
   Sized (..),
   ToCBOR,
+  TokenType (..),
+  liftST,
   mkSized,
+  peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -87,9 +94,11 @@ import Cardano.Ledger.Conway.TxBody (
   conwayRedeemerPointerInverse,
  )
 import Cardano.Ledger.Core (EraPParams (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.TxOut ()
+import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -106,11 +115,14 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Coerce (coerce)
+import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
+import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
+import Data.Set (Set, foldr')
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (to, (^.))
+import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
 
 data DijkstraTxBodyRaw = DijkstraTxBodyRaw
@@ -124,7 +136,7 @@ data DijkstraTxBodyRaw = DijkstraTxBodyRaw
   , dtbrWithdrawals :: !Withdrawals
   , dtbrFee :: !Coin
   , dtbrVldt :: !ValidityInterval
-  , dtbrReqSignerHashes :: !(Set (KeyHash 'Witness))
+  , dtbrGuards :: !(OSet (Credential Guard))
   , dtbrMint :: !MultiAsset
   , dtbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , dtbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -217,11 +229,9 @@ instance DecCBOR DijkstraTxBodyRaw where
           (\x tx -> tx {dtbrCollateralInputs = x})
           From
       bodyFields 14 =
-        fieldGuarded
-          (emptyFailure "Required Signer Hashes" "non-empty")
-          null
-          (\x tx -> tx {dtbrReqSignerHashes = x})
-          From
+        ofield
+          (\x tx -> tx {dtbrGuards = fromSMaybe mempty x})
+          (D decodeGuards)
       bodyFields 15 = ofield (\x tx -> tx {dtbrNetworkId = x}) From
       bodyFields 16 = ofield (\x tx -> tx {dtbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {dtbrTotalCollateral = x}) From
@@ -278,7 +288,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Omit OSet.null (Key 4 (To dtbrCerts))
         !> Omit (null . unWithdrawals) (Key 5 (To dtbrWithdrawals))
         !> encodeKeyedStrictMaybe 8 bot
-        !> Omit null (Key 14 (To dtbrReqSignerHashes))
+        !> Omit null (Key 14 (To dtbrGuards))
         !> Omit (== mempty) (Key 9 (To dtbrMint))
         !> encodeKeyedStrictMaybe 11 dtbrScriptIntegrityHash
         !> encodeKeyedStrictMaybe 7 dtbrAuxDataHash
@@ -310,7 +320,7 @@ pattern DijkstraTxBody ::
   Withdrawals ->
   Coin ->
   ValidityInterval ->
-  Set (KeyHash 'Witness) ->
+  OSet (Credential Guard) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
   StrictMaybe TxAuxDataHash ->
@@ -331,7 +341,7 @@ pattern DijkstraTxBody
   , dtbWithdrawals
   , dtbTxfee
   , dtbVldt
-  , dtbReqSignerHashes
+  , dtbGuards
   , dtbMint
   , dtbScriptIntegrityHash
   , dtbAdHash
@@ -353,7 +363,7 @@ pattern DijkstraTxBody
         , dtbrWithdrawals = dtbWithdrawals
         , dtbrFee = dtbTxfee
         , dtbrVldt = dtbVldt
-        , dtbrReqSignerHashes = dtbReqSignerHashes
+        , dtbrGuards = dtbGuards
         , dtbrMint = dtbMint
         , dtbrScriptIntegrityHash = dtbScriptIntegrityHash
         , dtbrAuxDataHash = dtbAdHash
@@ -376,7 +386,7 @@ pattern DijkstraTxBody
       withdrawalsX
       txfeeX
       vldtX
-      reqSignerHashesX
+      guards
       mintX
       scriptIntegrityHashX
       adHashX
@@ -397,7 +407,7 @@ pattern DijkstraTxBody
             withdrawalsX
             txfeeX
             vldtX
-            reqSignerHashesX
+            guards
             mintX
             scriptIntegrityHashX
             adHashX
@@ -514,10 +524,14 @@ instance AlonzoEraTxBody DijkstraEra where
       \txb x -> txb {dtbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
 
-  reqSignerHashesTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrReqSignerHashes $
-      \txb x -> txb {dtbrReqSignerHashes = x}
+  reqSignerHashesTxBodyL = notSupportedInThisEraL
   {-# INLINE reqSignerHashesTxBodyL #-}
+
+  reqSignerHashesTxBodyG = guardsTxBodyL . to (foldr' insertKeyHash mempty . OSet.toSet)
+    where
+      insertKeyHash (KeyHashObj kh) = Set.insert $ coerceKeyRole kh
+      insertKeyHash (ScriptHashObj _) = id
+  {-# INLINE reqSignerHashesTxBodyG #-}
 
   scriptIntegrityHashTxBodyL =
     lensMemoRawType @DijkstraEra dtbrScriptIntegrityHash $
@@ -577,3 +591,34 @@ instance ConwayEraTxBody DijkstraEra where
     lensMemoRawType @DijkstraEra dtbrTreasuryDonation $
       \txb x -> txb {dtbrTreasuryDonation = x}
   {-# INLINE treasuryDonationTxBodyL #-}
+
+class ConwayEraTxBody era => DijkstraEraTxBody era where
+  guardsTxBodyL :: Lens' (TxBody era) (OSet (Credential Guard))
+
+instance DijkstraEraTxBody DijkstraEra where
+  {-# INLINE guardsTxBodyL #-}
+  guardsTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrGuards $
+      \txb x -> txb {dtbrGuards = x}
+
+-- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
+-- the first element and if it's a credential, it decodes the rest of the
+-- elements as credentials. If the first element is a plain keyhash, it will
+-- decode rest of the elements as keyhashes.
+decodeGuards :: Decoder s (OSet (Credential Guard))
+decodeGuards = do
+  elementsAreCredentials <- liftST $ newSTRef Nothing
+  let
+    decodeElement = do
+      liftST (readSTRef elementsAreCredentials) >>= \case
+        Nothing -> do
+          tokenType <- peekTokenType
+          liftST . writeSTRef elementsAreCredentials . Just $ case tokenType of
+            TypeListLen -> True
+            TypeListLen64 -> True
+            TypeListLenIndef -> True
+            _ -> False
+          decodeElement
+        Just True -> decCBOR
+        Just False -> KeyHashObj <$> decCBOR
+  decodeOSet decodeElement

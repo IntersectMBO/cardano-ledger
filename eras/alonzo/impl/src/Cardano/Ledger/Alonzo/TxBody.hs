@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -140,7 +141,13 @@ type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
 
-  reqSignerHashesTxBodyL :: Lens' (TxBody era) (Set (KeyHash 'Witness))
+  reqSignerHashesTxBodyL :: ProtVerAtMost era 11 => Lens' (TxBody era) (Set (KeyHash 'Witness))
+
+  reqSignerHashesTxBodyG ::
+    SimpleGetter (TxBody era) (Set (KeyHash Witness))
+  default reqSignerHashesTxBodyG ::
+    ProtVerAtMost era 11 => SimpleGetter (TxBody era) (Set (KeyHash Witness))
+  reqSignerHashesTxBodyG = reqSignerHashesTxBodyL
 
   scriptIntegrityHashTxBodyL ::
     Lens' (TxBody era) (StrictMaybe ScriptIntegrityHash)

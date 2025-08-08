@@ -147,7 +147,7 @@ transaction_body =
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
       , opt (idx 13 ==> nonempty_set transaction_input)
-      , opt (idx 14 ==> required_signers)
+      , opt (idx 14 ==> guards)
       , opt (idx 15 ==> network_id)
       , opt (idx 16 ==> transaction_output)
       , opt (idx 17 ==> coin)
@@ -157,6 +157,12 @@ transaction_body =
       , opt (idx 21 ==> coin)
       , opt (idx 22 ==> positive_coin)
       ]
+
+guards :: Rule
+guards =
+  "guards"
+    =:= nonempty_set addr_keyhash
+    / nonempty_oset credential
 
 proposal_procedure :: Rule
 proposal_procedure =
@@ -169,10 +175,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_set proposal_procedure
+proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_set certificate
+certificates = "certificates" =:= nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
