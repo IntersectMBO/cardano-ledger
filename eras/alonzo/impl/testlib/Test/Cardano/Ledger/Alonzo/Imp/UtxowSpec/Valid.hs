@@ -151,13 +151,13 @@ shelleyCertsSpec = do
                 & certsTxBodyL .~ [txCert]
 
         it "Validating WITHDRAWAL script" $ do
-          account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
+          account <- shelleyRegisterStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
           submitTx_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
         it "Not validating WITHDRAWAL script" $ do
-          account <- registerStakeCredential $ ScriptHashObj alwaysFailsNoDatumHash
+          account <- shelleyRegisterStakeCredential $ ScriptHashObj alwaysFailsNoDatumHash
           submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
@@ -183,7 +183,7 @@ shelleyCertsSpec = do
             rewardScriptHashes = [alwaysSucceedsNoDatumHash, timelockScriptHash2]
           txIns <- traverse produceScript inputScriptHashes
           multiAsset <- MultiAsset . fromList <$> traverse scriptAsset assetScriptHashes
-          rewardAccounts <- traverse (registerStakeCredential . ScriptHashObj) rewardScriptHashes
+          rewardAccounts <- traverse (shelleyRegisterStakeCredential . ScriptHashObj) rewardScriptHashes
           outputAddr <- freshKeyHash @'Payment
           let
             txOut =
