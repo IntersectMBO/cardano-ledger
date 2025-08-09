@@ -81,7 +81,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -108,7 +108,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -155,7 +155,7 @@ spec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
