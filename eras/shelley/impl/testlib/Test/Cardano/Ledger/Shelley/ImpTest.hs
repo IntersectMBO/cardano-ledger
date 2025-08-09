@@ -1570,15 +1570,15 @@ registerStakeCredential ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
 registerStakeCredential cred = do
+  regTxCert <- genRegTxCert cred
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert cred]
+        .~ SSeq.fromList [regTxCert]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
 

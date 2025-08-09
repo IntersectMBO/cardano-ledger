@@ -814,7 +814,7 @@ votingSpec =
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
 
           kh <- freshKeyHash
-          _ <- registerStakeCredentialWithDeposit (KeyHashObj kh)
+          _ <- registerStakeCredential (KeyHashObj kh)
           _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
           passEpoch
           -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
