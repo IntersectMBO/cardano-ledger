@@ -53,6 +53,7 @@ instance ShelleyEraImp BabbageEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
+  registerStakeCredential = shelleyRegisterStakeCredential
 
 babbageFixupTx ::
   ( HasCallStack
