@@ -54,6 +54,7 @@ instance ShelleyEraImp DijkstraEra where
 
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
+  registerStakeCredential = conwayRegisterStakeCredential
 
 instance MaryEraImp DijkstraEra
 
