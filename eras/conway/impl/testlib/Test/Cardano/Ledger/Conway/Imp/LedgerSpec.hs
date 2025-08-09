@@ -81,7 +81,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -146,7 +146,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    void $ regDelegToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
+    void $ delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
@@ -258,7 +258,7 @@ shelleyCertsSpec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- shelleyRegisterStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -286,7 +286,7 @@ shelleyCertsSpec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- shelleyRegisterStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
