@@ -69,7 +69,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   tryRunImpRuleNoAssertions,
   delegateStake,
   registerRewardAccount,
-  registerStakeCredential,
+  shelleyRegisterStakeCredential,
   getRewardAccountFor,
   getReward,
   lookupReward,
@@ -503,6 +503,8 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
+  registerStakeCredential :: HasCallStack => Credential 'Staking -> ImpTestM era RewardAccount
+
 defaultInitNewEpochState ::
   forall era g s m.
   ( MonadState s m
@@ -766,6 +768,7 @@ instance
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  registerStakeCredential = shelleyRegisterStakeCredential
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1524,7 +1527,7 @@ getRewardAccountFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingC
 
-registerStakeCredential ::
+shelleyRegisterStakeCredential ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
@@ -1532,7 +1535,7 @@ registerStakeCredential ::
   ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
-registerStakeCredential cred = do
+shelleyRegisterStakeCredential cred = do
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL

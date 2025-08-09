@@ -133,7 +133,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
   getCommittee,
-  registerStakeCredentialWithDeposit,
+  conwayRegisterStakeCredential,
   registerPoolWithDeposit,
   registerRewardAccountWithDeposit,
 ) where
@@ -306,6 +306,7 @@ instance ShelleyEraImp ConwayEra where
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
+  registerStakeCredential = conwayRegisterStakeCredential
 
 conwayModifyImpInitProtVer ::
   forall era.
@@ -1820,12 +1821,14 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
 getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
 
-registerStakeCredentialWithDeposit ::
+conwayRegisterStakeCredential ::
   forall era.
-  ConwayEraImp era =>
+  ( HasCallStack
+  , ConwayEraImp era
+  ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
-registerStakeCredentialWithDeposit cred = do
+conwayRegisterStakeCredential cred = do
   deposit <- getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
@@ -1839,7 +1842,7 @@ registerPoolWithDeposit ::
   KeyHash 'StakePool ->
   ImpTestM era ()
 registerPoolWithDeposit khPool =
-  (freshKeyHash >>= registerStakeCredentialWithDeposit . KeyHashObj)
+  (freshKeyHash >>= registerStakeCredential . KeyHashObj)
     >>= registerPoolWithRewardAccount khPool
 
 registerRewardAccountWithDeposit ::
@@ -1847,4 +1850,4 @@ registerRewardAccountWithDeposit ::
   ConwayEraImp era =>
   ImpTestM era RewardAccount
 registerRewardAccountWithDeposit = do
-  freshKeyHash >>= registerStakeCredentialWithDeposit . KeyHashObj
+  freshKeyHash >>= registerStakeCredential . KeyHashObj
