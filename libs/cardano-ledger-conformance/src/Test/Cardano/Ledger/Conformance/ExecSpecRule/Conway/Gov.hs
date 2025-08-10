@@ -15,37 +15,26 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
+import Control.State.Transition.Extended (TRC (..))
 import Lens.Micro ((&), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
-import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Imp.Common
 
-instance
-  NFData (SpecRep (ConwayGovPredFailure ConwayEra)) =>
-  ExecSpecRule "GOV" ConwayEra
-  where
+instance ExecSpecRule "GOV" ConwayEra where
   type ExecContext "GOV" ConwayEra = EnactState ConwayEra
 
-  environmentSpec _ = govEnvSpec
+  runAgdaRule (SpecTRC env st sig) = unComputationResult $ Agda.govStep env st sig
 
-  stateSpec _ = govProposalsSpec
-
-  signalSpec _ = govProceduresSpec
-
-  runAgdaRule env st sig = unComputationResult $ Agda.govStep env st sig
-
-  translateInputs env@GovEnv {gePParams} st sig enactState = do
-    agdaEnv <- expectRight $ runSpecTransM ctx $ toSpecRep env
-    agdaSt <- expectRight $ runSpecTransM ctx $ toSpecRep st
-    agdaSig <- expectRight $ runSpecTransM ctx $ toSpecRep sig
-    pure (agdaEnv, agdaSt, agdaSig)
+  translateInputs enactState (TRC (env@GovEnv {gePParams}, st, sig)) = do
+    runSpecTransM ctx $
+      SpecTRC
+        <$> toSpecRep env
+        <*> toSpecRep st
+        <*> toSpecRep sig
     where
       ctx =
         enactState
-          & ensPrevGovActionIdsL
-            .~ toPrevGovActionIds (st ^. pRootsL)
-          & ensProtVerL
-            .~ (gePParams ^. ppProtocolVersionL)
+          & ensPrevGovActionIdsL .~ toPrevGovActionIds (st ^. pRootsL)
+          & ensProtVerL .~ (gePParams ^. ppProtocolVersionL)

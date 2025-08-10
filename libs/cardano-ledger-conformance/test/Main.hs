@@ -10,4 +10,5 @@ main :: IO ()
 main =
   ledgerTestMain $ do
     describe "ConformanceSpec" $ ConformanceSpec.spec
-    describe "Conway" $ Conway.spec
+    describe "Conway" $ do
+      describe "Imp" Conway.spec

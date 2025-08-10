@@ -105,8 +105,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impEraStartEpochNo,
   impSetSeed,
   modifyImpInitProtVer,
-  modifyImpInitExpectLedgerRuleConformance,
-  disableImpInitExpectLedgerRuleConformance,
+  modifyImpInitPostSubmitTxHook,
+  disableImpInitPostSubmitTxHook,
   minorFollow,
   majorFollow,
   cantFollow,
@@ -291,7 +291,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
             ImpTestEnv
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
-              , iteExpectLedgerRuleConformance = \_ _ _ _ _ -> pure ()
+              , itePostSubmitTxHook = \_ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -588,33 +588,31 @@ modifyImpInitProtVer ver =
               .~ ProtVer ver 0
       }
 
-modifyImpInitExpectLedgerRuleConformance ::
+modifyImpInitPostSubmitTxHook ::
   forall era.
   ( forall t.
     Globals ->
+    TRC (EraRule "LEDGER" era) ->
     Either
       (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-    LedgerEnv era ->
-    LedgerState era ->
-    Tx era ->
     ImpM t ()
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
-modifyImpInitExpectLedgerRuleConformance f =
+modifyImpInitPostSubmitTxHook f =
   modifyImpInit $ \impInit ->
     impInit
       { impInitEnv =
           impInitEnv impInit
-            & iteExpectLedgerRuleConformanceL .~ f
+            & itePostSubmitTxHookL .~ f
       }
 
-disableImpInitExpectLedgerRuleConformance ::
+disableImpInitPostSubmitTxHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
-disableImpInitExpectLedgerRuleConformance =
-  modifyImpInitExpectLedgerRuleConformance $ \_ _ _ _ _ -> pure ()
+disableImpInitPostSubmitTxHook =
+  modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -655,12 +653,12 @@ instance
       gen =
         ShelleyGenesis
           { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
-          , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+          , sgNetworkMagic = 123_456 -- Mainnet value: 764824073
           , sgNetworkId = Testnet
           , sgActiveSlotsCoeff = 20 %! 100 -- Mainnet value: 5 %! 100
           , sgSecurityParam = knownNonZeroBounded @108 -- Mainnet value: 2160
           , sgEpochLength = 4320 -- Mainnet value: 432000
-          , sgSlotsPerKESPeriod = 129600
+          , sgSlotsPerKESPeriod = 129_600
           , sgMaxKESEvolutions = 62
           , sgSlotLength = 1
           , sgUpdateQuorum = 5
@@ -669,8 +667,8 @@ instance
               emptyPParams
                 & ppMinFeeAL .~ Coin 44
                 & ppMinFeeBL .~ Coin 155_381
-                & ppMaxBBSizeL .~ 65536
-                & ppMaxTxSizeL .~ 16384
+                & ppMaxBBSizeL .~ 65_536
+                & ppMaxTxSizeL .~ 16_384
                 & ppKeyDepositL .~ Coin 2_000_000
                 & ppPoolDepositL .~ Coin 500_000_000
                 & ppEMaxL .~ EpochInterval 18
@@ -749,15 +747,13 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
-  , iteExpectLedgerRuleConformance ::
+  , itePostSubmitTxHook ::
       forall t.
       Globals ->
+      TRC (EraRule "LEDGER" era) ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-      LedgerEnv era ->
-      LedgerState era ->
-      Tx era ->
       ImpM t ()
   , iteCborRoundTripFailures :: Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
@@ -766,21 +762,19 @@ data ImpTestEnv era = ImpTestEnv
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
-iteExpectLedgerRuleConformanceL ::
+itePostSubmitTxHookL ::
   forall era.
   Lens'
     (ImpTestEnv era)
     ( forall t.
       Globals ->
+      TRC (EraRule "LEDGER" era) ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-      LedgerEnv era ->
-      LedgerState era ->
-      Tx era ->
       ImpM t ()
     )
-iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
+itePostSubmitTxHookL = lens itePostSubmitTxHook (\x y -> x {itePostSubmitTxHook = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1085,10 +1079,10 @@ trySubmitTx tx = do
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   roundTripCheck <- asks iteCborRoundTripFailures
   globals <- use impGlobalsL
+  let trc = TRC (lEnv, st ^. nesEsL . esLStateL, txFixed)
 
   -- Check for conformance
-  asks iteExpectLedgerRuleConformance
-    >>= (\f -> f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
+  asks itePostSubmitTxHook >>= (\f -> f globals trc res)
 
   case res of
     Left predFailures -> do
@@ -1165,7 +1159,9 @@ tryRunImpRule = tryRunImpRule' @rule AssertionsAll
 
 tryRunImpRuleNoAssertions ::
   forall rule era.
-  (STS (EraRule rule era), BaseM (EraRule rule era) ~ ShelleyBase) =>
+  ( STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  ) =>
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
@@ -1217,10 +1213,10 @@ runImpRule ::
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
   ImpTestM era (State (EraRule rule era))
-runImpRule stsEnv stsState stsSignal = do
+runImpRule env st sig = do
   let ruleName = symbolVal (Proxy @rule)
   (res, ev) <-
-    tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
+    tryRunImpRule @rule env st sig >>= \case
       Left fs ->
         assertFailure $
           unlines $

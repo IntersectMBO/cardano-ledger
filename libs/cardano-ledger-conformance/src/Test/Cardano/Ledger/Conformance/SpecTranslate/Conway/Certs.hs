@@ -25,11 +25,6 @@ import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
-import Test.Cardano.Ledger.Conway.TreeDiff
-
-instance ToExpr (PredicateFailure (EraRule "CERT" era)) => SpecTranslate ctx (ConwayCertsPredFailure era) where
-  type SpecRep (ConwayCertsPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . showOpaqueErrorString
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
