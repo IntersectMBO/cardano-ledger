@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Shelley.LedgerState
+import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)
@@ -149,11 +150,12 @@ instance
 instance
   ( EraPParams era
   , ConwayEraGov era
-  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecTranslate [GovActionState era] (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate [GovActionState era] (PParamsHKD StrictMaybe era)
   , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
@@ -172,10 +174,11 @@ instance
       <*> toSpecRep esSnapshots
       <*> toSpecRep esLState
       <*> toSpecRep enactState
-      <*> toSpecRep ratifyState
+      <*> withCtx govActions (toSpecRep ratifyState)
     where
       enactState = mkEnactState $ utxosGovState lsUTxOState
-      ratifyState = RatifyState enactState mempty mempty False
+      ratifyState = getRatifyState $ utxosGovState lsUTxOState
+      govActions = toList $ lsUTxOState ^. utxosGovStateL . proposalsGovStateL . pPropsL
 
 instance SpecTranslate ctx SnapShots where
   type SpecRep SnapShots = Agda.Snapshots
@@ -194,6 +197,7 @@ instance SpecTranslate ctx SnapShot where
     Agda.MkSnapshot
       <$> toSpecRep ssStake
       <*> toSpecRep (VMap.toMap ssDelegations)
+      <*> return (Agda.MkHSMap [])
 
 instance SpecTranslate ctx Stake where
   type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin
@@ -232,8 +236,9 @@ instance
   , SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecTranslate [GovActionState era] (PParamsHKD Identity era)
+  , SpecTranslate [GovActionState era] (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era

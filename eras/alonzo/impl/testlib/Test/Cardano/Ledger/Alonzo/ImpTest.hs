@@ -431,6 +431,7 @@ instance ShelleyEraImp AlonzoEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
   expectTxSuccess = impAlonzoExpectTxSuccess
+  modifyImpInitProtVer = shelleyModifyImpInitProtVer
 
 instance MaryEraImp AlonzoEra
 

@@ -490,7 +490,7 @@ spec = do
           setProtVer initialProtVer
           pure res
         (khSPO, _, _) <- setupPoolWithStake $ Coin 10_000_000
-        -- Using an irrefutable pattern here to prevent evaluation of tuple
+        -- Using a lazy pattern match here to prevent evaluation of tuple
         -- unless we actually need a value from it
         ~(drepCred, _, _) <-
           if initialProtVer > bootstrapVer

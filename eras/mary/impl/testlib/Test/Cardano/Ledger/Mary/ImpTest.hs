@@ -27,6 +27,7 @@ instance ShelleyEraImp MaryEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
+  modifyImpInitProtVer = shelleyModifyImpInitProtVer
 
 class
   ( ShelleyEraImp era
