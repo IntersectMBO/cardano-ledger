@@ -367,7 +367,14 @@ instance SpecNormalize EpochState
 
 instance SpecNormalize Snapshots
 
-instance SpecNormalize Snapshot
+instance SpecNormalize Snapshot where
+  specNormalize (MkSnapshot s d) =
+    MkSnapshot (specNormalize $ removeZero s) (specNormalize $ removeZero d)
+    where
+      removeZero (MkHSMap l) = MkHSMap $ f l
+      f [] = []
+      f ((_, 0) : xs) = f xs
+      f (x : xs) = x : f xs
 
 instance SpecNormalize Acnt
 
