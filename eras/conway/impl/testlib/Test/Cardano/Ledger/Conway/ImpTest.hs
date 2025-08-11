@@ -176,11 +176,10 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   epochStateGovStateL,
-  epochStatePoolParamsL,
+  epochStateStakePoolsL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -977,7 +976,7 @@ getRatifyEnv = do
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
-  poolPs <- getsNES $ nesEsL . epochStatePoolParamsL
+  poolPs <- getsNES $ nesEsL . epochStateStakePoolsL
   pure
     RatifyEnv
       { reStakePoolDistr = poolDistr
@@ -987,7 +986,7 @@ getRatifyEnv = do
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
       , reAccounts = accounts
-      , rePoolParams = poolPs
+      , reStakePools = poolPs
       }
 
 ccShouldNotBeExpired ::
@@ -1694,7 +1693,7 @@ showConwayTxBalance pp certState utxo tx =
         (lookupDepositDState $ certState ^. certDStateL)
         (lookupDepositVState $ certState ^. certVStateL)
         txBody
-    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolParamsL))
+    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 logConwayTxBalance ::
@@ -1778,10 +1777,10 @@ delegateSPORewardAddressToDRep_ ::
   DRep ->
   ImpTestM era ()
 delegateSPORewardAddressToDRep_ kh stake drep = do
-  pp <- getRatifyEnv >>= expectJust . Map.lookup kh . rePoolParams
+  sps <- getRatifyEnv >>= expectJust . Map.lookup kh . reStakePools
   void $
     delegateToDRep
-      (raCredential . ppRewardAccount $ pp)
+      (raCredential $ spsRewardAccount sps)
       stake
       drep
 

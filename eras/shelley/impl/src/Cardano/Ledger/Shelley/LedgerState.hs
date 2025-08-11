@@ -103,6 +103,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   epochStateStakeDistrL,
   epochStatePoolParamsL,
+  epochStateStakePoolsL,
   epochStateDonationL,
   newEpochStateGovStateL,
   epochStateTreasuryL,
@@ -111,8 +112,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   dsGenDelegsL,
   dsIRewardsL,
   dsFutureGenDelegsL,
-  psStakePoolParamsL,
-  psFutureStakePoolParamsL,
+  psStakePoolsL,
+  psFutureStakePoolsL,
   psRetiringL,
   psDepositsL,
 

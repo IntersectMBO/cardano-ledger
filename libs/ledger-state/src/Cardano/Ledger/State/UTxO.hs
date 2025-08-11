@@ -22,7 +22,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys hiding (Hash)
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.State
@@ -486,12 +485,12 @@ countPStateStats :: PState CurrentEra -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
-        statMapKeys psStakePoolParams
-          <> statMapKeys psFutureStakePoolParams
+        statMapKeys psStakePools
+          <> statMapKeys psFutureStakePools
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats psStakePoolParams
-          <> foldMap countPoolParamsStats psFutureStakePoolParams
+        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psStakePools)
+          <> foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psFutureStakePools)
     }
 
 data LedgerStateStats = LedgerStateStats

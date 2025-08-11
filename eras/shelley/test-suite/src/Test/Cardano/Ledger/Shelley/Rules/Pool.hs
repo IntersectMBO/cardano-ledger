@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Block (bheader)
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams (ppId)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -132,16 +131,16 @@ poolRegistrationProp
     , target = targetSt
     } =
     let hk = ppId poolParams
-        reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
+        reRegistration = eval (hk ∈ dom (psStakePools sourceSt))
      in if reRegistration
           then
             conjoin
               [ counterexample
                   "Pre-existing PoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+                  (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
               , counterexample
                   "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (psFutureStakePoolParams targetSt) === Just poolParams)
+                  (Map.lookup hk (psFutureStakePools targetSt) === Just (mkStakePoolState poolParams))
               , counterexample
                   "PoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
@@ -150,10 +149,10 @@ poolRegistrationProp
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePoolParams targetSt) === Just poolParams)
+                  (Map.lookup hk (psStakePools targetSt) === Just (mkStakePoolState poolParams))
               , counterexample
                   "PoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psFutureStakePools targetSt)) :: Bool)
               , counterexample
                   "PoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
@@ -175,10 +174,10 @@ poolRetirementProp
           (currentEpoch < e && e < EpochNo (ce + fromIntegral maxEpoch))
       , counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool)
+          (eval (hk ∈ dom (psStakePools sourceSt)) :: Bool)
       , counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+          (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
       , counterexample
           "hk must be in target's retiring"
           (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
@@ -186,7 +185,7 @@ poolRetirementProp
 poolRetirementProp _ _ _ = property ()
 
 poolStateIsInternallyConsistentProp :: PState c -> Property
-poolStateIsInternallyConsistentProp PState {psStakePoolParams = pParams_, psRetiring = retiring_} = do
+poolStateIsInternallyConsistentProp PState {psStakePools = pParams_, psRetiring = retiring_} = do
   let poolKeys = Map.keysSet pParams_
       pParamKeys = Map.keysSet pParams_
       retiringKeys = Map.keysSet retiring_

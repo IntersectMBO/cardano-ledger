@@ -41,7 +41,6 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -77,7 +76,14 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), SnapShot (..), UTxO, maxPool)
+import Cardano.Ledger.State (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  PoolParams (..),
+  SnapShot (..),
+  UTxO,
+  maxPool,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val

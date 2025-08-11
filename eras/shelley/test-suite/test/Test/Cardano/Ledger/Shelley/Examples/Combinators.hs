@@ -59,7 +59,6 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -277,7 +276,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
+        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -300,7 +299,7 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psFutureStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
+        { psFutureStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -323,8 +322,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
-        , psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
+        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        , psFutureStakePools = Map.delete (ppId pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -375,7 +374,7 @@ reapPool pool cs = cs {chainNes = nes'}
     ps' =
       ps
         { psRetiring = Map.delete poolId (psRetiring ps)
-        , psStakePoolParams = Map.delete poolId (psStakePoolParams ps)
+        , psStakePools = Map.delete poolId (psStakePools ps)
         , psDeposits = Map.delete poolId (psDeposits ps)
         }
     pp = es ^. curPParamsEpochStateL

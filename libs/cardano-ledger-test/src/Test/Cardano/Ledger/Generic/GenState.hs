@@ -98,7 +98,6 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeC
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -673,7 +672,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-    pstate = PState pools Map.empty Map.empty (fmap (const poolDeposit) pools)
+    pstate = PState (mkStakePoolState <$> pools) Map.empty Map.empty (fmap (const poolDeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
     pools = gsInitialPoolParams gstate
@@ -1101,8 +1100,8 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       modifyModelPoolParams (Map.insert kh pp)
       return (kh, pp)
     pickExisting = do
-      psStakePoolParams <- gets (mPoolParams . gsModel)
+      psStakePools <- gets (mPoolParams . gsModel)
       avoidKey <- gets gsAvoidKey
-      lift (genMapElemWhere psStakePoolParams 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
+      lift (genMapElemWhere psStakePools 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
         Just (kh, pp) -> pure (kh, pp)

@@ -220,7 +220,7 @@ certTransition = do
   TRC (CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
     certPState = certState ^. certPStateL
-    pools = psStakePoolParams certPState
+    pools = psStakePools certPState
   case c of
     ConwayTxCertDeleg delegCert -> do
       trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certState, delegCert)

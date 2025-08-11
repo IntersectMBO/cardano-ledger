@@ -11,7 +11,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm, fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.State hiding (balance)
 import Cardano.Ledger.TxIn (TxIn)
 import Data.Default (def)
@@ -86,7 +85,7 @@ instantStakeIncludesRewards = do
 
     instantStake = addInstantStake utxo1 mempty
     poolparamMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
-  pState <- arbitraryLens psStakePoolParamsL poolparamMap
+  pState <- arbitraryLens psStakePoolsL $ mkStakePoolState <$> poolparamMap
   let snapShot = snapShotFromInstantStake instantStake dState pState
       computedStakeDistr = VMap.toMap (unStake (ssStake snapShot))
 

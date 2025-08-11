@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.API (
   GenDelegPair (..),
   GenDelegs (..),
   Network (..),
-  PoolParams (..),
   StrictMaybe (..),
   VKey,
  )
@@ -300,7 +299,7 @@ genDelegation
       availableDelegates = filter (registeredDelegate . mkCredential . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = psStakePoolParams (dpState ^. certPStateL)
+      registeredPools = psStakePools (dpState ^. certPStateL)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
@@ -430,7 +429,7 @@ genRetirePool _pp poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = psStakePoolParams pState
+    stakePools = psStakePools pState
     registered_ = eval (dom stakePools)
     retiring_ = domain (psRetiring pState)
     retireable = Set.toList (registered_ \\ retiring_)

@@ -48,12 +48,11 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
  )
-import Cardano.Ledger.State (Stake (..), maxPool')
+import Cardano.Ledger.State (PoolParams (..), Stake (..), maxPool')
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)

@@ -31,7 +31,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   withSLanguage,
  )
-import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (epochStateStakePoolsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
@@ -159,7 +159,7 @@ spec = describe "Invalid transactions" $ do
         it "No ExtraRedeemers on same script certificates" $ do
           Positive n <- arbitrary
           replicateM_ n $ freshKeyHash >>= registerPool
-          pools <- getsNES $ nesEsL . epochStatePoolParamsL
+          pools <- getsNES $ nesEsL . epochStateStakePoolsL
           poolId <- elements $ Map.keys pools
           let scriptHash = alwaysSucceedsNoDatumHash
               cred = ScriptHashObj scriptHash
@@ -256,7 +256,7 @@ spec = describe "Invalid transactions" $ do
               let scriptHash = alwaysSucceedsWithDatumHash
               Positive n <- arbitrary
               replicateM_ n $ freshKeyHash >>= registerPool
-              pools <- getsNES $ nesEsL . epochStatePoolParamsL
+              pools <- getsNES $ nesEsL . epochStateStakePoolsL
               poolId <- elements $ Map.keys pools
               let cred = ScriptHashObj scriptHash
                   certs =

@@ -45,7 +45,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
@@ -56,7 +55,7 @@ import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, mapWithKey)
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -695,9 +694,15 @@ epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = treasuryL
 {-# DEPRECATED epochStateTreasuryL "In favor of `treasuryL`" #-}
 
+epochStateStakePoolsL ::
+  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolState)
+epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
-epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+epochStatePoolParamsL =
+  epochStateStakePoolsL . lens (mapWithKey stakePoolStateToPoolParams) (const $ fmap mkStakePoolState)
+{-# DEPRECATED epochStatePoolParamsL "In favor of `epochStateStakePoolsL`" #-}
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))

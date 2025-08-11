@@ -38,7 +38,6 @@ import Cardano.Ledger.Keys (
   asWitness,
   genDelegKeyHash,
  )
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.State ()
@@ -50,9 +49,10 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.State (
   EraCertState (..),
+  PoolParams (..),
   dsGenDelegs,
   lookupDepositDState,
-  psStakePoolParamsL,
+  psStakePoolsL,
  )
 import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),
@@ -141,7 +141,7 @@ produced ::
   TxBody era ->
   Value era
 produced pp certState =
-  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolParamsL)
+  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
 
 shelleyProducedValue ::
   EraTxBody era =>

@@ -97,7 +97,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
@@ -675,6 +674,10 @@ instance HasSpec PoolCert
 instance HasSimpleRep PoolParams
 
 instance HasSpec PoolParams
+
+instance HasSimpleRep StakePoolState
+
+instance HasSpec StakePoolState
 
 instance HasSimpleRep PoolMetadata
 
@@ -1442,7 +1445,7 @@ type DRepPulserTypes =
    , EnactState ConwayEra
    , StrictSeq (GovActionState ConwayEra)
    , Map (Credential 'Staking) (CompactForm Coin)
-   , Map (KeyHash 'StakePool) PoolParams
+   , Map (KeyHash 'StakePool) StakePoolState
    ]
 
 instance
@@ -1466,7 +1469,7 @@ instance
       dpEnactState
       dpProposals
       dpProposalDeposits
-      dpPoolParams
+      dpStakePools
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep

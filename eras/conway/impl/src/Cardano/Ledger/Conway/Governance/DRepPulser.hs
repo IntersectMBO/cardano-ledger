@@ -71,7 +71,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Conway.State hiding (balance)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
@@ -283,7 +282,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpProposalDeposits :: !(Map (Credential 'Staking) (CompactForm Coin))
     -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
-    , dpPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+    , dpStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
     -- ^ Snapshot of the parameters of stake pools -
     --   this is needed to get the reward account for SPO vote calculation
     } ->
@@ -339,7 +338,7 @@ instance
       , noThunks ctxt (dpProposals drp)
       , noThunks ctxt (dpProposalDeposits drp)
       , noThunks ctxt (dpGlobals drp)
-      , noThunks ctxt (dpPoolParams drp)
+      , noThunks ctxt (dpStakePools drp)
       ]
 
 instance
@@ -411,7 +410,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
         , reCurrentEpoch = dpCurrentEpoch
         , reCommitteeState = dpCommitteeState
         , reAccounts = dpAccounts
-        , rePoolParams = dpPoolParams
+        , reStakePools = dpStakePools
         }
     !ratifySig = RatifySignal dpProposals
     !ratifyState =

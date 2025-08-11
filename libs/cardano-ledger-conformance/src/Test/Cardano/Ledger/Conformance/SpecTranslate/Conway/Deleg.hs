@@ -49,7 +49,8 @@ instance
     delegatees <- askCtx @(Set (Credential 'DRepRole))
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
+      <*> toSpecRep
+        (Map.mapKeys (hashToInteger . unKeyHash) $ Map.mapWithKey stakePoolStateToPoolParams cdePools)
       <*> toSpecRep delegatees
 
 instance SpecTranslate ctx ConwayDelegCert where

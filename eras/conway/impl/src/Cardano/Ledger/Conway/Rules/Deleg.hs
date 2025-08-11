@@ -54,7 +54,6 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.PoolParams (PoolParams)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)
 import Control.State.Transition (
@@ -83,7 +82,7 @@ import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
-  , cdePools :: Map (KeyHash 'StakePool) PoolParams
+  , cdePools :: Map (KeyHash 'StakePool) StakePoolState
   }
   deriving (Generic)
 
