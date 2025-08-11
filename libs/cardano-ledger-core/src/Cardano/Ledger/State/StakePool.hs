@@ -81,18 +81,19 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
+import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as Char8
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -228,8 +229,9 @@ instance FromJSON PoolMetadata where
 
 parseJsonBase16 :: Value -> Parser ByteString
 parseJsonBase16 v = do
-  s <- parseJSON v
-  case B16.decode (Char8.pack s) of
+  txt <- parseJSON v
+  unless (Text.isAscii txt) $ fail $ "Supplied text contains non-ASCII characters: " <> show txt
+  case B16.decode (Text.encodeUtf8 txt) of
     Right bs -> return bs
     Left msg -> fail msg
 
