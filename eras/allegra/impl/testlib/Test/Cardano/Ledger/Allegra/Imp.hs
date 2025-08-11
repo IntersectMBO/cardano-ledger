@@ -23,5 +23,5 @@ spec ::
   Spec
 spec = do
   ShelleyImp.spec @era
-  describe "AllegraImpSpec" . withImpInit @(LedgerSpec era) $ do
+  describe "AllegraImpSpec" . withEachEraVersion @era $
     UtxowSpec.spec

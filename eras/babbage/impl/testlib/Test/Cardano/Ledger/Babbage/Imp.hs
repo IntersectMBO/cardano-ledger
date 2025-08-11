@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
+import Test.Cardano.Ledger.Alonzo.ImpTest
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
@@ -46,7 +46,7 @@ spec ::
   Spec
 spec = do
   AlonzoImp.spec @era
-  withImpInit @(LedgerSpec era) $
+  withEachEraVersion @era $
     describe "BabbageImpSpec" $ do
       Utxo.spec
       Utxow.spec
