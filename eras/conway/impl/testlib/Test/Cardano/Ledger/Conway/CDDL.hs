@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
+import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Babbage.CDDL hiding (
@@ -201,10 +202,10 @@ proposal_procedure =
       ]
 
 proposal_procedures :: Rule
-proposal_procedures = "proposal_procedures" =:= nonempty_set proposal_procedure
+proposal_procedures = "proposal_procedures" =:= nonempty_oset proposal_procedure
 
 certificates :: Rule
-certificates = "certificates" =:= nonempty_set certificate
+certificates = "certificates" =:= nonempty_oset certificate
 
 gov_action :: Rule
 gov_action =
@@ -842,14 +843,22 @@ conway_script =
 -- tooling to account for this future breaking change sooner rather than
 -- later, in order to provide a smooth transition for their users.
 set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) / sarr [0 <+ a x]
+set = set_len_spec "set" 0
 
 -- | Conway era introduces an optional 258 tag for sets, which will
 -- become mandatory in the second era after Conway. We recommend all the
 -- tooling to account for this future breaking change sooner rather than
 -- later, in order to provide a smooth transition for their users.
 nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x ->
-  "nonempty_set"
-    =:= tag 258 (arr [1 <+ a x])
-    / sarr [1 <+ a x]
+nonempty_set = set_len_spec "nonempty_set" 1
+
+-- | An OSet is a Set that preserves the order of its elements.
+oset :: IsType0 t0 => t0 -> GRuleCall
+oset = set_len_spec "oset" 0
+
+-- | An NonEmpty OSet is a NonEmpty Set that preserves the order of its elements.
+nonempty_oset :: IsType0 t0 => t0 -> GRuleCall
+nonempty_oset = set_len_spec "nonempty_oset" 1
+
+set_len_spec :: IsType0 t0 => Text -> Word64 -> t0 -> GRuleCall
+set_len_spec label n = binding $ \x -> label =:= tag 258 (arr [n <+ a x]) / sarr [n <+ a x]
