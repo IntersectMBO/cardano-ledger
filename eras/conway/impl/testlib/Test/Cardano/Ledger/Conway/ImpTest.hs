@@ -21,6 +21,7 @@
 module Test.Cardano.Ledger.Conway.ImpTest (
   module Test.Cardano.Ledger.Babbage.ImpTest,
   ConwayEraImp,
+  conwayModifyImpInitProtVer,
   enactConstitution,
   enactTreasuryWithdrawals,
   submitGovAction,
@@ -140,9 +141,11 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
   UnitInterval,
+  Version,
   addEpochInterval,
   binOpEpochNo,
   inject,
@@ -222,6 +225,7 @@ import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
 import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
+import Test.ImpSpec
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -297,6 +301,24 @@ instance ShelleyEraImp ConwayEra where
 
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
+  modifyImpInitProtVer = conwayModifyImpInitProtVer
+
+conwayModifyImpInitProtVer ::
+  forall era.
+  ConwayEraImp era =>
+  Version ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+conwayModifyImpInitProtVer ver =
+  modifyImpInit $ \impInit ->
+    impInit
+      { impInitState =
+          impInitState impInit
+            & impNESL . nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer ver 0
+            & impNESL . nesEsL %~ (\es -> setCompleteDRepPulsingState def (ratifyState es) es)
+      }
+  where
+    ratifyState es = def & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
 
 instance MaryEraImp ConwayEra
 
@@ -439,7 +461,7 @@ setupSingleDRep ::
   ConwayEraImp era =>
   Integer ->
   ImpTestM era (Credential 'DRepRole, Credential 'Staking, KeyPair 'Payment)
-setupSingleDRep stake = do
+setupSingleDRep stake = impAnn "Set up a single DRep" $ do
   drepKH <- registerDRep
   delegatorKH <- freshKeyHash
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -488,7 +510,7 @@ setupPoolWithStake ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Coin ->
   ImpTestM era (KeyHash 'StakePool, Credential 'Payment, Credential 'Staking)
-setupPoolWithStake delegCoin = do
+setupPoolWithStake delegCoin = impAnn "Set up pool with stake" $ do
   khPool <- freshKeyHash
   registerPool khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
@@ -584,22 +606,23 @@ trySubmitVote ::
   GovActionId ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) TxId)
 trySubmitVote vote voter gaId =
-  fmap (bimap fst txIdTx) $
-    trySubmitTx $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . votingProceduresTxBodyL
-          .~ VotingProcedures
-            ( Map.singleton
-                voter
-                ( Map.singleton
-                    gaId
-                    ( VotingProcedure
-                        { vProcVote = vote
-                        , vProcAnchor = SNothing
-                        }
-                    )
-                )
-            )
+  impAnn ("Submitting vote (" <> show vote <> ")") $
+    fmap (bimap fst txIdTx) $
+      trySubmitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . votingProceduresTxBodyL
+            .~ VotingProcedures
+              ( Map.singleton
+                  voter
+                  ( Map.singleton
+                      gaId
+                      ( VotingProcedure
+                          { vProcVote = vote
+                          , vProcAnchor = SNothing
+                          }
+                      )
+                  )
+              )
 
 submitProposal_ ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
@@ -1215,7 +1238,7 @@ registerCommitteeHotKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Credential 'ColdCommitteeRole ->
   ImpTestM era (Credential 'HotCommitteeRole)
-registerCommitteeHotKey coldKey = do
+registerCommitteeHotKey coldKey = impAnn "Register committee hot key" $ do
   hotKey NE.:| [] <- registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ pure coldKey
   pure hotKey
 
@@ -1291,33 +1314,36 @@ electBasicCommittee ::
     , GovPurposeId 'CommitteePurpose
     )
 electBasicCommittee = do
-  logString "Setting up a DRep"
   (drep, _, _) <- setupSingleDRep 1_000_000
-  (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+  logString $ "Registered DRep: " <> showExpr drep
 
-  logString "Registering committee member"
-  coldCommitteeC <- KeyHashObj <$> freshKeyHash
-  startEpochNo <- getsNES nesELL
-  let
-    committeeAction =
-      UpdateCommittee
-        SNothing
-        mempty
-        (Map.singleton coldCommitteeC (addEpochInterval startEpochNo (EpochInterval 10)))
-        (1 %! 2)
-  (gaidCommitteeProp NE.:| _) <-
-    submitGovActions
-      [ committeeAction
-      , UpdateCommittee SNothing mempty mempty (1 %! 10)
-      ]
-  submitYesVote_ (DRepVoter drep) gaidCommitteeProp
-  submitYesVote_ (StakePoolVoter spoC) gaidCommitteeProp
-  passNEpochs 2
-  committeeMembers <- getCommitteeMembers
-  impAnn "The committee should be enacted" $
-    committeeMembers `shouldSatisfy` Set.member coldCommitteeC
-  hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
-  pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
+  (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+  logString $ "Registered SPO: " <> showExpr spoC
+
+  impAnn "Registering committee member" $ do
+    coldCommitteeC <- KeyHashObj <$> freshKeyHash
+    startEpochNo <- getsNES nesELL
+    let
+      committeeAction =
+        UpdateCommittee
+          SNothing
+          mempty
+          (Map.singleton coldCommitteeC (addEpochInterval startEpochNo (EpochInterval 10)))
+          (1 %! 2)
+    (gaidCommitteeProp NE.:| _) <-
+      impAnn "Submitting UpdateCommittee action" $
+        submitGovActions
+          [ committeeAction
+          , UpdateCommittee SNothing mempty mempty (1 %! 10)
+          ]
+    submitYesVote_ (DRepVoter drep) gaidCommitteeProp
+    submitYesVote_ (StakePoolVoter spoC) gaidCommitteeProp
+    passNEpochs 2
+    committeeMembers <- getCommitteeMembers
+    impAnn "The committee should be enacted" $
+      committeeMembers `shouldSatisfy` Set.member coldCommitteeC
+    hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
+    pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
 logCurPParams ::
   ( EraGov era
