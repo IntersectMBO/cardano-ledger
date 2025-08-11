@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure,
+  ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
@@ -29,6 +30,7 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era

@@ -8,7 +8,11 @@
 module Test.Cardano.Ledger.Mary.Imp (spec) where
 
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
+ )
 import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as Utxo
@@ -19,6 +23,7 @@ spec ::
   ( MaryEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   ) =>
   Spec
 spec = do
