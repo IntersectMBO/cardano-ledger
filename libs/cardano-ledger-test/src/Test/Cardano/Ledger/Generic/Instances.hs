@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus (ExUnits (..), Language (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
@@ -116,7 +116,7 @@ applyShelleyCert model dcert = case dcert of
       }
   ShelleyTxCertPool (RegPool poolparams) ->
     model
-      { mPoolParams = Map.insert hk poolparams (mPoolParams model)
+      { mStakePoolParams = Map.insert hk poolparams (mStakePoolParams model)
       , mDeposited =
           if Map.member hk (mPoolDeposits model)
             then mDeposited model

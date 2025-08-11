@@ -30,7 +30,7 @@ spec = do
     roundTripJsonSpec @CostModels
     roundTripJsonSpec @PoolMetadata
     roundTripJsonSpec @StakePoolRelay
-    roundTripJsonSpec @PoolParams
+    roundTripJsonSpec @StakePoolParams
     roundTripJsonSpec @Addr
     roundTripJsonSpec @RewardAccount
     roundTripJsonSpec @(Credential 'Witness)

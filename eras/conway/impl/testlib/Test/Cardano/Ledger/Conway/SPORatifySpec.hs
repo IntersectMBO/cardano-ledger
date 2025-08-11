@@ -34,7 +34,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams, ppId, ppRewardAccount)
+import Cardano.Ledger.PoolParams (StakePoolParams, ppId, ppRewardAccount)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default (def)
 import Data.Map.Strict (Map)
@@ -71,7 +71,7 @@ acceptedRatioProp = do
                   re
                     { reStakePoolDistr = distr
                     , reAccounts = accountsFromDelegatees delegatees
-                    , rePoolParams = poolParams
+                    , reStakePoolParams = poolParams
                     }
                   gas {gasStakePoolVotes = votes}
                   protVer
@@ -116,7 +116,7 @@ allAbstainProp =
           re
             { reStakePoolDistr = distr
             , reAccounts = accountsFromDelegatees delegatees
-            , rePoolParams = poolParams
+            , reStakePoolParams = poolParams
             }
           gas {gasStakePoolVotes = votes}
           (rs ^. rsEnactStateL . ensProtVerL)
@@ -187,7 +187,7 @@ data TestData era = TestData
   , stakeNoConfidence :: Coin
   , stakeNotVoted :: Coin
   , delegatees :: Map (Credential 'Staking) DRep
-  , poolParams :: Map (KeyHash 'StakePool) PoolParams
+  , poolParams :: Map (KeyHash 'StakePool) StakePoolParams
   }
   deriving (Show)
 
@@ -226,9 +226,9 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
         )
         (CompactCoin $ fromIntegral totalStake)
 
-  poolParamsAA <- genPoolParams poolsAlwaysAbstain
-  poolParamsNC <- genPoolParams poolsNoConfidence
-  poolParamsRest <- genPoolParams $ poolsYes <> poolsNo <> poolsAbstain
+  poolParamsAA <- genStakePoolParams poolsAlwaysAbstain
+  poolParamsNC <- genStakePoolParams poolsNoConfidence
+  poolParamsRest <- genStakePoolParams $ poolsYes <> poolsNo <> poolsAbstain
   let delegateesAA = mkDelegatees DRepAlwaysAbstain poolParamsAA
       delegateesNC = mkDelegatees DRepAlwaysNoConfidence poolParamsNC
       votes = unionAllFromLists [(poolsYes, VoteYes), (poolsNo, VoteNo), (poolsAbstain, Abstain)]
@@ -267,17 +267,17 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
        in
         (rs1, rs2, rs3, rs4, rs5, rest'''')
 
-    genPoolParams p = do
-      let genPoolParams' poolId = do
+    genStakePoolParams p = do
+      let genStakePoolParams' poolId = do
             poolParams <- arbitrary
             pure $ poolParams {ppId = poolId}
-      sequence $ fromKeys genPoolParams' p
+      sequence $ fromKeys genStakePoolParams' p
 
     -- Given a delegatee and a map of stake pool params,
     -- create a map of reward account delegatees.
     mkDelegatees ::
       DRep ->
-      Map (KeyHash 'StakePool) PoolParams ->
+      Map (KeyHash 'StakePool) StakePoolParams ->
       Map (Credential 'Staking) DRep
     mkDelegatees drep =
       fromKeys (const drep) . map (raCredential . ppRewardAccount) . Map.elems

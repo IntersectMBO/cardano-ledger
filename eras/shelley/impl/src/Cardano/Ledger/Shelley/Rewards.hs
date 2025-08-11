@@ -48,7 +48,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
@@ -94,7 +94,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -112,7 +112,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -214,7 +214,7 @@ data PoolRewardInfo = PoolRewardInfo
   -- ^ The stake pool's stake divided by the total stake
   , poolPot :: !Coin
   -- ^ The maximum rewards available for the entire pool
-  , poolPs :: !PoolParams
+  , poolPs :: !StakePoolParams
   -- ^ The stake pool parameters
   , poolBlocks :: !Natural
   -- ^ The number of blocks the stake pool produced
@@ -250,7 +250,7 @@ instance DecCBOR PoolRewardInfo where
       )
 
 notPoolOwner ::
-  PoolParams ->
+  StakePoolParams ->
   Credential 'Staking ->
   Bool
 notPoolOwner pps = \case
@@ -316,7 +316,7 @@ mkPoolRewardInfo ::
   Map (KeyHash 'StakePool) Coin ->
   Coin ->
   Coin ->
-  PoolParams ->
+  StakePoolParams ->
   Either StakeShare PoolRewardInfo
 mkPoolRewardInfo
   pp

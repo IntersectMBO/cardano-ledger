@@ -27,9 +27,9 @@ import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
-  PoolParams (..),
   RewardAccount (..),
   ShelleyTxOut (..),
+  StakePoolParams (..),
   TxIn (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -103,9 +103,9 @@ alicePool = KeyPair vk sk
 alicePoolKH :: KeyHash 'StakePool
 alicePoolKH = hashKey $ vKey alicePool
 
-alicePoolParams :: PoolParams
-alicePoolParams =
-  PoolParams
+aliceStakePoolParams :: StakePoolParams
+aliceStakePoolParams =
+  StakePoolParams
     { ppId = alicePoolKH
     , ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 0 0 0 0 3)
     , ppPledge = Coin 1
@@ -327,7 +327,7 @@ txbRegisterPool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [RegPoolTxCert alicePoolParams]
+    , stbCerts = StrictSeq.fromList [RegPoolTxCert aliceStakePoolParams]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10

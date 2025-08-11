@@ -38,7 +38,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -177,7 +177,7 @@ txbodyEx1 =
         ( [ RegTxCert Cast.aliceSHK
           , RegTxCert Cast.bobSHK
           , RegTxCert Cast.carlSHK
-          , RegPoolTxCert Cast.alicePoolParams
+          , RegPoolTxCert Cast.aliceStakePoolParams
           ]
             ++ [ ShelleyTxCertMir
                    ( MIRCert
@@ -241,12 +241,12 @@ expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
     . C.addFees feeTx1
-    . C.addPoolDeposits ppEx [Cast.alicePoolParams]
+    . C.addPoolDeposits ppEx [Cast.aliceStakePoolParams]
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
-    . C.newPool Cast.alicePoolParams
+    . C.newPool Cast.aliceStakePoolParams
     . C.mir Cast.carlSHK ReservesMIR carlMIR
     . C.mir Cast.dariaSHK ReservesMIR dariaMIR
     $ initStPoolLifetime
@@ -352,8 +352,8 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.addFees feeTx2
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (ppId Cast.alicePoolParams)
-    . C.delegation Cast.bobSHK (ppId Cast.alicePoolParams)
+    . C.delegation Cast.aliceSHK (ppId Cast.aliceStakePoolParams)
+    . C.delegation Cast.bobSHK (ppId Cast.aliceStakePoolParams)
     . C.pulserUpdate pulserEx2
     $ expectedStEx1
 
@@ -397,7 +397,7 @@ snapEx3 =
         [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , ssStakePoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
     }
 
 expectedStEx3 :: ChainState ShelleyEra
@@ -486,7 +486,7 @@ expectedStEx4 =
     . C.newLab blockEx4
     . C.addFees feeTx4
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (ppId Cast.alicePoolParams)
+    . C.delegation Cast.carlSHK (ppId Cast.aliceStakePoolParams)
     . C.pulserUpdate pulserEx4
     $ expectedStEx3
 
@@ -536,7 +536,7 @@ snapEx5 =
         , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , ssStakePoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]
     }
 
 pdEx5 :: PoolDistr
@@ -1019,7 +1019,7 @@ expectedStEx12 =
     . C.newSnapshot snapEx12 (Coin 11)
     . C.applyRewardUpdate rewardUpdateEx11
     . C.setOCertCounter coreNodeHK 3
-    . C.reapPool Cast.alicePoolParams
+    . C.reapPool Cast.aliceStakePoolParams
     $ expectedStEx11
   where
     coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @ShelleyEra ppEx 510

@@ -71,7 +71,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
-  PoolParams (..),
+  StakePoolParams (..),
   StakePoolRelay (..),
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -521,7 +521,7 @@ tests =
             shelleyProtVer
             "register_pool"
             ( RegPoolTxCert @ShelleyEra
-                ( PoolParams
+                ( StakePoolParams
                     { ppId = hashKey $ vKey testStakePoolKey
                     , ppVrf = vrfKeyHash
                     , ppPledge = poolPledge

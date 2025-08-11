@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (SnapShot (ssPoolParams), UTxO (..), emptySnapShot)
+import Cardano.Ledger.State (SnapShot (ssStakePoolParams), UTxO (..), emptySnapShot)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -90,7 +90,7 @@ txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
-    (StrictSeq.fromList [RegPoolTxCert Cast.alicePoolParams])
+    (StrictSeq.fromList [RegPoolTxCert Cast.aliceStakePoolParams])
     (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
@@ -132,9 +132,9 @@ expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
     . C.addFees feeTx1
-    . C.addPoolDeposits ppEx [Cast.alicePoolParams]
+    . C.addPoolDeposits ppEx [Cast.aliceStakePoolParams]
     . C.newUTxO txbodyEx1
-    . C.newPool Cast.alicePoolParams
+    . C.newPool Cast.aliceStakePoolParams
     $ initStPoolReReg
 
 -- === Block 1, Slot 10, Epoch 0
@@ -153,8 +153,8 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-newPoolParams :: PoolParams
-newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
+newStakePoolParams :: StakePoolParams
+newStakePoolParams = Cast.aliceStakePoolParams {ppCost = Coin 500}
 
 txbodyEx2 :: TxBody ShelleyEra
 txbodyEx2 =
@@ -162,7 +162,7 @@ txbodyEx2 =
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
-        ( [ RegPoolTxCert newPoolParams
+        ( [ RegPoolTxCert newStakePoolParams
           ]
         )
     )
@@ -212,9 +212,9 @@ blockEx2A = blockEx2 20
 expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.addFees feeTx2
-    . C.addPoolDeposits ppEx [newPoolParams] -- The deposit should be ignored because the poolId is already registered
+    . C.addPoolDeposits ppEx [newStakePoolParams] -- The deposit should be ignored because the poolId is already registered
     . C.newUTxO txbodyEx2
-    . C.reregPool newPoolParams
+    . C.reregPool newStakePoolParams
     $ expectedStEx1
 
 expectedStEx2A :: ChainState ShelleyEra
@@ -274,14 +274,14 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]}
+  emptySnapShot {ssStakePoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.aliceStakePoolParams)]}
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <+> feeTx2)
     . C.applyRewardUpdate emptyRewardUpdate
-    . C.updatePoolParams newPoolParams
+    . C.updateStakePoolParams newStakePoolParams
     $ expectedStEx2B
 
 -- === Block 3, Slot 110, Epoch 1

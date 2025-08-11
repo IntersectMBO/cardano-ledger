@@ -15,7 +15,7 @@ import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -91,7 +91,7 @@ delegationsSpec ::
 delegationsSpec = (hasSize (rangeSize 8 12))
 
 poolRegSpec ::
-  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) PoolParams)
+  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) StakePoolParams)
 poolRegSpec univ = constrained $ \poolRegMap ->
   [ witness univ (dom_ poolRegMap)
   , witness univ (rng_ poolRegMap)

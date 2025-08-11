@@ -33,7 +33,7 @@ import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (ppId))
+import Cardano.Ledger.PoolParams (StakePoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
@@ -78,8 +78,8 @@ class
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
 
-  mkRegPoolTxCert :: PoolParams -> TxCert era
-  getRegPoolTxCert :: TxCert era -> Maybe PoolParams
+  mkRegPoolTxCert :: StakePoolParams -> TxCert era
+  getRegPoolTxCert :: TxCert era -> Maybe StakePoolParams
 
   mkRetirePoolTxCert :: KeyHash 'StakePool -> EpochNo -> TxCert era
   getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool, EpochNo)
@@ -110,7 +110,7 @@ class
     f (TxCert era) ->
     Coin
 
-pattern RegPoolTxCert :: EraTxCert era => PoolParams -> TxCert era
+pattern RegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where
     RegPoolTxCert d = mkRegPoolTxCert d
@@ -132,7 +132,7 @@ getPoolCertTxCert = \case
 
 data PoolCert
   = -- | A stake pool registration certificate.
-    RegPool !PoolParams
+    RegPool !StakePoolParams
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)

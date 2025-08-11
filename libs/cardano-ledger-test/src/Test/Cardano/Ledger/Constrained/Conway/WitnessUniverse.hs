@@ -69,7 +69,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value ()
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
@@ -407,14 +407,14 @@ witRewardAccountSpec univ =
         satisfies raCred (witCredSpec @era univ)
 
 owners_ ::
-  Term PoolParams -> Term (Set (KeyHash 'Staking))
+  Term StakePoolParams -> Term (Set (KeyHash 'Staking))
 owners_ = sel @6
 
-witPoolParamsSpec ::
+witStakePoolParamsSpec ::
   forall era.
-  WitUniv era -> Specification PoolParams
-witPoolParamsSpec univ =
-  explainWit "poolparams :: (PoolParams c)" univ $
+  WitUniv era -> Specification StakePoolParams
+witStakePoolParamsSpec univ =
+  explainWit "poolparams :: (StakePoolParams c)" univ $
     constrained $ \ [var|poolparams|] ->
       [ forAll (owners_ poolparams) $ \ [var|ownerKeyHash|] -> satisfies ownerKeyHash (witKeyHashSpec univ)
       , satisfies (owners_ poolparams) (hasSize (rangeSize 1 3))
@@ -445,7 +445,7 @@ witShelleyTxCert univ =
         )
         ( branchW 3 $ \poolcert ->
             (caseOn poolcert)
-              (branch $ \registerPoolParams -> satisfies registerPoolParams (witPoolParamsSpec univ))
+              (branch $ \registerStakePoolParams -> satisfies registerStakePoolParams (witStakePoolParamsSpec univ))
               (branch $ \retirePoolAuthor _ -> satisfies retirePoolAuthor (witKeyHashSpec univ))
         )
         ( branchW 1 $ \genesiscert -> match genesiscert $ \authorkey _ _ -> satisfies authorkey (witKeyHashSpec univ)
@@ -474,7 +474,7 @@ witConwayTxCert univ =
         )
         ( branch $ \poolcert ->
             (caseOn poolcert)
-              (branch $ \registerPoolParams -> satisfies registerPoolParams (witPoolParamsSpec univ))
+              (branch $ \registerStakePoolParams -> satisfies registerStakePoolParams (witStakePoolParamsSpec univ))
               (branch $ \retirePoolAuthor _ -> satisfies retirePoolAuthor (witKeyHashSpec univ))
         )
         ( branch $ \govcert ->
@@ -681,8 +681,8 @@ instance Era era => Witnessed era DRep where
 instance Era era => Witnessed era RewardAccount where
   witness univ t = satisfies t (witRewardAccountSpec univ)
 
-instance Era era => Witnessed era PoolParams where
-  witness univ t = satisfies t (witPoolParamsSpec univ)
+instance Era era => Witnessed era StakePoolParams where
+  witness univ t = satisfies t (witStakePoolParamsSpec univ)
 
 instance Era era => Witnessed era GenDelegPair where
   witness univ t = satisfies t (witGenDelegPairSpec univ)

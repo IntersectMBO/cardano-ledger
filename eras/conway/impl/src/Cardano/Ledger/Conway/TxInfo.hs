@@ -545,7 +545,7 @@ transTxBodyWithdrawals txBody =
 transTxCert ::
   (ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) => ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
-  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+  RegPoolTxCert StakePoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister
       (transKeyHash ppId)
       (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))

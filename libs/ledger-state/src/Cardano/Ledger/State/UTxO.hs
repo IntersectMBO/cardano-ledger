@@ -203,8 +203,8 @@ data SnapShotStats = SnapShotStats
   { sssStake :: !(Stat (Credential 'Staking))
   , sssDelegationCredential :: !(Stat (Credential 'Staking))
   , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool))
-  , sssPoolParams :: !(Stat (KeyHash 'StakePool))
-  , sssPoolParamsStats :: !PoolParamsStats
+  , sssStakePoolParams :: !(Stat (KeyHash 'StakePool))
+  , sssStakePoolParamsStats :: !StakePoolParamsStats
   }
 
 instance Semigroup SnapShotStats where
@@ -226,15 +226,15 @@ instance Pretty SnapShotStats where
       [ "Stake" <:> sssStake
       , "DelegationCredential" <:> sssDelegationCredential
       , "DelegationStakePool" <:> sssDelegationStakePool
-      , "PoolParams" <:> sssPoolParams
-      , pretty sssPoolParamsStats
+      , "StakePoolParams" <:> sssStakePoolParams
+      , pretty sssStakePoolParamsStats
       ]
 
 instance AggregateStat SnapShotStats where
   aggregateStat SnapShotStats {..} =
-    (aggregateStat sssPoolParamsStats)
+    (aggregateStat sssStakePoolParamsStats)
       { gsCredentialStaking = sssStake <> sssDelegationCredential
-      , gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
+      , gsKeyHashStakePool = sssDelegationStakePool <> sssStakePoolParams
       }
 
 countSnapShotStat :: SnapShot -> SnapShotStats
@@ -243,42 +243,42 @@ countSnapShotStat SnapShot {..} =
     { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
     , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
     , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
-    , sssPoolParams = statMapKeys (VMap.toMap ssPoolParams)
-    , sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
+    , sssStakePoolParams = statMapKeys (VMap.toMap ssStakePoolParams)
+    , sssStakePoolParamsStats = VMap.foldMap countStakePoolParamsStats ssStakePoolParams
     }
 
-data PoolParamsStats = PoolParamsStats
+data StakePoolParamsStats = StakePoolParamsStats
   { ppsPoolId :: !(Stat (KeyHash 'StakePool))
   , ppsRewardAccount :: !(Stat (Credential 'Staking))
   , ppsOwners :: !(Stat (KeyHash 'Staking))
   }
 
-instance Semigroup PoolParamsStats where
-  (<>) (PoolParamsStats x1 x2 x3) (PoolParamsStats y1 y2 y3) =
-    PoolParamsStats
+instance Semigroup StakePoolParamsStats where
+  (<>) (StakePoolParamsStats x1 x2 x3) (StakePoolParamsStats y1 y2 y3) =
+    StakePoolParamsStats
       (x1 <> y1)
       (x2 <> y2)
       (x3 <> y3)
 
-instance Monoid PoolParamsStats where
-  mempty = PoolParamsStats mempty mempty mempty
+instance Monoid StakePoolParamsStats where
+  mempty = StakePoolParamsStats mempty mempty mempty
 
-instance Pretty PoolParamsStats where
-  pretty PoolParamsStats {..} =
+instance Pretty StakePoolParamsStats where
+  pretty StakePoolParamsStats {..} =
     prettyRecord
-      "PoolParamsStats"
+      "StakePoolParamsStats"
       [ "PoolId" <:> ppsPoolId
       , "RewardAccount" <:> ppsRewardAccount
       , "Owners" <:> ppsOwners
       ]
 
-instance AggregateStat PoolParamsStats where
-  aggregateStat PoolParamsStats {..} =
+instance AggregateStat StakePoolParamsStats where
+  aggregateStat StakePoolParamsStats {..} =
     mempty {gsCredentialStaking = ppsRewardAccount, gsKeyHashStakePool = ppsPoolId}
 
-countPoolParamsStats :: PoolParams -> PoolParamsStats
-countPoolParamsStats PoolParams {..} =
-  PoolParamsStats
+countStakePoolParamsStats :: StakePoolParams -> StakePoolParamsStats
+countStakePoolParamsStats StakePoolParams {..} =
+  StakePoolParamsStats
     { ppsPoolId = statSingleton ppId
     , ppsRewardAccount = statSingleton (raCredential ppRewardAccount)
     , ppsOwners = statSet ppOwners
@@ -467,7 +467,7 @@ countDStateStats ds@DState {..} =
 
 data PStateStats = PStateStats
   { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
-  , pssPoolParamsStats :: !PoolParamsStats
+  , pssStakePoolParamsStats :: !StakePoolParamsStats
   }
 
 instance Pretty PStateStats where
@@ -475,23 +475,23 @@ instance Pretty PStateStats where
     prettyRecord
       "PStateStats"
       [ "KeyHashStakePool" <:> pssKeyHashStakePool
-      , pretty pssPoolParamsStats
+      , pretty pssStakePoolParamsStats
       ]
 
 instance AggregateStat PStateStats where
   aggregateStat PStateStats {..} =
-    (aggregateStat pssPoolParamsStats) {gsKeyHashStakePool = pssKeyHashStakePool}
+    (aggregateStat pssStakePoolParamsStats) {gsKeyHashStakePool = pssKeyHashStakePool}
 
 countPStateStats :: PState CurrentEra -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
-        statMapKeys psStakePoolParams
-          <> statMapKeys psFutureStakePoolParams
+        statMapKeys psStakeStakePoolParams
+          <> statMapKeys psFutureStakeStakePoolParams
           <> statMapKeys psRetiring
-    , pssPoolParamsStats =
-        foldMap countPoolParamsStats psStakePoolParams
-          <> foldMap countPoolParamsStats psFutureStakePoolParams
+    , pssStakePoolParamsStats =
+        foldMap countStakePoolParamsStats psStakeStakePoolParams
+          <> foldMap countStakePoolParamsStats psFutureStakeStakePoolParams
     }
 
 data LedgerStateStats = LedgerStateStats

@@ -28,7 +28,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (StakePoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
@@ -78,7 +78,7 @@ dRepMembershipPred dRepsMap dRep =
 
 -- | The DState needs a witnessed set of delegations to be usefull. Use this Spec to obtain a random one
 witnessedKeyHashPoolParamMapSpec ::
-  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) PoolParams)
+  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) StakePoolParams)
 witnessedKeyHashPoolParamMapSpec univ =
   constrained $ \keyPoolParamMap ->
     [witness univ (dom_ keyPoolParamMap), witness univ (rng_ keyPoolParamMap)]
@@ -86,7 +86,7 @@ witnessedKeyHashPoolParamMapSpec univ =
 conwayAccountsSpec ::
   Era era =>
   WitUniv era ->
-  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Term (Map (KeyHash 'StakePool) StakePoolParams) ->
   Specification (ConwayAccounts era)
 conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
   match conwayAccounts $ \ [var|accountmap|] ->
