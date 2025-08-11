@@ -199,7 +199,7 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePoolState, psFutureStakePoolState, psRetiring}
+      , ps@PState {psStakePools, psFutureStakePools, psRetiring}
       , poolCert
       ) <-
     judgmentContext
@@ -234,13 +234,13 @@ poolDelegationTransition = do
               , mismatchExpected = minPoolCost
               }
 
-      if eval (ppId ∉ dom psStakePoolState)
+      if eval (ppId ∉ dom psStakePools)
         then do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps {psStakePoolState = eval (psStakePoolState ⨃ singleton ppId (mkStakePoolState poolParams))}
+              ps {psStakePools = eval (psStakePools ⨃ singleton ppId (mkStakePoolState poolParams))}
         else do
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
@@ -254,12 +254,12 @@ poolDelegationTransition = do
           -- the if statement.
           pure $
             ps
-              { psFutureStakePoolState =
-                  eval (psFutureStakePoolState ⨃ singleton ppId (mkStakePoolState poolParams))
+              { psFutureStakePools =
+                  eval (psFutureStakePools ⨃ singleton ppId (mkStakePoolState poolParams))
               , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
               }
     RetirePool hk e -> do
-      eval (hk ∈ dom psStakePoolState) ?! StakePoolNotRegisteredOnKeyPOOL hk
+      eval (hk ∈ dom psStakePools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)

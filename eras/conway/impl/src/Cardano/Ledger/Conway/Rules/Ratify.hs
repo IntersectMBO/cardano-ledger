@@ -197,7 +197,7 @@ spoAcceptedRatio
   RatifyEnv
     { reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)
     , reAccounts
-    , rePoolState
+    , reStakePools
     }
   GovActionState
     { gasStakePoolVotes
@@ -213,7 +213,7 @@ spoAcceptedRatio
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
                 | hardforkConwayBootstrapPhase pv -> (yes, abstain + stake)
-                | otherwise -> case defaultStakePoolVote poolId rePoolState reAccounts of
+                | otherwise -> case defaultStakePoolVote poolId reStakePools reAccounts of
                     DefaultNoConfidence
                       | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
                     DefaultAbstain -> (yes, abstain + stake)

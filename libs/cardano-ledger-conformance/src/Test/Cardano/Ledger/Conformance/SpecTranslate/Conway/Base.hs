@@ -989,7 +989,7 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
-      <*> toSpecRep (Map.mapWithKey stakePoolStateToPoolParams rePoolState)
+      <*> toSpecRep (Map.mapWithKey stakePoolStateToPoolParams reStakePools)
       <*> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance SpecTranslate ctx Bool where

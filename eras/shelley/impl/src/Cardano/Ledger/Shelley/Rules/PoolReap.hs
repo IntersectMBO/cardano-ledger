@@ -140,7 +140,7 @@ poolReapTransition = do
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     -- collect all accounts for stake pools that will retire
     retiredStakePoolAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
-    retiredStakePoolAccounts = Map.map spsRewardAccount $ eval (retired ◁ psStakePoolState ps)
+    retiredStakePoolAccounts = Map.map spsRewardAccount $ eval (retired ◁ psStakePools ps)
     retiredStakePoolAccountsWithRefund :: Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
     retiredStakePoolAccountsWithRefund = Map.intersectionWith (,) retiredStakePoolAccounts retiringDeposits
     -- collect all of the potential refunds
@@ -183,8 +183,8 @@ poolReapTransition = do
       ( cs
           & certDStateL . accountsL
             %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
-          & certPStateL . psStakePoolStateL %~ (eval . (retired ⋪))
-          & certPStateL . psFutureStakePoolStateL %~ (eval . (retired ⋪))
+          & certPStateL . psStakePoolsL %~ (eval . (retired ⋪))
+          & certPStateL . psFutureStakePoolsL %~ (eval . (retired ⋪))
           & certPStateL . psRetiringL %~ (eval . (retired ⋪))
           & certPStateL . psDepositsCompactL .~ remainingDeposits
       )

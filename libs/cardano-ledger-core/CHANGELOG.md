@@ -7,8 +7,8 @@
   * Add the `StakePoolState` data type to the new module.
   * Reexport `PoolParams` from its original module and deprecate it.
   * Replace `PoolParams` with `StatekPoolState` in `PState` and rename the fields and lenses.
-    * `psStakePoolParams(L)` to `psStakePoolState(L)`, and
-    * `psFutureStakePoolParams(L)` to `psFutureStakePoolState(L)`.
+    * `psStakePoolParams(L)` to `psStakePools(L)`, and
+    * `psFutureStakePoolParams(L)` to `psFutureStakePools(L)`.
 * Add `HashHeader` (moved from `cardano-protocol-tpraos`)
 * Add `drepDepositCompactL`
 * Change the type of `drepDeposit` to `CompactForm Coin`

@@ -219,7 +219,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
   epochStateGovStateL,
-  epochStatePoolStateL,
+  epochStateStakePoolsL,
   esLStateL,
   lsCertState,
   lsUTxOState,
@@ -512,7 +512,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     , dpProposals = proposalsActions props
                     , dpProposalDeposits = proposalsDeposits props
                     , dpGlobals = globals
-                    , dpPoolState = epochState ^. epochStatePoolStateL
+                    , dpStakePools = epochState ^. epochStateStakePoolsL
                     }
                 )
   pure $ epochState & epochStateGovStateL .~ govState'

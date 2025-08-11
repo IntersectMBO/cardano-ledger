@@ -70,7 +70,7 @@ acceptedRatioProp = do
                   re
                     { reStakePoolDistr = distr
                     , reAccounts = accountsFromDelegatees delegatees
-                    , rePoolState = poolState
+                    , reStakePools = stakePools
                     }
                   gas {gasStakePoolVotes = votes}
                   protVer
@@ -115,7 +115,7 @@ allAbstainProp =
           re
             { reStakePoolDistr = distr
             , reAccounts = accountsFromDelegatees delegatees
-            , rePoolState = poolState
+            , reStakePools = stakePools
             }
           gas {gasStakePoolVotes = votes}
           (rs ^. rsEnactStateL . ensProtVerL)
@@ -186,7 +186,7 @@ data TestData era = TestData
   , stakeNoConfidence :: Coin
   , stakeNotVoted :: Coin
   , delegatees :: Map (Credential 'Staking) DRep
-  , poolState :: Map (KeyHash 'StakePool) StakePoolState
+  , stakePools :: Map (KeyHash 'StakePool) StakePoolState
   }
   deriving (Show)
 
@@ -244,7 +244,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
       , stakeNoConfidence = Coin . fromIntegral $ length poolsNoConfidence
       , stakeNotVoted = Coin . fromIntegral $ length rest
       , delegatees = Map.union delegateesAA delegateesNC
-      , poolState = Map.unions [poolStateRest, poolStateAA, poolStateNC]
+      , stakePools = Map.unions [poolStateRest, poolStateAA, poolStateNC]
       }
   where
     splitByPct ::

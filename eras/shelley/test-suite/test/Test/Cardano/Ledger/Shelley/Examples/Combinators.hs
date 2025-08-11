@@ -276,7 +276,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePoolState = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePoolState ps)
+        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -299,7 +299,7 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psFutureStakePoolState = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePoolState ps)
+        { psFutureStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -322,8 +322,8 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePoolState = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePoolState ps)
-        , psFutureStakePoolState = Map.delete (ppId pool) (psStakePoolState ps)
+        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        , psFutureStakePools = Map.delete (ppId pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -374,7 +374,7 @@ reapPool pool cs = cs {chainNes = nes'}
     ps' =
       ps
         { psRetiring = Map.delete poolId (psRetiring ps)
-        , psStakePoolState = Map.delete poolId (psStakePoolState ps)
+        , psStakePools = Map.delete poolId (psStakePools ps)
         , psDeposits = Map.delete poolId (psDeposits ps)
         }
     pp = es ^. curPParamsEpochStateL

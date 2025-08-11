@@ -73,12 +73,12 @@ tests =
         map removedAfterPoolreap_ $
           filter (not . sameEpoch) (chainSstWithTick tr)
   where
-    poolState target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    stakePools target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
-       in removedAfterPoolreap (poolState source) (poolState target) e
+       in removedAfterPoolreap (stakePools source) (stakePools target) e
 
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
@@ -94,8 +94,8 @@ removedAfterPoolreap p p' e =
       && Set.null (eval (retire ∩ dom stp'))
       && Set.null (eval (retire ∩ dom retiring'))
   where
-    stp = psStakePoolState p
-    stp' = psStakePoolState p'
+    stp = psStakePools p
+    stp' = psStakePools p'
     retiring = psRetiring p
     retiring' = psRetiring p'
     retire :: Set.Set (KeyHash 'StakePool) -- This declaration needed to disambiguate 'eval'

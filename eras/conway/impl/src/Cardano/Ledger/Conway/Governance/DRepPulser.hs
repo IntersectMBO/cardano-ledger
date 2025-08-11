@@ -282,7 +282,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpProposalDeposits :: !(Map (Credential 'Staking) (CompactForm Coin))
     -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
-    , dpPoolState :: !(Map (KeyHash 'StakePool) StakePoolState)
+    , dpStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
     -- ^ Snapshot of the parameters of stake pools -
     --   this is needed to get the reward account for SPO vote calculation
     } ->
@@ -338,7 +338,7 @@ instance
       , noThunks ctxt (dpProposals drp)
       , noThunks ctxt (dpProposalDeposits drp)
       , noThunks ctxt (dpGlobals drp)
-      , noThunks ctxt (dpPoolState drp)
+      , noThunks ctxt (dpStakePools drp)
       ]
 
 instance
@@ -410,7 +410,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
         , reCurrentEpoch = dpCurrentEpoch
         , reCommitteeState = dpCommitteeState
         , reAccounts = dpAccounts
-        , rePoolState = dpPoolState
+        , reStakePools = dpStakePools
         }
     !ratifySig = RatifySignal dpProposals
     !ratifyState =

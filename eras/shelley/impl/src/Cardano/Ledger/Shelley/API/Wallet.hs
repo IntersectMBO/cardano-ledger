@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.API.Wallet (
   AdaPots (..),
   totalAdaES,
   totalAdaPotsES,
-  getPoolState,
+  getStakePools,
 ) where
 
 import Cardano.Ledger.Address (Addr (..), compactAddr)
@@ -156,7 +156,7 @@ getPools ::
   Set (KeyHash 'StakePool)
 getPools = Map.keysSet . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -170,20 +170,20 @@ getPoolParameters = Map.restrictKeys . f
   where
     f nes =
       Map.mapWithKey stakePoolStateToPoolParams $
-        nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
-{-# DEPRECATED getPoolParameters "In favor of `getPoolState`" #-}
+        nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+{-# DEPRECATED getPoolParameters "In favor of `getStakePools`" #-}
 
 -- | Get the /current/ registered stake pool state for a given set of
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
-getPoolState ::
+getStakePools ::
   EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool) ->
   Map (KeyHash 'StakePool) StakePoolState
-getPoolState = Map.restrictKeys . f
+getStakePools = Map.restrictKeys . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolStateL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 -- | Get pool sizes, but in terms of total stake
 --

@@ -1469,7 +1469,7 @@ instance
       dpEnactState
       dpProposals
       dpProposalDeposits
-      dpPoolState
+      dpStakePools
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep

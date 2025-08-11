@@ -250,7 +250,7 @@ validateStakePoolDelegateeRegistered ::
   KeyHash 'StakePool ->
   Test (KeyHash 'StakePool)
 validateStakePoolDelegateeRegistered pState targetPool =
-  let stPools = psStakePoolState pState
+  let stPools = psStakePools pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
 
 instance

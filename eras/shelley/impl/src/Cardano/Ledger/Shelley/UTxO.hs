@@ -52,7 +52,7 @@ import Cardano.Ledger.State (
   PoolParams (..),
   dsGenDelegs,
   lookupDepositDState,
-  psStakePoolStateL,
+  psStakePoolsL,
  )
 import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),
@@ -141,7 +141,7 @@ produced ::
   TxBody era ->
   Value era
 produced pp certState =
-  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolStateL)
+  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
 
 shelleyProducedValue ::
   EraTxBody era =>

@@ -404,7 +404,7 @@ conwayCertStateSpec ::
 conwayCertStateSpec univ (whodelegates, wdrl) epoch = constrained $ \ [var|convCertState|] ->
   match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pStateSpec univ epoch)
-    , reify pState psStakePoolState $ \ [var|poolreg|] ->
+    , reify pState psStakePools $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
         , satisfies dState (conwayDStateSpec univ (whodelegates, wdrl) poolreg)
         ]
@@ -529,7 +529,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
     markPoolParams =
       VMap.fromMap $
         Map.mapWithKey stakePoolStateToPoolParams $
-          psStakePoolState $
+          psStakePools $
             ls ^. lsCertStateL . certPStateL
 
 -- ====================================================================

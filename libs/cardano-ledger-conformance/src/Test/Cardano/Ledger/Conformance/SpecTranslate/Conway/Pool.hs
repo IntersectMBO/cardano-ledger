@@ -32,7 +32,7 @@ instance SpecTranslate ctx (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep (Map.mapWithKey stakePoolStateToPoolParams psStakePoolState)
+      <$> toSpecRep (Map.mapWithKey stakePoolStateToPoolParams psStakePools)
       <*> toSpecRep psRetiring
 
 instance SpecTranslate ctx PoolCert where

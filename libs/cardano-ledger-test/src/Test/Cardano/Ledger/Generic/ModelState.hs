@@ -161,8 +161,8 @@ dStateZero =
 pStateZero :: PState era
 pStateZero =
   PState
-    { psStakePoolState = Map.empty
-    , psFutureStakePoolState = Map.empty
+    { psStakePools = Map.empty
+    , psFutureStakePools = Map.empty
     , psRetiring = Map.empty
     , psDeposits = Map.empty
     }
@@ -325,7 +325,7 @@ abstract x =
   ModelNewEpochState
     { mPoolParams =
         ( Map.mapWithKey stakePoolStateToPoolParams
-            . psStakePoolState
+            . psStakePools
             . certPState
             . lsCertState
             . esLState
@@ -346,7 +346,7 @@ abstract x =
     , -- below here NO EFFECT until we model EpochBoundary
       mFPoolParams =
         ( Map.mapWithKey stakePoolStateToPoolParams
-            . psFutureStakePoolState
+            . psFutureStakePools
             . certPState
             . lsCertState
             . esLState

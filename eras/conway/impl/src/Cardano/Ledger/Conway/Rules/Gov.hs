@@ -458,7 +458,7 @@ govTransition = do
       certDState = certState ^. certDStateL
       committeeState = vsCommitteeState certVState
       knownDReps = vsDReps certVState
-      knownStakePools = psStakePoolState certPState
+      knownStakePools = psStakePools certPState
       knownCommitteeMembers = authorizedHotCommitteeCredentials committeeState
 
   expectedNetworkId <- liftSTS $ asks networkId

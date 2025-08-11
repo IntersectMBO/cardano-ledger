@@ -485,12 +485,12 @@ countPStateStats :: PState CurrentEra -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
-        statMapKeys psStakePoolState
-          <> statMapKeys psFutureStakePoolState
+        statMapKeys psStakePools
+          <> statMapKeys psFutureStakePools
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psStakePoolState)
-          <> foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psFutureStakePoolState)
+        foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psStakePools)
+          <> foldMap countPoolParamsStats (Map.mapWithKey stakePoolStateToPoolParams psFutureStakePools)
     }
 
 data LedgerStateStats = LedgerStateStats
