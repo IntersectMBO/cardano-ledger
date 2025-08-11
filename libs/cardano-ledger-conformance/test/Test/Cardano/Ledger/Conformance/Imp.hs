@@ -23,8 +23,10 @@ import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), ledgerSlotNoL)
 import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
+import Data.Data (Proxy (..))
 import Data.List.NonEmpty
 import Data.Text qualified as T
+import GHC.TypeLits (symbolVal)
 import Lens.Micro
 import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
@@ -45,6 +47,60 @@ import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
+
+conformanceHook ::
+  forall rule era t.
+  ( ShelleyEraImp era
+  , ExecSpecRule rule era
+  , ToExpr (Event (EraRule rule era))
+  ) =>
+  Globals ->
+  ExecContext rule era ->
+  TRC (EraRule rule era) ->
+  Either
+    (NonEmpty (PredicateFailure (EraRule rule era)))
+    (State (EraRule rule era), [Event (EraRule rule era)]) ->
+  ImpM t ()
+conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
+  impAnn ("Conformance hook (" <> symbolVal (Proxy @rule) <> ")") $ do
+    -- translate inputs
+    specTRC@(SpecTRC specEnv specState specSignal) <-
+      impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
+    -- get agda response
+    agdaResponse <- fmap (second specNormalize) . evaluateDeep $ runAgdaRule @rule @era specTRC
+    -- translate imp response
+    let
+      impRuleResult' = bimap (T.pack . show) fst impRuleResult
+      impResponse = first (T.pack . show) . translateOutput @rule @era ctx trc =<< impRuleResult'
+
+    logString "implEnv"
+    logToExpr env
+    logString "implState"
+    logToExpr state
+    logString "implSignal"
+    logToExpr signal
+    logString "implStateOut"
+    logToExpr impRuleResult
+    logString "specEnv"
+    logToExpr specEnv
+    logString "specState"
+    logToExpr specState
+    logString "specSignal"
+    logToExpr specSignal
+    logString "Extra info:"
+    logDoc $
+      extraInfo @rule @era
+        globals
+        ctx
+        (TRC (env, state, signal))
+        (first (T.pack . show) impRuleResult)
+    logString "diffConformance:"
+    logDoc $ diffConformance impResponse agdaResponse
+    case (impResponse, agdaResponse) of
+      (Right impRes, Right agdaRes)
+        | impRes == agdaRes -> pure ()
+      (Left _, Left _) -> pure ()
+      _ -> assertFailure "Conformance failure"
 
 submitTxConformanceHook ::
   forall era t.
@@ -67,69 +123,54 @@ submitTxConformanceHook ::
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
   ImpM t ()
-submitTxConformanceHook globals trc@(TRC (env, state, signal)) impRuleResult = do
-  let ctx =
-        ConwayLedgerExecContext
-          { clecPolicyHash =
-              state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionScriptL
-          , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
-          , clecUtxoExecContext =
-              UtxoExecContext
-                { uecTx = signal
-                , uecUTxO = state ^. utxoL
-                , uecUtxoEnv =
-                    UtxoEnv
-                      { ueSlot = env ^. ledgerSlotNoL
-                      , uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
-                      , ueCertState = state ^. lsCertStateL
-                      }
-                }
-          }
-  -- translate inputs
-  specTRC@(SpecTRC specEnv specState specSignal) <-
-    impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
-  -- get agda response
-  agdaResponse <- fmap (second specNormalize) . evaluateDeep $ runAgdaRule @"LEDGER" @era specTRC
-  -- translate imp response
-  let
-    impRuleResult' = bimap (T.pack . show) fst impRuleResult
-    impResponse = first (T.pack . show) . translateOutput ctx trc =<< impRuleResult'
+submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
+  conformanceHook globals ctx trc
+  where
+    ctx =
+      ConwayLedgerExecContext
+        { clecPolicyHash =
+            state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionScriptL
+        , clecEnactState = mkEnactState $ state ^. lsUTxOStateL . utxosGovStateL
+        , clecUtxoExecContext =
+            UtxoExecContext
+              { uecTx = signal
+              , uecUTxO = state ^. utxoL
+              , uecUtxoEnv =
+                  UtxoEnv
+                    { ueSlot = env ^. ledgerSlotNoL
+                    , uePParams = state ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+                    , ueCertState = state ^. lsCertStateL
+                    }
+              }
+        }
 
-  logString "implEnv"
-  logToExpr env
-  logString "implState"
-  logToExpr state
-  logString "implSignal"
-  logToExpr signal
-  logString "specEnv"
-  logToExpr specEnv
-  logString "specState"
-  logToExpr specState
-  logString "specSignal"
-  logToExpr specSignal
-  logString "Extra info:"
-  logDoc $
-    extraInfo @"LEDGER" @era
-      globals
-      ctx
-      (TRC (env, state, signal))
-      (first (T.pack . show) impRuleResult)
-  logDoc $ diffConformance impResponse agdaResponse
-  case (impResponse, agdaResponse) of
-    (Right impRes, Right agdaRes)
-      | impRes == agdaRes -> pure ()
-    (Left _, Left _) -> pure ()
-    _ -> assertFailure "Conformance failure"
+_epochBoundaryConformanceHook ::
+  forall era t.
+  ( ShelleyEraImp era
+  , ExecSpecRule "NEWEPOCH" era
+  , ExecContext "NEWEPOCH" era ~ ()
+  , ToExpr (Event (EraRule "NEWEPOCH" era))
+  ) =>
+  Globals ->
+  TRC (EraRule "NEWEPOCH" era) ->
+  State (EraRule "NEWEPOCH" era) ->
+  ImpM t ()
+_epochBoundaryConformanceHook globals trc res =
+  conformanceHook @"NEWEPOCH" @era globals () trc $ Right (res, [])
 
 spec :: Spec
 spec =
   withImpInit @(LedgerSpec ConwayEra) $
     modifyImpInitProtVer @ConwayEra (natVersion @10) $
       modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
+        -- TODO enable epoch boundary conformance tests once the specs have been fixed
+        -- modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
         describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
             _ <- submitConstitution @ConwayEra SNothing
             passNEpochs 2
+          it "Can elect a basic committee" $ do
+            void $ evaluateDeep =<< electBasicCommittee
         describe "Conway Imp conformance" $ do
           describe "BBODY" Bbody.spec
           describe "CERTS" Certs.spec

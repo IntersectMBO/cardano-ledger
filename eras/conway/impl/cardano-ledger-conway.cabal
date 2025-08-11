@@ -176,6 +176,7 @@ library testlib
 
   build-depends:
     FailT,
+    ImpSpec,
     aeson,
     base,
     bytestring,
