@@ -40,6 +40,10 @@ module Cardano.Ledger.State.StakePool (
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
+  ppCostL,
+  ppMetadataL,
+  ppVrfL,
+  spsVrfL,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
@@ -97,6 +101,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | State representation of a stake pool. This type contains all the same
@@ -121,6 +126,9 @@ data StakePoolState = StakePoolState
   -- ^ Optional metadata (URL and hash)
   }
   deriving (Show, Generic, Eq, Ord)
+
+spsVrfL :: Lens' StakePoolState (VRFVerKeyHash 'StakePoolVRF)
+spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
 
 deriving instance NoThunks StakePoolState
 
@@ -347,6 +355,15 @@ data PoolParams = PoolParams
   deriving (Show, Generic, Eq, Ord)
   deriving (EncCBOR) via CBORGroup PoolParams
   deriving (DecCBOR) via CBORGroup PoolParams
+
+ppVrfL :: Lens' PoolParams (VRFVerKeyHash 'StakePoolVRF)
+ppVrfL = lens ppVrf (\pp u -> pp {ppVrf = u})
+
+ppCostL :: Lens' PoolParams Coin
+ppCostL = lens ppCost (\pp u -> pp {ppCost = u})
+
+ppMetadataL :: Lens' PoolParams (StrictMaybe PoolMetadata)
+ppMetadataL = lens ppMetadata (\pp u -> pp {ppMetadata = u})
 
 instance Default PoolParams where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
