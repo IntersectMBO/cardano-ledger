@@ -57,13 +57,8 @@ import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Conway.ImpTest (
-  ConwayEraImp,
-  LedgerSpec,
-  modifyImpInitProtVer,
- )
+import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Shelley.ImpTest (ImpInit)
 
 spec ::
   forall era.
@@ -101,11 +96,7 @@ spec ::
   Spec
 spec = do
   BabbageImp.spec @era
-  withImpInit @(LedgerSpec era) $
-    forM_ (eraProtVersions @era) $ \protVer ->
-      describe ("ConwayImpSpec - " <> show protVer) $
-        modifyImpInitProtVer protVer $
-          conwaySpec @era
+  withEachEraVersion @era $ conwaySpec @era
 
 conwaySpec ::
   forall era.

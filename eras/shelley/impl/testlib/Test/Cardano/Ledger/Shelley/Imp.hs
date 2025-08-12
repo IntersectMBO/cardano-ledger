@@ -13,7 +13,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec, ShelleyEraImp)
+import Test.Cardano.Ledger.Shelley.ImpTest
 import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Instant
 
 spec ::
@@ -24,7 +24,7 @@ spec ::
   ) =>
   Spec
 spec = do
-  describe "ShelleyImpSpec" $ withImpInit @(LedgerSpec era) $ do
+  describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
     Ledger.spec
     Epoch.spec
     Utxow.spec

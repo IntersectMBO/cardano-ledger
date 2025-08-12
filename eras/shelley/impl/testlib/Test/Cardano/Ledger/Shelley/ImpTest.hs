@@ -115,6 +115,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   whenMajorVersionAtMost,
   unlessMajorVersion,
   getsPParams,
+  withEachEraVersion,
 
   -- * Logging
   Doc,
@@ -568,6 +569,17 @@ defaultInitImpTestState nes = do
       , impGlobals = globals
       , impEvents = mempty
       }
+
+withEachEraVersion ::
+  forall era.
+  ShelleyEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  Spec
+withEachEraVersion specWith =
+  withImpInit @(LedgerSpec era) $ do
+    forM_ (eraProtVersions @era) $ \protVer ->
+      describe (show protVer) $
+        modifyImpInitProtVer protVer specWith
 
 modifyImpInitProtVer ::
   forall era.
