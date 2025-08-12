@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `ppVrfL`, `ppCostL`, `ppMetadataL`, `spsVrfL` to `StakePool` module
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Move the `PoolParams` module to `Cardano.Ledger.State.StakePool` and export from there.
   * Add the `StakePoolState` data type to the new module.
