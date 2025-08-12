@@ -129,6 +129,7 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-data,
     cardano-ledger-alonzo:testlib,
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,

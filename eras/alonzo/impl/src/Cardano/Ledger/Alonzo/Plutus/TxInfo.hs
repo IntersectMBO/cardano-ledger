@@ -285,7 +285,7 @@ transTxBodyWithdrawals txBody = Map.toList (transWithdrawals (txBody ^. withdraw
 -- | Translate all required signers produced by `reqSignerHashesTxBodyL`s from within a
 -- `TxBody`
 transTxBodyReqSignerHashes :: AlonzoEraTxBody era => TxBody era -> [PV1.PubKeyHash]
-transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSignerHashesTxBodyL)
+transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSignerHashesTxBodyG)
 
 -- | Translate all `TxDats`s from within `TxWits`
 transTxWitsDatums :: AlonzoEraTxWits era => TxWits era -> [(PV1.DatumHash, PV1.Datum)]

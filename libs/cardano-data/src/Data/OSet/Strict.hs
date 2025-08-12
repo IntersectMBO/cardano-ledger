@@ -36,10 +36,12 @@ module Data.OSet.Strict (
   filter,
   mapL,
   mapR,
+  decodeOSet,
 ) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR (encCBOR),
   decodeSetLikeEnforceNoDuplicates,
   encodeStrictSeq,
@@ -102,11 +104,14 @@ instance Foldable OSet where
   null = F.null . SSeq.fromStrict . osSSeq
   {-# INLINE null #-}
 
+decodeOSet :: Ord a => Decoder s a -> Decoder s (OSet a)
+decodeOSet = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset))
+
 instance EncCBOR a => EncCBOR (OSet a) where
   encCBOR (OSet seq _set) = encodeTag setTag <> encodeStrictSeq encCBOR seq
 
 instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
-  decCBOR = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset)) decCBOR
+  decCBOR = decodeOSet decCBOR
 
 instance ToJSON a => ToJSON (OSet a) where
   toJSON = toJSON . F.toList

@@ -139,7 +139,7 @@ transaction_body =
   , ? 9  : mint                            
   , ? 11 : script_data_hash                
   , ? 13 : nonempty_set<transaction_input>
-  , ? 14 : required_signers                
+  , ? 14 : guards                          
   , ? 15 : network_id                      
   , ? 16 : transaction_output              
   , ? 17 : coin                            
@@ -503,7 +503,7 @@ script_data_hash = hash32
 
 nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
 
-required_signers = nonempty_set<addr_keyhash>
+guards = nonempty_set<addr_keyhash>/ nonempty_oset<credential>
 
 network_id = 0/ 1
 

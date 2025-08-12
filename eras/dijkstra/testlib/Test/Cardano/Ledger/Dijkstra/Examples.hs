@@ -27,12 +27,14 @@ import Cardano.Ledger.Plutus.Data (
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
+  Credential (..),
   RewardAccount (..),
   TxId (..),
  )
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
@@ -54,6 +56,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   exampleStakeKey,
   keyToCredential,
   mkKeyHash,
+  mkScriptHash,
  )
 
 ledgerExamples :: LedgerExamples DijkstraEra
@@ -96,7 +99,7 @@ exampleTxBodyDijkstra =
     )
     (Coin 999) -- txfee
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
-    (Set.singleton $ mkKeyHash 212) -- reqSignerHashes
+    (OSet.fromList [KeyHashObj $ mkKeyHash 212, ScriptHashObj $ mkScriptHash 213]) -- guards
     exampleMultiAsset -- mint
     (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
     (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
