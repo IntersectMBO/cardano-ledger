@@ -27,8 +27,8 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2025-06-11T21:55:55Z
-  , cardano-haskell-packages 2025-06-11T08:32:56Z
+  , hackage.haskell.org 2025-08-05T00:00:00Z
+  , cardano-haskell-packages 2025-08-14T14:31:31Z
 
 packages:
   -- == Byron era ==
