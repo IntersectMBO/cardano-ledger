@@ -75,21 +75,36 @@ spec = describe "POOL" $ do
             submitFailingTx tx [injectFailure $ PoolMedataHashTooBig kh (fromIntegral tooBigSize)]
 
     it "register a new pool with an already registered VRF" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
-      expectPool khNew (Just vrf)
+      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectPool khNew (Just vrf)
+          else do
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
+            expectPool khNew Nothing
       expectPool kh (Just vrf)
 
     it "re-register a pool with an already registered VRF" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh1, vrf1) <- registerNewPool
       (kh2, vrf2) <- registerNewPool
-      registerPoolTx <$> poolParams kh1 vrf2 >>= submitTx_
-      expectPool kh1 (Just vrf1)
-      expectFuturePool kh1 (Just vrf2)
-      passEpoch
-      expectPool kh1 (Just vrf2)
-      expectPool kh2 (Just vrf2)
+      registerPoolTx <$> poolParams kh1 vrf2 >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectPool kh1 (Just vrf1)
+            expectFuturePool kh1 (Just vrf2)
+            passEpoch
+            expectPool kh1 (Just vrf2)
+            expectPool kh2 (Just vrf2)
+          else do
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
+            expectPool kh1 (Just vrf1)
+            expectFuturePool kh1 Nothing
 
     it "re-register a pool with its own VRF" $ do
       (kh, vrf) <- registerNewPool
@@ -148,14 +163,22 @@ spec = describe "POOL" $ do
       expectRetiring False kh
 
     it "re-register a retiring pool with an already registered vrf" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh1, _) <- registerNewPool
       (_, vrf2) <- registerNewPool
       retirePoolTx kh1 (EpochInterval 10) >>= submitTx_
-      registerPoolTx <$> poolParams kh1 vrf2 >>= submitTx_
-      expectRetiring False kh1
-      expectFuturePool kh1 (Just vrf2)
-      passEpoch
-      expectPool kh1 (Just vrf2)
+      registerPoolTx <$> poolParams kh1 vrf2 >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectRetiring False kh1
+            expectFuturePool kh1 (Just vrf2)
+            passEpoch
+            expectPool kh1 (Just vrf2)
+          else do
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
+            expectRetiring True kh1
+            expectFuturePool kh1 Nothing
 
     it "re-register retiring pool with its own VRF" $ do
       (kh, vrf) <- registerNewPool
@@ -176,15 +199,21 @@ spec = describe "POOL" $ do
       expectPool kh (Just vrfNew)
 
     it "register a pool with the VRF of a retiring pool" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       let retirement = 1
       retirePoolTx kh (EpochInterval retirement) >>= submitTx_
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
-      expectPool khNew (Just vrf)
+      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectPool khNew (Just vrf)
+          else do
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
+            expectPool khNew Nothing
       expectRetiring True kh
       passNEpochs (fromIntegral retirement)
-      expectPool khNew (Just vrf)
       expectRetiring False khNew
       expectPool kh Nothing
 
@@ -197,6 +226,7 @@ spec = describe "POOL" $ do
       expectPool kh Nothing
       registerPoolTx <$> poolParams kh vrf >>= submitTx_
       expectPool kh (Just vrf)
+      expectVRFs [vrf]
 
     it "register a pool with the VRF of a retired pool" $ do
       (kh, vrf) <- registerNewPool
@@ -209,6 +239,7 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams khNew vrf >>= submitTx_
       expectPool khNew (Just vrf)
       expectRetiring False khNew
+      expectVRFs [vrf]
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
@@ -235,6 +266,8 @@ spec = describe "POOL" $ do
       assertBool
         ("Expected 'retiring' status of: " <> show poolKh <> " to be: " <> show isRetiring)
         $ Map.member poolKh retiring == isRetiring
+    expectVRFs vrfs = do
+      (^. psVRFKeyHashesL) <$> getPState `shouldReturn` vrfs
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $ pps & ppVrfL .~ vrf

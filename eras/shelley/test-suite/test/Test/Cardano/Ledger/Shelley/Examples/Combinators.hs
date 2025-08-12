@@ -277,6 +277,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps' =
       ps
         { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        , psVRFKeyHashes = Set.insert (ppVrf pool) (psVRFKeyHashes ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
