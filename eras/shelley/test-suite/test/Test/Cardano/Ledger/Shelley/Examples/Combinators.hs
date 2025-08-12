@@ -376,6 +376,7 @@ reapPool pool cs = cs {chainNes = nes'}
         { psRetiring = Map.delete poolId (psRetiring ps)
         , psStakePools = Map.delete poolId (psStakePools ps)
         , psDeposits = Map.delete poolId (psDeposits ps)
+        , psVRFKeyHashes = Set.delete (ppVrf pool) (psVRFKeyHashes ps)
         }
     pp = es ^. curPParamsEpochStateL
     ds = dps ^. certDStateL
