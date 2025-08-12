@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.Era (
   hardforkAlonzoAllowMIRTransfer,
   hardforkAlonzoValidatePoolRewardAccountNetID,
   hardforkBabbageForgoRewardPrefilter,
+  hardforkConwayDisallowDuplicatedVRFKeys,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -155,3 +156,8 @@ hardforkAlonzoValidatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
 -- See the Shelley Ledger Errata 17.2.
 hardforkBabbageForgoRewardPrefilter :: ProtVer -> Bool
 hardforkBabbageForgoRewardPrefilter pv = pvMajor pv > natVersion @6
+
+hardforkConwayDisallowDuplicatedVRFKeys ::
+  ProtVer ->
+  Bool
+hardforkConwayDisallowDuplicatedVRFKeys pv = pvMajor pv > natVersion @10

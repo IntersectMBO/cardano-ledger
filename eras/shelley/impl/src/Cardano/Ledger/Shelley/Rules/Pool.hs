@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
   ShelleyPOOL,
   hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkConwayDisallowDuplicatedVRFKeys,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.State
@@ -67,6 +68,7 @@ import Control.State.Transition (
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -213,12 +215,12 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePools}
+      , ps@PState {psStakePools, psVRFKeyHashes}
       , poolCert
       ) <-
     judgmentContext
   case poolCert of
-    RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
+    RegPool poolParams@PoolParams {ppId, ppVrf, ppRewardAccount, ppMetadata, ppCost} -> do
       let pv = pp ^. ppProtocolVersionL
       when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
@@ -247,15 +249,29 @@ poolDelegationTransition = do
               { mismatchSupplied = ppCost
               , mismatchExpected = minPoolCost
               }
-
-      if not (Map.member ppId psStakePools)
-        then do
+      let mbStakePoolState = Map.lookup ppId psStakePools
+      let hasMatchingVRF = ((^. spsVrfL) <$> mbStakePoolState) == Just ppVrf
+      when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+        -- if the VRF key is not associated with this pool (either because the pool is not registered
+        -- or because the VRF key is different from the one registered for this pool),
+        -- then we check that this VRF key is not already in use
+        hasMatchingVRF
+          || Set.notMember ppVrf psVRFKeyHashes
+            ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+      case mbStakePoolState of
+        Nothing -> do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
-        else do
+              ps
+                & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
+                & psVRFKeyHashesL %~ Set.insert ppVrf
+        Just _ -> do
+          -- re-register Pool
+          let updateVRFs
+                | hasMatchingVRF = id
+                | otherwise = psVRFKeyHashesL %~ Set.insert ppVrf
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
           -- to the Future pool params (if it is not there already), and overriding the
@@ -270,6 +286,7 @@ poolDelegationTransition = do
             ps
               & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
               & psRetiringL %~ Map.delete ppId
+              & updateVRFs
     RetirePool ppId e -> do
       Map.member ppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL ppId
       let maxEpoch = pp ^. ppEMaxL
