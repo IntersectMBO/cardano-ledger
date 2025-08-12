@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Add `psVRFKeyHashes` to `PState`
+* Add `psVRFKeyHashesL`
 * Deprecate `costModelParamsCount` in favor of `costModelInitParamCount`
 * Add `costModelInitParamNames`, `costModelInitParamCount`, `parseCostModelAsArray` and `parseCostModelAsMap`
 * Export `credToDRep` and `dRepToCred`

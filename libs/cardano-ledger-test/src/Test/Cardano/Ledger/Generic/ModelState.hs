@@ -61,6 +61,7 @@ import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Set as Set
 import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
@@ -161,7 +162,8 @@ dStateZero =
 pStateZero :: PState era
 pStateZero =
   PState
-    { psStakePools = Map.empty
+    { psVRFKeyHashes = Set.empty
+    , psStakePools = Map.empty
     , psFutureStakePools = Map.empty
     , psRetiring = Map.empty
     , psDeposits = Map.empty
@@ -265,6 +267,7 @@ instance Extract (DState era) era where
 instance Extract (PState era) era where
   extract x =
     PState
+      Set.empty
       (mkStakePoolState <$> mPoolParams x)
       (mkStakePoolState <$> mFPoolParams x)
       (mRetiring x)
