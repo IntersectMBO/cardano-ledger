@@ -1,21 +1,13 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Plutus.CostModels (
@@ -184,6 +176,8 @@ costModelParamNames lang = plutusVXParamNames lang
 -- files and the values returned by plutus via `P.showParamName` on the `ParamName` enum.
 -- This listed is sorted in the order given by `ParamName` enum, so we can use it to sort
 -- the costmodel param values before passing them to plutus `mkEvaluationContext`.
+--
+-- Moreover, number of primitives increased in Conway, but for AlonzoGenesis we need to preserve the original number of parameters that was i
 plutusV1ParamNames :: [Text]
 plutusV1ParamNames =
   map (\newName -> Map.findWithDefault newName newName oldNewMapping) newNames
