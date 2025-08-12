@@ -37,7 +37,6 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (
   Assertion (..),
   AssertionViolation (..),
@@ -51,7 +50,7 @@ import Data.Default (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set (member)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -133,14 +132,14 @@ poolReapTransition = do
     ds = cs ^. certDStateL
     -- The set of pools retiring this epoch
     retired :: Set (KeyHash 'StakePool)
-    retired = eval (dom (psRetiring ps ▷ setSingleton e))
+    retired = Set.fromDistinctAscList [k | (k, v) <- Map.toAscList (psRetiring ps), v == e]
     -- The Map of pools (retiring this epoch) to their deposits
     retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) (CompactForm Coin)
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     -- collect all accounts for stake pools that will retire
     retiredStakePoolAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
-    retiredStakePoolAccounts = Map.map spsRewardAccount $ eval (retired ◁ psStakePools ps)
+    retiredStakePoolAccounts = Map.map spsRewardAccount $ Map.restrictKeys (psStakePools ps) retired
     retiredStakePoolAccountsWithRefund :: Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
     retiredStakePoolAccountsWithRefund = Map.intersectionWith (,) retiredStakePoolAccounts retiringDeposits
     -- collect all of the potential refunds
@@ -183,9 +182,9 @@ poolReapTransition = do
       ( cs
           & certDStateL . accountsL
             %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
-          & certPStateL . psStakePoolsL %~ (eval . (retired ⋪))
-          & certPStateL . psFutureStakePoolsL %~ (eval . (retired ⋪))
-          & certPStateL . psRetiringL %~ (eval . (retired ⋪))
+          & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
+          & certPStateL . psFutureStakePoolsL %~ (`Map.withoutKeys` retired)
+          & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psDepositsCompactL .~ remainingDeposits
       )
 

@@ -50,13 +50,11 @@ import Cardano.Ledger.Shelley.Era (
   ShelleyPOOL,
   hardforkAlonzoValidatePoolRewardAccountNetID,
  )
-import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), mkStakePoolState)
+import Cardano.Ledger.State
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (⋪), (⨃))
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -68,9 +66,10 @@ import Control.State.Transition (
  )
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
+import qualified Data.Map as Map
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
@@ -199,7 +198,7 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePools, psFutureStakePools, psRetiring}
+      , ps@PState {psStakePools}
       , poolCert
       ) <-
     judgmentContext
@@ -234,13 +233,13 @@ poolDelegationTransition = do
               , mismatchExpected = minPoolCost
               }
 
-      if eval (ppId ∉ dom psStakePools)
+      if not (Map.member ppId psStakePools)
         then do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps {psStakePools = eval (psStakePools ⨃ singleton ppId (mkStakePoolState poolParams))}
+              ps & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
         else do
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
@@ -254,12 +253,10 @@ poolDelegationTransition = do
           -- the if statement.
           pure $
             ps
-              { psFutureStakePools =
-                  eval (psFutureStakePools ⨃ singleton ppId (mkStakePoolState poolParams))
-              , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
-              }
-    RetirePool hk e -> do
-      eval (hk ∈ dom psStakePools) ?! StakePoolNotRegisteredOnKeyPOOL hk
+              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
+              & psRetiringL %~ Map.delete ppId
+    RetirePool ppId e -> do
+      Map.member ppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL ppId
       let maxEpoch = pp ^. ppEMaxL
           limitEpoch = addEpochInterval cEpoch maxEpoch
       (cEpoch < e && e <= limitEpoch)
@@ -273,4 +270,4 @@ poolDelegationTransition = do
             , mismatchExpected = limitEpoch
             }
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-      pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}
+      pure $ ps & psRetiringL %~ Map.insert ppId e
