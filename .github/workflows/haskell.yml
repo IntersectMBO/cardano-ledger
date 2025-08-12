@@ -630,3 +630,18 @@ jobs:
           echo "Commit $TAG was not found on the master-artifacts branch of formal-ledger-specifications."
           exit 1
         }
+  undefined-check:
+    name: Check that there are no additions of `undefined`s in the PR diff
+    runs-on: ubuntu-latest
+    if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check for `undefined`s in the diffs
+      run: |
+        PR_TARGET=${{ github.base_ref }}
+        git fetch origin -n --refmap= +$PR_TARGET:pr-target
+        if git diff pr-target '*.hs' | grep '^\+.*undefined'; then
+          echo 'The diff must not contain any `undefined` values'
+          false
+        fi
