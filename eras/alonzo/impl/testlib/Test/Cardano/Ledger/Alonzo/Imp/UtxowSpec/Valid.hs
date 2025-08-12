@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoEraSpecificSpec) where
 
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
@@ -47,8 +47,6 @@ import Test.Cardano.Ledger.Plutus.Examples
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -89,6 +87,51 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
+        it "Validating MINT script" $ do
+          submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+
+        it "Not validating MINT script" $ do
+          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
+
+        it "Acceptable supplementary datum" $ do
+          inputAddr <- freshKeyHash @'Payment
+          amount <- Coin <$> choose (2_000_000, 8_000_000)
+          txIn <- sendCoinTo (mkAddr inputAddr StakeRefNull) amount
+          let
+            datum = Data (P.I 123)
+            datumHash = hashData datum
+            txOut =
+              mkBasicTxOut
+                (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
+                (MaryValue amount mempty)
+                & dataHashTxOutL .~ SJust datumHash
+            txBody =
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & outputsTxBodyL .~ [txOut]
+            tx =
+              mkBasicTx txBody
+                & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+          submitTx_ tx
+
+alonzoEraSpecificSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+alonzoEraSpecificSpec = do
+  forM_ (eraLanguages @era) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        let
+          alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang :: ScriptHash
+          alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang :: ScriptHash
+          alwaysFailsWithDatumHash = hashPlutusScript $ alwaysFailsWithDatum slang :: ScriptHash
+          alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash
+
         it "Validating CERT script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
@@ -118,12 +161,6 @@ spec = describe "Valid transactions" $ do
           submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
-
-        it "Validating MINT script" $ do
-          submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
-
-        it "Not validating MINT script" $ do
-          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
 
         --  Process a transaction with a succeeding script in every place possible,
         --  and also with succeeding timelock scripts.
@@ -162,27 +199,6 @@ spec = describe "Valid transactions" $ do
                 & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
                 & outputsTxBodyL .~ [txOut]
           submitTx_ $ mkBasicTx txBody
-
-        it "Acceptable supplementary datum" $ do
-          inputAddr <- freshKeyHash @'Payment
-          amount <- Coin <$> choose (2_000_000, 8_000_000)
-          txIn <- sendCoinTo (mkAddr inputAddr StakeRefNull) amount
-          let
-            datum = Data (P.I 123)
-            datumHash = hashData datum
-            txOut =
-              mkBasicTxOut
-                (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
-                (MaryValue amount mempty)
-                & dataHashTxOutL .~ SJust datumHash
-            txBody =
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & outputsTxBodyL .~ [txOut]
-            tx =
-              mkBasicTx txBody
-                & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
-          submitTx_ tx
 
         it "Multiple identical certificates" $ do
           let scriptHash = alwaysSucceedsNoDatumHash
