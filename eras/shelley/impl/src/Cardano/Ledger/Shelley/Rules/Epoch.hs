@@ -60,7 +60,6 @@ import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, U
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -70,7 +69,6 @@ import Control.State.Transition (
   trans,
  )
 import Data.Default (Default)
-import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -208,20 +206,12 @@ epochTransition = do
   let pp = es ^. curPParamsEpochStateL
       utxoSt = lsUTxOState ls
       certState = ls ^. lsCertStateL
-      pstate = certState ^. certPStateL
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
-  let PState stakePools futureStakePools _ _ = pstate
-      ppp = eval (stakePools ⨃ futureStakePools)
-      pstate' =
-        pstate
-          { psStakePools = ppp
-          , psFutureStakePools = Map.empty
-          }
   PoolreapState utxoSt' chainAccountState' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $
-      TRC ((), PoolreapState utxoSt chainAccountState (certState & certPStateL .~ pstate'), e)
+      TRC ((), PoolreapState utxoSt chainAccountState certState, e)
 
   let ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
