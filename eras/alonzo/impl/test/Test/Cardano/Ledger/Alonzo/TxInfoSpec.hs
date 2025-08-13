@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transValidityInterval)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -115,8 +115,7 @@ transVITimeUpperBoundIsClosed ::
   Expectation
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-      pv = BT.ProtVer (eraProtVerLow @era) 0
-  case transValidityInterval (Proxy @era) pv ei ss interval of
+  case transValidityInterval (Proxy @era) ei ss interval of
     Left (e :: ContextError era) ->
       expectationFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
@@ -124,26 +123,6 @@ transVITimeUpperBoundIsClosed = do
         `shouldBe` PV1.Interval
           (PV1.LowerBound PV1.NegInf True)
           (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
-
--- | The test checks that since protocol version 9 'transVITime' works correctly,
--- by returning open upper bound of the validaty interval.
-transVITimeUpperBoundIsOpen ::
-  forall era.
-  ( EraPlutusContext era
-  , BT.Inject (AlonzoContextError era) (ContextError era)
-  ) =>
-  Expectation
-transVITimeUpperBoundIsOpen = do
-  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-      pv = BT.ProtVer (natVersion @9) 0
-  case transValidityInterval (Proxy @era) pv ei ss interval of
-    Left (e :: ContextError era) ->
-      expectationFailure $ "no translation error was expected, but got: " <> show e
-    Right t ->
-      t
-        `shouldBe` PV1.Interval
-          (PV1.LowerBound PV1.NegInf True)
-          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
 
 spec :: Spec
 spec = describe "txInfo translation" $ do
@@ -156,8 +135,6 @@ spec = describe "txInfo translation" $ do
   describe "transVITime" $ do
     it "validity interval's upper bound is closed when protocol < 9" $
       transVITimeUpperBoundIsClosed @AlonzoEra
-    it "validity interval's upper bound is open when protocol >= 9" $
-      transVITimeUpperBoundIsOpen @AlonzoEra
 
 genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

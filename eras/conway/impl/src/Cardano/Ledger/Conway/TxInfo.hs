@@ -31,6 +31,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transTxOutV1,
   transMintValue,
   transTxBodyId,
+  transValidityInterval,
   transVotingProcedures,
   transProposal,
   toPlutusV3Args,
@@ -103,6 +104,7 @@ import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
+  slotToPOSIXTime,
   transBoundedRational,
   transCoinToLovelace,
   transCoinToValue,
@@ -116,6 +118,8 @@ import Cardano.Ledger.Plutus.TxInfo (
  )
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
@@ -125,6 +129,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Generics hiding (to)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
@@ -398,7 +403,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     mapM_ (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -433,7 +438,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -470,7 +475,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     let
       txInputs = txBody ^. inputsTxBodyL
       refInputs = txBody ^. referenceInputsTxBodyL
@@ -764,3 +769,30 @@ class
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
+
+-- | Translate a validity interval to POSIX time
+transValidityInterval ::
+  forall proxy era a.
+  Inject (AlonzoContextError era) a =>
+  proxy era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  ValidityInterval ->
+  Either a PV1.POSIXTimeRange
+transValidityInterval _ epochInfo systemStart = \case
+  ValidityInterval SNothing SNothing -> pure PV1.always
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
+  ValidityInterval SNothing (SJust i) -> do
+    t <- transSlotToPOSIXTime i
+    pure $ PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.strictUpperBound t)
+  ValidityInterval (SJust i) (SJust j) -> do
+    t1 <- transSlotToPOSIXTime i
+    t2 <- transSlotToPOSIXTime j
+    pure $
+      PV1.Interval
+        (PV1.lowerBound t1)
+        (PV1.strictUpperBound t2)
+  where
+    transSlotToPOSIXTime =
+      left (inject . TimeTranslationPastHorizon @era)
+        . slotToPOSIXTime epochInfo systemStart
