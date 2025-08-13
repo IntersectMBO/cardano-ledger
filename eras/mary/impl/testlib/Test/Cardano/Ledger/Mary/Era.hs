@@ -12,6 +12,7 @@ import Cardano.Ledger.Plutus (emptyCostModels)
 import Test.Cardano.Ledger.Allegra.Era
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.TreeDiff ()
+import Paths_cardano_ledger_mary
 
 class
   ( AllegraEraTest era
@@ -21,6 +22,8 @@ class
 
 instance EraTest MaryEra where
   zeroCostModels = emptyCostModels
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState = mkShelleyTestAccountState
 

@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.Plutus (Language (..))
 import Data.TreeDiff
+import Paths_cardano_ledger_alonzo
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Mary.Era
@@ -35,6 +36,8 @@ class
 
 instance EraTest AlonzoEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1]
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState = mkShelleyTestAccountState
 
