@@ -215,7 +215,7 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePools, psVRFKeyHashes}
+      , ps@PState {psStakePools, psFutureStakePools, psVRFKeyHashes}
       , poolCert
       ) <-
     judgmentContext
@@ -269,9 +269,17 @@ poolDelegationTransition = do
                 & psVRFKeyHashesL %~ Set.insert ppVrf
         Just _ -> do
           -- re-register Pool
+
+          -- If a pool re-registers with a fresh VRF, we have to add it to the list,
+          -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
+          -- which we can retrieve from futureStakePools. We first delete and then insert the new one,
+          -- so in case they are the same, it will still end up in the set.
           let updateVRFs
                 | hasMatchingVRF = id
-                | otherwise = psVRFKeyHashesL %~ Set.insert ppVrf
+                | otherwise = psVRFKeyHashesL %~ (Set.insert ppVrf . withoutFutureVrf)
+                where
+                  withoutFutureVrf s = maybe s (`Set.delete` s) futureVrf
+                  futureVrf = (^. spsVrfL) <$> Map.lookup ppId psFutureStakePools
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
           -- to the Future pool params (if it is not there already), and overriding the
