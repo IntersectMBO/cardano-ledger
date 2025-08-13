@@ -31,11 +31,11 @@ import Data.Default
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
+import Paths_cardano_ledger_shelley (getDataFileName)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
-import Paths_cardano_ledger_shelley (getDataFileName)
 
 class
   ( EraTest era

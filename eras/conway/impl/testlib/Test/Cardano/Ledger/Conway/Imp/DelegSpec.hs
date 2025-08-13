@@ -42,6 +42,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Utils (nextMajorProtVer)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
 
@@ -419,7 +420,7 @@ spec = do
           hotCreds <- registerInitialCommittee
           (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
           protVer <- getProtVer
-          gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+          gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
           submitYesVoteCCs_ hotCreds gai
           submitYesVote_ (StakePoolVoter spo) gai
           passNEpochs 2
@@ -440,7 +441,7 @@ spec = do
               hotCreds <- registerInitialCommittee
               (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
               protVer <- getProtVer
-              gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+              gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
               submitYesVoteCCs_ hotCreds gai
               submitYesVote_ (StakePoolVoter spo) gai
               passNEpochs 2
@@ -534,7 +535,7 @@ spec = do
         expectDelegatedVote cred DRepAlwaysAbstain
         impAnn "Version should be unchanged" $
           getProtVer `shouldReturn` initialProtVer
-        let nextVer = majorFollow initialProtVer
+        let nextVer = nextMajorProtVer initialProtVer
         hfGaid <- submitGovAction $ HardForkInitiation SNothing nextVer
         submitVote_ VoteYes (StakePoolVoter khSPO) hfGaid
         submitVote_ VoteYes (CommitteeVoter ccCred) hfGaid
