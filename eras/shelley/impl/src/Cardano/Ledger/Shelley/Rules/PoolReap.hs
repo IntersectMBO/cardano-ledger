@@ -125,10 +125,17 @@ instance
 
 poolReapTransition :: forall era. EraCertState era => TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
-  TRC (_, PoolreapState us a cs, e) <- judgmentContext
-
+  TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let
-    ps = cs ^. certPStateL
+    ps0 = cs0 ^. certPStateL
+    -- activate future stakePools
+    ps =
+      ps0
+        { psStakePools = Map.union (ps0 ^. psFutureStakePoolsL) (ps0 ^. psStakePoolsL)
+        , psFutureStakePools = Map.empty
+        }
+    cs = cs0 & certPStateL .~ ps
+
     ds = cs ^. certDStateL
     -- The set of pools retiring this epoch
     retired :: Set (KeyHash 'StakePool)
@@ -183,7 +190,6 @@ poolReapTransition = do
           & certDStateL . accountsL
             %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
-          & certPStateL . psFutureStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psDepositsCompactL .~ remainingDeposits
       )

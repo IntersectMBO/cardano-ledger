@@ -95,7 +95,6 @@ import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.Val (zero, (<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
-import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -297,20 +296,12 @@ epochTransition = do
       utxoState0 = lsUTxOState ledgerState0
       certState0 = ledgerState0 ^. lsCertStateL
       vState = certState0 ^. certVStateL
-      pState0 = certState0 ^. certPStateL
   snapshots1 <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
-  -- Activate future StakePools
-  let newStakePools = eval (psStakePools pState0 ⨃ psFutureStakePools pState0)
-      pState1 =
-        pState0
-          { psStakePools = newStakePools
-          , psFutureStakePools = Map.empty
-          }
   PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC ((), PoolreapState utxoState0 chainAccountState0 (certState0 & certPStateL .~ pState1), eNo)
+      TRC ((), PoolreapState utxoState0 chainAccountState0 certState0, eNo)
 
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
