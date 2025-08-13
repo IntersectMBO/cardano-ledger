@@ -2,6 +2,9 @@
 
 ## 1.14.0.0
 
+* Make `transValidityInterval` based on eras instead of protocol versions.
+  * Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
+  * Remove protocol version from arguments to `transValidityInterval`.
 * Add `NFData` instance for `AlonzoGenesis`
 * Add `reqSignerHashesTxBodyG`
 * Add `mkScriptIntegrity`

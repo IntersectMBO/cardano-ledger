@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Make `transValidityInterval` implicit to eras instead of protocol versions.
+  * Implement `transValidityInterval` for Conway.
 * Add `NFData` for `ConwayGenesis`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
