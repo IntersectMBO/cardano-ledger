@@ -33,6 +33,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair
 import Test.Cardano.Ledger.Core.Rational ((%!))
+import Test.Cardano.Ledger.Core.Utils (nextMajorProtVer)
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -82,7 +83,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
     anchor <- arbitrary
     mHotCred <- resignCommitteeColdKey committeeMember anchor
     protVer <- getProtVer
-    gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+    gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
     submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred hotCs) gai
     submitYesVote_ (StakePoolVoter spoK1) gai
     if hardforkConwayBootstrapPhase protVer
@@ -117,7 +118,7 @@ spoAndCCVotingSpec = do
       (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
       protVer <- getProtVer
 
-      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+      gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
 
       submitYesVote_ (StakePoolVoter spoC) gai
       -- CC members expired so their votes don't count - we are stuck!
@@ -146,15 +147,14 @@ spoAndCCVotingSpec = do
   describe "When CC threshold is 0" $ do
     -- During the bootstrap phase, proposals that modify the committee are not allowed,
     -- hence we need to directly set the threshold for the initial members
-    let
-      modifyCommittee f = modifyNES $ \nes ->
-        nes
-          & newEpochStateGovStateL . committeeGovStateL %~ f
-          & newEpochStateDRepPulsingStateL %~ modifyDRepPulser
-        where
-          modifyDRepPulser pulser =
-            case finishDRepPulser pulser of
-              (snapshot, rState) -> DRComplete snapshot (rState & rsEnactStateL . ensCommitteeL %~ f)
+    let modifyCommittee f = modifyNES $ \nes ->
+          nes
+            & newEpochStateGovStateL . committeeGovStateL %~ f
+            & newEpochStateDRepPulsingStateL %~ modifyDRepPulser
+          where
+            modifyDRepPulser pulser =
+              case finishDRepPulser pulser of
+                (snapshot, rState) -> DRComplete snapshot (rState & rsEnactStateL . ensCommitteeL %~ f)
     it "SPOs alone can enact hard-fork during bootstrap" $ do
       (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
       protVer <- getProtVer
@@ -162,7 +162,7 @@ spoAndCCVotingSpec = do
       let nextProtVer = protVer {pvMajor = nextMajorVersion}
       modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
 
-      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+      gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
 
       submitYesVote_ (StakePoolVoter spoC) gai
 
@@ -531,7 +531,7 @@ spoVotesForHardForkInitiation =
       _ <- setupPoolWithStake $ Coin 100_000_000
       modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
       protVer <- getProtVer
-      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+      gai <- submitGovAction $ HardForkInitiation SNothing (nextMajorProtVer protVer)
       impAnn "Submit CC yes vote" $ submitYesVoteCCs_ hotCCs gai
       logString $ "Committee: " <> showExpr hotCCs
       GovActionState {gasCommitteeVotes} <- getGovActionState gai
@@ -724,8 +724,7 @@ votingSpec =
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
             curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               mkProposalWithRewardAccount
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
@@ -740,8 +739,7 @@ votingSpec =
             getLastEnactedCommittee `shouldReturn` SNothing
             -- Submit another proposal to bump up the active voting stake
             cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             mkProposalWithRewardAccount
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
               dRepRewardAccount
@@ -767,16 +765,14 @@ votingSpec =
             -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
             cc <- KeyHashObj <$> freshKeyHash
             curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               mkProposalWithRewardAccount
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
                 dRepRewardAccount1
                 >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             mkProposalWithRewardAccount
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
               dRepRewardAccount3
@@ -1055,8 +1051,7 @@ votingSpec =
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
             curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               mkProposalWithRewardAccount
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
@@ -1071,8 +1066,7 @@ votingSpec =
             getLastEnactedCommittee `shouldReturn` SNothing
             -- Submit another proposal to bump up the active voting stake of SPO #1
             cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             mkProposalWithRewardAccount
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
               spoRewardAccount
@@ -1109,16 +1103,14 @@ votingSpec =
             -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
             cc <- KeyHashObj <$> freshKeyHash
             curEpochNo <- getsNES nesELL
-            let
-              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               mkProposalWithRewardAccount
                 (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
                 spoRewardAccount1
                 >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
-            let
-              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            let newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             mkProposalWithRewardAccount
               (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
               spoRewardAccount3
@@ -1677,28 +1669,27 @@ committeeMaxTermLengthSpec ::
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "Committee members can serve full `CommitteeMaxTermLength`" $ do
-    let
-      electMembersWithMaxTermLength ::
-        KeyHash 'StakePool ->
-        Credential 'DRepRole ->
-        ImpTestM era [Credential 'ColdCommitteeRole]
-      electMembersWithMaxTermLength spoC drep = do
-        m1 <- KeyHashObj <$> freshKeyHash
-        m2 <- KeyHashObj <$> freshKeyHash
-        currentEpoch <- getsNES nesELL
-        maxTermLength <-
-          getsNES $
-            nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
-        let expiry = addEpochInterval (addEpochInterval currentEpoch $ EpochInterval 1) maxTermLength
-            members = [(m1, expiry), (m2, expiry)]
-        GovPurposeId gaid <-
-          submitCommitteeElection
-            SNothing
-            drep
-            Set.empty
-            members
-        submitYesVote_ (StakePoolVoter spoC) gaid
-        pure [m1, m2]
+    let electMembersWithMaxTermLength ::
+          KeyHash 'StakePool ->
+          Credential 'DRepRole ->
+          ImpTestM era [Credential 'ColdCommitteeRole]
+        electMembersWithMaxTermLength spoC drep = do
+          m1 <- KeyHashObj <$> freshKeyHash
+          m2 <- KeyHashObj <$> freshKeyHash
+          currentEpoch <- getsNES nesELL
+          maxTermLength <-
+            getsNES $
+              nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+          let expiry = addEpochInterval (addEpochInterval currentEpoch $ EpochInterval 1) maxTermLength
+              members = [(m1, expiry), (m2, expiry)]
+          GovPurposeId gaid <-
+            submitCommitteeElection
+              SNothing
+              drep
+              Set.empty
+              members
+          submitYesVote_ (StakePoolVoter spoC) gaid
+          pure [m1, m2]
     it "maxTermLength = 0" $ whenPostBootstrap $ do
       -- ======== EPOCH e ========
 

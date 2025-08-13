@@ -46,6 +46,8 @@ import Test.Cardano.Ledger.Babbage.Era ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 
+instance EraImp BabbageEra
+
 instance ShelleyEraImp BabbageEra where
   initNewEpochState =
     defaultInitNewEpochState
@@ -92,7 +94,8 @@ impBabbageExpectTxSuccess ::
   , AlonzoEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era -> ImpTestM era ()
+  Tx era ->
+  ImpTestM era ()
 impBabbageExpectTxSuccess tx = do
   impAlonzoExpectTxSuccess tx
   -- Check that the balance of the collateral was returned

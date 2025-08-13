@@ -12,6 +12,7 @@ module Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
   addDummyWitsTx,
+  ensureAuxDataHash,
 
   -- * TxOut
   setMinCoinTxOut,
@@ -27,7 +28,7 @@ module Cardano.Ledger.Tools (
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -222,6 +223,15 @@ estimateMinFeeTx pp tx numKeyWits numByronKeyWits refScriptsSize =
           { Byron.aaVKDerivationPath = Nothing
           , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
           }
+
+-- | Sets an auxiliary data hash to the transaction if auxiliary data present, while the hash of it
+-- is not.
+ensureAuxDataHash :: EraTx era => Tx era -> Tx era
+ensureAuxDataHash tx
+  | SNothing <- tx ^. bodyTxL . auxDataHashTxBodyL
+  , SJust auxData <- tx ^. auxDataTxL =
+      tx & bodyTxL . auxDataHashTxBodyL .~ SJust (TxAuxDataHash (hashAnnotated auxData))
+  | otherwise = tx
 
 integralToByteStringN :: (Integral i, Bits i) => Int -> i -> ByteString
 integralToByteStringN len = fst . BS.unfoldrN len (\n -> Just (fromIntegral n, n `shiftR` 8))

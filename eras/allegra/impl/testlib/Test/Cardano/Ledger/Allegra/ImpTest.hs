@@ -37,6 +37,8 @@ import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
+instance EraImp AllegraEra
+
 instance ShelleyEraImp AllegraEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 

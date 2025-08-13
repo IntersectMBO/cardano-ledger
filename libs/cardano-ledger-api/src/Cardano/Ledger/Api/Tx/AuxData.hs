@@ -4,6 +4,7 @@ module Cardano.Ledger.Api.Tx.AuxData (
   metadataTxAuxDataL,
   hashTxAuxData,
   validateTxAuxData,
+  ensureAuxDataHash,
 
   -- * Shelley
   ShelleyTxAuxData (..),
@@ -36,3 +37,4 @@ import Cardano.Ledger.Alonzo.TxAuxData (
 import Cardano.Ledger.Api.Era (EraApi (..))
 import Cardano.Ledger.Core (EraTxAuxData (..), binaryUpgradeTxAuxData, hashTxAuxData)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+import Cardano.Ledger.Tools (ensureAuxDataHash)
