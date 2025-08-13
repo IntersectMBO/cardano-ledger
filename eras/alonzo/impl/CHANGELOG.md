@@ -2,6 +2,9 @@
 
 ## 1.14.0.0
 
+* Make `transValidityInterval` based on eras instead of protocol versions.
+  * Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
+  * Remove protocol version from arguments to `transValidityInterval`.
 * Add `reqSignerHashesTxBodyG`
 * Add `mkScriptIntegrity`
 * Changed the type of `hashScriptIntegrity`
@@ -49,6 +52,7 @@
 
 ### `testlib`
 
+* Move `transVITimeUpperBoundIsOpen` test to Conway.
 * Added `Examples` module with: `ledgerExamples`, `mkLedgerExamples`, `exampleTx`, `exampleDatum`, `exampleAlonzoGenesis`
 * Added `Twiddle` instances for Alonzo core types
 * Add `Arbitrary` instance for `LangDepView`
