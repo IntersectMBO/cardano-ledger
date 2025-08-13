@@ -123,6 +123,78 @@ spec = describe "POOL" $ do
       expectFuturePool kh (Just vrfNew)
       passEpoch
       expectPool kh (Just vrfNew)
+      expectVRFs [vrfNew]
+      -- now the original VRF can be reused
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      expectVRFs [vrf, vrfNew]
+
+    it "register a new pool with the VRF of a re-registered pool " $ do
+      pv <- getsPParams ppProtocolVersionL
+      (kh, _) <- registerNewPool
+      vrfNew <- freshKeyHashVRF
+      -- re-register pool with a new vrf
+      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      passEpoch
+      -- try to register a new pool with the new vrf
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrfNew >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectPool kh (Just vrfNew)
+            expectPool khNew (Just vrfNew)
+          else
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrfNew]
+
+    it "after the epoch changes, reuse VRFs that get overwritten" $ do
+      (kh, vrf) <- registerNewPool
+      vrf1 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh vrf1 >>= submitTx_
+      expectVRFs [vrf, vrf1]
+      vrf2 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh vrf2 >>= submitTx_
+      expectVRFs [vrf, vrf2]
+      vrf3 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh vrf3 >>= submitTx_
+      expectVRFs [vrf, vrf3]
+      passEpoch
+      expectPool kh (Just vrf3)
+      expectVRFs [vrf3]
+      -- reuse VRFs that didn't get used
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrf1 >>= submitTx_
+      expectPool khNew (Just vrf1)
+      expectVRFs [vrf1, vrf3]
+      -- the original pool can be re-registered with one of the discarded VRFs too
+      registerPoolTx <$> poolParams kh vrf2 >>= submitTx_
+      expectVRFs [vrf1, vrf2, vrf3]
+      passEpoch
+      expectVRFs [vrf1, vrf2]
+      -- the original pool can be re-registered with the original VRF too
+      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      expectVRFs [vrf, vrf1, vrf2]
+      passEpoch
+      expectVRFs [vrf, vrf1]
+
+    it "before the epoch changes, try to reuse VRFs that get overwritten" $ do
+      pv <- getsPParams ppProtocolVersionL
+      (kh, vrf) <- registerNewPool
+      vrfNew <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      -- try to register a pool with the original VRF that got overwritten
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
+        if pvMajor pv < natVersion @11
+          then do
+            submitTx_ tx
+            expectPool kh (Just vrf)
+            expectPool khNew (Just vrf)
+            passEpoch
+            expectPool kh (Just vrfNew)
+            expectPool khNew (Just vrf)
+          else do
+            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
 
   describe "Retiring pools" $ do
     it "retire an unregistered pool" $ do
@@ -189,7 +261,7 @@ spec = describe "POOL" $ do
       expectRetiring False kh
 
     it "re-register a retiring pool with a fresh VRF" $ do
-      (kh, _) <- registerNewPool
+      (kh, vrf) <- registerNewPool
       retirePoolTx kh (EpochInterval 10) >>= submitTx_
       vrfNew <- freshKeyHashVRF
       registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
@@ -197,6 +269,10 @@ spec = describe "POOL" $ do
       expectFuturePool kh (Just vrfNew)
       passEpoch
       expectPool kh (Just vrfNew)
+      expectVRFs [vrfNew]
+      -- now the original VRF can be reused
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
 
     it "register a pool with the VRF of a retiring pool" $ do
       pv <- getsPParams ppProtocolVersionL
