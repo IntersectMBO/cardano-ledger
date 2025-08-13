@@ -35,6 +35,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Paths_cardano_ledger_shelley (getDataFileName)
 
 class
   ( EraTest era
@@ -53,6 +54,8 @@ class
 
 instance EraTest ShelleyEra where
   zeroCostModels = emptyCostModels
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState = mkShelleyTestAccountState
 
