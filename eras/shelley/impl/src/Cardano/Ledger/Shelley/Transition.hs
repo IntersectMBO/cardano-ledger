@@ -54,7 +54,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Genesis (EraGenesis, NoGenesis (..))
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
@@ -169,7 +169,8 @@ class
 
   toTransitionConfigKeyValuePairs ::
     KeyValue e a =>
-    TransitionConfig era -> [a]
+    TransitionConfig era ->
+    [a]
   default toTransitionConfigKeyValuePairs ::
     ( EraTransition (PreviousEra era)
     , ToKeyValuePairs (TranslationContext era)
@@ -177,7 +178,8 @@ class
     , Typeable (TranslationContext era)
     , KeyValue e a
     ) =>
-    TransitionConfig era -> [a]
+    TransitionConfig era ->
+    [a]
   toTransitionConfigKeyValuePairs config =
     toKeyValuePairs (config ^. tcPreviousEraConfigL) ++ translationContextPairs
     where
@@ -194,15 +196,12 @@ class
     , FromJSON (TranslationContext era)
     , FromJSON (TransitionConfig (PreviousEra era))
     ) =>
-    Aeson.Value -> Parser (TransitionConfig era)
+    Aeson.Value ->
+    Parser (TransitionConfig era)
   parseTransitionConfigJSON = withObject (eraName @era <> "TransitionConfig") $ \o -> do
     prevTransitionConfig :: TransitionConfig (PreviousEra era) <- parseJSON (Aeson.Object o)
-    case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
-      Nothing -> do
-        translationContext :: TranslationContext era <- o .: eraNameKey @era
-        pure $ mkTransitionConfig translationContext prevTransitionConfig
-      Just Refl ->
-        pure $ mkTransitionConfig NoGenesis prevTransitionConfig
+    genesis <- mkGenesisWith @era (o .: eraNameKey @era)
+    pure $ mkTransitionConfig genesis prevTransitionConfig
 
 eraNameKey :: forall era. Era era => Key
 eraNameKey = fromString (map toLower (eraName @era))
