@@ -119,7 +119,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNESL,
   impGlobalsL,
   impLastTickG,
-  impKeyPairsG,
   impNativeScriptsG,
   produceScript,
   advanceToPointOfNoReturn,
@@ -296,17 +295,15 @@ instance ToExpr (SomeSTSEvent era) where
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !TxIn
-  , impKeyPairs :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
-  , impByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
+  , impKeyPairStore :: !KeyPairStore
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impEvents :: [SomeSTSEvent era]
   }
 
-instance Era era => HasKeyPairs (ImpTestState era) where
-  keyPairsL = lens impKeyPairs (\x y -> x {impKeyPairs = y})
-  keyPairsByronL = lens impByronKeyPairs (\x y -> x {impByronKeyPairs = y})
+instance HasKeyPairStore (ImpTestState era) where
+  keyPairStoreL = lens impKeyPairStore (\x y -> x {impKeyPairStore = y})
 
 impGlobalsL :: Lens' (ImpTestState era) Globals
 impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
@@ -322,12 +319,6 @@ impLastTickG = impLastTickL
 
 impRootTxInL :: Lens' (ImpTestState era) TxIn
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
-
-impKeyPairsG ::
-  SimpleGetter
-    (ImpTestState era)
-    (Map (KeyHash 'Witness) (KeyPair 'Witness))
-impKeyPairsG = to impKeyPairs
 
 impNativeScriptsL :: Lens' (ImpTestState era) (Map ScriptHash (NativeScript era))
 impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
@@ -384,11 +375,10 @@ class
   ShelleyEraImp era
   where
   initNewEpochState ::
-    (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =>
+    (MonadState KeyPairStore m, HasStatefulGen g m, MonadFail m) =>
     m (NewEpochState era)
   default initNewEpochState ::
-    ( HasKeyPairs s
-    , MonadState s m
+    ( MonadState KeyPairStore m
     , HasStatefulGen g m
     , MonadFail m
     , ShelleyEraImp (PreviousEra era)
@@ -400,8 +390,7 @@ class
   initNewEpochState = defaultInitNewEpochState id
 
   initImpTestState ::
-    ( HasKeyPairs s
-    , MonadState s m
+    ( MonadState KeyPairStore m
     , HasStatefulGen g m
     , MonadFail m
     ) =>
@@ -431,9 +420,8 @@ class
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
 defaultInitNewEpochState ::
-  forall era g s m.
-  ( MonadState s m
-  , HasKeyPairs s
+  forall era g m.
+  ( MonadState KeyPairStore m
   , HasStatefulGen g m
   , MonadFail m
   , ShelleyEraImp era
@@ -468,11 +456,10 @@ impEraStartEpochNo = EpochNo (getVersion majProtVer * 100)
     majProtVer = eraProtVerLow @era
 
 defaultInitImpTestState ::
-  forall era s g m.
+  forall era g m.
   ( EraGov era
   , EraTxOut era
-  , HasKeyPairs s
-  , MonadState s m
+  , MonadState KeyPairStore m
   , HasStatefulGen g m
   , MonadFail m
   ) =>
@@ -502,8 +489,7 @@ defaultInitImpTestState nes = do
     ImpTestState
       { impNES = nesWithRoot
       , impRootTxIn = rootTxIn
-      , impKeyPairs = prepState ^. keyPairsL
-      , impByronKeyPairs = prepState ^. keyPairsByronL
+      , impKeyPairStore = prepState
       , impNativeScripts = mempty
       , impLastTick = slotNo
       , impGlobals = globals
@@ -646,7 +632,7 @@ instance ShelleyEraImp ShelleyEra where
     pure $ translateToShelleyLedgerStateFromUtxo transContext startEpochNo Byron.empty
 
   impSatisfyNativeScript providedVKeyHashes _txBody script = do
-    keyPairs <- gets impKeyPairs
+    keyPairs <- gets (keyPairStore . impKeyPairStore)
     let
       satisfyMOf m Empty
         | m <= 0 = Just mempty
