@@ -7,16 +7,18 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.ImpTest (
   EraImp (..),
+  KeyPairSpec,
+  KeyPairStore (..),
   HasKeyPairStore (..),
   keyPairsL,
   keyPairsByronL,
-  KeyPairStore (..),
   freshKeyAddr,
   freshKeyAddr_,
   freshKeyHash,
@@ -64,6 +66,7 @@ import Control.Monad.State.Strict (MonadState (..), get, modify, put)
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.TreeDiff (ansiWlExpr)
 import Lens.Micro (Lens', lens, (%~))
 import Lens.Micro.Mtl (use)
@@ -75,6 +78,9 @@ import Test.Cardano.Ledger.Era (EraTest)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Slotting.Numeric ()
 import Test.ImpSpec
+
+-- | ImpSpec for tests that need access to a KeyPair store.
+data KeyPairSpec
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
 data KeyPairStore = KeyPairStore
@@ -95,6 +101,15 @@ instance Monoid KeyPairStore where
       { keyPairStore = mempty
       , keyPairByronStore = mempty
       }
+
+instance ImpSpec KeyPairSpec where
+  type ImpSpecState KeyPairSpec = KeyPairStore
+  impInitIO _qcGen =
+    pure $
+      ImpInit
+        { impInitEnv = Proxy
+        , impInitState = mempty
+        }
 
 class HasKeyPairStore t where
   keyPairStoreL :: Lens' t KeyPairStore
