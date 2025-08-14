@@ -162,6 +162,6 @@ conwayEraSpecificSpec = do
       describe "UTXOS" Utxos.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where
-  eraSpecific =
+  eraSpecificSpec =
     AlonzoImp.alonzoEraSpecificSpec
       >> conwayEraSpecificSpec

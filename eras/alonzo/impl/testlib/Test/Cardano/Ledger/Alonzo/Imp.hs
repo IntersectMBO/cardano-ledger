@@ -63,4 +63,4 @@ alonzoEraSpecificSpec = do
       Utxow.alonzoEraSpecificSpec
 
 instance EraSpecificSpec AlonzoEra where
-  eraSpecific = alonzoEraSpecificSpec
+  eraSpecificSpec = alonzoEraSpecificSpec
