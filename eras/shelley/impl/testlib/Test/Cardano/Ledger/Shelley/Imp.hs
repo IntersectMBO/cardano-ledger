@@ -27,7 +27,7 @@ spec ::
   ) =>
   Spec
 spec = do
-  describe "Era specific tests" . withEachEraVersion @era $ eraSpecific
+  describe "Era specific tests" . withEachEraVersion @era $ eraSpecificSpec
   describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
     Ledger.spec
     Epoch.spec
