@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `queryDRepDelegations` state query
 * Remove `filterStakePoolDelegsAndRewards` as unnecessary. Use `queryStakePoolDelegsAndRewards` instead
 * Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`
 * Add `EraApi` class
