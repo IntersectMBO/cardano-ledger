@@ -4,6 +4,8 @@
 
 module Test.Cardano.Ledger.Era.Spec (
   everyEraSpec,
+  goldenFilePath,
+  goldenJsonFilePath,
 ) where
 
 import Cardano.Ledger.Core

@@ -87,6 +87,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
+import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -137,6 +138,8 @@ data ShelleyGenesisStaking = ShelleyGenesisStaking
   deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs ShelleyGenesisStaking
 
+instance NFData ShelleyGenesisStaking
+
 instance NoThunks ShelleyGenesisStaking
 
 instance Semigroup ShelleyGenesisStaking where
@@ -166,7 +169,7 @@ emptyGenesisStaking = mempty
 newtype NominalDiffTimeMicro = NominalDiffTimeMicro Micro
   deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
-  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, EncCBOR, DecCBOR, NFData)
 
 -- | There is no loss of resolution in this conversion
 microToPico :: Micro -> Pico
@@ -229,6 +232,8 @@ data ShelleyGenesis = ShelleyGenesis
   }
   deriving stock (Generic, Show, Eq)
   deriving (ToJSON) via KeyValuePairs ShelleyGenesis
+
+instance NFData ShelleyGenesis
 
 sgInitialFundsL :: Lens' ShelleyGenesis (LM.ListMap Addr Coin)
 sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
