@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,6 +23,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
  )
 import Cardano.Ledger.Core.Era (Era)
+import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (unless)
 import Data.Aeson (
   FromJSON (..),
@@ -32,13 +34,28 @@ import qualified Data.Aeson.KeyMap as KV
 import Data.Kind (Type)
 import Data.Typeable
 
-class Era era => EraGenesis era where
+class
+  ( Era era
+  , Eq (Genesis era)
+  , Show (Genesis era)
+  , Typeable (Genesis era)
+  , ToCBOR (Genesis era)
+  , FromCBOR (Genesis era)
+  , ToJSON (Genesis era)
+  , FromJSON (Genesis era)
+  , NFData (Genesis era)
+  ) =>
+  EraGenesis era
+  where
   type Genesis era :: Type
   type Genesis era = NoGenesis era
 
 data NoGenesis era = NoGenesis
   deriving (Eq, Show)
   deriving (ToJSON) via KeyValuePairs (NoGenesis era)
+
+instance NFData (NoGenesis era) where
+  rnf = rwhnf
 
 instance Era era => ToCBOR (NoGenesis era) where
   toCBOR _ = toCBOR ()

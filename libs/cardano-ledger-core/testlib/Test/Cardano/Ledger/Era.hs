@@ -14,6 +14,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.State
 import Cardano.Ledger.UMap
@@ -44,6 +45,7 @@ class
   , EraStake era
   , EraUTxO era
   , EraAccounts era
+  , EraGenesis era
   , -- Arbitrary Core
     Arbitrary (Tx era)
   , Arbitrary (TxOut era)

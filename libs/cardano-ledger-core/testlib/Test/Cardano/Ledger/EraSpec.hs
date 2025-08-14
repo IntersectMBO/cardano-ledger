@@ -1,27 +1,43 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Spec (
+module Test.Cardano.Ledger.EraSpec (
   everyEraSpec,
 ) where
 
-import Test.Cardano.Ledger.Common
+import Cardano.Ledger.Core
+import Cardano.Ledger.Genesis
+import Control.Monad.IO.Class
+import Data.Aeson (eitherDecodeFileStrict')
+import Data.Char (toLower)
+import System.FilePath ((</>))
 import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.ImpTest
 
+goldenFilePath :: FilePath
 goldenFilePath = "golden"
 
+goldenJsonFilePath :: FilePath
 goldenJsonFilePath = goldenFilePath </> "json"
 
 -- | This spec is applicable to all eras and will be executed for every era starting with Shelley.
-everyEraSpec :: forall era. EraTest era => Spec
+everyEraSpec :: forall era. EraImp era => Spec
 everyEraSpec =
   describe "Spec for every Era" $ do
+    let eraLowerName = map toLower $ eraName @era
     describe "Golden" $ do
       describe "JSON" $ do
-        it "Genesis" $ do
-          withImpInit @(LedgerSpec era) $ do
-            let decodeJsonGenesis =
-                  getEraDataFilePath (goldenJsonFilePath </> "genesis.json")
-            mkGenesisWith decodeJsonGenesis $ \decodedGenesis -> do
-              initializedGenesis <- initGenesis
-              decodedGenesis `shouldBe` initializedGenesis
+        withImpInit @KeyPairSpec $ do
+          it "Genesis" $ do
+            let decodeJsonGenesis = do
+                  eitherGenesis <-
+                    liftIO $ do
+                      genesisFilePath <-
+                        getEraDataFileName @era $
+                          goldenJsonFilePath </> eraLowerName <> "-genesis.json"
+                      eitherDecodeFileStrict' genesisFilePath
+                  expectRightDeep eitherGenesis
+            genesis <- impAnn "Initializing Genesis" $ initGenesis @era
+            mkGenesisWith @era decodeJsonGenesis `shouldReturn` genesis
