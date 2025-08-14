@@ -12,6 +12,7 @@ goldenFilePath = "golden"
 
 goldenJsonFilePath = goldenFilePath </> "json"
 
+-- | This spec is applicable to all eras and will be executed for every era starting with Shelley.
 everyEraSpec :: forall era. EraTest era => Spec
 everyEraSpec =
   describe "Spec for every Era" $ do
