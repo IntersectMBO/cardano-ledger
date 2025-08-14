@@ -322,7 +322,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
     unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
 
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     outputs <-
       zipWithM
@@ -355,7 +355,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-

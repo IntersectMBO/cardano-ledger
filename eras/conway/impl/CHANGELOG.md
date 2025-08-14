@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Make `transValidityInterval` implicit to eras instead of protocol versions.
+  * Implement `transValidityInterval` for Conway.
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
 * Better predicate failures for incorrect deposits and refunds.
@@ -87,6 +89,7 @@
 
 ### `testlib`
 
+* Add `transVITimeUpperBoundIsOpen` test to `TxInfoSpec`.
 * Added `Examples` module with: `ledgerExamples`, `exampleConwayCerts`
 * Fix CDDL for `MultiAsset` in `TxOut` as well as the `Tx` mint field.
 * Add `mkConwayTestAccountState` and `conwayAccountsToUMap`
