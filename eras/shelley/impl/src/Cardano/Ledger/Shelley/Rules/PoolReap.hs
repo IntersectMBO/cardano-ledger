@@ -137,7 +137,7 @@ poolReapTransition = do
     -- The Map of pools (retiring this epoch) to their deposits
     retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) (CompactForm Coin)
     (retiringDeposits, remainingDeposits) =
-      Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
+      Map.partitionWithKey (\k _ -> Set.member k retired) (spsDeposit <$> psStakePools ps)
     -- collect all accounts for stake pools that will retire
     retiredStakePoolAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
     retiredStakePoolAccounts = Map.map spsRewardAccount $ eval (retired ◁ psStakePools ps)

@@ -27,6 +27,17 @@ module Cardano.Ledger.State.StakePool (
   -- * Stake Pool State
   StakePoolState (..),
 
+  -- * Lenses
+  spsVrfL,
+  spsPledgeL,
+  spsCostL,
+  spsMarginL,
+  spsRewardAccountL,
+  spsOwnersL,
+  spsRelaysL,
+  spsMetadataL,
+  spsDepositL,
+
   -- * Conversions
   mkStakePoolState,
   stakePoolStateToPoolParams,
@@ -77,7 +88,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
@@ -97,6 +108,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | State representation of a stake pool. This type contains all the same
@@ -119,8 +131,37 @@ data StakePoolState = StakePoolState
   -- ^ Network relay information for pool connectivity
   , spsMetadata :: !(StrictMaybe PoolMetadata)
   -- ^ Optional metadata (URL and hash)
+  , spsDeposit :: CompactForm Coin
+  -- ^ Deposit for each pool
   }
   deriving (Show, Generic, Eq, Ord)
+
+spsVrfL :: Lens' StakePoolState (VRFVerKeyHash 'StakePoolVRF)
+spsVrfL = lens spsVrf $ \sps vrf -> sps {spsVrf = vrf}
+
+spsPledgeL :: Lens' StakePoolState Coin
+spsPledgeL = lens spsPledge $ \sps c -> sps {spsPledge = c}
+
+spsCostL :: Lens' StakePoolState Coin
+spsCostL = lens spsCost $ \sps c -> sps {spsCost = c}
+
+spsMarginL :: Lens' StakePoolState UnitInterval
+spsMarginL = lens spsMargin $ \sps m -> sps {spsMargin = m}
+
+spsRewardAccountL :: Lens' StakePoolState RewardAccount
+spsRewardAccountL = lens spsRewardAccount $ \sps ra -> sps {spsRewardAccount = ra}
+
+spsOwnersL :: Lens' StakePoolState (Set (KeyHash 'Staking))
+spsOwnersL = lens spsOwners $ \sps s -> sps {spsOwners = s}
+
+spsRelaysL :: Lens' StakePoolState (StrictSeq StakePoolRelay)
+spsRelaysL = lens spsRelays $ \sps rs -> sps {spsRelays = rs}
+
+spsMetadataL :: Lens' StakePoolState (StrictMaybe PoolMetadata)
+spsMetadataL = lens spsMetadata $ \sps md -> sps {spsMetadata = md}
+
+spsDepositL :: Lens' StakePoolState (CompactForm Coin)
+spsDepositL = lens spsDeposit $ \sps d -> sps {spsDeposit = d}
 
 deriving instance NoThunks StakePoolState
 
@@ -142,11 +183,13 @@ instance EncCBOR StakePoolState where
         !> To (spsOwners sps)
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
+        !> To (spsDeposit sps)
 
 instance DecCBOR StakePoolState where
   decCBOR =
     decode $
       RecD StakePoolState
+        <! From
         <! From
         <! From
         <! From
@@ -170,13 +213,14 @@ instance Default StakePoolState where
       , spsOwners = def
       , spsRelays = def
       , spsMetadata = def
+      , spsDeposit = mempty
       }
 
 -- | Convert 'PoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: PoolParams -> StakePoolState
-mkStakePoolState pp =
+mkStakePoolState :: CompactForm Coin -> PoolParams -> StakePoolState
+mkStakePoolState deposit pp =
   StakePoolState
     { spsVrf = ppVrf pp
     , spsPledge = ppPledge pp
@@ -186,6 +230,7 @@ mkStakePoolState pp =
     , spsOwners = ppOwners pp
     , spsRelays = ppRelays pp
     , spsMetadata = ppMetadata pp
+    , spsDeposit = deposit
     }
 
 -- | Convert 'StakePoolState' back to 'PoolParams' by providing the pool ID.
