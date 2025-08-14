@@ -32,6 +32,7 @@ import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..), ConwayEraPlutusTxInfo (..))
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Dijkstra.Core
@@ -185,6 +186,8 @@ transTxCertV1V2 = \case
     Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegDepositTxCert stakeCred _refund ->
     Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  DelegTxCert stakeCred (DelegStake keyHash) ->
+    Right $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     Right $
       PV1.DCertPoolRegister

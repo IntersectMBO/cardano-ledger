@@ -103,6 +103,7 @@ certTransition = do
       let conwayDelegCert = case delegCert of
             DijkstraRegCert cred coin -> ConwayRegCert cred (SJust coin)
             DijkstraUnRegCert cred coin -> ConwayUnRegCert cred (SJust coin)
+            DijkstraDelegCert cred d -> ConwayDelegCert cred d
             DijkstraRegDelegCert sc d coin -> ConwayRegDelegCert sc d coin
        in trans @(EraRule "DELEG" era) $
             TRC (ConwayDelegEnv pp pools, certState, conwayDelegCert)
