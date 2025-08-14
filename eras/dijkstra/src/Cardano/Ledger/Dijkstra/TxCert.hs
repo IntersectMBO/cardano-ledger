@@ -34,13 +34,16 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxCert,
+  ShelleyEraTxCert (..),
   notSupportedInThisEra,
   poolCertKeyHashWitness,
   pattern AuthCommitteeHotKeyTxCert,
+  pattern DelegTxCert,
   pattern RegDRepTxCert,
   pattern RegDepositDelegTxCert,
   pattern RegDepositTxCert,
   pattern RegPoolTxCert,
+  pattern RegTxCert,
   pattern ResignCommitteeColdTxCert,
   pattern RetirePoolTxCert,
   pattern UnRegDRepTxCert,
@@ -69,7 +72,13 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Credential (StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
-import Cardano.Ledger.Shelley.TxCert (encodePoolCert, poolTxCertDecoder)
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyDelegCert (..),
+  encodePoolCert,
+  encodeShelleyDelegCert,
+  poolTxCertDecoder,
+  shelleyTxCertDelegDecoder,
+ )
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue ((.=)), ToJSON (..))
@@ -79,11 +88,24 @@ import NoThunks.Class (NoThunks)
 data DijkstraDelegCert
   = DijkstraRegCert !StakeCredential !Coin
   | DijkstraUnRegCert !StakeCredential !Coin
+  | DijkstraDelegCert !StakeCredential !Delegatee
   | DijkstraRegDelegCert !StakeCredential !Delegatee !Coin
   deriving (Show, Generic, Eq, Ord)
 
 instance EncCBOR DijkstraDelegCert where
   encCBOR = \case
+    DijkstraDelegCert cred (DelegStake poolId) -> encodeShelleyDelegCert $ ShelleyDelegCert cred poolId
+    DijkstraDelegCert cred (DelegVote drep) ->
+      encodeListLen 3
+        <> encodeWord8 9
+        <> encCBOR cred
+        <> encCBOR drep
+    DijkstraDelegCert cred (DelegStakeVote poolId dRep) ->
+      encodeListLen 4
+        <> encodeWord8 10
+        <> encCBOR cred
+        <> encCBOR poolId
+        <> encCBOR dRep
     DijkstraRegCert cred deposit ->
       encodeListLen 3
         <> encodeWord8 19
@@ -132,6 +154,12 @@ instance ToJSON DijkstraDelegCert where
         [ "credential" .= toJSON cred
         , "refund" .= toJSON refund
         ]
+    DijkstraDelegCert cred delegatee ->
+      kindObject
+        "DelegCert"
+        [ "credential" .= toJSON cred
+        , "delegatee" .= toJSON delegatee
+        ]
     DijkstraRegDelegCert cred delegatee deposit ->
       kindObject
         "RegDelegCert"
@@ -149,7 +177,6 @@ data DijkstraTxCert era
 data DijkstraTxCertUpgradeError
   = RegTxCertExpunged
   | UnRegTxCertExpunged
-  | DelegTxCertExpunged
   deriving (Eq, Show)
 
 instance NFData (DijkstraTxCert era)
@@ -172,19 +199,19 @@ instance
 
 instance
   ( ConwayEraTxCert era
+  , ShelleyEraTxCert era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   DecCBOR (DijkstraTxCert era)
   where
   decCBOR = decodeRecordSum "DijkstraTxCert" $ \case
     t
-      | 0 <= t && t < 3 -> fail "Certificates without deposits are no longer supported"
+      | 0 <= t && t < 2 -> fail "Certificates without deposits are no longer supported"
+      | t == 2 -> shelleyTxCertDelegDecoder t
       | 3 <= t && t < 5 -> poolTxCertDecoder t
       | t == 5 -> fail "Genesis delegation certificates are no longer supported"
       | t == 6 -> fail "MIR certificates are no longer supported"
-      | 7 <= t && t < 9 -> conwayTxCertDelegDecoder t
-      | 9 <= t && t < 11 -> fail "Certificates without deposits are no longer supported"
-      | 11 <= t && t < 19 -> conwayTxCertDelegDecoder t
+      | 7 <= t && t < 19 -> conwayTxCertDelegDecoder t
       | 19 <= t -> dijkstraTxCertDelegDecoder t
     t -> invalidKey t
 
@@ -230,15 +257,17 @@ instance EraTxCert DijkstraEra where
     RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
     RegDepositTxCert cred c -> Right $ RegDepositTxCert cred c
     UnRegDepositTxCert cred c -> Right $ UnRegDepositTxCert cred c
+    DelegTxCert cred d -> Right $ DelegTxCert cred d
     RegDepositDelegTxCert cred d c -> Right $ RegDepositDelegTxCert cred d c
     AuthCommitteeHotKeyTxCert ck hk -> Right $ AuthCommitteeHotKeyTxCert ck hk
     ResignCommitteeColdTxCert ck a -> Right $ ResignCommitteeColdTxCert ck a
     RegDRepTxCert cred deposit mAnchor -> Right $ RegDRepTxCert cred deposit mAnchor
     UnRegDRepTxCert cred deposit -> Right $ UnRegDRepTxCert cred deposit
     UpdateDRepTxCert cred mAnchor -> Right $ UpdateDRepTxCert cred mAnchor
-    -- Using wildcard here instead of a pattern match on DelegTxCert in order to
+    RegTxCert {} -> Left RegTxCertExpunged
+    -- Using wildcard here instead of a pattern match on UnRegTxCert in order to
     -- workaround ghc disrespecting the completeness pragma.
-    _ -> Left DelegTxCertExpunged
+    _ -> Left UnRegTxCertExpunged
 
   getVKeyWitnessTxCert = getVKeyWitnessDijkstraTxCert
 
@@ -272,6 +301,7 @@ getScriptWitnessDijkstraTxCert = \case
     case delegCert of
       DijkstraRegCert cred _ -> credScriptHash cred
       DijkstraUnRegCert cred _ -> credScriptHash cred
+      DijkstraDelegCert cred _ -> credScriptHash cred
       DijkstraRegDelegCert cred _ _ -> credScriptHash cred
   DijkstraTxCertPool {} -> Nothing
   DijkstraTxCertGov govCert -> govWitness govCert
@@ -290,6 +320,7 @@ getVKeyWitnessDijkstraTxCert = \case
     case delegCert of
       DijkstraRegCert cred _ -> credKeyHashWitness cred
       DijkstraUnRegCert cred _ -> credKeyHashWitness cred
+      DijkstraDelegCert cred _ -> credKeyHashWitness cred
       DijkstraRegDelegCert cred _ _ -> credKeyHashWitness cred
   DijkstraTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
   DijkstraTxCertGov govCert -> govWitness govCert
@@ -302,6 +333,24 @@ getVKeyWitnessDijkstraTxCert = \case
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
       ConwayUpdateDRep cred _ -> credKeyHashWitness cred
 
+instance ShelleyEraTxCert DijkstraEra where
+  mkRegTxCert = notSupportedInThisEra
+  getRegTxCert = const Nothing
+
+  mkUnRegTxCert = notSupportedInThisEra
+  getUnRegTxCert = const Nothing
+
+  mkDelegStakeTxCert c kh = DijkstraTxCertDeleg $ DijkstraDelegCert c (DelegStake kh)
+
+  getDelegStakeTxCert (DijkstraTxCertDeleg (DijkstraDelegCert c (DelegStake kh))) = Just (c, kh)
+  getDelegStakeTxCert _ = Nothing
+
+  mkGenesisDelegTxCert = notSupportedInThisEra
+  getGenesisDelegTxCert = const Nothing
+
+  mkMirTxCert = notSupportedInThisEra
+  getMirTxCert = const Nothing
+
 instance ConwayEraTxCert DijkstraEra where
   mkRegDepositTxCert cred c = DijkstraTxCertDeleg $ DijkstraRegCert cred c
 
@@ -313,8 +362,10 @@ instance ConwayEraTxCert DijkstraEra where
   getUnRegDepositTxCert (DijkstraTxCertDeleg (DijkstraUnRegCert cred c)) = Just (cred, c)
   getUnRegDepositTxCert _ = Nothing
 
-  mkDelegTxCert = notSupportedInThisEra
-  getDelegTxCert = const Nothing
+  mkDelegTxCert cred d = DijkstraTxCertDeleg $ DijkstraDelegCert cred d
+
+  getDelegTxCert (DijkstraTxCertDeleg (DijkstraDelegCert cred d)) = Just (cred, d)
+  getDelegTxCert _ = Nothing
 
   mkRegDepositDelegTxCert cred d c = DijkstraTxCertDeleg $ DijkstraRegDelegCert cred d c
   getRegDepositDelegTxCert (DijkstraTxCertDeleg (DijkstraRegDelegCert cred d c)) = Just (cred, d, c)
