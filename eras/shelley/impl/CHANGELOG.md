@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `hardforkConwayDisallowDuplicatedVRFKeys`
+* Add `VRFKeyHashAlreadyRegistered` to `ShelleyPoolPredFailure` type
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Deprecate the API `getPoolParameters` in favor of `getStakePools`.
   * Deprecate the lens `epochStatePoolParamsL` in favor of `epochStateStakePoolsL`.

@@ -277,6 +277,7 @@ newPool pool cs = cs {chainNes = nes'}
     ps' =
       ps
         { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        , psVRFKeyHashes = Set.insert (ppVrf pool) (psVRFKeyHashes ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -376,6 +377,7 @@ reapPool pool cs = cs {chainNes = nes'}
         { psRetiring = Map.delete poolId (psRetiring ps)
         , psStakePools = Map.delete poolId (psStakePools ps)
         , psDeposits = Map.delete poolId (psDeposits ps)
+        , psVRFKeyHashes = Set.delete (ppVrf pool) (psVRFKeyHashes ps)
         }
     pp = es ^. curPParamsEpochStateL
     ds = dps ^. certDStateL

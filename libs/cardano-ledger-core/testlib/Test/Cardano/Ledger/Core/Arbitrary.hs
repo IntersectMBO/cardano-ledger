@@ -782,7 +782,7 @@ instance (Era era, Arbitrary (Accounts era)) => Arbitrary (DState era) where
   arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary (PState era) where
-  arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary Anchor where
   arbitrary = Anchor <$> arbitrary <*> arbitrary

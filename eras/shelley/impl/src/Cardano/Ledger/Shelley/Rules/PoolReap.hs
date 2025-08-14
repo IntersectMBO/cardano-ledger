@@ -37,7 +37,6 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (
   Assertion (..),
   AssertionViolation (..),
@@ -49,9 +48,10 @@ import Control.State.Transition (
  )
 import Data.Default (Default, def)
 import Data.Foldable (fold)
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set (member)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -126,23 +126,54 @@ instance
 
 poolReapTransition :: forall era. EraCertState era => TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
-  TRC (_, PoolreapState us a cs, e) <- judgmentContext
-
+  TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let
-    ps = cs ^. certPStateL
+    ps0 = cs0 ^. certPStateL
+    -- find the set of VRF keys that are no longer relevant, since they have been overwritten
+    -- via pool re-registration
+    danglingVrfs =
+      Set.fromList $
+        Map.elems $
+          Map.merge
+            Map.dropMissing
+            Map.dropMissing
+            ( Map.zipWithMaybeMatched $ \_ sps spsF ->
+                if sps ^. spsVrfL /= spsF ^. spsVrfL then Just (sps ^. spsVrfL) else Nothing
+            )
+            (ps0 ^. psStakePoolsL)
+            (ps0 ^. psFutureStakePoolsL)
+
+    -- activate future stakePools
+    ps =
+      ps0
+        { psStakePools = Map.union (ps0 ^. psFutureStakePoolsL) (ps0 ^. psStakePoolsL)
+        , psFutureStakePools = Map.empty
+        }
+    cs = cs0 & certPStateL .~ ps
+
     ds = cs ^. certDStateL
     -- The set of pools retiring this epoch
     retired :: Set (KeyHash 'StakePool)
-    retired = eval (dom (psRetiring ps ▷ setSingleton e))
+    retired = Set.fromDistinctAscList [k | (k, v) <- Map.toAscList (psRetiring ps), v == e]
     -- The Map of pools (retiring this epoch) to their deposits
     retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) (CompactForm Coin)
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     -- collect all accounts for stake pools that will retire
-    retiredStakePoolAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
-    retiredStakePoolAccounts = Map.map spsRewardAccount $ eval (retired ◁ psStakePools ps)
-    retiredStakePoolAccountsWithRefund :: Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
-    retiredStakePoolAccountsWithRefund = Map.intersectionWith (,) retiredStakePoolAccounts retiringDeposits
+    retiredStakePoolAccountsWithVRFs ::
+      Map.Map (KeyHash 'StakePool) (RewardAccount, VRFVerKeyHash 'StakePoolVRF)
+    retiredStakePoolAccountsWithVRFs =
+      Map.map
+        (\sps -> (spsRewardAccount sps, spsVrf sps))
+        $ Map.restrictKeys (psStakePools ps) retired
+    retiredVRFs = foldMap (Set.singleton . snd) retiredStakePoolAccountsWithVRFs
+    retiredStakePoolAccountsWithRefund ::
+      Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
+    retiredStakePoolAccountsWithRefund =
+      Map.intersectionWith
+        (\(rewardAccount, _) coin -> (rewardAccount, coin))
+        retiredStakePoolAccountsWithVRFs
+        retiringDeposits
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
     accountRefunds =
@@ -183,10 +214,11 @@ poolReapTransition = do
       ( cs
           & certDStateL . accountsL
             %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
-          & certPStateL . psStakePoolsL %~ (eval . (retired ⋪))
-          & certPStateL . psFutureStakePoolsL %~ (eval . (retired ⋪))
-          & certPStateL . psRetiringL %~ (eval . (retired ⋪))
+          & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
+          & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psDepositsCompactL .~ remainingDeposits
+          & certPStateL . psVRFKeyHashesL
+            %~ (\s -> (s `Set.difference` retiredVRFs) `Set.difference` danglingVrfs)
       )
 
 renderPoolReapViolation ::
