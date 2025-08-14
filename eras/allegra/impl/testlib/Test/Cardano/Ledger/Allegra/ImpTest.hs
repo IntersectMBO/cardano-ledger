@@ -57,7 +57,7 @@ impAllegraSatisfyNativeScript ::
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
   impState <- get
   let
-    keyPairs = impState ^. impKeyPairsG
+    keyPairs = impState ^. keyPairsL
     vi = txBody ^. vldtTxBodyL
     satisfyMOf m Empty
       | m <= 0 = Just mempty

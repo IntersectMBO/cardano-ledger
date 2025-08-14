@@ -4,16 +4,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.ImpTest (
   EraImp (..),
-  HasKeyPairs (..),
+  HasKeyPairStore (..),
+  keyPairsL,
+  keyPairsByronL,
   KeyPairStore (..),
   freshKeyAddr,
   freshKeyAddr_,
@@ -94,17 +96,21 @@ instance Monoid KeyPairStore where
       , keyPairByronStore = mempty
       }
 
-class HasKeyPairs t where
-  keyPairsL :: Lens' t (Map (KeyHash 'Witness) (KeyPair 'Witness))
-  keyPairsByronL :: Lens' t (Map BootstrapAddress ByronKeyPair)
+class HasKeyPairStore t where
+  keyPairStoreL :: Lens' t KeyPairStore
 
-instance HasKeyPairs KeyPairStore where
-  keyPairsL = lens keyPairStore (\x y -> x {keyPairStore = y})
-  keyPairsByronL = lens keyPairByronStore (\x y -> x {keyPairByronStore = y})
+keyPairsL :: HasKeyPairStore t => Lens' t (Map (KeyHash 'Witness) (KeyPair 'Witness))
+keyPairsL = keyPairStoreL . lens keyPairStore (\x y -> x {keyPairStore = y})
+
+keyPairsByronL :: HasKeyPairStore t => Lens' t (Map BootstrapAddress ByronKeyPair)
+keyPairsByronL = keyPairStoreL . lens keyPairByronStore (\x y -> x {keyPairByronStore = y})
+
+instance HasKeyPairStore KeyPairStore where
+  keyPairStoreL = id
 
 class EraTest era => EraImp era where
   initGenesis ::
-    (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =>
+    (HasKeyPairStore s, MonadState s m, HasStatefulGen g m, MonadFail m) =>
     m (Genesis era)
   default initGenesis ::
     (Monad m, Genesis era ~ NoGenesis era) =>
@@ -156,7 +162,7 @@ genPoolParams ppMinCost khPool rewardAccount = do
 
 -- | Adds a key pair to the keyhash lookup map
 addKeyPair ::
-  (HasKeyPairs s, MonadState s m) =>
+  (HasKeyPairStore s, MonadState s m) =>
   KeyPair r ->
   m (KeyHash r)
 addKeyPair keyPair@(KeyPair vk _) = do
@@ -167,7 +173,7 @@ addKeyPair keyPair@(KeyPair vk _) = do
 -- | Looks up the `KeyPair` corresponding to the `KeyHash`. The `KeyHash` must be
 -- created with `freshKeyHash` for this to work.
 getKeyPair ::
-  (HasCallStack, HasKeyPairs s, MonadState s m) =>
+  (HasCallStack, HasKeyPairStore s, MonadState s m) =>
   KeyHash r ->
   m (KeyPair r)
 getKeyPair keyHash = do
@@ -185,14 +191,14 @@ getKeyPair keyHash = do
 -- generation or `getKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
 freshKeyHash ::
   forall r s g m.
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r)
 freshKeyHash = fst <$> freshKeyPair
 
 -- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
   forall r s g m.
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r, KeyPair r)
 freshKeyPair = do
   keyPair <- uniformM
@@ -202,13 +208,13 @@ freshKeyPair = do
 -- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
 -- to the known keys in the Imp state.
 freshKeyAddr_ ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) => m Addr
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m, MonadGen m) => m Addr
 freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
   m (KeyHash 'Payment, Addr)
 freshKeyAddr = do
   paymentKeyHash <- freshKeyHash @'Payment
@@ -220,7 +226,7 @@ freshKeyAddr = do
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.
 getByronKeyPair ::
-  (HasCallStack, HasKeyPairs s, MonadState s m) =>
+  (HasCallStack, HasKeyPairStore s, MonadState s m) =>
   BootstrapAddress ->
   m ByronKeyPair
 getByronKeyPair bootAddr = do
@@ -237,12 +243,12 @@ getByronKeyPair bootAddr = do
 -- ImpTestState. If you also need the `ByronKeyPair` consider using `freshByronKeyPair` for
 -- generation or `getByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
 freshByronKeyHash ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r)
 freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstapAddress
 
 freshBootstapAddress ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  (HasKeyPairStore s, MonadState s m, HasStatefulGen g m) =>
   m BootstrapAddress
 freshBootstapAddress = do
   keyPair@(ByronKeyPair verificationKey _) <- uniformM
