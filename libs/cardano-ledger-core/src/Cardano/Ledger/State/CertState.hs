@@ -78,21 +78,20 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolState)
+import Cardano.Ledger.State.StakePool (StakePoolState (..), spsDepositL)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Kind (Type)
+import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.), _1)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-
--- ======================================
 
 data FutureGenDeleg = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo
@@ -235,8 +234,6 @@ data PState era = PState
   -- of the Shelley Ledger Specification for a sequence diagram.
   , psRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
-  , psDeposits :: !(Map (KeyHash 'StakePool) (CompactForm Coin))
-  -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (PState era)
@@ -246,8 +243,8 @@ instance NoThunks (PState era)
 instance NFData (PState era)
 
 instance Era era => EncCBOR (PState era) where
-  encCBOR (PState a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  encCBOR (PState a b c) =
+    encodeListLen 3 <> encCBOR a <> encCBOR b <> encCBOR c
 
 instance DecShareCBOR (PState era) where
   type Share (PState era) = Interns (KeyHash 'StakePool)
@@ -255,8 +252,7 @@ instance DecShareCBOR (PState era) where
     psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psFutureStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    pure PState {psStakePools, psFutureStakePools, psRetiring, psDeposits}
+    pure PState {psStakePools, psFutureStakePools, psRetiring}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
@@ -266,7 +262,6 @@ instance ToKeyValuePairs (PState era) where
     [ "stakePools" .= psStakePools
     , "futureStakePools" .= psFutureStakePools
     , "retiring" .= psRetiring
-    , "deposits" .= psDeposits
     ]
 
 data CommitteeAuthorization
@@ -396,35 +391,27 @@ instance Default (Accounts era) => Default (DState era) where
 
 instance Default (PState era) where
   def =
-    PState Map.empty Map.empty Map.empty Map.empty
+    PState Map.empty Map.empty Map.empty
 
--- ==========================================================
--- Functions that handle Deposits
-
--- | One only pays a deposit on the initial pool registration. So return the
---   the Deposits unchanged if the keyhash already exists. There are legal
---   situations where a pool may be registered multiple times.
-payPoolDeposit ::
-  EraPParams era =>
-  KeyHash 'StakePool ->
-  PParams era ->
-  PState era ->
-  PState era
-payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
+-- | One only pays a deposit on the initial pool registration. So we return the
+-- StakePoolState unchanged if the deposit is already non-zero.
+--
+-- NOTE: There are legal situations where a pool may be registered multiple times.
+payPoolDeposit :: EraPParams era => KeyHash 'StakePool -> PParams era -> PState era -> PState era
+payPoolDeposit keyhash pp pstate = pstate & psStakePoolsL %~ Map.adjust payDeposit keyhash
   where
-    pool = psDeposits pstate
     !deposit = pp ^. ppPoolDepositCompactL
-    newpool
-      | Map.notMember keyhash pool = Map.insert keyhash deposit pool
-      | otherwise = pool
+    payDeposit sps
+      | sps ^. spsDepositL <= mempty = sps & spsDepositL .~ deposit
+      | otherwise = sps
 
 refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (CompactForm Coin, PState era)
-refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
-  where
-    pool = psDeposits pstate
-    (coin, newpool) = case Map.lookup keyhash pool of
-      Just c -> (c, Map.delete keyhash pool)
-      Nothing -> (mempty, pool)
+refundPoolDeposit keyhash pstate =
+  ( -- The actual deposit or mempty
+    maybe mempty spsDeposit $ Map.lookup keyhash $ pstate ^. psStakePoolsL
+  , -- The PState, updated with the deposit set to mempty
+    pstate & psStakePoolsL %~ Map.adjust (spsDepositL .~ mempty) keyhash
+  )
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -462,12 +449,6 @@ instance Show Obligations where
       , "   Proposal deposits = " ++ show (oblProposal x)
       ]
 
--- =======================================================
--- Lenses for CertState and its subsidiary types
-
--- ===================================
--- DState
-
 dsGenDelegsL :: Lens' (DState era) GenDelegs
 dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 
@@ -477,9 +458,6 @@ dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 dsFutureGenDelegsL ::
   Lens' (DState era) (Map FutureGenDeleg GenDelegPair)
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
-
--- ===================================
--- PState
 
 psStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
 psStakePoolsL = lens psStakePools (\ds u -> ds {psStakePools = u})
@@ -494,4 +472,15 @@ psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
 psDepositsL = psDepositsCompactL . lens (fmap fromCompact) (\_ -> fmap compactCoinOrError)
 
 psDepositsCompactL :: Lens' (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
-psDepositsCompactL = lens psDeposits (\ds u -> ds {psDeposits = u})
+psDepositsCompactL =
+  lens
+    (fmap spsDeposit . psStakePools)
+    ( \pstate deposits ->
+        pstate
+          & psStakePoolsL
+            %~ Map.merge
+              Map.dropMissing
+              Map.preserveMissing
+              (Map.zipWithMatched (\_key deposit sps -> sps {spsDeposit = deposit}))
+              deposits
+    )

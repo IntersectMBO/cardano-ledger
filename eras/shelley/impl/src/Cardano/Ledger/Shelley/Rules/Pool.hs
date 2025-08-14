@@ -50,9 +50,15 @@ import Cardano.Ledger.Shelley.Era (
   ShelleyPOOL,
   hardforkAlonzoValidatePoolRewardAccountNetID,
  )
-import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams (..), mkStakePoolState)
+import Cardano.Ledger.State (
+  PState (..),
+  PoolMetadata (..),
+  PoolParams (..),
+  StakePoolState (..),
+  mkStakePoolState,
+  psStakePoolsL,
+ )
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
@@ -68,9 +74,10 @@ import Control.State.Transition (
  )
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
+import Data.Map.Strict ((!))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((%~), (&), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
@@ -239,8 +246,9 @@ poolDelegationTransition = do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool ppId
           pure $
-            payPoolDeposit ppId pp $
-              ps {psStakePools = eval (psStakePools ⨃ singleton ppId (mkStakePoolState poolParams))}
+            ps
+              & psStakePoolsL %~ \stakePools ->
+                eval (stakePools ⨃ singleton ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams))
         else do
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
@@ -251,11 +259,12 @@ poolDelegationTransition = do
           -- (i.e. it's deposit has been refunded, and it has been removed from the
           -- registered pools).  does it need to pay a new deposit (at the current deposit
           -- amount). But of course, if that has happened, we cannot be in this branch of
-          -- the if statement.
+          -- the if statement. And so the use of (!) is also justified here.
+          let existingDeposit = spsDeposit $ psStakePools ! ppId
           pure $
             ps
               { psFutureStakePools =
-                  eval (psFutureStakePools ⨃ singleton ppId (mkStakePoolState poolParams))
+                  eval (psFutureStakePools ⨃ singleton ppId (mkStakePoolState existingDeposit poolParams))
               , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
               }
     RetirePool hk e -> do

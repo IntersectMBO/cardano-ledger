@@ -698,11 +698,13 @@ epochStateStakePoolsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolState)
 epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
-epochStatePoolParamsL ::
-  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
-epochStatePoolParamsL =
-  epochStateStakePoolsL . lens (mapWithKey stakePoolStateToPoolParams) (const $ fmap mkStakePoolState)
-{-# DEPRECATED epochStatePoolParamsL "In favor of `epochStateStakePoolsL`" #-}
+-- | We cannot have a full Lens' here since we loose information that is
+-- unrecoverable in the opposite direction, namely the pool deposit.
+epochStatePoolParamsG ::
+  EraCertState era => SimpleGetter (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
+epochStatePoolParamsG =
+  esLStateL . lsCertStateL . certPStateL . psStakePoolsL . to (mapWithKey stakePoolStateToPoolParams)
+{-# DEPRECATED epochStatePoolParamsG "In favor of `epochStateStakePoolsL`" #-}
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))
