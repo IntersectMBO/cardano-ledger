@@ -259,7 +259,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
   type ImpSpecState (LedgerSpec era) = ImpTestState era
   impInitIO qcGen = do
     ioGen <- R.newIOGenM qcGen
-    initState <- evalStateT (runReaderT initImpTestState ioGen) (mempty :: ImpPrepState)
+    initState <- evalStateT (runReaderT initImpTestState ioGen) (mempty :: KeyPairStore)
     pure $
       ImpInit
         { impInitEnv =

@@ -1,22 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -24,7 +14,7 @@
 module Test.Cardano.Ledger.ImpTest (
   EraImp (..),
   HasKeyPairs (..),
-  ImpPrepState (..),
+  KeyPairStore (..),
   freshKeyAddr,
   freshKeyAddr_,
   freshKeyHash,
@@ -85,32 +75,32 @@ import Test.Cardano.Slotting.Numeric ()
 import Test.ImpSpec
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
-data ImpPrepState = ImpPrepState
-  { impPrepKeyPairs :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
-  , impPrepByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
+data KeyPairStore = KeyPairStore
+  { keyPairStore :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
+  , keyPairByronStore :: !(Map BootstrapAddress ByronKeyPair)
   }
 
-instance Semigroup ImpPrepState where
+instance Semigroup KeyPairStore where
   (<>) ips1 ips2 =
-    ImpPrepState
-      { impPrepKeyPairs = impPrepKeyPairs ips1 <> impPrepKeyPairs ips2
-      , impPrepByronKeyPairs = impPrepByronKeyPairs ips1 <> impPrepByronKeyPairs ips2
+    KeyPairStore
+      { keyPairStore = keyPairStore ips1 <> keyPairStore ips2
+      , keyPairByronStore = keyPairByronStore ips1 <> keyPairByronStore ips2
       }
 
-instance Monoid ImpPrepState where
+instance Monoid KeyPairStore where
   mempty =
-    ImpPrepState
-      { impPrepKeyPairs = mempty
-      , impPrepByronKeyPairs = mempty
+    KeyPairStore
+      { keyPairStore = mempty
+      , keyPairByronStore = mempty
       }
 
 class HasKeyPairs t where
   keyPairsL :: Lens' t (Map (KeyHash 'Witness) (KeyPair 'Witness))
   keyPairsByronL :: Lens' t (Map BootstrapAddress ByronKeyPair)
 
-instance HasKeyPairs ImpPrepState where
-  keyPairsL = lens impPrepKeyPairs (\x y -> x {impPrepKeyPairs = y})
-  keyPairsByronL = lens impPrepByronKeyPairs (\x y -> x {impPrepByronKeyPairs = y})
+instance HasKeyPairs KeyPairStore where
+  keyPairsL = lens keyPairStore (\x y -> x {keyPairStore = y})
+  keyPairsByronL = lens keyPairByronStore (\x y -> x {keyPairByronStore = y})
 
 class EraTest era => EraImp era where
   initGenesis ::
