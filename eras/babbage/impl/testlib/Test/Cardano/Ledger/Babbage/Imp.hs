@@ -54,6 +54,6 @@ spec = do
       Utxos.spec @era
 
 instance EraSpecificSpec BabbageEra where
-  eraSpecific =
+  eraSpecificSpec =
     AlonzoImp.alonzoEraSpecificSpec
       >> Utxow.babbageEraSpecificSpec
