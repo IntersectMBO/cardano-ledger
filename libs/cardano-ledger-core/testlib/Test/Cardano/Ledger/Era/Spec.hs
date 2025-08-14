@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.EraSpec (
+module Test.Cardano.Ledger.Era.Spec (
   everyEraSpec,
 ) where
 
