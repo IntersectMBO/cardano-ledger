@@ -360,6 +360,7 @@ pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAn
   , RetirePoolTxCert
   , RegDepositTxCert
   , UnRegDepositTxCert
+  , DelegTxCert
   , RegDepositDelegTxCert
   , AuthCommitteeHotKeyTxCert
   , ResignCommitteeColdTxCert
