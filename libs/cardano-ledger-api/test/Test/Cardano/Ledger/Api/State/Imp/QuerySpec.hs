@@ -204,12 +204,12 @@ spec = do
 
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    _ <- registerStakeCredential cred
+    _ <- registerStakeCredentialWithDeposit cred
     _ <- delegateToDRep cred (Coin 2_000_000) DRepAlwaysAbstain
 
     kh2 <- freshKeyHash
     let cred2 = KeyHashObj kh2
-    _ <- registerStakeCredential cred2
+    _ <- registerStakeCredentialWithDeposit cred2
     _ <- delegateToDRep cred2 (Coin 3_000_000) DRepAlwaysNoConfidence
 
     let realDRepCred = DRepCredential credDrep
