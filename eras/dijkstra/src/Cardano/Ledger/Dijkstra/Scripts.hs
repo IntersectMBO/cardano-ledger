@@ -66,22 +66,57 @@ instance EraScript DijkstraEra where
   fromNativeScript = TimelockScript
 
 instance MemPack (PlutusScript DijkstraEra) where
-  packedByteCount = packedByteCount . unDijkstraPlutusScript
-  packM = packM . unDijkstraPlutusScript
-  unpackM = MkDijkstraPlutusScript <$> unpackM
+  packedByteCount = \case
+    DijkstraPlutusV1 script -> packedTagByteCount + packedByteCount script
+    DijkstraPlutusV2 script -> packedTagByteCount + packedByteCount script
+    DijkstraPlutusV3 script -> packedTagByteCount + packedByteCount script
+    DijkstraPlutusV4 script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    DijkstraPlutusV1 script -> packTagM 0 >> packM script
+    DijkstraPlutusV2 script -> packTagM 1 >> packM script
+    DijkstraPlutusV3 script -> packTagM 2 >> packM script
+    DijkstraPlutusV4 script -> packTagM 3 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> DijkstraPlutusV1 <$> unpackM
+      1 -> DijkstraPlutusV2 <$> unpackM
+      2 -> DijkstraPlutusV3 <$> unpackM
+      3 -> DijkstraPlutusV4 <$> unpackM
+      n -> unknownTagM @(PlutusScript DijkstraEra) n
+  {-# INLINE unpackM #-}
+
+instance NFData (PlutusScript DijkstraEra) where
+  rnf = rwhnf
+
+instance NoThunks (PlutusScript DijkstraEra)
+
+instance SafeToHash (PlutusScript DijkstraEra) where
+  originalBytes ps = withPlutusScript ps originalBytes
 
 instance AlonzoEraScript DijkstraEra where
-  newtype PlutusScript DijkstraEra = MkDijkstraPlutusScript
-    {unDijkstraPlutusScript :: PlutusScript ConwayEra}
-    deriving newtype (SafeToHash, Show, NFData, NoThunks, Eq, Ord, Generic)
+  data PlutusScript DijkstraEra
+    = DijkstraPlutusV1 !(Plutus 'PlutusV1)
+    | DijkstraPlutusV2 !(Plutus 'PlutusV2)
+    | DijkstraPlutusV3 !(Plutus 'PlutusV3)
+    | DijkstraPlutusV4 !(Plutus 'PlutusV4)
+    deriving (Eq, Ord, Show, Generic)
 
   type PlutusPurpose f DijkstraEra = ConwayPlutusPurpose f DijkstraEra
 
   eraMaxLanguage = PlutusV3
 
-  mkPlutusScript = fmap MkDijkstraPlutusScript . mkPlutusScript
+  mkPlutusScript plutus =
+    case plutusSLanguage plutus of
+      SPlutusV1 -> pure $ DijkstraPlutusV1 plutus
+      SPlutusV2 -> pure $ DijkstraPlutusV2 plutus
+      SPlutusV3 -> pure $ DijkstraPlutusV3 plutus
+      SPlutusV4 -> pure $ DijkstraPlutusV4 plutus
 
-  withPlutusScript (MkDijkstraPlutusScript s) = withPlutusScript s
+  withPlutusScript (DijkstraPlutusV1 plutus) f = f plutus
+  withPlutusScript (DijkstraPlutusV2 plutus) f = f plutus
+  withPlutusScript (DijkstraPlutusV3 plutus) f = f plutus
+  withPlutusScript (DijkstraPlutusV4 plutus) f = f plutus
 
   hoistPlutusPurpose f = \case
     ConwaySpending x -> ConwaySpending $ f x
