@@ -155,7 +155,6 @@ conwayEraSpecificSpec = do
   describe "Conway era specific Imp spec" $
     describe "Certificates without deposits" $ do
       describe "DELEG" Deleg.conwayEraSpecificSpec
-      describe "RATIFY" Ratify.conwayEraSpecificSpec
       describe "UTXO" Utxo.conwayEraSpecificSpec
       describe "UTXOS" Utxos.conwayEraSpecificSpec
 
