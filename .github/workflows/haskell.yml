@@ -641,7 +641,7 @@ jobs:
       run: |
         PR_TARGET=${{ github.base_ref }}
         git fetch origin -n --refmap= +$PR_TARGET:pr-target
-        if git diff pr-target '*.hs' | grep '^\+.*undefined'; then
+        if git diff -U0 pr-target '*.hs' | grep '^\+.*undefined'; then
           echo 'The diff must not contain any `undefined` values'
           false
         fi
