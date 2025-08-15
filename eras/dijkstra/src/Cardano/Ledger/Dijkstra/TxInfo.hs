@@ -22,7 +22,6 @@ import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Scripts (PlutusScript (..))
 import Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
   ConwayEraPlutusTxInfo (..),
@@ -97,13 +96,11 @@ instance EraPlutusContext DijkstraEra where
   lookupTxInfoResult SPlutusV3 (DijkstraTxInfoResult _ _ tirPlutusV3 _) = tirPlutusV3
   lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
 
-  mkPlutusWithContext =
-    ( \case
-        ConwayPlutusV1 p -> toPlutusWithContext $ Left p
-        ConwayPlutusV2 p -> toPlutusWithContext $ Left p
-        ConwayPlutusV3 p -> toPlutusWithContext $ Left p
-    )
-      . unDijkstraPlutusScript
+  mkPlutusWithContext = \case
+    DijkstraPlutusV1 p -> toPlutusWithContext $ Left p
+    DijkstraPlutusV2 p -> toPlutusWithContext $ Left p
+    DijkstraPlutusV3 p -> toPlutusWithContext $ Left p
+    DijkstraPlutusV4 p -> toPlutusWithContext $ Left p
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
