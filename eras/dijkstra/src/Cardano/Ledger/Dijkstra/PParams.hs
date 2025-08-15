@@ -61,7 +61,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, Key, ToJSON (..), withObject, (.:), (.=))
+import Data.Aeson (FromJSON, ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Data (Proxy (..))
 import Data.Default (Default (..))

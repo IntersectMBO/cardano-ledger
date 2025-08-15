@@ -205,7 +205,7 @@ library testlib
   build-depends:
     FailT,
     ImpSpec,
-    QuickCheck,
+    QuickCheck >= 2.16,
     aeson,
     aeson-pretty,
     base,
