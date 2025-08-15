@@ -1,0 +1,379 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.TxInfoSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.TxInfoSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Plutus.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#EraPlutusTxInfo"><span class="hs-identifier">EraPlutusTxInfo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#toPlutusTxCert"><span class="hs-identifier">toPlutusTxCert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeCredential"><span class="hs-identifier">StakeCredential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier">Language</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V2.html"><span class="hs-identifier">PlutusLedgerApi.V2</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV2</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.html"><span class="hs-identifier">PlutusLedgerApi.V3</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV3</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html#ConwayEraTest"><span class="hs-identifier">ConwayEraTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.TxInfoSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621684501551"><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html#ConwayEraTest"><span class="hs-identifier hs-type">ConwayEraTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#EraPlutusTxInfo"><span class="hs-identifier hs-type">EraPlutusTxInfo</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-type">PlutusV3</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCert"><span class="hs-identifier hs-type">ConwayTxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.12-eeeeaba6151f93948f8ea13b8d970cb5e69ee3f7bef98ad73e984c5de58a39fa/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-34"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era.
+(ConwayEraTest era, EraPlutusTxInfo 'PlutusV3 era,
+ TxCert era ~ ConwayTxCert era) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Conway.TxInfoSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.12-eeeeaba6151f93948f8ea13b8d970cb5e69ee3f7bef98ad73e984c5de58a39fa/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TxInfo&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621684502060"><span class="annot"><span class="annottext">trans :: ProtVer -&gt; TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502060"><span class="hs-identifier hs-var hs-var">trans</span></a></span></span><span> </span><span id="local-6989586621684502061"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621684502061"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span id="local-6989586621684502062"><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621684502062"><span class="hs-identifier hs-var">cert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ContextError era -&gt; TxCert)
+-&gt; (TxCert -&gt; TxCert) -&gt; Either (ContextError era) TxCert -&gt; TxCert
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; TxCert
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; TxCert)
+-&gt; (ContextError era -&gt; String) -&gt; ContextError era -&gt; TxCert
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ContextError era -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxCert -&gt; TxCert
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (l :: Language) era (proxy :: Language -&gt; *).
+EraPlutusTxInfo l era =&gt;
+proxy l
+-&gt; ProtVer
+-&gt; TxCert era
+-&gt; Either (ContextError era) (PlutusTxCert l)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#toPlutusTxCert"><span class="hs-identifier hs-var">toPlutusTxCert</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-type">PlutusV3</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621684501551"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy 'PlutusV3
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621684502061"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621684502062"><span class="hs-identifier hs-var">cert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>        </span><span id="local-6989586621684502075"><span class="annot"><span class="annottext">transV9 :: TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var hs-var">transV9</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502060"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Nat -&gt; ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Nat).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Nat
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>        </span><span id="local-6989586621684502083"><span class="annot"><span class="annottext">transV10 :: TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var hs-var">transV10</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502060"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Nat -&gt; ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Nat).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.0/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Nat
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.12-c04d876f787047693256f0e51f15795d35cbbc05c44079c957ad39dfbb88ae3c/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Deposit in registration certs&quot;</span></span><span> </span><span class="annot"><span class="annottext">((StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec)
+-&gt; (StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621684502085"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621684502086"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegCert"><span class="hs-identifier hs-var">ConwayRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; StrictMaybe Coin
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert era
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#RegDepositTxCert"><span class="hs-identifier hs-var">RegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegCert"><span class="hs-identifier hs-var">ConwayRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">Coin -&gt; TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502093"><span class="hs-identifier hs-var">expectDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegCert"><span class="hs-identifier hs-var">ConwayRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; StrictMaybe Coin
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">Coin -&gt; TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502093"><span class="hs-identifier hs-var">expectDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert era
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#RegDepositTxCert"><span class="hs-identifier hs-var">RegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502086"><span class="hs-identifier hs-var">coin</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegCert"><span class="hs-identifier hs-var">ConwayRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502085"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.12-c04d876f787047693256f0e51f15795d35cbbc05c44079c957ad39dfbb88ae3c/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Deposit in unregistration certs&quot;</span></span><span> </span><span class="annot"><span class="annottext">((StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec)
+-&gt; (StakeCredential -&gt; Coin -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621684502094"><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621684502095"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayUnRegCert"><span class="hs-identifier hs-var">ConwayUnRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; StrictMaybe Coin
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert era
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#UnRegDepositTxCert"><span class="hs-identifier hs-var">UnRegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502075"><span class="hs-identifier hs-var">transV9</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayUnRegCert"><span class="hs-identifier hs-var">ConwayUnRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">Coin -&gt; TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502093"><span class="hs-identifier hs-var">expectDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayUnRegCert"><span class="hs-identifier hs-var">ConwayUnRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; StrictMaybe Coin
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Coin -&gt; TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502093"><span class="hs-identifier hs-var">expectDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Coin -&gt; TxCert era
+forall era.
+ConwayEraTxCert era =&gt;
+StakeCredential -&gt; Coin -&gt; TxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#UnRegDepositTxCert"><span class="hs-identifier hs-var">UnRegDepositTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621684502095"><span class="hs-identifier hs-var">coin</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var">expectNoDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert -&gt; IO ()) -&gt; TxCert -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; TxCert
+</span><a href="#local-6989586621684502083"><span class="hs-identifier hs-var">transV10</span></a></span><span> </span><span class="annot"><span class="annottext">(TxCert era -&gt; TxCert) -&gt; TxCert era -&gt; TxCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert era
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert era)
+-&gt; ConwayDelegCert -&gt; ConwayTxCert era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayUnRegCert"><span class="hs-identifier hs-var">ConwayUnRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621684502094"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.4.0-83fc211a218cad376cf2e53d188782896f0ca20350c02539dc641a2fac569595/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><a href="#local-6989586621684502093"><span class="hs-identifier hs-type">expectDeposit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCert"><span class="hs-identifier hs-type">PV3.TxCert</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621684502093"><span class="annot"><span class="annottext">expectDeposit :: Coin -&gt; TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502093"><span class="hs-identifier hs-var hs-var">expectDeposit</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span id="local-6989586621684502099"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621684502099"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCertRegStaking"><span class="hs-identifier hs-type">PV3.TxCertRegStaking</span></a></span><span> </span><span class="annot"><span class="annottext">Credential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621684502101"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621684502101"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Lovelace
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V1.Value.html#Lovelace"><span class="hs-identifier hs-var">PV2.Lovelace</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621684502099"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621684502101"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCertUnRegStaking"><span class="hs-identifier hs-type">PV3.TxCertUnRegStaking</span></a></span><span> </span><span class="annot"><span class="annottext">Credential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621684502105"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621684502105"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Lovelace
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V1.Value.html#Lovelace"><span class="hs-identifier hs-var">PV2.Lovelace</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621684502099"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621684502105"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-63"></span><span>        </span><span id="local-6989586621684502106"><span class="annot"><span class="annottext">TxCert
+</span><a href="#local-6989586621684502106"><span class="hs-identifier hs-var">txcert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-64"></span><span>          </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; IO ()
+String -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#expectationFailure"><span class="hs-identifier hs-var">expectationFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Deposit: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621684502099"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; expected in: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxCert -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">TxCert
+</span><a href="#local-6989586621684502106"><span class="hs-identifier hs-var">txcert</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, but not found&quot;</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="#local-6989586621684502087"><span class="hs-identifier hs-type">expectNoDeposit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCert"><span class="hs-identifier hs-type">PV3.TxCert</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621684502087"><span class="annot"><span class="annottext">expectNoDeposit :: TxCert -&gt; IO ()
+</span><a href="#local-6989586621684502087"><span class="hs-identifier hs-var hs-var">expectNoDeposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCertRegStaking"><span class="hs-identifier hs-type">PV3.TxCertRegStaking</span></a></span><span> </span><span class="annot"><span class="annottext">Credential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Lovelace
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.46.0.0-825fdcde6bbfcb4253452f65a58eacd6d92eeb6ec4ec9ea552c43ddeb84629c1/share/doc/html/src/PlutusLedgerApi.V3.Contexts.html#TxCertUnRegStaking"><span class="hs-identifier hs-type">PV3.TxCertUnRegStaking</span></a></span><span> </span><span class="annot"><span class="annottext">Credential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Maybe Lovelace
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621684502108"><span class="annot"><span class="annottext">TxCert
+</span><a href="#local-6989586621684502108"><span class="hs-identifier hs-var">txcert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; IO ()
+String -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#expectationFailure"><span class="hs-identifier hs-var">expectationFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; IO ()) -&gt; String -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-73"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Deposit not expected, but found in: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxCert -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">TxCert
+</span><a href="#local-6989586621684502108"><span class="hs-identifier hs-var">txcert</span></a></span><span>
+</span><span id="line-74"></span></pre></body></html>
