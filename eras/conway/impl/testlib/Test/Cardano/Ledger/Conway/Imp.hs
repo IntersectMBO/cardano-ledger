@@ -148,7 +148,6 @@ conwayEraSpecificSpec ::
   ( ConwayEraImp era
   , ShelleyEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
