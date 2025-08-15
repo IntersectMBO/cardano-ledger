@@ -2,6 +2,7 @@
 
 module Main where
 
+import Test.Cardano.Ledger.Dijkstra.Era.Spec (dijkstraEraSpec)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules ()
 import Test.Cardano.Ledger.Common
@@ -15,6 +16,7 @@ import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 main :: IO ()
 main =
   ledgerTestMain $ do
+    dijkstraEraSpec @DijkstraEra
     describe "Dijkstra" $ do
       ConwaySpec.spec @DijkstraEra
     roundTripJsonShelleyEraSpec @DijkstraEra

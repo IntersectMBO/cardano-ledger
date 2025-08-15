@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Era.Spec (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis
 import Control.Monad.IO.Class
-import Data.Aeson (eitherDecodeFileStrict')
+import Data.Aeson (eitherDecodeFileStrict', encode)
 import Data.Char (toLower)
 import System.FilePath ((</>))
 import Test.Cardano.Ledger.Era
