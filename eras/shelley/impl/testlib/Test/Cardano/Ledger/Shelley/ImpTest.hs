@@ -603,6 +603,7 @@ instance EraImp ShelleyEra where
                 & ppMinFeeAL .~ Coin 44
                 & ppMinFeeBL .~ Coin 155_381
                 & ppMaxBBSizeL .~ 65_536
+                & ppMaxBHSizeL .~ 1100
                 & ppMaxTxSizeL .~ 16_384
                 & ppKeyDepositL .~ Coin 2_000_000
                 & ppPoolDepositL .~ Coin 500_000_000
@@ -613,7 +614,7 @@ instance EraImp ShelleyEra where
                 & ppTauL .~ (2 %! 10)
                 & ppDL .~ (1 %! 1)
                 & ppExtraEntropyL .~ NeutralNonce
-                & ppMinUTxOValueL .~ Coin 2_000_000
+                & ppMinUTxOValueL .~ Coin 1_000_000
                 & ppMinPoolCostL .~ Coin 340_000_000
           , -- TODO: Add a top level definition and add private keys to ImpState:
             sgGenDelegs = mempty

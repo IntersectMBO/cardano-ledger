@@ -10,11 +10,15 @@ module Test.Cardano.Ledger.Core.JSON (
   roundTripJsonProperty,
   goldenJsonPParamsSpec,
   goldenJsonPParamsUpdateSpec,
+  goldenJsonExpectation,
+  goldenToJsonExpectation,
+  goldenFromJsonExpectation,
 ) where
 
 import Cardano.Ledger.Core
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, eitherDecodeFileStrict, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Function ((&))
 import qualified Data.Text as T
@@ -78,7 +82,22 @@ goldenJsonPParamsUpdateSpec ::
   SpecWith FilePath
 goldenJsonPParamsUpdateSpec =
   it "Golden JSON specs for PParamsUpdate" $ \file -> do
-    let ppu = runGen 100 100 (arbitrary @(PParamsUpdate era))
-    let encoded = T.decodeUtf8 (BSL.toStrict (encodePretty ppu)) <> "\n"
-    fileContent <- T.decodeUtf8 . BSL.toStrict <$> BSL.readFile file
-    encoded `shouldBe` fileContent
+    goldenToJsonExpectation file $ runGen 100 100 (arbitrary @(PParamsUpdate era))
+
+goldenToJsonExpectation :: (HasCallStack, ToJSON a) => FilePath -> a -> Expectation
+goldenToJsonExpectation filePath value = do
+  let encoded = T.decodeUtf8 (BSL.toStrict (encodePretty value)) <> "\n"
+  fileContent <- T.decodeUtf8 <$> BS.readFile filePath
+  fileContent `shouldBe` encoded
+
+goldenFromJsonExpectation ::
+  (HasCallStack, FromJSON a, Show a, Eq a) => FilePath -> a -> Expectation
+goldenFromJsonExpectation filePath expectedValue = do
+  decodedValue <- expectRight =<< eitherDecodeFileStrict filePath
+  decodedValue `shouldBe` expectedValue
+
+goldenJsonExpectation ::
+  (HasCallStack, ToJSON a, FromJSON a, Show a, Eq a) => FilePath -> a -> Expectation
+goldenJsonExpectation filePath expectedValue = do
+  decodedValue <- expectRight =<< eitherDecodeFileStrict filePath
+  decodedValue `shouldBe` expectedValue

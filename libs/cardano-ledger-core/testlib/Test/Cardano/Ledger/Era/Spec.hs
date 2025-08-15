@@ -29,8 +29,8 @@ everyEraSpec :: forall era. EraImp era => Spec
 everyEraSpec =
   describe "Spec for every Era" $ do
     let eraLowerName = map toLower $ eraName @era
-    describe "Golden" $ do
-      describe "JSON" $ do
+    describe "JSON" $ do
+      describe "Golden" $ do
         withImpInit @KeyPairSpec $ do
           it "Genesis" $ do
             let decodeJsonGenesis = do
