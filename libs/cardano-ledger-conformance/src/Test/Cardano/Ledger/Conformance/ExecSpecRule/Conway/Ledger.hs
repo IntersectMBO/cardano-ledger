@@ -83,12 +83,23 @@ instance
   ) =>
   ToExpr (ConwayLedgerExecContext era)
 
-instance EraPParams era => EncCBOR (ConwayLedgerExecContext era) where
+instance
+  ( EraPParams era
+  , EraCertState era
+  , EncCBOR (TxOut era)
+  , EncCBOR (TxBody era)
+  , EncCBOR (TxAuxData era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (Tx era)
+  ) =>
+  EncCBOR (ConwayLedgerExecContext era)
+  where
   encCBOR ConwayLedgerExecContext {..} =
     encode $
       Rec ConwayLedgerExecContext
         !> To clecPolicyHash
         !> To clecEnactState
+        !> To clecUtxoExecContext
 
 instance ExecSpecRule "LEDGER" ConwayEra where
   type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
