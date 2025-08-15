@@ -4,19 +4,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Allegra.Imp (spec) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Allegra.Imp.UtxowSpec as UtxowSpec
+import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
-import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
   forall era.
   ( ShelleyEraImp era
+  , EraSpecificSpec era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
@@ -25,3 +28,5 @@ spec = do
   ShelleyImp.spec @era
   describe "AllegraImpSpec" . withEachEraVersion @era $
     UtxowSpec.spec
+
+instance EraSpecificSpec AllegraEra

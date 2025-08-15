@@ -4,9 +4,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
@@ -28,7 +30,7 @@ import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 spec ::
   forall era.
   ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , EraSpecificSpec era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
@@ -42,3 +44,21 @@ spec = do
     Utxo.spec
     Utxos.spec
     Utxow.spec
+
+alonzoEraSpecificSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+alonzoEraSpecificSpec = do
+  describe "Alonzo era specific Imp spec" $
+    describe "Certificates without deposits" $
+      Utxow.alonzoEraSpecificSpec
+
+instance EraSpecificSpec AlonzoEra where
+  eraSpecificSpec = alonzoEraSpecificSpec

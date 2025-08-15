@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
@@ -13,12 +14,12 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
@@ -32,8 +33,8 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , EraSpecificSpec era
   , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
@@ -47,7 +48,12 @@ spec ::
 spec = do
   AlonzoImp.spec @era
   withEachEraVersion @era $
-    describe "BabbageImpSpec" $ do
+    describe "BabbageImpSpec - era generic tests" $ do
       Utxo.spec
       Utxow.spec
       Utxos.spec @era
+
+instance EraSpecificSpec BabbageEra where
+  eraSpecificSpec =
+    AlonzoImp.alonzoEraSpecificSpec
+      >> Utxow.babbageEraSpecificSpec

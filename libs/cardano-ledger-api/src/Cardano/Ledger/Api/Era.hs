@@ -88,6 +88,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
@@ -558,8 +559,12 @@ instance EraApi ConwayEra where
       , txrdmrs = upgradeRedeemers (txrdmrs atw)
       }
 
+newtype DijkstraTxBodyUpgradeError = DTBUETxCert DijkstraTxCertUpgradeError
+  deriving (Eq, Show)
+
 instance EraApi DijkstraEra where
   type TxUpgradeError DijkstraEra = TxBodyUpgradeError DijkstraEra
+  type TxBodyUpgradeError DijkstraEra = DijkstraTxBodyUpgradeError
   upgradeTx (MkConwayTx (AlonzoTx b w valid aux)) =
     fmap MkDijkstraTx $
       AlonzoTx
@@ -569,11 +574,12 @@ instance EraApi DijkstraEra where
         <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody ConwayTxBody {..} = do
+    certs <- traverse (left DTBUETxCert . upgradeTxCert) $ OSet.toStrictSeq ctbCerts
     pure $
       DijkstraTxBody
         { dtbSpendInputs = ctbSpendInputs
         , dtbOutputs = unsafeMapSized upgradeTxOut <$> ctbOutputs
-        , dtbCerts = OSet.mapL coerce ctbCerts
+        , dtbCerts = OSet.fromStrictSeq certs
         , dtbWithdrawals = ctbWithdrawals
         , dtbTxfee = ctbTxfee
         , dtbVldt = ctbVldt
