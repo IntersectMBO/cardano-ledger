@@ -147,8 +147,6 @@ conwayEraGenericSpec = do
 conwayEraSpecificSpec ::
   ( ConwayEraImp era
   , ShelleyEraTxCert era
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayEraSpecificSpec = do
@@ -156,7 +154,6 @@ conwayEraSpecificSpec = do
     describe "Certificates without deposits" $ do
       describe "DELEG" Deleg.conwayEraSpecificSpec
       describe "UTXO" Utxo.conwayEraSpecificSpec
-      describe "UTXOS" Utxos.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where
   eraSpecificSpec =
