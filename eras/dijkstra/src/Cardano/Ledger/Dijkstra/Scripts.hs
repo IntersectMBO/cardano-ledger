@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -11,6 +10,7 @@
 
 module Cardano.Ledger.Dijkstra.Scripts (PlutusScript (..)) where
 
+import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
   Timelock,
@@ -35,21 +35,35 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIx (..),
   alonzoScriptPrefixTag,
  )
+import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts (
   ConwayEraScript (..),
   ConwayPlutusPurpose (..),
   PlutusScript (..),
  )
-import Cardano.Ledger.Core (EraScript (..), SafeToHash (..))
+import Cardano.Ledger.Core (EraScript (..), EraTxCert (..), SafeToHash (..), ScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
+import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLanguage)
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
+import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
+
+data DijkstraPlutusPurpose f era
+  = DijkstraSpending !(f Word32 TxIn)
+  | DijkstraMinting !(f Word32 PolicyID)
+  | DijkstraCertifying !(f Word32 (TxCert era))
+  | DijkstraRewarding !(f Word32 RewardAccount)
+  | DijkstraVoting !(f Word32 Voter)
+  | DijkstraProposing !(f Word32 (ProposalProcedure era))
+  | DijkstraGuarding !(f Word32 ScriptHash)
+  deriving (Generic)
 
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
