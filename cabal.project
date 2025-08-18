@@ -96,3 +96,9 @@ if impl(ghc >=9.12)
   allow-newer:
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+-- See https://github.com/IntersectMBO/cardano-haskell-packages/issues/1123
+allow-newer:
+  -- https://github.com/phadej/vec/issues/121
+  ral:QuickCheck,
+  fin:QuickCheck,
+  bin:QuickCheck,
