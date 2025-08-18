@@ -94,6 +94,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
+import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -118,8 +119,10 @@ import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
+import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
@@ -130,7 +133,9 @@ import Data.Maybe.Strict (
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
 
@@ -217,10 +222,11 @@ auxDataAlonzoTxL = lens atAuxData (\tx txTxAuxData -> tx {atAuxData = txTxAuxDat
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Integer
+sizeAlonzoTxF :: forall era. (HasCallStack, EraTx era) => SimpleGetter (AlonzoTx era) Word32
 sizeAlonzoTxF =
   to $
-    fromIntegral
+    errorFail
+      . integralToBounded @Int64 @Word32
       . LBS.length
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation

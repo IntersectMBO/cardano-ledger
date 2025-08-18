@@ -74,6 +74,7 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -92,8 +93,7 @@ data ConwayUtxoPredFailure era
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO
-      (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
       (Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
