@@ -6,10 +6,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.TxInfo () where
 
+import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
@@ -21,8 +23,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (ProtVer (..), strictMaybe)
+import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Scripts (PlutusScript (..))
 import Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
@@ -30,14 +33,16 @@ import Cardano.Ledger.Conway.TxInfo (
   guardConwayFeaturesForPlutusV1V2,
   scriptPurposeToScriptInfo,
   toPlutusV3Args,
+  transColdCommitteeCred,
+  transDRepCred,
+  transDelegatee,
+  transHotCommitteeCred,
   transMintValue,
   transPlutusPurposeV1V2,
   transProposal,
   transScriptPurpose,
   transTxBodyId,
   transTxBodyWithdrawals,
-  transTxCert,
-  transTxCertV1V2,
   transTxInInfoV1,
   transTxInInfoV3,
   transTxOutV1,
@@ -46,7 +51,7 @@ import Cardano.Ledger.Conway.TxInfo (
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (PlutusScript (..))
-import Cardano.Ledger.Dijkstra.TxCert ()
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (
   Language (..),
@@ -55,10 +60,14 @@ import Cardano.Ledger.Plutus (
   TxOutSource (..),
   transCoinToLovelace,
   transCoinToValue,
+  transCred,
   transDatum,
+  transEpochNo,
+  transKeyHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.State (PoolParams (..))
 import Control.Monad (zipWithM)
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -139,6 +148,26 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = Alonzo.toPlutusV1Args
+
+transTxCertV1V2 ::
+  ( ConwayEraTxCert era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  TxCert era ->
+  Either (ContextError era) PV1.DCert
+transTxCertV1V2 = \case
+  RegDepositTxCert stakeCred _deposit ->
+    Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegDepositTxCert stakeCred _refund ->
+    Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+    Right $
+      PV1.DCertPoolRegister
+        (transKeyHash ppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+  RetirePoolTxCert poolId retireEpochNo ->
+    Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  txCert -> Left $ inject $ CertificateNotSupported txCert
 
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
@@ -231,6 +260,39 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV3Args
+
+transTxCert ::
+  (ConwayEraTxCert era, TxCert era ~ DijkstraTxCert era) => ProtVer -> TxCert era -> PV3.TxCert
+transTxCert pv = \case
+  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+    PV3.TxCertPoolRegister
+      (transKeyHash ppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+  RetirePoolTxCert poolId retireEpochNo ->
+    PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  RegDepositTxCert stakeCred deposit ->
+    let transDeposit
+          | hardforkConwayBootstrapPhase pv = Nothing
+          | otherwise = Just (transCoinToLovelace deposit)
+     in PV3.TxCertRegStaking (transCred stakeCred) transDeposit
+  UnRegDepositTxCert stakeCred refund ->
+    let transRefund
+          | hardforkConwayBootstrapPhase pv = Nothing
+          | otherwise = Just (transCoinToLovelace refund)
+     in PV3.TxCertUnRegStaking (transCred stakeCred) transRefund
+  RegDepositDelegTxCert stakeCred delegatee deposit ->
+    PV3.TxCertRegDeleg (transCred stakeCred) (transDelegatee delegatee) (transCoinToLovelace deposit)
+  AuthCommitteeHotKeyTxCert coldCred hotCred ->
+    PV3.TxCertAuthHotCommittee (transColdCommitteeCred coldCred) (transHotCommitteeCred hotCred)
+  ResignCommitteeColdTxCert coldCred _anchor ->
+    PV3.TxCertResignColdCommittee (transColdCommitteeCred coldCred)
+  RegDRepTxCert drepCred deposit _anchor ->
+    PV3.TxCertRegDRep (transDRepCred drepCred) (transCoinToLovelace deposit)
+  UnRegDRepTxCert drepCred refund ->
+    PV3.TxCertUnRegDRep (transDRepCred drepCred) (transCoinToLovelace refund)
+  UpdateDRepTxCert drepCred _anchor ->
+    PV3.TxCertUpdateDRep (transDRepCred drepCred)
+  _ -> error "Impossible: All TxCerts should have been accounted for"
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))

@@ -81,7 +81,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -106,13 +106,11 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
@@ -127,9 +125,9 @@ spec = do
 
   it "Withdraw and unregister staking credential in the same transaction" $ do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    (_, cred, _) <- setupSingleDRep 1_000_000
+    ra <- getRewardAccountFor cred
+
     Positive newDeposit <- arbitrary
     modifyPParams $ \pp ->
       pp
@@ -138,10 +136,6 @@ spec = do
 
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
-
-    (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     let tx =
           mkBasicTx $
@@ -157,7 +151,7 @@ spec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    ra <- registerStakeCredentialWithDeposit cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -182,15 +176,10 @@ spec = do
       pp
         & ppGovActionLifetimeL .~ EpochInterval 4
         & ppDRepActivityL .~ EpochInterval 1
-    kh <- freshKeyHash
-    let cred = KeyHashObj kh
-    ra <- registerStakeCredential cred
+    (drep, cred, _) <- setupSingleDRep 1_000_000
+    ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
-
-    (drep, _, _) <- setupSingleDRep 1_000_000
-
-    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     -- expire the drep after delegation
     mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
@@ -209,7 +198,8 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    ra <- registerStakeCredential cred
+    void $ regDelegToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
+    ra <- getRewardAccountFor cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -217,7 +207,6 @@ spec = do
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
-    _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitTx_ $
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
@@ -285,7 +274,7 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccount
+        rewardAccount <- registerRewardAccountWithDeposit
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
       let
