@@ -402,7 +402,9 @@ cost_models =
         , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
 
--- TODO: add entry for Plutus v4
+plutus_v4_script :: Rule
+plutus_v4_script = "plutus_v4_script" =:= distinct VBytes
+
 alonzo_auxiliary_data :: Rule
 alonzo_auxiliary_data =
   "alonzo_auxiliary_data"
@@ -414,6 +416,7 @@ alonzo_auxiliary_data =
           , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
           , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
           , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
+          , opt (idx 5 ==> arr [0 <+ a plutus_v4_script])
           ]
       )
 
@@ -424,7 +427,6 @@ auxiliary_data =
     / shelley_ma_auxiliary_data
     / alonzo_auxiliary_data
 
--- TODO: add entry for Plutus v4
 dijkstra_script :: Rule
 dijkstra_script =
   "script"
@@ -432,3 +434,4 @@ dijkstra_script =
     / arr [1, a plutus_v1_script]
     / arr [2, a plutus_v2_script]
     / arr [3, a plutus_v3_script]
+    / arr [4, a plutus_v4_script]
