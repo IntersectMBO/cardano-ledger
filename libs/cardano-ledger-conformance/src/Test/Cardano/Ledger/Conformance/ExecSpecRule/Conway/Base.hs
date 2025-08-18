@@ -24,8 +24,8 @@ import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (integerToHash)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (signatureFromInteger)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (signatureFromInteger, vkeyFromInteger)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest ()
 

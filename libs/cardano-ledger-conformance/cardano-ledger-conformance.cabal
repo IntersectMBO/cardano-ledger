@@ -55,6 +55,7 @@ library
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 
   default-language: Haskell2010
   ghc-options:
