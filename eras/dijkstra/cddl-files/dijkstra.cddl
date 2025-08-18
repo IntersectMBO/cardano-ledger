@@ -286,6 +286,7 @@ script =
   // 1, plutus_v1_script
   // 2, plutus_v2_script
   // 3, plutus_v3_script
+  // 4, plutus_v4_script
   ]
 
 
@@ -336,6 +337,8 @@ distinct_VBytes =
 plutus_v2_script = distinct_VBytes
 
 plutus_v3_script = distinct_VBytes
+
+plutus_v4_script = distinct_VBytes
 
 certificates = nonempty_oset<certificate>
 
@@ -736,6 +739,7 @@ alonzo_auxiliary_data =
     , ? 2 : [* plutus_v1_script]
     , ? 3 : [* plutus_v2_script]
     , ? 4 : [* plutus_v3_script]
+    , ? 5 : [* plutus_v4_script]
     }
 
   )
