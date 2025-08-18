@@ -60,6 +60,7 @@ import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -72,7 +73,7 @@ data AllegraUtxoPredFailure era
   | OutsideValidityIntervalUTxO
       ValidityInterval -- transaction's validity interval
       SlotNo -- current slot
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
   | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era)) -- Consumed, then produced

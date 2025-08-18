@@ -98,6 +98,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -169,7 +170,7 @@ data ShelleyUtxoPredFailure era
   | ExpiredUTxO
       (Mismatch 'RelLTEQ SlotNo)
   | MaxTxSizeUTxO
-      (Mismatch 'RelLTEQ Integer)
+      (Mismatch 'RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
       (Mismatch 'RelGTEQ Coin)
@@ -578,7 +579,7 @@ validateMaxTxSizeUTxO pp tx =
         , mismatchExpected = maxTxSize
         }
   where
-    maxTxSize = toInteger (pp ^. ppMaxTxSizeL)
+    maxTxSize = pp ^. ppMaxTxSizeL
     txSize = tx ^. sizeTxF
 
 -- | This monadic action captures the final stages of the UTXO(S) rule. In particular it

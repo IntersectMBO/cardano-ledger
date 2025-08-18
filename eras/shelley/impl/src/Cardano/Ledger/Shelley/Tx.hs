@@ -31,6 +31,7 @@ module Cardano.Ledger.Shelley.Tx (
   shelleyTxEqRaw,
 ) where
 
+import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -54,13 +55,16 @@ import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
 import Data.Maybe.Strict (
   StrictMaybe (..),
   strictMaybeToMaybe,
  )
+import Data.Word (Word32)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
 
@@ -144,10 +148,11 @@ toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
     <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Integer
+sizeShelleyTxF :: forall era. (HasCallStack, EraTx era) => SimpleGetter (ShelleyTx era) Word32
 sizeShelleyTxF =
   to $
-    fromIntegral
+    errorFail
+      . integralToBounded
       . LBS.length
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation

@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Changed `MaxTxSizeUTxO` and `sizeShelleyTxF` to use `Word32`
 * Remove:
   * `ShelleyEpochPredFailure`
   * `ShelleyMirPredFailure`
