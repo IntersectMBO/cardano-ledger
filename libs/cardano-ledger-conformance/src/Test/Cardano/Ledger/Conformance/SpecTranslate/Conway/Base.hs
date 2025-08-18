@@ -35,7 +35,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   Timelock,
   pattern RequireTimeExpire,
@@ -54,11 +54,10 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..),
 import Cardano.Ledger.Conway.Rules (EnactSignal (..))
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
@@ -90,8 +89,8 @@ import Test.Cardano.Ledger.Conformance (
   SpecTransM,
   SpecTranslate (..),
   askCtx,
-  hashToInteger,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core ()
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance SpecTranslate ctx TxIx where
@@ -103,31 +102,6 @@ instance SpecTranslate ctx TxIn where
   type SpecRep TxIn = Agda.TxIn
 
   toSpecRep (TxIn txId txIx) = toSpecRep (txId, txIx)
-
-instance SpecTranslate ctx StakeReference where
-  type SpecRep StakeReference = Maybe Agda.Credential
-
-  toSpecRep (StakeRefBase c) = Just <$> toSpecRep c
-  toSpecRep (StakeRefPtr _) = pure Nothing
-  toSpecRep StakeRefNull = pure Nothing
-
-instance SpecTranslate ctx BootstrapAddress where
-  type SpecRep BootstrapAddress = Agda.BootstrapAddr
-
-  toSpecRep _ = error "Cannot translate bootstrap addresses"
-
-instance SpecTranslate ctx Addr where
-  type SpecRep Addr = Agda.Addr
-
-  toSpecRep (Addr nw pc sr) =
-    Left
-      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr)
-  toSpecRep (AddrBootstrap ba) = Right <$> toSpecRep ba
-
-instance SpecTranslate ctx (Hash a b) where
-  type SpecRep (Hash a b) = Integer
-
-  toSpecRep = pure . hashToInteger
 
 instance SpecTranslate ctx (SafeHash a) where
   type SpecRep (SafeHash a) = Agda.DataHash
@@ -227,8 +201,6 @@ instance
     script' <- toSpecRep script
     pure (addr', (val', (datum', script')))
 
-deriving instance SpecTranslate ctx Coin
-
 instance
   ( SpecTranslate ctx (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
@@ -236,33 +208,8 @@ instance
   SpecTranslate ctx (UTxO era)
   where
   type SpecRep (UTxO era) = SpecRep (Map TxIn (TxOut era))
+
   toSpecRep (UTxO m) = toSpecRep m
-
-deriving instance SpecTranslate ctx SlotNo
-
-deriving instance SpecTranslate ctx EpochNo
-
-deriving instance SpecTranslate ctx EpochInterval
-
-instance SpecTranslate ctx ProtVer where
-  type SpecRep ProtVer = (Integer, Integer)
-
-  toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
-
-instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = ()
-
-  toSpecRep _ = pure ()
-
-instance SpecTranslate ctx Prices where
-  type SpecRep Prices = ()
-
-  toSpecRep _ = pure ()
-
-instance SpecTranslate ctx ExUnits where
-  type SpecRep ExUnits = Agda.ExUnits
-
-  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
 
 deriving instance SpecTranslate ctx OrdExUnits
 
@@ -372,11 +319,6 @@ instance SpecTranslate ctx ValidityInterval where
 
   toSpecRep (ValidityInterval lo hi) = toSpecRep (lo, hi)
 
-instance SpecTranslate ctx (KeyHash r) where
-  type SpecRep (KeyHash r) = Integer
-
-  toSpecRep (KeyHash h) = toSpecRep h
-
 vkeyToInteger :: VKey kd -> Integer
 vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
 
@@ -473,27 +415,6 @@ instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
   type SpecRep (AlonzoTxAuxData era) = Agda.AuxiliaryData
 
   toSpecRep = toSpecRep . hashAnnotated
-
-instance SpecTranslate ctx ScriptHash where
-  type SpecRep ScriptHash = Integer
-
-  toSpecRep (ScriptHash h) = toSpecRep h
-
-instance SpecTranslate ctx (Credential k) where
-  type SpecRep (Credential k) = Agda.Credential
-
-  toSpecRep (KeyHashObj h) = Agda.KeyHashObj <$> toSpecRep h
-  toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
-
-instance SpecTranslate ctx Network where
-  type SpecRep Network = Integer
-
-  toSpecRep = pure . fromIntegral . fromEnum
-
-instance SpecTranslate ctx RewardAccount where
-  type SpecRep RewardAccount = Agda.RwdAddr
-
-  toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
 
 instance SpecTranslate ctx PoolParams where
   type SpecRep PoolParams = Agda.StakePoolParams
@@ -810,8 +731,6 @@ instance SpecTranslate ctx MaryValue where
   type SpecRep MaryValue = Agda.Coin
 
   toSpecRep = toSpecRep . coin
-
-
 
 instance SpecTranslate ctx CommitteeAuthorization where
   type
