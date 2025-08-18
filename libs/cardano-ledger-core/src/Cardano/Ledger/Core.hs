@@ -76,7 +76,7 @@ import Cardano.Ledger.Address (
   decompactAddr,
   isBootstrapCompactAddr,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR,
@@ -110,6 +110,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -156,17 +157,18 @@ class
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (TxAuxData era))
 
   -- | For fee calculation and estimations of impact on block space
-  sizeTxF :: SimpleGetter (Tx era) Integer
+  sizeTxF :: HasCallStack => SimpleGetter (Tx era) Word32
 
   -- | For fee calculation and estimations of impact on block space
   -- To replace `sizeTxF` after it has been proved equivalent to it .
-  sizeTxForFeeCalculation :: SafeToHash (TxWits era) => Tx era -> Integer
+  sizeTxForFeeCalculation :: (HasCallStack, SafeToHash (TxWits era)) => Tx era -> Word32
   sizeTxForFeeCalculation tx =
-    fromIntegral $
-      originalBytesSize (tx ^. bodyTxL)
-        + originalBytesSize (tx ^. witsTxL)
-        + strictMaybe 1 originalBytesSize (tx ^. auxDataTxL)
-        + 1 -- account for the top-level CBOR encoding tag
+    errorFail $
+      integralToBounded @Int @Word32 $
+        originalBytesSize (tx ^. bodyTxL)
+          + originalBytesSize (tx ^. witsTxL)
+          + strictMaybe 1 originalBytesSize (tx ^. auxDataTxL)
+          + 1 -- account for the top-level CBOR encoding tag
 
   -- | Using information from the transaction validate the supplied native script.
   validateNativeScript :: Tx era -> NativeScript era -> Bool

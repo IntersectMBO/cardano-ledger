@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Changed `MaxTxSizeUTxO` to use `Word32`
 * Make `transValidityInterval` based on eras instead of protocol versions.
   * Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
   * Remove protocol version from arguments to `transValidityInterval`.

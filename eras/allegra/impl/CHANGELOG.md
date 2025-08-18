@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Changed `MaxTxSizeUTxO` to use `Word32`
 * Added `COMPLETE` pragma for `TxCert AllegraEra`
 * Added `COMPLETE` pragma for `NativeScript AllegraEra`
 * Move to `testlib` `DecCBOR` instances for: `TxBody AllegraEra`, `AllegraTxAuxDataRaw`, `AllegraTxAuxData`, `TimelockRaw`, `Timelock`

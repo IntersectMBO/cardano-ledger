@@ -58,10 +58,12 @@ import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
@@ -80,7 +82,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 sizeTest :: HasCallStack => BSL.ByteString -> Tx ShelleyEra -> Assertion
 sizeTest b16 tx = do
   Base16.encode (Plain.serialize tx) @?= b16
-  (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
+  (tx ^. sizeTxF) @?= (fromIntegral @Int64 @Word32 (BSL.length b16) `div` 2)
 
 alicePay :: KeyPair 'Payment
 alicePay = KeyPair vk sk
