@@ -18,9 +18,10 @@ import Test.Cardano.Ledger.Conformance (
   hashToInteger,
   integerToHash,
   runSpecTransM,
+  vkeyFromInteger,
+  vkeyToInteger,
  )
 import Test.Cardano.Ledger.Conformance.Spec.Conway ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger, vkeyToInteger)
 
 hashDisplayProp ::
   forall a.

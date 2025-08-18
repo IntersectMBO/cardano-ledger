@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -22,20 +21,9 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   committeeCredentialToStrictMaybe,
   SpecTranslate (..),
-  vkeyToInteger,
-  vkeyFromInteger,
-  signatureToInteger,
-  signatureFromInteger,
-  -- HSMap utils
-  unionHSMap,
-  unionsHSMap,
-  mapHSMapKey,
-  bimapMHSMap,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
-import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   Timelock,
   pattern RequireTimeExpire,
@@ -54,12 +42,8 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..),
 import Cardano.Ledger.Conway.Rules (EnactSignal (..))
 import Cardano.Ledger.Conway.Scripts (AlonzoScript (..), ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.HKD (HKD)
-import Cardano.Ledger.Keys (VKey (..))
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
-import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -70,9 +54,6 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad.Except (MonadError (..))
-import Data.Bifunctor (Bifunctor (..))
-import Data.Bitraversable (bimapM)
-import Data.Containers.ListUtils (nubOrdOn)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
@@ -86,70 +67,15 @@ import qualified GHC.Exts as Exts
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (
+import Test.Cardano.Ledger.Conformance.Orphans ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTransM,
   SpecTranslate (..),
   askCtx,
-  hashToInteger,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
+import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
-
-instance SpecTranslate ctx TxIx where
-  type SpecRep TxIx = Integer
-
-  toSpecRep (TxIx x) = pure $ toInteger x
-
-instance SpecTranslate ctx TxIn where
-  type SpecRep TxIn = Agda.TxIn
-
-  toSpecRep (TxIn txId txIx) = toSpecRep (txId, txIx)
-
-instance SpecTranslate ctx StakeReference where
-  type SpecRep StakeReference = Maybe Agda.Credential
-
-  toSpecRep (StakeRefBase c) = Just <$> toSpecRep c
-  toSpecRep (StakeRefPtr _) = pure Nothing
-  toSpecRep StakeRefNull = pure Nothing
-
-instance SpecTranslate ctx BootstrapAddress where
-  type SpecRep BootstrapAddress = Agda.BootstrapAddr
-
-  toSpecRep _ = error "Cannot translate bootstrap addresses"
-
-instance SpecTranslate ctx Addr where
-  type SpecRep Addr = Agda.Addr
-
-  toSpecRep (Addr nw pc sr) =
-    Left
-      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr)
-  toSpecRep (AddrBootstrap ba) = Right <$> toSpecRep ba
-
-instance SpecTranslate ctx (Hash a b) where
-  type SpecRep (Hash a b) = Integer
-
-  toSpecRep = pure . hashToInteger
-
-instance SpecTranslate ctx (SafeHash a) where
-  type SpecRep (SafeHash a) = Agda.DataHash
-
-  toSpecRep = toSpecRep . extractHash
-
-instance
-  ( SpecRep DataHash ~ Agda.DataHash
-  , Era era
-  ) =>
-  SpecTranslate ctx (BinaryData era)
-  where
-  type SpecRep (BinaryData era) = Agda.DataHash
-
-  toSpecRep = toSpecRep . hashBinaryData
-
-instance Era era => SpecTranslate ctx (Datum era) where
-  type SpecRep (Datum era) = Maybe (Either Agda.Datum Agda.DataHash)
-
-  toSpecRep NoDatum = pure Nothing
-  toSpecRep (Datum d) = Just . Left <$> toSpecRep d
-  toSpecRep (DatumHash h) = Just . Right <$> toSpecRep h
 
 instance
   ( AlonzoEraScript era
@@ -227,8 +153,6 @@ instance
     script' <- toSpecRep script
     pure (addr', (val', (datum', script')))
 
-deriving instance SpecTranslate ctx Coin
-
 instance
   ( SpecTranslate ctx (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
@@ -236,33 +160,8 @@ instance
   SpecTranslate ctx (UTxO era)
   where
   type SpecRep (UTxO era) = SpecRep (Map TxIn (TxOut era))
+
   toSpecRep (UTxO m) = toSpecRep m
-
-deriving instance SpecTranslate ctx SlotNo
-
-deriving instance SpecTranslate ctx EpochNo
-
-deriving instance SpecTranslate ctx EpochInterval
-
-instance SpecTranslate ctx ProtVer where
-  type SpecRep ProtVer = (Integer, Integer)
-
-  toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
-
-instance SpecTranslate ctx CostModels where
-  type SpecRep CostModels = ()
-
-  toSpecRep _ = pure ()
-
-instance SpecTranslate ctx Prices where
-  type SpecRep Prices = ()
-
-  toSpecRep _ = pure ()
-
-instance SpecTranslate ctx ExUnits where
-  type SpecRep ExUnits = Agda.ExUnits
-
-  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
 
 deriving instance SpecTranslate ctx OrdExUnits
 
@@ -359,53 +258,10 @@ instance
 
     pure Agda.MkPParams {..}
 
-instance
-  SpecTranslate ctx (PParamsHKD Identity era) =>
-  SpecTranslate ctx (PParams era)
-  where
-  type SpecRep (PParams era) = SpecRep (PParamsHKD Identity era)
-
-  toSpecRep (PParams x) = toSpecRep x
-
 instance SpecTranslate ctx ValidityInterval where
   type SpecRep ValidityInterval = (Maybe Integer, Maybe Integer)
 
   toSpecRep (ValidityInterval lo hi) = toSpecRep (lo, hi)
-
-instance SpecTranslate ctx (KeyHash r) where
-  type SpecRep (KeyHash r) = Integer
-
-  toSpecRep (KeyHash h) = toSpecRep h
-
-vkeyToInteger :: VKey kd -> Integer
-vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
-
-vkeyFromInteger :: Integer -> Maybe (VKey kd)
-vkeyFromInteger = fmap VKey . rawDeserialiseVerKeyDSIGN . naturalToBytes 32 . fromInteger
-
-signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
-signatureToInteger = toInteger . bytesToNatural . rawSerialiseSigDSIGN
-
-signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
-signatureFromInteger = rawDeserialiseSigDSIGN . naturalToBytes 64 . fromInteger
-
-instance SpecTranslate ctx (VKey k) where
-  type SpecRep (VKey k) = Agda.HSVKey
-
-  toSpecRep x = do
-    let hvkVKey = vkeyToInteger x
-    hvkStoredHash <- toSpecRep (hashVerKeyDSIGN @_ @ADDRHASH $ unVKey x)
-    pure Agda.MkHSVKey {..}
-
-instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
-  type SpecRep (SignedDSIGN v a) = Integer
-
-  toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
-
-instance SpecTranslate ctx (WitVKey k) where
-  type SpecRep (WitVKey k) = (SpecRep (VKey k), Integer)
-
-  toSpecRep (WitVKey vk sk) = toSpecRep (vk, sk)
 
 instance Era era => SpecTranslate ctx (TxDats era) where
   type SpecRep (TxDats era) = Agda.HSSet Agda.Datum
@@ -431,11 +287,6 @@ instance SpecTranslate ctx (ConwayPlutusPurpose AsIx era) where
     ConwayRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
     ConwayVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
     ConwayProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
-
-instance Era era => SpecTranslate ctx (Data era) where
-  type SpecRep (Data era) = Agda.DataHash
-
-  toSpecRep = toSpecRep . hashAnnotated
 
 instance
   ( AlonzoEraScript era
@@ -474,27 +325,6 @@ instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate ctx ScriptHash where
-  type SpecRep ScriptHash = Integer
-
-  toSpecRep (ScriptHash h) = toSpecRep h
-
-instance SpecTranslate ctx (Credential k) where
-  type SpecRep (Credential k) = Agda.Credential
-
-  toSpecRep (KeyHashObj h) = Agda.KeyHashObj <$> toSpecRep h
-  toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
-
-instance SpecTranslate ctx Network where
-  type SpecRep Network = Integer
-
-  toSpecRep = pure . fromIntegral . fromEnum
-
-instance SpecTranslate ctx RewardAccount where
-  type SpecRep RewardAccount = Agda.RwdAddr
-
-  toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
-
 instance SpecTranslate ctx PoolParams where
   type SpecRep PoolParams = Agda.StakePoolParams
 
@@ -521,20 +351,10 @@ instance SpecTranslate ctx Anchor where
   type SpecRep Anchor = Agda.Anchor
   toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep url <*> toSpecRep h
 
-instance SpecTranslate ctx TxId where
-  type SpecRep TxId = Agda.TxId
-
-  toSpecRep (TxId x) = toSpecRep x
-
 instance SpecTranslate ctx Withdrawals where
   type SpecRep Withdrawals = Agda.Wdrl
 
   toSpecRep (Withdrawals w) = toSpecRep w
-
-instance SpecTranslate ctx TxAuxDataHash where
-  type SpecRep TxAuxDataHash = Agda.DataHash
-
-  toSpecRep (TxAuxDataHash x) = toSpecRep x
 
 instance SpecTranslate ctx IsValid where
   type SpecRep IsValid = Bool
@@ -670,14 +490,6 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
     pure Agda.MkPParamsUpdate {..}
 
 instance
-  SpecTranslate ctx (PParamsHKD StrictMaybe era) =>
-  SpecTranslate ctx (PParamsUpdate era)
-  where
-  type SpecRep (PParamsUpdate era) = SpecRep (PParamsHKD StrictMaybe era)
-
-  toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
-
-instance
   ( EraPParams era
   , SpecTranslate ctx (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
@@ -811,37 +623,6 @@ instance SpecTranslate ctx MaryValue where
 
   toSpecRep = toSpecRep . coin
 
-
-
-instance SpecTranslate ctx CommitteeAuthorization where
-  type
-    SpecRep CommitteeAuthorization =
-      SpecRep (Maybe (Credential 'HotCommitteeRole))
-
-  toSpecRep (CommitteeHotCredential c) = toSpecRep $ Just c
-  toSpecRep (CommitteeMemberResigned _) =
-    toSpecRep $
-      Nothing @(Credential 'HotCommitteeRole)
-
-instance SpecTranslate ctx (CommitteeState era) where
-  type
-    SpecRep (CommitteeState era) =
-      SpecRep (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
-
-  toSpecRep = toSpecRep . csCommitteeCreds
-
-instance SpecTranslate ctx IndividualPoolStake where
-  type SpecRep IndividualPoolStake = SpecRep Coin
-
-  toSpecRep (IndividualPoolStake _ c _) = toSpecRep c
-
-instance SpecTranslate ctx PoolDistr where
-  type SpecRep PoolDistr = Agda.HSMap Agda.VDeleg Agda.Coin
-
-  toSpecRep (PoolDistr ps _) = do
-    Agda.MkHSMap l <- toSpecRep ps
-    pure . Agda.MkHSMap $ first (Agda.CredVoter Agda.SPO . Agda.KeyHashObj) <$> l
-
 instance
   (Inject ctx Coin, ConwayEraAccounts era) =>
   SpecTranslate ctx (RatifyEnv era)
@@ -928,23 +709,3 @@ instance
   type SpecRep (EnactSignal era) = SpecRep (GovAction era)
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
-
-committeeCredentialToStrictMaybe ::
-  CommitteeAuthorization ->
-  StrictMaybe (Credential 'HotCommitteeRole)
-committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
-committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
-
--- HSMap utils
-
-unionsHSMap :: Ord k => [Agda.HSMap k v] -> Agda.HSMap k v
-unionsHSMap = Agda.MkHSMap . sortOn fst . nubOrdOn fst . foldr' (\(Agda.MkHSMap x) y -> x <> y) []
-
-unionHSMap :: Ord k => Agda.HSMap k v -> Agda.HSMap k v -> Agda.HSMap k v
-unionHSMap x y = unionsHSMap [x, y]
-
-mapHSMapKey :: (k -> l) -> Agda.HSMap k v -> Agda.HSMap l v
-mapHSMapKey f (Agda.MkHSMap l) = Agda.MkHSMap $ first f <$> l
-
-bimapMHSMap :: Applicative m => (k -> m k') -> (v -> m v') -> Agda.HSMap k v -> m (Agda.HSMap k' v')
-bimapMHSMap f g (Agda.MkHSMap m) = Agda.MkHSMap <$> traverse (bimapM f g) m
