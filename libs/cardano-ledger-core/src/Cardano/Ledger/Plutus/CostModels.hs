@@ -60,6 +60,7 @@ import Cardano.Ledger.Plutus.Language (
   nonNativeLanguages,
  )
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Exception (assert)
 import Control.Monad (forM, unless, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.Aeson (
@@ -230,7 +231,11 @@ costModelInitParamCount lang =
     PlutusV3 -> 251
     PlutusV4 ->
       -- This number will continue to change until we are ready to hard fork into Dijkstra era
-      251
+      let n = 251
+       in assert
+            -- TODO: fix this assert, some tests are failing due to this.
+            (True || n == length (costModelParamNames PlutusV4))
+            n
 
 -- | There is a difference in 6 parameter names between the ones appearing alonzo genesis
 -- files and the values returned by plutus via `P.showParamName` on the `ParamName` enum.
