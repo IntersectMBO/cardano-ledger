@@ -1350,7 +1350,8 @@ passNEpochs ::
   ImpTestM era ()
 passNEpochs n =
   impAnn ("Passing " <> show n <> " epochs") $
-    traverse_ (\i -> impAnn ("Passing epoch (" <> show i <> ")") $ passEpoch) ([1 .. n] :: [Natural])
+    forM_ ([1 .. n] :: [Natural]) $ \i ->
+      impAnn ("Passing epoch (" <> show i <> ")") $ passEpoch
 
 -- | Runs the TICK rule until the `n` epochs are passed, running the `checks`
 -- each time.
