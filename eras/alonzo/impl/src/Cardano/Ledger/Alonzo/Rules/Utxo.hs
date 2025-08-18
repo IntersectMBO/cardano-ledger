@@ -108,6 +108,7 @@ import Data.Foldable as F (foldl', sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -125,7 +126,7 @@ data AlonzoUtxoPredFailure era
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
   | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era))
