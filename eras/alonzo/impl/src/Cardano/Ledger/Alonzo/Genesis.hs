@@ -50,7 +50,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Control.DeepSeq (NFData)
+import Cardano.Ledger.Plutus.CostModels (parseCostModels)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -63,7 +63,7 @@ newtype AlonzoGenesis = AlonzoGenesisWrapper
   { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
   }
   deriving stock (Eq, Generic)
-  deriving newtype (Show, NoThunks, NFData)
+  deriving newtype (Show, NoThunks)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
 
 pattern AlonzoGenesis ::
@@ -171,7 +171,7 @@ instance ToCBOR AlonzoGenesis where
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     agCoinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    agCostModels <- o .: "costModels"
+    agCostModels <- parseCostModels False =<< o .: "costModels"
     agPrices <- o .: "executionPrices"
     agMaxTxExUnits <- o .: "maxTxExUnits"
     agMaxBlockExUnits <- o .: "maxBlockExUnits"

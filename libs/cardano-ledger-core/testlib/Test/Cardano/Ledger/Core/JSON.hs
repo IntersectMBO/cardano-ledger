@@ -66,15 +66,15 @@ roundTripJsonEraSpec =
 
 goldenJsonPParamsSpec ::
   forall era.
-  EraPParams era =>
+  (HasCallStack, EraPParams era) =>
   SpecWith FilePath
 goldenJsonPParamsSpec =
-  it "Golden JSON specs for PParams " $
+  it "Golden JSON specs for PParams" $
     eitherDecodeFileStrict @(PParams era) >=> expectRightDeepExpr_
 
 goldenJsonPParamsUpdateSpec ::
   forall era.
-  EraTest era =>
+  (HasCallStack, EraTest era) =>
   SpecWith FilePath
 goldenJsonPParamsUpdateSpec =
   it "Golden JSON specs for PParamsUpdate" $ \file -> do

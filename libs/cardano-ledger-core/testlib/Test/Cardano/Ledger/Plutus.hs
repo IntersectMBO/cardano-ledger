@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Plutus (
   PlutusArgs (..),
@@ -32,7 +31,7 @@ import Cardano.Ledger.Binary.Plain (decodeFullFromHexText)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
-  costModelParamsCount,
+  costModelInitParamCount,
   getCostModelEvaluationContext,
   mkCostModel,
   mkCostModels,
@@ -62,7 +61,7 @@ import Test.Cardano.Ledger.Plutus.ScriptTestContext (
 
 -- | Construct a test cost model where all parameters are set to the same value
 mkCostModelConst :: HasCallStack => Language -> Int64 -> CostModel
-mkCostModelConst lang = mkCostModel' lang . replicate (costModelParamsCount lang)
+mkCostModelConst lang = mkCostModel' lang . replicate (costModelInitParamCount lang)
 
 mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> CostModel
 mkCostModel' lang params =
