@@ -133,22 +133,6 @@
         "type": "github"
       }
     },
-    "constrained-generators": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1752890418,
-        "narHash": "sha256-HjRCWK+3uTZBPLkpxr7oDlZe2W5kf/5s32XzXPdi6Go=",
-        "owner": "input-output-hk",
-        "repo": "constrained-generators",
-        "rev": "45559e07fe1651ddd257f2a1215dfd65e30a963f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "constrained-generators",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -767,7 +751,6 @@
       "inputs": {
         "CHaP": "CHaP",
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
-        "constrained-generators": "constrained-generators",
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "formal-ledger-specifications": "formal-ledger-specifications",

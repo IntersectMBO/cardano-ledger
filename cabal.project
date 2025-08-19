@@ -21,6 +21,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/constrained-generators.git
+  --sha256: sha256-HjRCWK+3uTZBPLkpxr7oDlZe2W5kf/5s32XzXPdi6Go=
   tag: 45559e07fe1651ddd257f2a1215dfd65e30a963f
 
 -- NOTE: If you would like to update the above,
