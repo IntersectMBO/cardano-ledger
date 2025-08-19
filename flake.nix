@@ -35,11 +35,6 @@
 
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
 
-    constrained-generators = {
-      url = "github:input-output-hk/constrained-generators";
-      flake = false;
-    };
-
     formal-ledger-specifications = {
       url = "github:IntersectMBO/formal-ledger-specifications";
       flake = false;
@@ -92,7 +87,6 @@
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
             "https://github.com/IntersectMBO/formal-ledger-specifications.git" = inputs.formal-ledger-specifications;
-            "https://github.com/input-output-hk/constrained-generators.git" = inputs.constrained-generators;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
