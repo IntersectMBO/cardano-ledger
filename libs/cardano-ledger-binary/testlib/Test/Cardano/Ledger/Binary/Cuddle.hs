@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +14,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
   writeSpec,
+  huddleRoundTripArbitraryValidate,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -22,10 +24,13 @@ import Cardano.Ledger.Binary (
   Version,
   decodeFullAnnotator,
   decodeFullDecoder,
+  serialize',
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
+import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR')
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
@@ -36,12 +41,13 @@ import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Data.Data (Proxy (..))
-import Data.Foldable (traverse_)
+import Data.Foldable (Foldable (..), traverse_)
 import Data.Functor.Identity (Identity)
 import Data.List (unfoldr)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty))
+import Prettyprinter (Pretty (pretty), vsep)
 import Prettyprinter.Render.Text (hPutDoc)
 import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
@@ -57,13 +63,15 @@ import Test.Hspec (
   Spec,
   SpecWith,
   beforeAll,
+  describe,
   expectationFailure,
   it,
   shouldBe,
  )
 import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
-import Test.QuickCheck (Args (replay))
+import Test.QuickCheck (Arbitrary (..), Args (replay), Testable (..))
 import Test.QuickCheck.Random (QCGen, mkQCGen)
+import Text.Pretty.Simple (pShow)
 
 data CuddleData = CuddleData
   { cddl :: !(Cuddle.CTreeRoot' Identity Cuddle.MonoRef)
@@ -109,10 +117,11 @@ huddleRoundTripCborSpec ::
 huddleRoundTripCborSpec version ruleName =
   let lbl = label $ Proxy @a
       trip = cborTrip @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-        \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
-            roundTripExample lbl version version trip
+   in describe "Generate bytestring from CDDL and decode/encode" $
+        it (T.unpack ruleName <> ": " <> T.unpack lbl) $
+          \cddlData ->
+            withGenTerm cddlData (Cuddle.Name ruleName mempty) $
+              roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
   forall a.
@@ -156,7 +165,7 @@ withGenTerm cd n withTerm = Seeded $ \gen ->
 -- * Decoded successfully into a Haskell type using the decoder in `Trip` and the version
 --   supplied
 --
--- * When reencoded conforms produces a valid `FlatTerm`
+-- * When reencoded produces a valid `FlatTerm`
 --
 -- * When decoded again from the bytes produced by the encoder matches the type exactly
 --   when it was decoded from random bytes
@@ -225,6 +234,49 @@ cddlFailure encoding err =
       , show err
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
+
+huddleRoundTripArbitraryValidate ::
+  forall a.
+  ( DecCBOR a
+  , EncCBOR a
+  , Arbitrary a
+  ) =>
+  Version ->
+  T.Text ->
+  SpecWith CuddleData
+huddleRoundTripArbitraryValidate version ruleName =
+  let lbl = label $ Proxy @a
+   in describe "Encode an arbitrary value and check against CDDL"
+        . it (T.unpack ruleName <> ": " <> T.unpack lbl)
+        $ \CuddleData {cddl} -> property $ do
+          val <- arbitrary @a
+          let
+            bs = serialize' version val
+            res = validateCBOR' bs (Name ruleName mempty) cddl
+          pure $ case res of
+            CBORTermResult _ (Valid _) -> pure ()
+            CBORTermResult term err ->
+              expectationFailure $
+                "CBOR Validation failed\nTerm:\n" <> LT.unpack (pShow term) <> "\nError:\n" <> show errMsg
+              where
+                errMsg = case err of
+                  ChoiceFail rule _ alternativeResults ->
+                    vsep $
+                      [ "ChoiceFail when trying rule:"
+                      , pretty $ pShow rule
+                      , "====="
+                      ]
+                        <> fmap prettyAlternative (toList alternativeResults)
+                    where
+                      prettyAlternative (r, s) =
+                        vsep
+                          [ "Tried rule"
+                          , pretty $ pShow r
+                          , "Result:"
+                          , pretty $ pShow s
+                          , "====="
+                          ]
+                  _ -> pretty $ pShow err
 
 --------------------------------------------------------------------------------
 -- Writing specs to a file
