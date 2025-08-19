@@ -26,6 +26,7 @@ import Test.Cardano.Ledger.Binary.Cddl (
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
+  huddleRoundTripArbitraryValidate,
   huddleRoundTripCborSpec,
   specWithHuddle,
  )
@@ -68,6 +69,7 @@ spec =
 
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
       huddleRoundTripCborSpec @Addr v "address"
+      huddleRoundTripArbitraryValidate @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @RewardAccount v "reward_account"
