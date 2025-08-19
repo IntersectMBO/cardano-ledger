@@ -257,8 +257,7 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 
 ### To build the Haskell code from the Agda ledger spec
 
-See [Build the spec using nix-build](https://github.com/IntersectMBO/formal-ledger-specifications/tree/master?tab=readme-ov-file#build-the-spec-using-nix-build)
-and [Contributing](https://github.com/IntersectMBO/formal-ledger-specifications/blob/master/CONTRIBUTING.md)
+See [Contributing](https://github.com/IntersectMBO/formal-ledger-specifications/blob/master/CONTRIBUTING.md)
 in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications).
 
 ### To update the referenced Agda ledger spec
