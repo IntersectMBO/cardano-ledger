@@ -180,6 +180,7 @@ library testlib
     Test.Cardano.Ledger.Core.Rational
     Test.Cardano.Ledger.Core.Utils
     Test.Cardano.Ledger.Era
+    Test.Cardano.Ledger.Era.Spec
     Test.Cardano.Ledger.Imp.Common
     Test.Cardano.Ledger.ImpTest
     Test.Cardano.Ledger.Plutus
@@ -221,6 +222,7 @@ library testlib
     cuddle >=0.4,
     data-default,
     deepseq,
+    filepath,
     generic-random,
     genvalidity,
     hedgehog-quickcheck,

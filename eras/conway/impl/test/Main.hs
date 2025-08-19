@@ -7,6 +7,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
+import Test.Cardano.Ledger.Conway.Era.Spec (conwayEraSpec)
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
@@ -17,6 +18,7 @@ import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
 main = ledgerTestMain $ do
+  conwayEraSpec @ConwayEra
   describe "Conway era-generic" $ ConwaySpec.spec @ConwayEra
   describe "Conway era-specific" $ do
     GoldenTranslation.spec
