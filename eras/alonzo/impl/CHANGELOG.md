@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `NFData` instance for `AlonzoGenesis`
 * Add `reqSignerHashesTxBodyG`
 * Add `mkScriptIntegrity`
 * Changed the type of `hashScriptIntegrity`

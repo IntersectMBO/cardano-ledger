@@ -10,6 +10,9 @@
   * Replace `PoolParams` with `StatekPoolState` in `PState` and rename the fields and lenses.
     * `psStakePoolParams(L)` to `psStakePools(L)`, and
     * `psFutureStakePoolParams(L)` to `psFutureStakePools(L)`.
+* Add `mkGenesisWith`
+* Add `NFData` instance for `NoGenesis`
+* Require `Eq`, `Show`, `Typeable`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`, `NFData` for every `Genesis` type.
 * Add `HashHeader` (moved from `cardano-protocol-tpraos`)
 * Add `drepDepositCompactL`
 * Change the type of `drepDeposit` to `CompactForm Coin`
