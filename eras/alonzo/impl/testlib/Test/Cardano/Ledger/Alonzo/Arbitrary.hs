@@ -107,6 +107,7 @@ import Test.Cardano.Ledger.Core.Arbitrary (
   genValidAndUnknownCostModels,
   genValidCostModel,
   genValidCostModels,
+  genericShrinkMemo,
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
@@ -114,16 +115,20 @@ import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
 instance
   ( Arbitrary (AlonzoScript era)
   , AlonzoEraScript era
+  , NativeScript era ~ Timelock era
   ) =>
   Arbitrary (AlonzoTxAuxData era)
   where
   arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
+  shrink (AlonzoTxAuxData md tl lpb) =
+    [AlonzoTxAuxData md' tl' lpb | (md', tl') <- shrink (md, tl)]
 
 instance
   (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) =>
   Arbitrary (Redeemers era)
   where
   arbitrary = Redeemers <$> arbitrary
+  shrink = genericShrinkMemo
 
 genNonEmptyRedeemers ::
   (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) => Gen (Redeemers era)
@@ -144,6 +149,7 @@ instance
       <*> genScripts
       <*> arbitrary
       <*> arbitrary
+  shrink = genericShrinkMemo
 
 genScripts ::
   forall era.
@@ -155,6 +161,7 @@ genScripts = Map.fromElems (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 instance Era era => Arbitrary (TxDats era) where
   arbitrary = TxDats . Map.fromElems @[] hashData <$> arbitrary
+  shrink = genericShrinkMemo
 
 genNonEmptyTxDats :: Era era => Gen (TxDats era)
 genNonEmptyTxDats = TxDats . Map.fromElems @[] hashData <$> listOf1 arbitrary

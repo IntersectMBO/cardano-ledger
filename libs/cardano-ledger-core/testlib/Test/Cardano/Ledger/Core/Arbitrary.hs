@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genInsertDeleteRoundtripPtr,
   genInsertDeleteRoundtripSPool,
   genInsertDeleteRoundtripDRep,
+  genericShrinkMemo,
 
   -- * Plutus
   genValidAndUnknownCostModels,
@@ -83,6 +84,7 @@ import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
+import Cardano.Ledger.MemoBytes (Memoized (..), getMemoRawType, mkMemoizedEra)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
@@ -119,6 +121,7 @@ import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
 import Data.Word (Word16, Word64, Word8)
+import GHC.Generics (Generic (..))
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
@@ -129,6 +132,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
+import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
 maxDecimalsWord64 :: Int
@@ -348,7 +352,7 @@ instance Typeable kr => Arbitrary (WitVKey kr) where
   arbitrary = WitVKey <$> arbitrary <*> arbitrary
 
 instance Arbitrary ChainCode where
-  arbitrary = ChainCode <$> arbitrary
+  arbitrary = ChainCode <$> genByteString 32
 
 instance Arbitrary BootstrapWitness where
   arbitrary = do
@@ -357,6 +361,7 @@ instance Arbitrary BootstrapWitness where
     bwChainCode <- arbitrary
     bwAttributes <- arbitrary
     pure $ BootstrapWitness {bwKey, bwSignature, bwChainCode, bwAttributes}
+  shrink = genericShrink
 
 instance Arbitrary GenDelegPair where
   arbitrary = GenDelegPair <$> arbitrary <*> arbitrary
@@ -968,3 +973,15 @@ genCostModelValues lang = do
 
 instance Arbitrary (NoGenesis era) where
   arbitrary = pure NoGenesis
+
+genericShrinkMemo ::
+  forall era a.
+  ( Era era
+  , EncCBOR (RawType (a era))
+  , Memoized (a era)
+  , Generic (RawType (a era))
+  , RecursivelyShrink (Rep (RawType (a era)))
+  , GSubterms (Rep (RawType (a era))) (RawType (a era))
+  ) =>
+  a era -> [a era]
+genericShrinkMemo = fmap (mkMemoizedEra @era) . genericShrink . getMemoRawType
