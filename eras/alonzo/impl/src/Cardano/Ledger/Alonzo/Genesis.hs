@@ -51,6 +51,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Plutus.CostModels (parseCostModels)
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -63,7 +64,7 @@ newtype AlonzoGenesis = AlonzoGenesisWrapper
   { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
   }
   deriving stock (Eq, Generic)
-  deriving newtype (Show, NoThunks)
+  deriving newtype (Show, NoThunks, NFData)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
 
 pattern AlonzoGenesis ::
