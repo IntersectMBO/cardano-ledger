@@ -240,6 +240,7 @@ huddleRoundTripArbitraryValidate ::
   ( DecCBOR a
   , EncCBOR a
   , Arbitrary a
+  , Show a
   ) =>
   Version ->
   T.Text ->
@@ -248,12 +249,11 @@ huddleRoundTripArbitraryValidate version ruleName =
   let lbl = label $ Proxy @a
    in describe "Encode an arbitrary value and check against CDDL"
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
-        $ \CuddleData {cddl} -> property $ do
-          val <- arbitrary @a
+        $ \CuddleData {cddl} -> property $ \(val :: a) -> do
           let
             bs = serialize' version val
             res = validateCBOR' bs (Name ruleName mempty) cddl
-          pure $ case res of
+          case res of
             CBORTermResult _ (Valid _) -> pure ()
             CBORTermResult term err ->
               expectationFailure $
