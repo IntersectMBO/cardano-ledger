@@ -57,7 +57,7 @@ validCostModelProp = do
               ppuRes <- expectRight ppuDecoded
               ppuRes `shouldSatisfy` \ppu -> (validCm <$> ppu ^. ppuCostModelsL) == SJust True
   where
-    genValidCostModelEnc lang = genCostModelEncForLanguage lang (costModelParamsCount lang)
+    genValidCostModelEnc lang = genCostModelEncForLanguage lang (costModelInitParamCount lang)
     validCm cms =
       not (null (costModelsValid cms)) && null (costModelsUnknown cms)
 
@@ -84,7 +84,7 @@ underspecifiedCostModelProp = do
                   cmRes `shouldSatisfy` not . null . costModelsValid
   where
     genUnderspecifiedCostModelEnc lang = do
-      let validCount = costModelParamsCount lang
+      let validCount = costModelInitParamCount lang
       count <- choose (0, validCount - 1)
       genCostModelEncForLanguage lang count
 

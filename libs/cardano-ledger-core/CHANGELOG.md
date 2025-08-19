@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Deprecate `costModelParamsCount` in favor of `costModelInitParamCount`
+* Add `costModelInitParamNames`, `costModelInitParamCount`, `parseCostModelAsArray` and `parseCostModelAsMap`
 * Export `credToDRep` and `dRepToCred`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Move the `PoolParams` module to `Cardano.Ledger.State.StakePool` and export from there.

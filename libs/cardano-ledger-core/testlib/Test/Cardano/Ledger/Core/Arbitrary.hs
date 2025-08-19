@@ -86,7 +86,7 @@ import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), Wi
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
-  costModelParamsCount,
+  costModelInitParamCount,
   mkCostModel,
   mkCostModels,
   mkCostModelsLenient,
@@ -910,7 +910,7 @@ instance Arbitrary PV1.Data where
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (costModelParamsCount lang) arbitrary
+  newParamValues <- vectorOf (costModelInitParamCount lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     mkCostModel lang newParamValues
 
@@ -953,14 +953,14 @@ genUnknownCostModelValues = do
 genCostModelValues :: Language -> Gen (Word8, [Int64])
 genCostModelValues lang = do
   Positive sub <- arbitrary
-  (,) lang'
+  (,) langWord8
     <$> oneof
-      [ listAtLeast (costModelParamsCount lang) -- Valid Cost Model for known language
+      [ listAtLeast (costModelInitParamCount lang) -- Valid Cost Model for known language
       , take (tooFew sub) <$> arbitrary -- Invalid Cost Model for known language
       ]
   where
-    lang' = fromIntegral (fromEnum lang)
-    tooFew sub = costModelParamsCount lang - sub
+    langWord8 = fromIntegral (fromEnum lang)
+    tooFew sub = costModelInitParamCount lang - sub
     listAtLeast :: Int -> Gen [Int64]
     listAtLeast x = do
       NonNegative y <- arbitrary

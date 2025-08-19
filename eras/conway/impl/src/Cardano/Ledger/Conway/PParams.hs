@@ -135,8 +135,8 @@ import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   decodeCostModel,
   encodeCostModel,
-  mkCostModel,
   mkCostModels,
+  parseCostModelAsArray,
  )
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -1079,7 +1079,7 @@ instance FromJSON (UpgradeConwayPParams Identity) where
         <*> o .: "dRepDeposit"
         <*> o .: "dRepActivity"
         <*> o .: "minFeeRefScriptCostPerByte"
-        <*> (either (fail . show) pure . mkCostModel PlutusV3 =<< o .: "plutusV3CostModel")
+        <*> (parseCostModelAsArray False PlutusV3 =<< o .: "plutusV3CostModel")
 
 upgradeConwayPParams ::
   forall f.

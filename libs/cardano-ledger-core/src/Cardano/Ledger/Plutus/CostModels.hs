@@ -1,21 +1,13 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Plutus.CostModels (
@@ -33,12 +25,17 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelFromMap,
   costModelParamsCount,
   decodeCostModel,
+  costModelInitParamNames,
+  costModelInitParamCount,
+  parseCostModelAsMap,
+  parseCostModelAsArray,
 
   -- * Cost Models
   CostModels,
   mkCostModels,
   emptyCostModels,
   updateCostModels,
+  parseCostModels,
   decodeCostModelsLenient,
   decodeCostModelsFailing,
   costModelsValid,
@@ -63,9 +60,10 @@ import Cardano.Ledger.Plutus.Language (
   nonNativeLanguages,
  )
 import Control.DeepSeq (NFData (..), deepseq)
-import Control.Monad (forM, when)
+import Control.Monad (forM, unless, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.Aeson (
+  Array,
   FromJSON (..),
   Object,
   ToJSON (..),
@@ -137,28 +135,64 @@ instance NFData CostModel where
   rnf (CostModel lang cm ectx) = lang `deepseq` cm `deepseq` rnf ectx
 
 instance FromJSON CostModels where
-  parseJSON = withObject "CostModels" $ \o -> do
-    cms <- mapM (parseCostModel o) nonNativeLanguages
+  parseJSON = parseCostModels True
+
+parseCostModels ::
+  -- | Do not restrict number of parameters to the initial count and allow parsing of cost models
+  -- for unknown plutus versions.
+  Bool ->
+  Value ->
+  Parser CostModels
+parseCostModels isLenient =
+  withObject "CostModels" $ \o -> do
+    cms <- mapM (parseCostModel isLenient o) nonNativeLanguages
     let cmsMap = Map.fromList [(cmLanguage cm, cm) | Just cm <- cms]
-    unknown <- o .:? "Unknown" .!= mempty
-    unknownCostModels <- mkCostModelsLenient unknown
+    unknownCostModels <-
+      if isLenient
+        then do
+          unknown <- o .:? "Unknown" .!= mempty
+          mkCostModelsLenient unknown
+        else
+          pure mempty
     pure $ mkCostModels cmsMap <> unknownCostModels
 
--- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
--- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
--- integers representing the values of the map.  The expectation on this list of integers
--- is that they are sorted in the order given by the `ParamName` enum, so even though we
--- just have to pass the list to plutus, we still need to use the names of the parameters
--- in order to sort the list.  In new versions, we want to represent the costmodel
--- parameters directly as a list, so we can avoid this reordering.
-parseCostModel :: Object -> Language -> Parser (Maybe CostModel)
-parseCostModel o lang = do
+-- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does no longer
+-- require the map as a parameter to `mkEvaluationContext`, but the list of integers representing
+-- the values of the map.  The expectation on this list of integers is that they are sorted in the
+-- order given by the `ParamName` enum, so even though we just have to pass the list to plutus, we
+-- still need to use the names of the parameters in order to sort the list.  In new versions, we
+-- represent the costmodel parameters directly as a list, so we can avoid this reordering.
+parseCostModel :: Bool -> Object -> Language -> Parser (Maybe CostModel)
+parseCostModel isLenient o lang = do
   plutusCostModelValueMaybe <- o .:? fromString (show lang)
   forM plutusCostModelValueMaybe $ \plutusCostModelValue ->
     case plutusCostModelValue of
-      Object _ -> costModelFromMap lang =<< parseJSON plutusCostModelValue
-      Array _ -> validateCostModel lang =<< parseJSON plutusCostModelValue
+      Object m -> parseCostModelAsMap isLenient lang m
+      Array a -> parseCostModelAsArray isLenient lang a
       _ -> fail $ "Expected either an Array or an Object, but got: " ++ show plutusCostModelValue
+
+parseCostModelAsMap :: Bool -> Language -> Object -> Parser CostModel
+parseCostModelAsMap isLenient lang m = do
+  costModel <- costModelFromMap lang =<< parseJSON (Object m)
+  unless isLenient $ guardNumberOfParameters lang m
+  pure costModel
+
+parseCostModelAsArray :: Bool -> Language -> Array -> Parser CostModel
+parseCostModelAsArray isLenient lang a = do
+  costModel <- validateCostModel lang =<< parseJSON (Array a)
+  unless isLenient $ guardNumberOfParameters lang a
+  pure costModel
+
+guardNumberOfParameters :: (Foldable f, MonadFail m) => Language -> f a -> m ()
+guardNumberOfParameters lang ps =
+  let suppliedParameterCount = length ps
+      expectedParameterCount = costModelInitParamCount lang
+   in unless (suppliedParameterCount == expectedParameterCount) $
+        fail $
+          "Number of parameters supplied "
+            <> show suppliedParameterCount
+            <> " does not match the expected number of "
+            <> show expectedParameterCount
 
 costModelFromMap :: MonadFail m => Language -> Map Text Int64 -> m CostModel
 costModelFromMap lang cmMap =
@@ -166,7 +200,7 @@ costModelFromMap lang cmMap =
     validationToEither (traverse lookupFail paramNames)
   where
     header = "Cost model language: " ++ show lang
-    paramNames = costModelParamNames lang
+    paramNames = costModelInitParamNames lang
     lookupFail paramName =
       case Map.lookup paramName cmMap of
         Nothing -> failure $ "  Parameter name missing from cost model: " ++ show paramName
@@ -179,6 +213,24 @@ costModelToMap cm =
 costModelParamNames :: Language -> [Text]
 costModelParamNames PlutusV1 = plutusV1ParamNames
 costModelParamNames lang = plutusVXParamNames lang
+
+-- | List of parameter names as when they were introduced upon a hard fork to a specific era for a
+-- corresponding plutus version.
+costModelInitParamNames :: Language -> [Text]
+costModelInitParamNames lang = take (costModelInitParamCount lang) $ costModelParamNames lang
+
+-- | Number of `CostModel` parameters for a specified plutus version as when it was initially
+-- added. This is useful for genesis files, which shouldn't have the number of parameters vary over
+-- time.
+costModelInitParamCount :: Language -> Int
+costModelInitParamCount lang =
+  case lang of
+    PlutusV1 -> 166
+    PlutusV2 -> 175
+    PlutusV3 -> 251
+    PlutusV4 ->
+      -- This number will continue to change until we are ready to hard fork into Dijkstra era
+      251
 
 -- | There is a difference in 6 parameter names between the ones appearing alonzo genesis
 -- files and the values returned by plutus via `P.showParamName` on the `ParamName` enum.
@@ -264,6 +316,10 @@ costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
 costModelParamsCount PlutusV3 = 231
 costModelParamsCount PlutusV4 = 231
+{-# DEPRECATED
+  costModelParamsCount
+  "Deprecated in favor of `costModelInitParamCount`, since this function provided an incorrect value of 231 for PlutusV3, where it should have been 251"
+  #-}
 
 decodeCostModelLegacy :: Language -> Decoder s CostModel
 decodeCostModelLegacy lang = do
@@ -272,7 +328,7 @@ decodeCostModelLegacy lang = do
       "Legacy CostModel decoding is not supported for " ++ show lang ++ " language version"
   values <- decCBOR
   let numValues = length values
-      expectedNumValues = costModelParamsCount lang
+      expectedNumValues = costModelInitParamCount lang
   when (numValues /= expectedNumValues) $
     fail $
       "Expected array with "
