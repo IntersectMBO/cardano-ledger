@@ -32,6 +32,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
+import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -65,6 +66,8 @@ instance EraGenesis ConwayEra where
   type Genesis ConwayEra = ConwayGenesis
 
 instance NoThunks ConwayGenesis
+
+instance NFData ConwayGenesis
 
 -- | Genesis are always encoded with the version of era they are defined in.
 instance FromCBOR ConwayGenesis where

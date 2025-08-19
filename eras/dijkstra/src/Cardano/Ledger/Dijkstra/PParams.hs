@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -32,6 +33,7 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   NonZero,
   PositiveInterval,
@@ -59,7 +61,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, Key, ToJSON (..), withObject, (.:), (.=))
+import Data.Aeson (FromJSON, ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Data (Proxy (..))
 import Data.Default (Default (..))
@@ -240,12 +242,27 @@ deriving instance Eq (UpgradeDijkstraPParams Identity era)
 deriving instance Show (UpgradeDijkstraPParams Identity era)
 
 instance FromJSON (UpgradeDijkstraPParams Identity era) where
-  parseJSON = withObject "UpgradeDijkstraPParams" $ \o ->
-    UpgradeDijkstraPParams
-      <$> o .: "maxRefScriptSizePerBlock"
-      <*> o .: "maxRefScriptSizePerTx"
-      <*> o .: "refScriptCostStride"
-      <*> o .: "refScriptCostMultiplier"
+  parseJSON = withObject "UpgradeDijkstraPParams" $ \o -> do
+    udppMaxRefScriptSizePerBlock <- o .: "maxRefScriptSizePerBlock"
+    udppMaxRefScriptSizePerTx <- o .: "maxRefScriptSizePerTx"
+    udppRefScriptCostStride <- o .: "refScriptCostStride"
+    udppRefScriptCostMultiplier <- o .: "refScriptCostMultiplier"
+    pure UpgradeDijkstraPParams {..}
+
+instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
+  toKeyValuePairs udpp =
+    [ "maxRefScriptSizePerBlock" .= udppMaxRefScriptSizePerBlock udpp
+    , "maxRefScriptSizePerTx" .= udppMaxRefScriptSizePerTx udpp
+    , "refScriptCostStride" .= udppRefScriptCostStride udpp
+    , "refScriptCostMultiplier" .= udppRefScriptCostMultiplier udpp
+    ]
+
+deriving via
+  KeyValuePairs (UpgradeDijkstraPParams Identity era)
+  instance
+    ToJSON (UpgradeDijkstraPParams Identity era)
+
+instance NFData (UpgradeDijkstraPParams Identity era)
 
 instance NoThunks (UpgradeDijkstraPParams Identity era)
 
@@ -266,17 +283,6 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppMaxRefScriptSizePerTx
         !> To udppRefScriptCostStride
         !> To udppRefScriptCostMultiplier
-
-upgradeDijkstraPParamsHKDPairs :: UpgradeDijkstraPParams Identity era -> [(Key, Aeson.Value)]
-upgradeDijkstraPParamsHKDPairs UpgradeDijkstraPParams {..} =
-  [ ("maxRefScriptSizePerBlock", toJSON udppMaxRefScriptSizePerBlock)
-  , ("maxRefScriptSizePerTx", toJSON udppMaxRefScriptSizePerTx)
-  , ("refScriptCostStride", toJSON udppRefScriptCostStride)
-  , ("refScriptCostMultiplier", toJSON udppRefScriptCostMultiplier)
-  ]
-
-instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
-  toKeyValuePairs upp = uncurry (.=) <$> upgradeDijkstraPParamsHKDPairs upp
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
 emptyDijkstraUpgradePParamsUpdate = UpgradeDijkstraPParams SNothing SNothing SNothing SNothing

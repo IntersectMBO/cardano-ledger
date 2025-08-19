@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Add `NFData` for `ConwayGenesis`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
 * Better predicate failures for incorrect deposits and refunds.

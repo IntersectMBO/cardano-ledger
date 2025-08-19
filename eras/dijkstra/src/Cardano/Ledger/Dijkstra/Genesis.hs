@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -9,7 +10,7 @@ module Cardano.Ledger.Dijkstra.Genesis (
   DijkstraGenesis (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -21,34 +22,19 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams)
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Data.Aeson (FromJSON (..), ToJSON, Value (..), withObject)
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON)
 import Data.Functor.Identity (Identity)
 import GHC.Generics
 import NoThunks.Class (NoThunks)
 
--- TODO: Currently it is just a placeholder for all the new protocol parameters that will be added
--- in the Dijkstra era
-data DijkstraGenesis = DijkstraGenesis
-  { dgUpgradePParams :: !(UpgradeDijkstraPParams Identity DijkstraEra)
+newtype DijkstraGenesis = DijkstraGenesis
+  { dgUpgradePParams :: UpgradeDijkstraPParams Identity DijkstraEra
   }
-  deriving (Eq, Show, Generic)
-  deriving (ToJSON) via KeyValuePairs DijkstraGenesis
-
-instance FromJSON DijkstraGenesis where
-  parseJSON = withObject "DijkstraGenesis" $ \obj -> do
-    dgUpgradePParams <- parseJSON (Object obj)
-    pure DijkstraGenesis {..}
-
-instance NoThunks DijkstraGenesis
+  deriving (Eq, Show, Generic, NoThunks, ToJSON, FromJSON, ToKeyValuePairs, NFData)
 
 instance EraGenesis DijkstraEra where
   type Genesis DijkstraEra = DijkstraGenesis
-
--- TODO: Implement this and use for ToJSON instance
-instance ToKeyValuePairs DijkstraGenesis where
-  toKeyValuePairs dg@(DijkstraGenesis _) =
-    let DijkstraGenesis {..} = dg
-     in toKeyValuePairs dgUpgradePParams
 
 instance FromCBOR DijkstraGenesis where
   fromCBOR =
