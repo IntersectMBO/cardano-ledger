@@ -67,31 +67,33 @@ hardforkTransition = do
   TRC (_, epochState, newPv) <-
     judgmentContext
   tellEvent $ ConwayHardForkEvent newPv
-  if pvMajor newPv == natVersion @10
-    then
-      pure $
-        epochState
-          & esLStateL . lsCertStateL %~ \certState ->
-            let accountsMap = certState ^. certDStateL . accountsL . accountsMapL
-                dReps =
-                  -- Reset all delegations in order to remove any inconsistencies
-                  -- Delegations will be reset accordingly below.
-                  Map.map (\dRepState -> dRepState {drepDelegs = Set.empty}) $
-                    certState ^. certVStateL . vsDRepsL
-                (dRepsWithDelegations, accountsWithoutUnknownDRepDelegations) =
-                  Map.mapAccumWithKey adjustDelegations dReps accountsMap
-                adjustDelegations ds stakeCred accountState =
-                  case accountState ^. dRepDelegationAccountStateL of
-                    Just (DRepCredential dRep) ->
-                      let addDelegation _ dRepState =
-                            Just $ dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
-                       in case Map.updateLookupWithKey addDelegation dRep ds of
-                            (Nothing, _) -> (ds, accountState & dRepDelegationAccountStateL .~ Nothing)
-                            (Just _, ds') -> (ds', accountState)
-                    _ -> (ds, accountState)
-             in certState
-                  -- Remove dangling delegations to non-existent DReps:
-                  & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
-                  -- Populate DRep delegations with delegatees
-                  & certVStateL . vsDRepsL .~ dRepsWithDelegations
-    else pure epochState
+  let update
+        | pvMajor newPv == natVersion @10 =
+            esLStateL . lsCertStateL %~ updateDRepDelegations
+        | otherwise = id
+  pure $ update epochState
+
+updateDRepDelegations :: ConwayEraCertState era => CertState era -> CertState era
+updateDRepDelegations certState =
+  let accountsMap = certState ^. certDStateL . accountsL . accountsMapL
+      dReps =
+        -- Reset all delegations in order to remove any inconsistencies
+        -- Delegations will be reset accordingly below.
+        Map.map (\dRepState -> dRepState {drepDelegs = Set.empty}) $
+          certState ^. certVStateL . vsDRepsL
+      (dRepsWithDelegations, accountsWithoutUnknownDRepDelegations) =
+        Map.mapAccumWithKey adjustDelegations dReps accountsMap
+      adjustDelegations ds stakeCred accountState =
+        case accountState ^. dRepDelegationAccountStateL of
+          Just (DRepCredential dRep) ->
+            let addDelegation _ dRepState =
+                  Just $ dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
+             in case Map.updateLookupWithKey addDelegation dRep ds of
+                  (Nothing, _) -> (ds, accountState & dRepDelegationAccountStateL .~ Nothing)
+                  (Just _, ds') -> (ds', accountState)
+          _ -> (ds, accountState)
+   in certState
+        -- Remove dangling delegations to non-existent DReps:
+        & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
+        -- Populate DRep delegations with delegatees
+        & certVStateL . vsDRepsL .~ dRepsWithDelegations
