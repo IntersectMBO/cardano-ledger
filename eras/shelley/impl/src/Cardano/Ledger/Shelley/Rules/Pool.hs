@@ -249,37 +249,37 @@ poolDelegationTransition = do
               { mismatchSupplied = ppCost
               , mismatchExpected = minPoolCost
               }
-      let mbStakePoolState = Map.lookup ppId psStakePools
-      let hasMatchingVRF = ((^. spsVrfL) <$> mbStakePoolState) == Just ppVrf
-      when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-        -- if the VRF key is not associated with this pool (either because the pool is not registered
-        -- or because the VRF key is different from the one registered for this pool),
-        -- then we check that this VRF key is not already in use
-        hasMatchingVRF
-          || Set.notMember ppVrf psVRFKeyHashes
-            ?! VRFKeyHashAlreadyRegistered ppId ppVrf
-      case mbStakePoolState of
+      case Map.lookup ppId psStakePools of
+        -- register new, Pool-Reg
         Nothing -> do
-          -- register new, Pool-Reg
+          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+            Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+          let updateVRFKeyHash
+                | hardforkConwayDisallowDuplicatedVRFKeys pv = Set.insert ppVrf
+                | otherwise = id
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
               ps
                 & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
-                & psVRFKeyHashesL %~ Set.insert ppVrf
-        Just _ -> do
-          -- re-register Pool
-
-          -- If a pool re-registers with a fresh VRF, we have to add it to the list,
-          -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
-          -- which we can retrieve from futureStakePools. We first delete and then insert the new one,
-          -- so in case they are the same, it will still end up in the set.
-          let updateVRFs
-                | hasMatchingVRF = id
-                | otherwise = psVRFKeyHashesL %~ (Set.insert ppVrf . withoutFutureVrf)
-                where
-                  withoutFutureVrf s = maybe s (`Set.delete` s) futureVrf
-                  futureVrf = (^. spsVrfL) <$> Map.lookup ppId psFutureStakePools
+                & psVRFKeyHashesL %~ updateVRFKeyHash
+        -- re-register Pool
+        Just stakePoolState -> do
+          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+            ppVrf == stakePoolState ^. spsVrfL
+              || Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+          let updateFutureVRFKeyHash
+                | hardforkConwayDisallowDuplicatedVRFKeys pv =
+                    -- If a pool re-registers with a fresh VRF, we have to add it to the list,
+                    -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
+                    -- which we retrieve from futureStakePools.
+                    case Map.lookup ppId psFutureStakePools of
+                      Nothing -> Set.insert ppVrf
+                      Just futureStakePoolState
+                        | futureStakePoolState ^. spsVrfL /= ppVrf ->
+                            Set.insert ppVrf . Set.delete (futureStakePoolState ^. spsVrfL)
+                        | otherwise -> id
+                | otherwise = id
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
           -- to the Future pool params (if it is not there already), and overriding the
@@ -294,7 +294,7 @@ poolDelegationTransition = do
             ps
               & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
               & psRetiringL %~ Map.delete ppId
-              & updateVRFs
+              & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool ppId e -> do
       Map.member ppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL ppId
       let maxEpoch = pp ^. ppEMaxL

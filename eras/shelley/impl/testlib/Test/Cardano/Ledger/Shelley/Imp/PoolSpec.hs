@@ -343,7 +343,8 @@ spec = describe "POOL" $ do
         ("Expected 'retiring' status of: " <> show poolKh <> " to be: " <> show isRetiring)
         $ Map.member poolKh retiring == isRetiring
     expectVRFs vrfs = do
-      (^. psVRFKeyHashesL) <$> getPState `shouldReturn` vrfs
+      whenMajorVersionAtLeast @11 $
+        psVRFKeyHashes <$> getPState `shouldReturn` vrfs
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $ pps & ppVrfL .~ vrf
