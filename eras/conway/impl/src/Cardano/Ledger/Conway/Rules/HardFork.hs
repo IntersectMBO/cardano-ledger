@@ -70,6 +70,8 @@ hardforkTransition = do
   let update
         | pvMajor newPv == natVersion @10 =
             esLStateL . lsCertStateL %~ updateDRepDelegations
+        | pvMajor newPv == natVersion @11 =
+            esLStateL . lsCertStateL . certPStateL %~ populateVRFKeyHashes
         | otherwise = id
   pure $ update epochState
 
@@ -97,3 +99,11 @@ updateDRepDelegations certState =
         & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
         -- Populate DRep delegations with delegatees
         & certVStateL . vsDRepsL .~ dRepsWithDelegations
+
+populateVRFKeyHashes :: PState era -> PState era
+populateVRFKeyHashes pState =
+  let allVRFKeyHashes =
+        spsVrf
+          <$> Map.elems (pState ^. psStakePoolsL)
+            <> Map.elems (pState ^. psFutureStakePoolsL)
+   in pState & psVRFKeyHashesL .~ Set.fromList allVRFKeyHashes

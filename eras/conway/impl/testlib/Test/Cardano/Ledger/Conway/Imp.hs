@@ -53,6 +53,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
+import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HardFork
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
@@ -139,6 +140,7 @@ conwaySpec = do
   describe "GOV" Gov.spec
   describe "GOVCERT" GovCert.spec
   describe "LEDGER" Ledger.spec
+  describe "HARDFORK" HardFork.spec
   describe "RATIFY" Ratify.spec
   describe "UTXO" Utxo.spec
   describe "UTXOS" Utxos.spec
