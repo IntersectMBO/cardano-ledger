@@ -299,6 +299,7 @@ govProceduresSpec ge@GovEnv {..} ps =
       knownDReps = Map.keysSet $ geCertState ^. certVStateL . vsDRepsL
       knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolsL
       knownCommitteeAuthorizations = authorizedHotCommitteeCredentials committeeState
+      maxVoters = sum [length knownCommitteeAuthorizations, length knownDReps, length knownStakePools]
       committeeVotableActionIds =
         actions (isCommitteeVotingAllowed geEpoch committeeState)
       drepVotableActionIds =
@@ -309,24 +310,26 @@ govProceduresSpec ge@GovEnv {..} ps =
    in constrained $ \govSignal ->
         match govSignal $ \votingProcs proposalProcs _certificates ->
           [ match votingProcs $ \votingProcsMap ->
-              forAll votingProcsMap $ \kvp ->
-                match kvp $ \voter mapActVote ->
-                  (caseOn voter)
-                    ( branch $ \committeeHotCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
-                        , member_ committeeHotCred $ lit knownCommitteeAuthorizations
-                        ]
-                    )
-                    ( branch $ \drepCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
-                        , member_ drepCred $ lit knownDReps
-                        ]
-                    )
-                    ( branch $ \poolKeyHash ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
-                        , member_ poolKeyHash $ lit knownStakePools
-                        ]
-                    )
+              [ assert $ sizeOf_ votingProcsMap <=. lit (toInteger maxVoters)
+              , forAll votingProcsMap $ \kvp ->
+                  match kvp $ \voter mapActVote ->
+                    (caseOn voter)
+                      ( branch $ \committeeHotCred ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                          , member_ committeeHotCred $ lit knownCommitteeAuthorizations
+                          ]
+                      )
+                      ( branch $ \drepCred ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                          , member_ drepCred $ lit knownDReps
+                          ]
+                      )
+                      ( branch $ \poolKeyHash ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                          , member_ poolKeyHash $ lit knownStakePools
+                          ]
+                      )
+              ]
           , forAll proposalProcs $ \proc ->
               match proc $ \deposit returnAddr govAction _ ->
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
