@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   toPlutusTxInfo,
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
@@ -74,7 +75,8 @@ genTranslationInstance ::
   TranslatableGen era =>
   Gen (TranslationInstance era)
 genTranslationInstance = do
-  protVer <- arbitrary
+  version <- choose (eraProtVerLow @era, eraProtVerHigh @era)
+  let protVer = ProtVer version 0
   supportedLanguage :: SupportedLanguage era <- arbitrary
   tx <- tgTx supportedLanguage
   utxo <- tgUtxo supportedLanguage tx

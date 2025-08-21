@@ -46,7 +46,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoEra, hardforkConwayTranslateUpperBoundForPlutusScripts)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
@@ -103,7 +103,7 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
       txOut <- transLookupTxOut ltiUTxO txIn
       pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
@@ -218,23 +218,14 @@ transValidityInterval ::
   forall proxy era a.
   Inject (AlonzoContextError era) a =>
   proxy era ->
-  ProtVer ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
   Either a PV1.POSIXTimeRange
-transValidityInterval _ protVer epochInfo systemStart = \case
+transValidityInterval _ epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
   ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
-  ValidityInterval SNothing (SJust i) -> do
-    t <- transSlotToPOSIXTime i
-    pure $
-      if hardforkConwayTranslateUpperBoundForPlutusScripts protVer
-        then
-          PV1.Interval
-            (PV1.LowerBound PV1.NegInf True)
-            (PV1.strictUpperBound t)
-        else PV1.to t
+  ValidityInterval SNothing (SJust i) -> PV1.to <$> transSlotToPOSIXTime i
   ValidityInterval (SJust i) (SJust j) -> do
     t1 <- transSlotToPOSIXTime i
     t2 <- transSlotToPOSIXTime j

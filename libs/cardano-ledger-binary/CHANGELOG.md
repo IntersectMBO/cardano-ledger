@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `Random` instance for `Version`.
 * Add `liftST`
 * Bump `MaxVersion` to `12`
 * Add `decodeFullFromHexText`
