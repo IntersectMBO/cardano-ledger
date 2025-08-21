@@ -35,6 +35,7 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownNat, natVal, type (<=))
 import NoThunks.Class (NoThunks)
+import System.Random (Random)
 
 --------------------------------------------------------------------------------
 -- Version
@@ -43,7 +44,7 @@ import NoThunks.Class (NoThunks)
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word64
-  deriving (Eq, Ord, Show, NFData, NoThunks, ToCBOR, ToJSON)
+  deriving (Eq, Ord, Show, NFData, NoThunks, ToCBOR, ToJSON, Random)
 
 -- | Minimum supported version
 type MinVersion = 0

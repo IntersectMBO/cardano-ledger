@@ -11,15 +11,14 @@ import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
-  EraPlutusContext,
   LedgerTxInfo (..),
   toPlutusTxInfo,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transValidityInterval)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValidityInterval)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
-import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -107,43 +106,17 @@ silentlyIgnore tx =
 
 -- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
 -- by returning close upper bound of the validaty interval.
-transVITimeUpperBoundIsClosed ::
-  forall era.
-  ( EraPlutusContext era
-  , BT.Inject (AlonzoContextError era) (ContextError era)
-  ) =>
-  Expectation
+transVITimeUpperBoundIsClosed :: Expectation
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-      pv = BT.ProtVer (eraProtVerLow @era) 0
-  case transValidityInterval (Proxy @era) pv ei ss interval of
-    Left (e :: ContextError era) ->
+  case transValidityInterval (Proxy @AlonzoEra) ei ss interval of
+    Left (e :: ContextError AlonzoEra) ->
       expectationFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
       t
         `shouldBe` PV1.Interval
           (PV1.LowerBound PV1.NegInf True)
           (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
-
--- | The test checks that since protocol version 9 'transVITime' works correctly,
--- by returning open upper bound of the validaty interval.
-transVITimeUpperBoundIsOpen ::
-  forall era.
-  ( EraPlutusContext era
-  , BT.Inject (AlonzoContextError era) (ContextError era)
-  ) =>
-  Expectation
-transVITimeUpperBoundIsOpen = do
-  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-      pv = BT.ProtVer (natVersion @9) 0
-  case transValidityInterval (Proxy @era) pv ei ss interval of
-    Left (e :: ContextError era) ->
-      expectationFailure $ "no translation error was expected, but got: " <> show e
-    Right t ->
-      t
-        `shouldBe` PV1.Interval
-          (PV1.LowerBound PV1.NegInf True)
-          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
 
 spec :: Spec
 spec = describe "txInfo translation" $ do
@@ -155,9 +128,7 @@ spec = describe "txInfo translation" $ do
       silentlyIgnore (txEx byronInput shelleyOutput)
   describe "transVITime" $ do
     it "validity interval's upper bound is closed when protocol < 9" $
-      transVITimeUpperBoundIsClosed @AlonzoEra
-    it "validity interval's upper bound is open when protocol >= 9" $
-      transVITimeUpperBoundIsOpen @AlonzoEra
+      transVITimeUpperBoundIsClosed
 
 genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

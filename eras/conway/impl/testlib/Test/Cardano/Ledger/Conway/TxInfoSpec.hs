@@ -10,14 +10,25 @@
 
 module Test.Cardano.Ledger.Conway.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, toPlutusTxCert)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (ContextError),
+  EraPlutusTxInfo,
+  toPlutusTxCert,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Conway.TxInfo (transValidityInterval)
 import Cardano.Ledger.Credential (StakeCredential)
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Slot
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Proxy (Proxy (..))
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Test.Cardano.Ledger.Common
@@ -54,6 +65,9 @@ spec = do
       expectDeposit coin $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
       expectDeposit coin $ transV10 $ UnRegDepositTxCert cred coin
       expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
+
+    it "validity interval's upper bound is open when protocol >= 9" $
+      transVITimeUpperBoundIsOpen
   where
     expectDeposit :: Coin -> PV3.TxCert -> IO ()
     expectDeposit (Coin c) =
@@ -71,3 +85,23 @@ spec = do
         txcert ->
           expectationFailure $
             "Deposit not expected, but found in: " <> show txcert
+
+-- | The test checks that since protocol version 9 'transVITime' works correctly,
+-- by returning open upper bound of the validaty interval.
+transVITimeUpperBoundIsOpen :: Expectation
+transVITimeUpperBoundIsOpen = do
+  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
+  case transValidityInterval (Proxy @ConwayEra) ei ss interval of
+    Left (e :: ContextError ConwayEra) ->
+      expectationFailure $ "no translation error was expected, but got: " <> show e
+    Right t ->
+      t
+        `shouldBe` PV1.Interval
+          (PV1.LowerBound PV1.NegInf True)
+          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
+
+ei :: EpochInfo (Either a)
+ei = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
+
+ss :: SystemStart
+ss = SystemStart $ posixSecondsToUTCTime 0
