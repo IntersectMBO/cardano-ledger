@@ -406,16 +406,16 @@ bigStep = 99999
 genMaxTxExUnits :: Gen ExUnits
 genMaxTxExUnits =
   ExUnits
-    -- Accommodate the maximum number of scripts in a transaction
-    <$> genNatural (10 * bigMem + 1) (20 * bigMem + 1)
-    <*> genNatural (10 * bigStep + 1) (20 * bigStep + 1)
+    -- Accommodate at least 20 of our scripts in a transaction
+    <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
+    <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
 
 genMaxBlockExUnits :: Gen ExUnits
 genMaxBlockExUnits =
   ExUnits
-    -- Accommodate the maximum number of scripts in all transactions in a block
-    <$> genNatural (60 * bigMem + 1) (100 * bigMem + 1)
-    <*> genNatural (60 * bigStep + 1) (100 * bigStep + 1)
+    -- Accommodate at least 20 of our transactions in a block
+    <$> genNatural (20 * 20 * bigMem + 1) (20 * 30 * bigMem + 1)
+    <*> genNatural (20 * 20 * bigStep + 1) (20 * 30 * bigStep + 1)
 
 instance EraGen AlonzoEra where
   genEraAuxiliaryData = genAux
