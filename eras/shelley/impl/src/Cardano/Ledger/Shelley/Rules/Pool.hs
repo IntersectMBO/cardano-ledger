@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.Era (
   ShelleyEra,
   ShelleyPOOL,
   hardforkAlonzoValidatePoolRewardAccountNetID,
+  hardforkConwayDisallowDuplicatedVRFKeys,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.State
@@ -67,6 +68,7 @@ import Control.State.Transition (
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -91,7 +93,8 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      (KeyHash 'StakePool) -- KeyHash which cannot be retired since it is not registered
+      -- | KeyHash which cannot be retired since it is not registered
+      (KeyHash 'StakePool)
   | StakePoolRetirementWrongEpochPOOL
       (Mismatch 'RelGT EpochNo)
       (Mismatch 'RelLTEQ EpochNo)
@@ -99,10 +102,18 @@ data ShelleyPoolPredFailure era
       (Mismatch 'RelGTEQ Coin)
   | WrongNetworkPOOL
       (Mismatch 'RelEQ Network)
-      (KeyHash 'StakePool) -- Stake Pool ID
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
   | PoolMedataHashTooBig
-      (KeyHash 'StakePool) -- Stake Pool ID
-      Int -- Size of the metadata hash
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
+      -- | Size of the metadata hash
+      Int
+  | VRFKeyHashAlreadyRegistered
+      -- | Stake Pool ID
+      (KeyHash 'StakePool)
+      -- | VRF key attempted to use, that has already been registered
+      (VRFVerKeyHash 'StakePoolVRF)
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra
@@ -149,6 +160,8 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
       encodeListLen 4 <> encCBOR (4 :: Word8) <> encCBOR expected <> encCBOR supplied <> encCBOR c
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
+    VRFKeyHashAlreadyRegistered a b ->
+      encodeListLen 3 <> encCBOR (6 :: Word8) <> encCBOR a <> encCBOR b
 
 -- `ShelleyPoolPredFailure` is used in Conway POOL rule, so we need to keep the serialization unchanged
 instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
@@ -181,6 +194,10 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         poolID <- decCBOR
         s <- decCBOR
         pure (3, PoolMedataHashTooBig poolID s)
+      6 -> do
+        poolID <- decCBOR
+        vrfKeyHash <- decCBOR
+        pure (3, VRFKeyHashAlreadyRegistered poolID vrfKeyHash)
       k -> invalidKey k
 
 poolDelegationTransition ::
@@ -198,12 +215,12 @@ poolDelegationTransition ::
 poolDelegationTransition = do
   TRC
     ( PoolEnv cEpoch pp
-      , ps@PState {psStakePools}
+      , ps@PState {psStakePools, psFutureStakePools, psVRFKeyHashes}
       , poolCert
       ) <-
     judgmentContext
   case poolCert of
-    RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
+    RegPool poolParams@PoolParams {ppId, ppVrf, ppRewardAccount, ppMetadata, ppCost} -> do
       let pv = pp ^. ppProtocolVersionL
       when (hardforkAlonzoValidatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
@@ -232,15 +249,37 @@ poolDelegationTransition = do
               { mismatchSupplied = ppCost
               , mismatchExpected = minPoolCost
               }
-
-      if not (Map.member ppId psStakePools)
-        then do
-          -- register new, Pool-Reg
+      case Map.lookup ppId psStakePools of
+        -- register new, Pool-Reg
+        Nothing -> do
+          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+            Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+          let updateVRFKeyHash
+                | hardforkConwayDisallowDuplicatedVRFKeys pv = Set.insert ppVrf
+                | otherwise = id
           tellEvent $ RegisterPool ppId
           pure $
             payPoolDeposit ppId pp $
-              ps & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
-        else do
+              ps
+                & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
+                & psVRFKeyHashesL %~ updateVRFKeyHash
+        -- re-register Pool
+        Just stakePoolState -> do
+          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+            ppVrf == stakePoolState ^. spsVrfL
+              || Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+          let updateFutureVRFKeyHash
+                | hardforkConwayDisallowDuplicatedVRFKeys pv =
+                    -- If a pool re-registers with a fresh VRF, we have to add it to the list,
+                    -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
+                    -- which we retrieve from futureStakePools.
+                    case Map.lookup ppId psFutureStakePools of
+                      Nothing -> Set.insert ppVrf
+                      Just futureStakePoolState
+                        | futureStakePoolState ^. spsVrfL /= ppVrf ->
+                            Set.insert ppVrf . Set.delete (futureStakePoolState ^. spsVrfL)
+                        | otherwise -> id
+                | otherwise = id
           tellEvent $ ReregisterPool ppId
           -- hk is already registered, so we want to reregister it. That means adding it
           -- to the Future pool params (if it is not there already), and overriding the
@@ -255,6 +294,7 @@ poolDelegationTransition = do
             ps
               & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
               & psRetiringL %~ Map.delete ppId
+              & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool ppId e -> do
       Map.member ppId psStakePools ?! StakePoolNotRegisteredOnKeyPOOL ppId
       let maxEpoch = pp ^. ppEMaxL

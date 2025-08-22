@@ -45,6 +45,7 @@ module Cardano.Ledger.State.CertState (
   psRetiringL,
   psDepositsL,
   psDepositsCompactL,
+  psVRFKeyHashesL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -87,6 +88,7 @@ import qualified Data.Foldable as F
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1)
@@ -225,7 +227,9 @@ lookupRewardDState DState {dsAccounts} cred = do
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
+  { psVRFKeyHashes :: !(Set (VRFVerKeyHash 'StakePoolVRF))
+  -- ^ VRF key hashes that have been registered via PoolParams
+  , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of current stake pools.
   , psFutureStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of future stake pools.
@@ -246,24 +250,26 @@ instance NoThunks (PState era)
 instance NFData (PState era)
 
 instance Era era => EncCBOR (PState era) where
-  encCBOR (PState a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  encCBOR (PState a b c d e) =
+    encodeListLen 5 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d <> encCBOR e
 
 instance DecShareCBOR (PState era) where
   type Share (PState era) = Interns (KeyHash 'StakePool)
-  decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
+  decSharePlusCBOR = decodeRecordNamedT "PState" (const 5) $ do
+    psVRFKeyHashes <- lift decCBOR
     psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psFutureStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    pure PState {psStakePools, psFutureStakePools, psRetiring, psDeposits}
+    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePools, psRetiring, psDeposits}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
 instance ToKeyValuePairs (PState era) where
   toKeyValuePairs PState {..} =
-    [ "stakePools" .= psStakePools
+    [ "vrfKeyHashes" .= psVRFKeyHashes
+    , "stakePools" .= psStakePools
     , "futureStakePools" .= psFutureStakePools
     , "retiring" .= psRetiring
     , "deposits" .= psDeposits
@@ -396,7 +402,7 @@ instance Default (Accounts era) => Default (DState era) where
 
 instance Default (PState era) where
   def =
-    PState Map.empty Map.empty Map.empty Map.empty
+    PState Set.empty Map.empty Map.empty Map.empty Map.empty
 
 -- ==========================================================
 -- Functions that handle Deposits
@@ -482,16 +488,19 @@ dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u}
 -- PState
 
 psStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
-psStakePoolsL = lens psStakePools (\ds u -> ds {psStakePools = u})
+psStakePoolsL = lens psStakePools (\ps u -> ps {psStakePools = u})
 
 psFutureStakePoolsL :: Lens' (PState era) (Map (KeyHash 'StakePool) StakePoolState)
-psFutureStakePoolsL = lens psFutureStakePools (\ds u -> ds {psFutureStakePools = u})
+psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools = u})
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
-psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
+psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
 psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
 psDepositsL = psDepositsCompactL . lens (fmap fromCompact) (\_ -> fmap compactCoinOrError)
 
 psDepositsCompactL :: Lens' (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
-psDepositsCompactL = lens psDeposits (\ds u -> ds {psDeposits = u})
+psDepositsCompactL = lens psDeposits (\ps u -> ps {psDeposits = u})
+
+psVRFKeyHashesL :: Lens' (PState era) (Set (VRFVerKeyHash 'StakePoolVRF))
+psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})

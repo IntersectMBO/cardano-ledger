@@ -44,7 +44,7 @@ pStateSpec ::
   WitUniv era ->
   Specification (PState era)
 pStateSpec univ = constrained $ \ps ->
-  match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
+  match ps $ \_ stakePoolParams futureStakePoolParams retiring deposits ->
     [ witness univ (dom_ stakePoolParams)
     , witness univ (rng_ stakePoolParams)
     , witness univ (dom_ futureStakePoolParams)

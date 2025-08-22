@@ -2,9 +2,12 @@
 
 ## 1.18.0.0
 
+* Add `psVRFKeyHashes` to `PState`
+* Add `psVRFKeyHashesL`
 * Deprecate `costModelParamsCount` in favor of `costModelInitParamCount`
 * Add `costModelInitParamNames`, `costModelInitParamCount`, `parseCostModelAsArray` and `parseCostModelAsMap`
 * Export `credToDRep` and `dRepToCred`
+* Add `ppVrfL`, `ppCostL`, `ppMetadataL`, `spsVrfL` to `StakePool` module
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
   * Move the `PoolParams` module to `Cardano.Ledger.State.StakePool` and export from there.
   * Add the `StakePoolState` data type to the new module.

@@ -672,7 +672,8 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-    pstate = PState (mkStakePoolState <$> pools) Map.empty Map.empty (fmap (const poolDeposit) pools)
+    pstate =
+      PState Set.empty (mkStakePoolState <$> pools) Map.empty Map.empty (fmap (const poolDeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
     pools = gsInitialPoolParams gstate

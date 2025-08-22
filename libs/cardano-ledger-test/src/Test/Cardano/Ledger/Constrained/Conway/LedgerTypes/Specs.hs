@@ -371,7 +371,7 @@ pStateSpec ::
   Term EpochNo ->
   Specification (PState era)
 pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
-  match pState $ \ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
+  match pState $ \_ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
     [ witness univ (dom_ stakePoolParams)
     , witness univ (rng_ stakePoolParams)
     , witness univ (dom_ futureStakePoolParams)

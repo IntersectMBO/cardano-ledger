@@ -48,6 +48,7 @@ import Control.State.Transition (
  )
 import Data.Default (Default, def)
 import Data.Foldable (fold)
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -128,6 +129,20 @@ poolReapTransition = do
   TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let
     ps0 = cs0 ^. certPStateL
+    -- find the set of VRF key hashes that are no longer relevant, since they have been overwritten
+    -- via pool re-registration
+    danglingVrfKeyHashes =
+      Set.fromList $
+        Map.elems $
+          Map.merge
+            Map.dropMissing
+            Map.dropMissing
+            ( Map.zipWithMaybeMatched $ \_ sps spsF ->
+                if sps ^. spsVrfL /= spsF ^. spsVrfL then Just (sps ^. spsVrfL) else Nothing
+            )
+            (ps0 ^. psStakePoolsL)
+            (ps0 ^. psFutureStakePoolsL)
+
     -- activate future stakePools
     ps =
       ps0
@@ -145,10 +160,20 @@ poolReapTransition = do
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     -- collect all accounts for stake pools that will retire
-    retiredStakePoolAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
-    retiredStakePoolAccounts = Map.map spsRewardAccount $ Map.restrictKeys (psStakePools ps) retired
-    retiredStakePoolAccountsWithRefund :: Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
-    retiredStakePoolAccountsWithRefund = Map.intersectionWith (,) retiredStakePoolAccounts retiringDeposits
+    retiredStakePoolAccountsWithVRFs ::
+      Map.Map (KeyHash 'StakePool) (RewardAccount, VRFVerKeyHash 'StakePoolVRF)
+    retiredStakePoolAccountsWithVRFs =
+      Map.map
+        (\sps -> (spsRewardAccount sps, spsVrf sps))
+        $ Map.restrictKeys (psStakePools ps) retired
+    retiredVRFs = foldMap (Set.singleton . snd) retiredStakePoolAccountsWithVRFs
+    retiredStakePoolAccountsWithRefund ::
+      Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
+    retiredStakePoolAccountsWithRefund =
+      Map.intersectionWith
+        (\(rewardAccount, _) coin -> (rewardAccount, coin))
+        retiredStakePoolAccountsWithVRFs
+        retiringDeposits
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
     accountRefunds =
@@ -192,6 +217,8 @@ poolReapTransition = do
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psDepositsCompactL .~ remainingDeposits
+          & certPStateL . psVRFKeyHashesL
+            %~ ((`Set.difference` retiredVRFs) . (`Set.difference` danglingVrfKeyHashes))
       )
 
 renderPoolReapViolation ::
