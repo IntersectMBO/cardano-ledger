@@ -52,6 +52,7 @@ conformanceHook ::
   forall rule era t.
   ( ShelleyEraImp era
   , ExecSpecRule rule era
+  , ToExpr (Event (EraRule rule era))
   ) =>
   Globals ->
   ExecContext rule era ->
@@ -78,6 +79,8 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
     logToExpr state
     logString "implSignal"
     logToExpr signal
+    logString "implStateOut"
+    logToExpr impRuleResult
     logString "specEnv"
     logToExpr specEnv
     logString "specState"
@@ -91,6 +94,7 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
         ctx
         (TRC (env, state, signal))
         (first (T.pack . show) impRuleResult)
+    logString "diffConformance:"
     logDoc $ diffConformance impResponse agdaResponse
     case (impResponse, agdaResponse) of
       (Right impRes, Right agdaRes)
@@ -145,6 +149,7 @@ _epochBoundaryConformanceHook ::
   ( ShelleyEraImp era
   , ExecSpecRule "NEWEPOCH" era
   , ExecContext "NEWEPOCH" era ~ ()
+  , ToExpr (Event (EraRule "NEWEPOCH" era))
   ) =>
   Globals ->
   TRC (EraRule "NEWEPOCH" era) ->
