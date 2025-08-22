@@ -127,7 +127,7 @@
                 # tools that work only with default compiler
                 fourmolu = fourmoluVersion;
                 hlint = "3.8";
-                haskell-language-server = "2.9.0.0";
+                haskell-language-server = "2.11.0.0";
                 cabal-gild = "1.5.0.1";
               };
 
