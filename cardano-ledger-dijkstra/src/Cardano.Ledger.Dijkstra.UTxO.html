@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.UTxO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoEraUTxO"><span class="hs-identifier">AlonzoEraUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier">AlonzoScriptsNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsHashesNeeded"><span class="hs-identifier">getAlonzoScriptsHashesNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Babbage.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier">getBabbageScriptsProvided</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier">getBabbageSpendingDatum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier">getBabbageSupplementalDataHashes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Conway.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#conwayConsumed"><span class="hs-identifier">conwayConsumed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#conwayProducedValue"><span class="hs-identifier">conwayProducedValue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayMinFeeTxUtxo"><span class="hs-identifier">getConwayMinFeeTxUtxo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayScriptsNeeded"><span class="hs-identifier">getConwayScriptsNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayWitsVKeyNeeded"><span class="hs-identifier">getConwayWitsVKeyNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.State.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier">EraUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.State.CertState.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.State.CertState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Tx.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.0/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Mary.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.0/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getConsumedMaryValue"><span class="hs-identifier">getConsumedMaryValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier hs-type">EraUTxO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ScriptsNeeded"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsNeeded"><span class="hs-identifier hs-var">ScriptsNeeded</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier hs-type">AlonzoScriptsNeeded</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679329574"><span class="annot"><span class="annottext">consumed :: PParams DijkstraEra
+-&gt; CertState DijkstraEra
+-&gt; UTxO DijkstraEra
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+</span><a href="#local-6989586621679329574"><span class="hs-identifier hs-var hs-var hs-var hs-var">consumed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra
+-&gt; CertState DijkstraEra
+-&gt; UTxO DijkstraEra
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+forall era.
+(EraUTxO era, ConwayEraCertState era) =&gt;
+PParams era -&gt; CertState era -&gt; UTxO era -&gt; TxBody era -&gt; Value era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#conwayConsumed"><span class="hs-identifier hs-var">conwayConsumed</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679329580"><span class="annot"><span class="annottext">getConsumedValue :: PParams DijkstraEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO DijkstraEra
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+</span><a href="#local-6989586621679329580"><span class="hs-identifier hs-var hs-var hs-var hs-var">getConsumedValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO DijkstraEra
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+PParams DijkstraEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO DijkstraEra
+-&gt; TxBody DijkstraEra
+-&gt; MaryValue
+forall era.
+(MaryEraTxBody era, Value era ~ MaryValue) =&gt;
+PParams era
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO era
+-&gt; TxBody era
+-&gt; MaryValue
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.0/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getConsumedMaryValue"><span class="hs-identifier hs-var">getConsumedMaryValue</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679329586"><span class="annot"><span class="annottext">getProducedValue :: PParams DijkstraEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+</span><a href="#local-6989586621679329586"><span class="hs-identifier hs-var hs-var hs-var hs-var">getProducedValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody DijkstraEra
+-&gt; Value DijkstraEra
+forall era.
+(ConwayEraTxBody era, Value era ~ MaryValue) =&gt;
+PParams era
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; TxBody era -&gt; Value era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#conwayProducedValue"><span class="hs-identifier hs-var">conwayProducedValue</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679329591"><span class="annot"><span class="annottext">getScriptsProvided :: UTxO DijkstraEra -&gt; Tx DijkstraEra -&gt; ScriptsProvided DijkstraEra
+</span><a href="#local-6989586621679329591"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsProvided</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO DijkstraEra -&gt; Tx DijkstraEra -&gt; ScriptsProvided DijkstraEra
+forall era.
+(EraTx era, BabbageEraTxBody era) =&gt;
+UTxO era -&gt; Tx era -&gt; ScriptsProvided era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier hs-var">getBabbageScriptsProvided</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679329594"><span class="annot"><span class="annottext">getScriptsNeeded :: UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; ScriptsNeeded DijkstraEra
+</span><a href="#local-6989586621679329594"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; ScriptsNeeded DijkstraEra
+UTxO DijkstraEra
+-&gt; TxBody DijkstraEra -&gt; AlonzoScriptsNeeded DijkstraEra
+forall era.
+ConwayEraTxBody era =&gt;
+UTxO era -&gt; TxBody era -&gt; AlonzoScriptsNeeded era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayScriptsNeeded"><span class="hs-identifier hs-var">getConwayScriptsNeeded</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679329596"><span class="annot"><span class="annottext">getScriptsHashesNeeded :: ScriptsNeeded DijkstraEra -&gt; Set ScriptHash
+</span><a href="#local-6989586621679329596"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsHashesNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptsNeeded DijkstraEra -&gt; Set ScriptHash
+AlonzoScriptsNeeded DijkstraEra -&gt; Set ScriptHash
+forall era. AlonzoScriptsNeeded era -&gt; Set ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsHashesNeeded"><span class="hs-identifier hs-var">getAlonzoScriptsHashesNeeded</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679329600"><span class="annot"><span class="annottext">getWitsVKeyNeeded :: CertState DijkstraEra
+-&gt; UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; Set (KeyHash 'Witness)
+</span><a href="#local-6989586621679329600"><span class="hs-identifier hs-var hs-var hs-var hs-var">getWitsVKeyNeeded</span></a></span></span><span> </span><span class="annot"><span class="annottext">CertState DijkstraEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; Set (KeyHash 'Witness)
+forall era.
+(EraTx era, ConwayEraTxBody era) =&gt;
+UTxO era -&gt; TxBody era -&gt; Set (KeyHash 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayWitsVKeyNeeded"><span class="hs-identifier hs-var">getConwayWitsVKeyNeeded</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679329604"><span class="annot"><span class="annottext">getMinFeeTxUtxo :: PParams DijkstraEra -&gt; Tx DijkstraEra -&gt; UTxO DijkstraEra -&gt; Coin
+</span><a href="#local-6989586621679329604"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinFeeTxUtxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra -&gt; Tx DijkstraEra -&gt; UTxO DijkstraEra -&gt; Coin
+forall era.
+(EraTx era, BabbageEraTxBody era) =&gt;
+PParams era -&gt; Tx era -&gt; UTxO era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayMinFeeTxUtxo"><span class="hs-identifier hs-var">getConwayMinFeeTxUtxo</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.14.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoEraUTxO"><span class="hs-identifier hs-type">AlonzoEraUTxO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.18.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679329613"><span class="annot"><span class="annottext">getSupplementalDataHashes :: UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; Set DataHash
+</span><a href="#local-6989586621679329613"><span class="hs-identifier hs-var hs-var hs-var hs-var">getSupplementalDataHashes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO DijkstraEra -&gt; TxBody DijkstraEra -&gt; Set DataHash
+forall era.
+BabbageEraTxBody era =&gt;
+UTxO era -&gt; TxBody era -&gt; Set DataHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier hs-var">getBabbageSupplementalDataHashes</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679329619"><span class="annot"><span class="annottext">getSpendingDatum :: UTxO DijkstraEra
+-&gt; Tx DijkstraEra
+-&gt; PlutusPurpose AsItem DijkstraEra
+-&gt; Maybe (Data DijkstraEra)
+</span><a href="#local-6989586621679329619"><span class="hs-identifier hs-var hs-var hs-var hs-var">getSpendingDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO DijkstraEra
+-&gt; Tx DijkstraEra
+-&gt; PlutusPurpose AsItem DijkstraEra
+-&gt; Maybe (Data DijkstraEra)
+forall era.
+(AlonzoEraTx era, BabbageEraTxOut era) =&gt;
+UTxO era -&gt; Tx era -&gt; PlutusPurpose AsItem era -&gt; Maybe (Data era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.0.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier hs-var">getBabbageSpendingDatum</span></a></span><span>
+</span><span id="line-52"></span></pre></body></html>
