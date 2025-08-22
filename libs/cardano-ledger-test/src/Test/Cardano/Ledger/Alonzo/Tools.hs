@@ -49,7 +49,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Common (ToExpr, showExpr)
+import Test.Cardano.Ledger.Common (ToExpr, ansiExprString)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
@@ -261,8 +261,7 @@ updateRdmrUnits tx rdmrs = tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ updateF
     updateFrom new old = Map.foldrWithKey (\k eu -> Map.adjust (eu <$) k) old new
 
 failLeft :: (Monad m, ToExpr e) => (String -> m a) -> Either e a -> m a
-failLeft _ (Right a) = pure a
-failLeft err (Left e) = err (showExpr e)
+failLeft err = either (err . ansiExprString) pure
 
 testPParams :: forall era. (EraGenericGen era, AlonzoEraScript era) => PParams era
 testPParams =
