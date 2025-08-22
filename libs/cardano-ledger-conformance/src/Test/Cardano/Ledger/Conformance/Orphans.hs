@@ -96,7 +96,7 @@ instance NFData GovEnv
 
 instance NFData VDeleg
 
-instance NFData PoolParams
+instance NFData StakePoolParams
 
 instance NFData DCert
 
@@ -198,7 +198,7 @@ instance ToExpr EnactState
 
 instance ToExpr VDeleg
 
-instance ToExpr PoolParams
+instance ToExpr StakePoolParams
 
 instance ToExpr DCert
 
@@ -328,7 +328,7 @@ instance SpecNormalize DepositPurpose
 
 instance SpecNormalize DState
 
-instance SpecNormalize PoolParams
+instance SpecNormalize StakePoolParams
 
 instance SpecNormalize PState
 
@@ -368,8 +368,8 @@ instance SpecNormalize EpochState
 instance SpecNormalize Snapshots
 
 instance SpecNormalize Snapshot where
-  specNormalize (MkSnapshot s d) =
-    MkSnapshot (specNormalize $ removeZero s) (specNormalize $ removeZero d)
+  specNormalize (MkSnapshot s d p) =
+    MkSnapshot (specNormalize $ removeZero s) (specNormalize $ removeZero d) p
     where
       removeZero (MkHSMap l) = MkHSMap $ f l
       f [] = []

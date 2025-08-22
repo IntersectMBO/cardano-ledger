@@ -197,6 +197,7 @@ instance SpecTranslate ctx SnapShot where
     Agda.MkSnapshot
       <$> toSpecRep ssStake
       <*> toSpecRep (VMap.toMap ssDelegations)
+      <*> return (Agda.MkHSMap [])
 
 instance SpecTranslate ctx Stake where
   type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin
