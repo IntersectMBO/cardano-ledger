@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..), hashDataTxWitsL, unRedeemersL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
@@ -165,8 +165,7 @@ spec = describe "Invalid" $ do
             ( mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txInDatum]
                 & bodyTxL . referenceInputsTxBodyL .~ [txInScript]
-                & witsTxL . scriptTxWitsL
-                  .~ Map.fromList [(scriptHash, script)]
+                & witsTxL . hashScriptTxWitsL .~ [script]
             )
             [ injectFailure $
                 ExtraneousScriptWitnessesUTXOW [scriptHash]
@@ -183,7 +182,7 @@ spec = describe "Invalid" $ do
           submitFailingTx
             ( mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txIn]
-                & witsTxL . datsTxWitsL .~ TxDats [(hashData redundantDatum, redundantDatum)]
+                & witsTxL . hashDataTxWitsL .~ [redundantDatum]
             )
             [ injectFailure $
                 NotAllowedSupplementalDatums [hashData redundantDatum] mempty
