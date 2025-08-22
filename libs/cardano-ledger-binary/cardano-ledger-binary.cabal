@@ -132,6 +132,7 @@ library testlib
     hspec-core,
     iproute,
     pretty-show,
+    pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
     primitive,
