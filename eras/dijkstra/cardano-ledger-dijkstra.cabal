@@ -111,6 +111,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
     Test.Cardano.Ledger.Dijkstra.CDDL
     Test.Cardano.Ledger.Dijkstra.Era
+    Test.Cardano.Ledger.Dijkstra.Era.Spec
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.TreeDiff

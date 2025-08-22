@@ -21,6 +21,7 @@ import Data.Coerce
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
+import Paths_cardano_ledger_conway
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -37,6 +38,8 @@ class
 
 instance EraTest ConwayEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV3]
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState _mPtr = mkConwayTestAccountState
 

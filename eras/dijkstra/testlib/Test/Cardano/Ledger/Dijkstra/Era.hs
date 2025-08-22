@@ -8,6 +8,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
+import Paths_cardano_ledger_dijkstra
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
@@ -15,6 +16,8 @@ import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 instance EraTest DijkstraEra where
   zeroCostModels = zeroTestingCostModels [PlutusV1 .. PlutusV4]
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState _ptr = mkConwayTestAccountState
 

@@ -124,6 +124,42 @@ class
   where
   scriptTestContexts :: Map ScriptHash ScriptTestContext
 
+instance EraImp AlonzoEra where
+  initGenesis =
+    pure
+      AlonzoGenesis
+        { agCoinsPerUTxOWord = CoinPerWord (Coin 34_482)
+        , agCostModels = testingCostModels [PlutusV1]
+        , agPrices =
+            Prices
+              { prMem = 577 %! 10_000
+              , prSteps = 721 %! 10_000_000
+              }
+        , agMaxTxExUnits =
+            ExUnits
+              { exUnitsMem = 10_000_000
+              , exUnitsSteps = 10_000_000_000
+              }
+        , agMaxBlockExUnits =
+            ExUnits
+              { exUnitsMem = 50_000_000
+              , exUnitsSteps = 40_000_000_000
+              }
+        , agMaxValSize = 5000
+        , agCollateralPercentage = 150
+        , agMaxCollateralInputs = 3
+        }
+
+instance ShelleyEraImp AlonzoEra where
+  impSatisfyNativeScript = impAllegraSatisfyNativeScript
+  fixupTx = alonzoFixupTx
+  expectTxSuccess = impAlonzoExpectTxSuccess
+
+instance MaryEraImp AlonzoEra
+
+instance AlonzoEraImp AlonzoEra where
+  scriptTestContexts = plutusTestScripts SPlutusV1
+
 makeCollateralInput :: ShelleyEraImp era => ImpTestM era TxIn
 makeCollateralInput = do
   -- TODO: make more accurate
@@ -399,41 +435,6 @@ plutusTestScripts lang =
 malformedPlutus :: Plutus l
 malformedPlutus = Plutus (PlutusBinary "invalid")
 
-instance ShelleyEraImp AlonzoEra where
-  initGenesis =
-    pure
-      AlonzoGenesis
-        { agCoinsPerUTxOWord = CoinPerWord (Coin 34_482)
-        , agCostModels = testingCostModels [PlutusV1]
-        , agPrices =
-            Prices
-              { prMem = 577 %! 10_000
-              , prSteps = 721 %! 10_000_000
-              }
-        , agMaxTxExUnits =
-            ExUnits
-              { exUnitsMem = 10_000_000
-              , exUnitsSteps = 10_000_000_000
-              }
-        , agMaxBlockExUnits =
-            ExUnits
-              { exUnitsMem = 50_000_000
-              , exUnitsSteps = 40_000_000_000
-              }
-        , agMaxValSize = 5000
-        , agCollateralPercentage = 150
-        , agMaxCollateralInputs = 3
-        }
-
-  impSatisfyNativeScript = impAllegraSatisfyNativeScript
-  fixupTx = alonzoFixupTx
-  expectTxSuccess = impAlonzoExpectTxSuccess
-
-instance MaryEraImp AlonzoEra
-
-instance AlonzoEraImp AlonzoEra where
-  scriptTestContexts = plutusTestScripts SPlutusV1
-
 impLookupScriptContext ::
   forall era.
   AlonzoEraImp era =>
@@ -512,7 +513,8 @@ impAlonzoExpectTxSuccess ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era -> ImpTestM era ()
+  Tx era ->
+  ImpTestM era ()
 impAlonzoExpectTxSuccess tx = do
   utxo <- getsNES utxoL
   let inputs = tx ^. bodyTxL . inputsTxBodyL
