@@ -40,7 +40,8 @@ spec ::
   Spec
 spec = do
   MaryImp.spec @era
-  describe "AlonzoImpSpec" . withEachEraVersion @era $ do
-    Utxo.spec
-    Utxos.spec
-    Utxow.spec
+  withEachEraVersion @era $ do
+    describe "AlonzoImpSpec" $ do
+      Utxo.spec
+      Utxos.spec
+      Utxow.spec

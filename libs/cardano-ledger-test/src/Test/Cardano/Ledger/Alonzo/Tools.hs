@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Tools (
-  exUnitsTranslationRoundTrip,
   exampleExUnitCalc,
   exampleInvalidExUnitCalc,
 ) where
@@ -30,8 +29,6 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
-  exBudgetToExUnits,
-  transExUnits,
  )
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
@@ -49,7 +46,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Common (ToExpr, showExpr)
+import Test.Cardano.Ledger.Common (ToExpr, ansiExprString)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   EraModel (..),
@@ -63,21 +60,6 @@ import Test.Cardano.Ledger.Generic.GenState (EraGenericGen (..))
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (assertFailure, (@=?))
-import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample)
-
--- ExUnits should remain intact when translating to and from the plutus type
-exUnitsTranslationRoundTrip :: Gen Property
-exUnitsTranslationRoundTrip = do
-  e <- arbitrary
-  let result = exBudgetToExUnits (transExUnits e)
-  pure
-    $ counterexample
-      ( "Before: "
-          <> show e
-          <> "\n After: "
-          <> show result
-      )
-    $ result == Just e
 
 testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
@@ -261,8 +243,7 @@ updateRdmrUnits tx rdmrs = tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ updateF
     updateFrom new old = Map.foldrWithKey (\k eu -> Map.adjust (eu <$) k) old new
 
 failLeft :: (Monad m, ToExpr e) => (String -> m a) -> Either e a -> m a
-failLeft _ (Right a) = pure a
-failLeft err (Left e) = err (showExpr e)
+failLeft err = either (err . ansiExprString) pure
 
 testPParams :: forall era. (EraGenericGen era, AlonzoEraScript era) => PParams era
 testPParams =
