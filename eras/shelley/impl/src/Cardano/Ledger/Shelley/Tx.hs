@@ -60,6 +60,7 @@ import Data.Maybe.Strict (
   StrictMaybe (..),
   strictMaybeToMaybe,
  )
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -144,7 +145,7 @@ toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
     <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Integer
+sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Word32
 sizeShelleyTxF =
   to $
     fromIntegral

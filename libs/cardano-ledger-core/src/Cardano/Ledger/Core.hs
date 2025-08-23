@@ -156,11 +156,11 @@ class
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (TxAuxData era))
 
   -- | For fee calculation and estimations of impact on block space
-  sizeTxF :: SimpleGetter (Tx era) Integer
+  sizeTxF :: SimpleGetter (Tx era) Word32
 
   -- | For fee calculation and estimations of impact on block space
   -- To replace `sizeTxF` after it has been proved equivalent to it .
-  sizeTxForFeeCalculation :: SafeToHash (TxWits era) => Tx era -> Integer
+  sizeTxForFeeCalculation :: SafeToHash (TxWits era) => Tx era -> Word32
   sizeTxForFeeCalculation tx =
     fromIntegral $
       originalBytesSize (tx ^. bodyTxL)

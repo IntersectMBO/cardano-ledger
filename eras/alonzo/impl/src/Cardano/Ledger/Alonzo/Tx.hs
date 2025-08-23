@@ -130,6 +130,7 @@ import Data.Maybe.Strict (
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
@@ -217,7 +218,7 @@ auxDataAlonzoTxL = lens atAuxData (\tx txTxAuxData -> tx {atAuxData = txTxAuxDat
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Integer
+sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Word32
 sizeAlonzoTxF =
   to $
     fromIntegral
