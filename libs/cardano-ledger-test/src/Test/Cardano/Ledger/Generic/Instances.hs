@@ -115,16 +115,15 @@ applyShelleyCert model dcert = case dcert of
       }
   ShelleyTxCertPool (RegPool poolparams) ->
     model
-      { mPoolParams = Map.insert hk poolparams (mPoolParams model)
+      { mStakePools =
+          Map.insert
+            hk
+            (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolparams)
+            (mStakePools model)
       , mDeposited =
-          if Map.member hk (mPoolDeposits model)
+          if Map.member hk (mStakePools model)
             then mDeposited model
             else mDeposited model <+> pp ^. ppPoolDepositL
-      , mPoolDeposits -- Only add if it i[sn't already there
-        =
-          if Map.member hk (mPoolDeposits model)
-            then mPoolDeposits model
-            else Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
       }
     where
       hk = ppId poolparams

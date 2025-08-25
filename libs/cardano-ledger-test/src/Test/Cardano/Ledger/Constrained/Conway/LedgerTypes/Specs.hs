@@ -371,25 +371,21 @@ pStateSpec ::
   Term EpochNo ->
   Specification (PState era)
 pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
-  match pState $ \_ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
+  match pState $ \_ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] ->
     [ witness univ (dom_ stakePoolParams)
     , witness univ (rng_ stakePoolParams)
     , witness univ (dom_ futureStakePoolParams)
     , witness univ (rng_ futureStakePoolParams)
     , witness univ (dom_ retiring)
-    , witness univ (dom_ pooldeposits)
     , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
-    , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
-        dom_ pooldeposits ==. dom_ stakePoolParams
-    , assertExplain (pure "no deposit is 0") $
-        not_ $
-          lit (CompactCoin 0) `elem_` rng_ pooldeposits
+    , forAll' (rng_ stakePoolParams) $ \_ _ _ _ _ _ _ _ [var|d|] ->
+        assertExplain (pure "all deposits are greater then (Coin 0)") $ d >=. lit 0
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assertExplain (pure "retiring after current epoch") $
         forAll (rng_ retiring) (\ [var|epoch|] -> currepoch <=. epoch)
-    , assert $ sizeOf_ (futureStakePoolParams) <=. 4
+    , assert $ sizeOf_ futureStakePoolParams <=. 4
     , assert $ 3 <=. sizeOf_ stakePoolParams
     , assert $ sizeOf_ stakePoolParams <=. 8
     ]
