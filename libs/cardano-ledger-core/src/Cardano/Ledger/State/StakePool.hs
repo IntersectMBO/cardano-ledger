@@ -134,7 +134,7 @@ data StakePoolState = StakePoolState
   -- ^ Network relay information for pool connectivity
   , spsMetadata :: !(StrictMaybe PoolMetadata)
   -- ^ Optional metadata (URL and hash)
-  , spsDeposit :: CompactForm Coin
+  , spsDeposit :: !(CompactForm Coin)
   -- ^ Deposit for each pool
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
