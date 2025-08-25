@@ -385,28 +385,19 @@ createInitialState tc =
     reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> sumCoinUTxO initialUtxo
 
--- | From the haddock for `ShelleyGenesisStaking`:
---
--- > `ShelleyGenesisStaking` allows us to configure some initial stake pools and
--- > delegation to them, in order to test Praos in a static configuration, without
--- > requiring on-chain registration and delegation.
---
--- > For simplicity, pools defined in the genesis staking DO NOT PAY DEPOSITS FOR
--- > THEIR REGISTRATION
---
--- Therefore, we use `mempty` in the convertion below.
---
--- QUESTION: @aniketd: Is the assumption that we can use mempty truly harmless?
+-- | Register initial stake pools from the `ShelleyGenesisStaking`
 registerInitialStakePools ::
   forall era.
-  EraCertState era =>
+  (EraCertState era, EraGov era) =>
   ShelleyGenesisStaking ->
   NewEpochState era ->
   NewEpochState era
 registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-      .~ (mkStakePoolState mempty <$> ListMap.toMap sgsPools)
+      .~ ListMap.toMap (mkStakePoolState deposit <$> sgsPools)
+  where
+    deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
 
 -- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.

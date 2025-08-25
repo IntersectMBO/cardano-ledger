@@ -385,16 +385,10 @@ instance Default InstantaneousRewards where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 instance Default (Accounts era) => Default (DState era) where
-  def =
-    DState
-      def
-      Map.empty
-      (GenDelegs Map.empty)
-      def
+  def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def =
-    PState Set.empty Map.empty Map.empty Map.empty
+  def = PState Set.empty Map.empty Map.empty Map.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
