@@ -171,25 +171,13 @@ poolReapTransition = do
     retiringPools :: Map.Map (KeyHash 'StakePool) StakePoolState
     retiringPools = Map.restrictKeys (psStakePools ps) retired
     -- collect all accounts for stake pools that will retire
-    retiredStakePoolAccountsWithVRFs ::
-      Map.Map (KeyHash 'StakePool) (RewardAccount, VRFVerKeyHash 'StakePoolVRF)
-    retiredStakePoolAccountsWithVRFs =
-      Map.map
-        (\sps -> (spsRewardAccount sps, spsVrf sps))
-        retiringPools
-    retiredVRFs = foldMap (Set.singleton . snd) retiredStakePoolAccountsWithVRFs
-    retiredStakePoolAccountsWithRefund ::
-      Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
-    retiredStakePoolAccountsWithRefund =
-      Map.intersectionWith
-        (\(rewardAccount, _) sps -> (rewardAccount, spsDeposit sps))
-        retiredStakePoolAccountsWithVRFs
-        retiringPools
+    retiredVRFs = foldMap (Set.singleton . spsVrf) retiringPools
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
     accountRefunds =
-      Map.fromListWith (<>) $
-        [(raCredential k, v) | (k, v) <- Map.elems retiredStakePoolAccountsWithRefund]
+      Map.fromListWith
+        (<>)
+        [(raCredential $ spsRewardAccount sps, spsDeposit sps) | sps <- Map.elems retiringPools]
     accounts = ds ^. accountsL
     -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
     refunds, unclaimedDeposits :: Map.Map (Credential 'Staking) (CompactForm Coin)
@@ -203,15 +191,16 @@ poolReapTransition = do
 
   tellEvent $
     let rewardAccountsWithPool =
-          Map.foldlWithKey'
-            ( \acc sp (ra, coin) ->
-                Map.insertWith (Map.unionWith (<>)) (raCredential ra) (Map.singleton sp coin) acc
+          Map.foldrWithKey'
+            ( \poolId sps ->
+                let cred = raCredential $ spsRewardAccount sps
+                 in Map.insertWith (Map.unionWith (<>)) cred (Map.singleton poolId (spsDeposit sps))
             )
             Map.empty
-            retiredStakePoolAccountsWithRefund
+            retiringPools
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
-            (\cred _ -> isAccountRegistered cred accounts) -- (k ∈ dom (rewards ds))
+            (\cred _ -> isAccountRegistered cred accounts)
             rewardAccountsWithPool
      in RetiredPools
           { refundPools = refundPools'
