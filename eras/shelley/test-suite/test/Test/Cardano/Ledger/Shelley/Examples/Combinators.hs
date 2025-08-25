@@ -156,14 +156,13 @@ addPoolDeposits ::
   ChainState era
 addPoolDeposits ppEx pools cs = cs {chainNes = nes}
   where
-    curDeposits =
-      chainNes cs ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
+    curPools =
+      chainNes cs ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
     nes =
       chainNes cs
-        & nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL %~ Map.union newPools
         & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL <>~ (newPoolCount <×> ppEx ^. ppPoolDepositL)
     -- Count the number of new pools, because we don't take a deposit for existing pools
-    newPools = ppEx ^. ppPoolDepositL <$ (fromElems ppId pools `Map.difference` curDeposits)
+    newPools = ppEx ^. ppPoolDepositL <$ (fromElems ppId pools `Map.difference` curPools)
     newPoolCount = Map.size newPools
 
 addFees ::
@@ -263,7 +262,9 @@ delegation cred poolId cs = cs {chainNes = nes}
 -- Add a newly registered stake pool
 newPool ::
   forall era.
-  EraCertState era =>
+  ( EraCertState era
+  , EraGov era
+  ) =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -276,7 +277,11 @@ newPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        { psStakePools =
+            Map.insert
+              (ppId pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) pool)
+              (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -286,7 +291,9 @@ newPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 reregPool ::
   forall era.
-  EraCertState era =>
+  ( EraCertState era
+  , EraGov era
+  ) =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -299,7 +306,11 @@ reregPool pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psFutureStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        { psFutureStakePools =
+            Map.insert
+              (ppId pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) pool)
+              (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -309,7 +320,9 @@ reregPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 updatePoolParams ::
   forall era.
-  EraCertState era =>
+  ( EraCertState era
+  , EraGov era
+  ) =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -322,7 +335,11 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePools = Map.insert (ppId pool) (mkStakePoolState pool) (psStakePools ps)
+        { psStakePools =
+            Map.insert
+              (ppId pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) pool)
+              (psStakePools ps)
         , psFutureStakePools = Map.delete (ppId pool) (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
@@ -370,12 +387,11 @@ reapPool pool cs = cs {chainNes = nes'}
     ls = esLState es
     dps = lsCertState ls
     ps = dps ^. certPStateL
-    poolDeposit = fromJust $ Map.lookup poolId (psDeposits ps)
+    poolDeposit = spsDeposit $ fromJust $ Map.lookup poolId (psStakePools ps)
     ps' =
       ps
         { psRetiring = Map.delete poolId (psRetiring ps)
         , psStakePools = Map.delete poolId (psStakePools ps)
-        , psDeposits = Map.delete poolId (psDeposits ps)
         , psVRFKeyHashes = Set.delete (ppVrf pool) (psVRFKeyHashes ps)
         }
     pp = es ^. curPParamsEpochStateL
