@@ -78,8 +78,7 @@ shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
 shelleyObligationCertState certState =
   Obligations
     { oblStake = sumDepositsAccounts (certState ^. certDStateL . accountsL)
-    , oblPool =
-        F.foldl' (<>) (Coin 0) (fromCompact . spsDeposit <$> certState ^. certPStateL . psStakePoolsL)
+    , oblPool = fromCompact $ F.foldMap' spsDeposit (certState ^. certPStateL . psStakePoolsL)
     , oblDRep = Coin 0
     , oblProposal = Coin 0
     }
