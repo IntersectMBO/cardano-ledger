@@ -80,7 +80,7 @@ depositInvariant SourceSignalTarget {source = chainSt} =
       pstate = certState ^. certPStateL
       allDeposits = utxosDeposited utxost
       keyDeposits = sumDepositsAccounts (dstate ^. accountsL)
-      poolDeposits = foldMap fromCompact (psDeposits pstate)
+      poolDeposits = foldMap (fromCompact . spsDeposit) (psStakePools pstate)
    in counterexample
         ( ansiDocToString . Pretty.vsep $
             [ "Deposit invariant fails:"
@@ -88,7 +88,7 @@ depositInvariant SourceSignalTarget {source = chainSt} =
                 [ "All deposits = " ++ show allDeposits
                 , "Key deposits = "
                     ++ show ((^. depositAccountStateL) <$> (dstate ^. accountsL . accountsMapL))
-                , "Pool deposits = " ++ synopsisCoinMap (Just (fromCompact <$> psDeposits pstate))
+                , "Pool deposits = " ++ synopsisCoinMap (Just (fromCompact . spsDeposit <$> psStakePools pstate))
                 ]
             ]
         )

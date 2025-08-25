@@ -23,7 +23,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Constrained.API
 import Data.Map (Map)
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (witnessedKeyHashPoolParamMapSpec)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (witnessedKeyHashStakePoolMapSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   accountStateSpec,
@@ -70,8 +70,8 @@ dsX :: forall era. era ~ ConwayEra => Gen (DState era)
 dsX = do
   univ <- genWitUniv @era 100
   context <- genCertContext @era univ
-  khppMap <- genFromSpec (witnessedKeyHashPoolParamMapSpec univ)
-  genFromSpec @(DState era) (conwayDStateSpec univ context (lit $ mkStakePoolState <$> khppMap))
+  khppMap <- genFromSpec (witnessedKeyHashStakePoolMapSpec univ)
+  genFromSpec @(DState era) (conwayDStateSpec univ context (lit khppMap))
 
 conwayDStateGen ::
   forall era. era ~ ConwayEra => Gen (DState era)

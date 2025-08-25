@@ -90,7 +90,7 @@ delegationsSpec ::
 delegationsSpec = (hasSize (rangeSize 8 12))
 
 poolRegSpec ::
-  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) PoolParams)
+  forall era. Era era => WitUniv era -> Specification (Map (KeyHash 'StakePool) StakePoolState)
 poolRegSpec univ = constrained $ \poolRegMap ->
   [ witness univ (dom_ poolRegMap)
   , witness univ (rng_ poolRegMap)
@@ -135,7 +135,7 @@ specSuite n = do
     univ <- genWitUniv @era 200
     context <- genCertContext @era univ
     poolreg <- genFromSpec (poolRegSpec univ)
-    pure (conwayDStateSpec @era univ context (lit $ mkStakePoolState <$> poolreg))
+    pure (conwayDStateSpec @era univ context (lit poolreg))
 
   soundSpecWith @(VState era) (10 * n) $ do
     univ <- genWitUniv @era 200

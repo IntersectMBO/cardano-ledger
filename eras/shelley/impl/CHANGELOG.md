@@ -2,6 +2,11 @@
 
 ## 1.17.0.0
 
+* Refactor pool deposits to use `StakePoolState`. #5234
+  * Update `Pool` rule to store deposits in individual `StakePoolState` records
+  * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
+  * Update genesis stake pool registration to use `mempty` deposits for initial pools per specification
+  * Remove `epochStatePoolParamsL` lens.
 * Add `hardforkConwayDisallowDuplicatedVRFKeys`
 * Add `VRFKeyHashAlreadyRegistered` to `ShelleyPoolPredFailure` type
 * Add `NFData` for `NominalDiffTimeMicro`, `ShelleyGenesisStaking` and `ShelleyGenesis`

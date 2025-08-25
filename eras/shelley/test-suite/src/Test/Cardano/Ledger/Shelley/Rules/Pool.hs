@@ -25,6 +25,7 @@ import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
 import Control.SetAlgebra (dom, eval, (∈), (∉))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -131,25 +132,27 @@ poolRegistrationProp
     , target = targetSt
     } =
     let hk = ppId poolParams
-        reRegistration = eval (hk ∈ dom (psStakePools sourceSt))
-     in if reRegistration
-          then
+     in case Map.lookup hk $ psStakePools sourceSt of
+          Just sps ->
             conjoin
               [ counterexample
                   "Pre-existing PoolParams must still be registered in pParams"
                   (eval (hk ∈ dom (psStakePools targetSt)) :: Bool)
               , counterexample
                   "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (psFutureStakePools targetSt) === Just (mkStakePoolState poolParams))
+                  ( Map.lookup hk (psFutureStakePools targetSt)
+                      === Just (mkStakePoolState (sps ^. spsDepositL) poolParams)
+                  )
               , counterexample
                   "PoolParams are removed in 'retiring'"
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
-          else -- first registration
+          Nothing ->
+            -- first registration
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePools targetSt) === Just (mkStakePoolState poolParams))
+                  (Map.lookup hk (psStakePools targetSt) === Just (mkStakePoolState mempty poolParams))
               , counterexample
                   "PoolParams are not present in 'future pool params'"
                   (eval (hk ∉ dom (psFutureStakePools targetSt)) :: Bool)

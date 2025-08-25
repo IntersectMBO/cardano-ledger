@@ -44,21 +44,18 @@ pStateSpec ::
   WitUniv era ->
   Specification (PState era)
 pStateSpec univ = constrained $ \ps ->
-  match ps $ \_ stakePoolParams futureStakePoolParams retiring deposits ->
-    [ witness univ (dom_ stakePoolParams)
-    , witness univ (rng_ stakePoolParams)
-    , witness univ (dom_ futureStakePoolParams)
-    , witness univ (rng_ futureStakePoolParams)
+  match ps $ \_ stakePools futureStakePools retiring ->
+    [ witness univ (dom_ stakePools)
+    , witness univ (rng_ stakePools)
+    , witness univ (dom_ futureStakePools)
+    , witness univ (rng_ futureStakePools)
     , witness univ (dom_ retiring)
-    , witness univ (dom_ deposits)
     , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
-        dom_ retiring `subset_` dom_ stakePoolParams
-    , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
-        dom_ deposits ==. dom_ stakePoolParams
-    , forAll' (rng_ deposits) $ \ [var|dep|] ->
-        assertExplain (pure "all deposits are greater then (Coin 0)") $ dep >=. lit 0
+        dom_ retiring `subset_` dom_ stakePools
+    , forAll' (rng_ stakePools) $ \_ _ _ _ _ _ _ _ [var|d|] ->
+        assertExplain (pure "all deposits are greater then (Coin 0)") $ d >=. lit 0
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
-        dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
+        dom_ stakePools `disjoint_` dom_ futureStakePools
     ]
 
 poolCertSpec ::
