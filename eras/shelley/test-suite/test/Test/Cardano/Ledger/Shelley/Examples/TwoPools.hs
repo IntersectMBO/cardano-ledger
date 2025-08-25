@@ -233,13 +233,12 @@ expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
     . C.addFees feeTx1
-    . C.addPoolDeposits ppEx [alicePoolParams', bobPoolParams']
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
-    . C.newPool alicePoolParams'
-    . C.newPool bobPoolParams'
+    . C.regPool alicePoolParams'
+    . C.regPool bobPoolParams'
     . C.delegation Cast.aliceSHK (ppId alicePoolParams')
     . C.delegation Cast.bobSHK (ppId bobPoolParams')
     . C.delegation Cast.carlSHK (ppId alicePoolParams')
