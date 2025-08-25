@@ -327,7 +327,7 @@ instance EraAccounts era => TotalAda (DState era) where
         dState ^. accountsL . accountsMapL
 
 instance TotalAda (PState era) where
-  totalAda pstate = Fold.fold (fromCompact <$> psDeposits pstate)
+  totalAda pstate = Fold.fold (fromCompact . spsDeposit <$> psStakePools pstate)
 
 instance TotalAda (VState era) where
   totalAda _ = mempty

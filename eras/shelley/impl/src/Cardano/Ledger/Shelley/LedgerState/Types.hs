@@ -55,7 +55,7 @@ import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
-import Data.Map.Strict (Map, mapWithKey)
+import Data.Map.Strict (Map)
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -697,12 +697,6 @@ epochStateTreasuryL = treasuryL
 epochStateStakePoolsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) StakePoolState)
 epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-
-epochStatePoolParamsL ::
-  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
-epochStatePoolParamsL =
-  epochStateStakePoolsL . lens (mapWithKey stakePoolStateToPoolParams) (const $ fmap mkStakePoolState)
-{-# DEPRECATED epochStatePoolParamsL "In favor of `epochStateStakePoolsL`" #-}
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))

@@ -259,10 +259,9 @@ poolDelegationTransition = do
                 | otherwise = id
           tellEvent $ RegisterPool ppId
           pure $
-            payPoolDeposit ppId pp $
-              ps
-                & psStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
-                & psVRFKeyHashesL %~ updateVRFKeyHash
+            ps
+              & psStakePoolsL %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+              & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
@@ -281,18 +280,21 @@ poolDelegationTransition = do
                         | otherwise -> id
                 | otherwise = id
           tellEvent $ ReregisterPool ppId
-          -- hk is already registered, so we want to reregister it. That means adding it
-          -- to the Future pool params (if it is not there already), and overriding the
-          -- range with the new 'poolParam', if it is (using ⨃ ). We must also unretire
-          -- it, if it has been scheduled for retirement.  The deposit does not
-          -- change. One pays the deposit just once. Only if it is fully retired
-          -- (i.e. it's deposit has been refunded, and it has been removed from the
-          -- registered pools).  does it need to pay a new deposit (at the current deposit
-          -- amount). But of course, if that has happened, we cannot be in this branch of
-          -- the if statement.
+          -- NOTE: The `ppId` is already registered, so we want to reregister
+          -- it. That means adding it to the Future Stake Pools (if it is not
+          -- there already), and overriding its range with the new 'poolParams',
+          -- if it is.
+          --
+          -- We must also unretire it, if it has been scheduled for retirement.
+          --
+          -- The deposit does not change. One pays the deposit just once. Only
+          -- if it is fully retired (i.e. it's deposit has been refunded, and it
+          -- has been removed from the registered pools).  does it need to pay a
+          -- new deposit (at the current deposit amount). But of course, if that
+          -- has happened, we cannot be in this branch of the case statement.
           pure $
             ps
-              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState poolParams)
+              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState (stakePoolState ^. spsDepositL) poolParams)
               & psRetiringL %~ Map.delete ppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool ppId e -> do

@@ -42,8 +42,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   produced,
 
   -- * DelegationState
-  payPoolDeposit,
-  refundPoolDeposit,
   totalObligation,
   allObligations,
 
@@ -102,7 +100,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosDonationL,
   epochStateGovStateL,
   epochStateStakeDistrL,
-  epochStatePoolParamsL,
   epochStateStakePoolsL,
   epochStateDonationL,
   newEpochStateGovStateL,
@@ -115,7 +112,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   psStakePoolsL,
   psFutureStakePoolsL,
   psRetiringL,
-  psDepositsL,
+  psDepositsG,
   psVRFKeyHashesL,
 
   -- * Lenses from SnapShot(s)

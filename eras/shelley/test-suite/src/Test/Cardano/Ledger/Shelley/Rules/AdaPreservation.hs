@@ -236,8 +236,8 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
     oldCertState = lsCertState lsOld
     oldRetire = lsOld ^. lsCertStateL . certPStateL . psRetiringL
     newRetire = lsNew ^. lsCertStateL . certPStateL . psRetiringL
-    oldPoolDeposit = lsOld ^. lsCertStateL . certPStateL . psDepositsL
-    newPoolDeposit = lsNew ^. lsCertStateL . certPStateL . psDepositsL
+    oldPoolDeposit = spsDeposit <$> lsOld ^. lsCertStateL . certPStateL . psStakePoolsL
+    newPoolDeposit = spsDeposit <$> lsNew ^. lsCertStateL . certPStateL . psStakePoolsL
 
     proposal = votedFuturePParams (sgsCurProposals . utxosGovState $ lsUTxOState lsOld) currPP 5
     obligationMsgs = case proposal of

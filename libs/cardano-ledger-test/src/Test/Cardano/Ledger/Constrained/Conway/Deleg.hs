@@ -73,11 +73,11 @@ dRepMembershipPred dRepsMap dRep =
     dRepsSet f = Set.fromList [k' | k <- Map.keys dRepsMap, Just k' <- [f k]]
 
 -- | The DState needs a witnessed set of delegations to be usefull. Use this Spec to obtain a random one
-witnessedKeyHashPoolParamMapSpec ::
-  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) PoolParams)
-witnessedKeyHashPoolParamMapSpec univ =
-  constrained $ \keyPoolParamMap ->
-    [witness univ (dom_ keyPoolParamMap), witness univ (rng_ keyPoolParamMap)]
+witnessedKeyHashStakePoolMapSpec ::
+  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) StakePoolState)
+witnessedKeyHashStakePoolMapSpec univ =
+  constrained $ \keyPoolMap ->
+    [witness univ (dom_ keyPoolMap), witness univ (rng_ keyPoolMap)]
 
 conwayAccountsSpec ::
   Era era =>

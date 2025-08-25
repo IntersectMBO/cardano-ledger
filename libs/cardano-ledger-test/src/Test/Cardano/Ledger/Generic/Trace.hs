@@ -210,7 +210,6 @@ raiseMockError ::
   String
 raiseMockError slot (SlotNo next) epochstate _pdfs _txs _ =
   let _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-      _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
    in show
         [ toExpr $ adaPots reify epochstate
         , toExpr slot

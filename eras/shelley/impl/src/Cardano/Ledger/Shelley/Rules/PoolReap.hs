@@ -16,11 +16,14 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
   ShelleyPoolreapEvent (..),
   ShelleyPoolreapState (..),
+  prCertStateL,
+  prChainAccountStateL,
+  prUTxOStateL,
   PredicateFailure,
   ShelleyPoolreapPredFailure,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount, raCredential)
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -64,6 +67,15 @@ data ShelleyPoolreapState era = PoolreapState
 
 deriving stock instance
   (Show (UTxOState era), Show (CertState era)) => Show (ShelleyPoolreapState era)
+
+prUTxOStateL :: Lens' (ShelleyPoolreapState era) (UTxOState era)
+prUTxOStateL = lens prUTxOSt $ \sprs x -> sprs {prUTxOSt = x}
+
+prChainAccountStateL :: Lens' (ShelleyPoolreapState era) ChainAccountState
+prChainAccountStateL = lens prChainAccountState $ \sprs x -> sprs {prChainAccountState = x}
+
+prCertStateL :: Lens' (ShelleyPoolreapState era) (CertState era)
+prCertStateL = lens prCertState $ \sprs x -> sprs {prCertState = x}
 
 data ShelleyPoolreapPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
@@ -155,38 +167,37 @@ poolReapTransition = do
     -- The set of pools retiring this epoch
     retired :: Set (KeyHash 'StakePool)
     retired = Set.fromDistinctAscList [k | (k, v) <- Map.toAscList (psRetiring ps), v == e]
-    -- The Map of pools (retiring this epoch) to their deposits
-    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) (CompactForm Coin)
-    (retiringDeposits, remainingDeposits) =
-      Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
+    -- The Map of pools retiring this epoch
+    retiringPools :: Map.Map (KeyHash 'StakePool) StakePoolState
+    retiringPools = Map.restrictKeys (psStakePools ps) retired
     -- collect all accounts for stake pools that will retire
     retiredStakePoolAccountsWithVRFs ::
       Map.Map (KeyHash 'StakePool) (RewardAccount, VRFVerKeyHash 'StakePoolVRF)
     retiredStakePoolAccountsWithVRFs =
       Map.map
         (\sps -> (spsRewardAccount sps, spsVrf sps))
-        $ Map.restrictKeys (psStakePools ps) retired
+        retiringPools
     retiredVRFs = foldMap (Set.singleton . snd) retiredStakePoolAccountsWithVRFs
     retiredStakePoolAccountsWithRefund ::
       Map.Map (KeyHash 'StakePool) (RewardAccount, CompactForm Coin)
     retiredStakePoolAccountsWithRefund =
       Map.intersectionWith
-        (\(rewardAccount, _) coin -> (rewardAccount, coin))
+        (\(rewardAccount, _) sps -> (rewardAccount, spsDeposit sps))
         retiredStakePoolAccountsWithVRFs
-        retiringDeposits
+        retiringPools
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
     accountRefunds =
       Map.fromListWith (<>) $
         [(raCredential k, v) | (k, v) <- Map.elems retiredStakePoolAccountsWithRefund]
     accounts = ds ^. accountsL
-    -- figure out whcich deposits can be refunded and which ones will be deposited into the treasury
-    -- as unclaimed
+    -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
     refunds, unclaimedDeposits :: Map.Map (Credential 'Staking) (CompactForm Coin)
     (refunds, unclaimedDeposits) =
       Map.partitionWithKey
         (\stakeCred _ -> isAccountRegistered stakeCred accounts) -- (k ∈ dom (rewards ds))
         accountRefunds
+
     refunded = fold refunds
     unclaimed = fold unclaimedDeposits
 
@@ -216,7 +227,6 @@ poolReapTransition = do
             %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
-          & certPStateL . psDepositsCompactL .~ remainingDeposits
           & certPStateL . psVRFKeyHashesL
             %~ ((`Set.difference` retiredVRFs) . (`Set.difference` danglingVrfKeyHashes))
       )

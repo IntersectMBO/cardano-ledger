@@ -88,7 +88,7 @@ depositsMap certState props =
       , bimapMHSMap
           (fmap Agda.PoolDeposit . toSpecRep)
           toSpecRep
-          (Agda.MkHSMap . Map.toList $ certState ^. certPStateL . psDepositsL)
+          (Agda.MkHSMap . Map.toList $ fromCompact . spsDeposit <$> certState ^. certPStateL . psStakePoolsL)
       , bimapMHSMap
           (fmap Agda.DRepDeposit . toSpecRep)
           (toSpecRep . drepDeposit)

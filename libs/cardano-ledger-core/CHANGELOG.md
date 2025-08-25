@@ -2,6 +2,14 @@
 
 ## 1.18.0.0
 
+* Move pool deposits from `PState` into `StakePoolState`. #5234
+  * Add `spsDeposit` field to `StakePoolState`
+  * Remove `psDeposits` field from `PState` data constructor
+  * Update `mkStakePoolState` to take deposit parameter as first argument
+  * Replace `psDepositsL` and `psDepositsCompactL` lenses with `psDepositsG` and `psDepositsCompactG` getters
+  * Remove `payPoolDeposit` and `refundPoolDeposit` functions as they are no longer necessary
+  * Update `EncCBOR`/`DecCBOR` instances for `PState` to handle new structure
+  * Add lenses for `StakePoolState` fields
 * Add `psVRFKeyHashes` to `PState`
 * Add `psVRFKeyHashesL`
 * Deprecate `costModelParamsCount` in favor of `costModelInitParamCount`

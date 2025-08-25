@@ -607,7 +607,7 @@ genTxCerts slot = do
           RetirePoolTxCert kh _ -> do
             -- We need to make sure that the pool is registered before
             -- we try to retire it
-            modelPools <- gets $ mPoolParams . gsModel
+            modelPools <- gets $ mStakePools . gsModel
             case Map.lookup kh modelPools of
               Just _ -> pure (dc : dcs, ss, regCreds)
               Nothing -> pure (dcs, ss, regCreds)
