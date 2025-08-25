@@ -30,6 +30,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -77,7 +78,8 @@ shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
 shelleyObligationCertState certState =
   Obligations
     { oblStake = sumDepositsAccounts (certState ^. certDStateL . accountsL)
-    , oblPool = F.foldl' (<>) (Coin 0) (certState ^. certPStateL . psDepositsL)
+    , oblPool =
+        F.foldl' (<>) (Coin 0) (fromCompact . spsDeposit <$> certState ^. certPStateL . psStakePoolsL)
     , oblDRep = Coin 0
     , oblProposal = Coin 0
     }
