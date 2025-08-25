@@ -6,7 +6,7 @@
   * Add `spsDeposit` field to `StakePoolState`
   * Remove `psDeposits` field from `PState` data constructor
   * Update `mkStakePoolState` to take deposit parameter as first argument
-  * Replace `psDepositsL` and `psDepositsCompactL` lenses with `psDepositsG` and `psDepositsCompactG` getters
+  * Remove `psDepositsL` as no longer necessary.
   * Remove `payPoolDeposit` and `refundPoolDeposit` functions as they are no longer necessary
   * Update `EncCBOR`/`DecCBOR` instances for `PState` to handle new structure
   * Add lenses for `StakePoolState` fields

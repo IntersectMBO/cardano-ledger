@@ -112,7 +112,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   psStakePoolsL,
   psFutureStakePoolsL,
   psRetiringL,
-  psDepositsG,
   psVRFKeyHashesL,
 
   -- * Lenses from SnapShot(s)

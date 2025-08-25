@@ -41,8 +41,6 @@ module Cardano.Ledger.State.CertState (
   psStakePoolsL,
   psFutureStakePoolsL,
   psRetiringL,
-  psDepositsG,
-  psDepositsCompactG,
   psVRFKeyHashesL,
 ) where
 
@@ -444,12 +442,6 @@ psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools =
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
-
-psDepositsCompactG :: SimpleGetter (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
-psDepositsCompactG = to (fmap spsDeposit . psStakePools)
-
-psDepositsG :: SimpleGetter (PState era) (Map (KeyHash 'StakePool) Coin)
-psDepositsG = psDepositsCompactG . to (fmap fromCompact)
 
 psVRFKeyHashesL :: Lens' (PState era) (Set (VRFVerKeyHash 'StakePoolVRF))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})

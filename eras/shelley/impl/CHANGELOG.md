@@ -7,6 +7,7 @@
   * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
   * Update genesis stake pool registration to use `mempty` deposits for initial pools per specification
   * Remove `epochStatePoolParamsL` lens.
+  * Remove `psDepositsL` as no longer necessary.
 * Add `hardforkConwayDisallowDuplicatedVRFKeys`
 * Add `VRFKeyHashAlreadyRegistered` to `ShelleyPoolPredFailure` type
 * Add `NFData` for `NominalDiffTimeMicro`, `ShelleyGenesisStaking` and `ShelleyGenesis`
