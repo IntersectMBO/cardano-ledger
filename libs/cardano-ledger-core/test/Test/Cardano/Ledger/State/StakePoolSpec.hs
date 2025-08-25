@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
+import Cardano.Ledger.Coin
 import Cardano.Ledger.State
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -14,8 +15,8 @@ spec :: Spec
 spec = do
   describe "StakePoolState" $ do
     prop "mkStakePoolState/stakePoolStateToPoolParams round-trip" $
-      \(poolParams :: PoolParams) ->
+      \(poolParams :: PoolParams, deposit :: CompactForm Coin) ->
         let poolId = ppId poolParams
-            stakePoolState = mkStakePoolState poolParams
+            stakePoolState = mkStakePoolState deposit poolParams
             poolParams' = stakePoolStateToPoolParams poolId stakePoolState
          in poolParams === poolParams'
