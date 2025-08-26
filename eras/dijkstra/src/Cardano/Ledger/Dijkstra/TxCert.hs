@@ -21,7 +21,6 @@ module Cardano.Ledger.Dijkstra.TxCert (
 import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  Decoder,
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
@@ -34,7 +33,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxCert,
-  ShelleyEraTxCert (..),
   poolCertKeyHashWitness,
   pattern AuthCommitteeHotKeyTxCert,
   pattern DelegTxCert,
@@ -78,7 +76,6 @@ import Cardano.Ledger.Shelley.TxCert (
   encodePoolCert,
   encodeShelleyDelegCert,
   poolTxCertDecoder,
-  shelleyTxCertDelegDecoder,
  )
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData)
@@ -109,29 +106,29 @@ instance EncCBOR DijkstraDelegCert where
         <> encCBOR dRep
     DijkstraRegCert cred deposit ->
       encodeListLen 3
-        <> encodeWord8 19
+        <> encodeWord8 7
         <> encCBOR cred
         <> encCBOR deposit
     DijkstraUnRegCert cred deposit ->
       encodeListLen 3
-        <> encodeWord8 20
+        <> encodeWord8 8
         <> encCBOR cred
         <> encCBOR deposit
     DijkstraRegDelegCert cred (DelegStake poolId) deposit ->
       encodeListLen 4
-        <> encodeWord8 21
+        <> encodeWord8 11
         <> encCBOR cred
         <> encCBOR poolId
         <> encCBOR deposit
     DijkstraRegDelegCert cred (DelegVote drep) deposit ->
       encodeListLen 4
-        <> encodeWord8 22
+        <> encodeWord8 12
         <> encCBOR cred
         <> encCBOR drep
         <> encCBOR deposit
     DijkstraRegDelegCert cred (DelegStakeVote poolId dRep) deposit ->
       encodeListLen 5
-        <> encodeWord8 23
+        <> encodeWord8 13
         <> encCBOR cred
         <> encCBOR poolId
         <> encCBOR dRep
@@ -200,7 +197,6 @@ instance
 
 instance
   ( ConwayEraTxCert era
-  , ShelleyEraTxCert era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   DecCBOR (DijkstraTxCert era)
@@ -208,36 +204,15 @@ instance
   decCBOR = decodeRecordSum "DijkstraTxCert" $ \case
     t
       | 0 <= t && t < 2 -> fail "Certificates without deposits are no longer supported"
-      | t == 2 -> shelleyTxCertDelegDecoder t
+      | t == 2 -> do
+          cred <- decCBOR
+          stakePool <- decCBOR
+          pure (3, DelegTxCert cred (DelegStake stakePool))
       | 3 <= t && t < 5 -> poolTxCertDecoder t
       | t == 5 -> fail "Genesis delegation certificates are no longer supported"
       | t == 6 -> fail "MIR certificates are no longer supported"
-      | 7 <= t && t < 19 -> conwayTxCertDelegDecoder t
-      | 19 <= t -> dijkstraTxCertDelegDecoder t
+      | 7 <= t -> conwayTxCertDelegDecoder t
     t -> invalidKey t
-
-dijkstraTxCertDelegDecoder :: ConwayEraTxCert era => Word -> Decoder s (Int, TxCert era)
-dijkstraTxCertDelegDecoder = \case
-  19 -> do
-    cred <- decCBOR
-    deposit <- decCBOR
-    pure (3, RegDepositTxCert cred deposit)
-  20 -> do
-    cred <- decCBOR
-    deposit <- decCBOR
-    pure (3, UnRegDepositTxCert cred deposit)
-  21 -> regDelegCertDecoder 4 (DelegStake <$> decCBOR)
-  22 -> regDelegCertDecoder 4 (DelegVote <$> decCBOR)
-  23 -> regDelegCertDecoder 5 (DelegStakeVote <$> decCBOR <*> decCBOR)
-  k -> invalidKey k
-  where
-    regDelegCertDecoder n decodeDelegatee = do
-      cred <- decCBOR
-      delegatee <- decodeDelegatee
-      deposit <- decCBOR
-      pure (n, RegDepositDelegTxCert cred delegatee deposit)
-    {-# INLINE regDelegCertDecoder #-}
-{-# INLINE dijkstraTxCertDelegDecoder #-}
 
 instance (Era era, Val (Value era)) => ToCBOR (DijkstraTxCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
