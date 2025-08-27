@@ -710,6 +710,7 @@ redeemer_tag =
   / 3 ; reward   
   / 4 ; voting   
   / 5 ; proposing
+  / 6 ; guarding
 
 transaction_index = uint .size 2
 

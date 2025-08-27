@@ -25,7 +25,6 @@ module Cardano.Ledger.Conway.TxInfo (
   transHotCommitteeCred,
   transDelegatee,
   transDRep,
-  transScriptPurpose,
   transMap,
   transTxInInfoV1,
   transTxOutV1,
@@ -37,6 +36,7 @@ module Cardano.Ledger.Conway.TxInfo (
   toPlutusV3Args,
   transTxCertV1V2,
   transPlutusPurposeV1V2,
+  transPlutusPurposeV3,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
   scriptPurposeToScriptInfo,
@@ -471,7 +471,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
-  toPlutusScriptPurpose = transScriptPurpose
+  toPlutusScriptPurpose = transPlutusPurposeV3
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
@@ -612,13 +612,15 @@ transDRep = \case
 -- and `PV3.Proposing` also have an index. Moreover, other script purposes rely on Ledger
 -- `Ord` instances for types that dictate the order, so it might not be a good idea to pass
 -- that information to Plutus for those purposes.
-transScriptPurpose ::
-  (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
+transPlutusPurposeV3 ::
+  ( ConwayEraPlutusTxInfo l era
+  , PlutusTxCert l ~ PV3.TxCert
+  ) =>
   proxy l ->
   ProtVer ->
   ConwayPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transScriptPurpose proxy pv = \case
+transPlutusPurposeV3 proxy pv = \case
   ConwaySpending (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   ConwayMinting (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   ConwayCertifying (AsIxItem ix txCert) ->
@@ -706,10 +708,11 @@ transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAc
     }
 
 transPlutusPurposeV1V2 ::
+  forall l era proxy.
   ( PlutusTxCert l ~ PV2.DCert
-  , PlutusPurpose AsItem era ~ ConwayPlutusPurpose AsItem era
   , EraPlutusTxInfo l era
   , Inject (ConwayContextError era) (ContextError era)
+  , Inject (ConwayPlutusPurpose AsItem era) (PlutusPurpose AsItem era)
   ) =>
   proxy l ->
   ProtVer ->
@@ -720,7 +723,7 @@ transPlutusPurposeV1V2 proxy pv = \case
   ConwayMinting policyId -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting policyId
   ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying txCert
   ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding rewardAccount
-  purpose -> Left $ inject $ PlutusPurposeNotSupported purpose
+  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ inject purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =

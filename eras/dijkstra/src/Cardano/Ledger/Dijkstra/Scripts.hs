@@ -1,14 +1,26 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Scripts (PlutusScript (..)) where
+module Cardano.Ledger.Dijkstra.Scripts (
+  PlutusScript (..),
+  DijkstraPlutusPurpose (..),
+  pattern GuardingPurpose,
+) where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (
@@ -32,8 +44,20 @@ import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoScript (..),
+  AsItem,
   AsIx (..),
+  AsIxItem,
   alonzoScriptPrefixTag,
+ )
+import Cardano.Ledger.BaseTypes (Inject (..), kindObject)
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  DecCBOR (..),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
+  decodeWord8,
+  encodeWord8,
  )
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts (
@@ -41,7 +65,13 @@ import Cardano.Ledger.Conway.Scripts (
   ConwayPlutusPurpose (..),
   PlutusScript (..),
  )
-import Cardano.Ledger.Core (EraScript (..), EraTxCert (..), SafeToHash (..), ScriptHash)
+import Cardano.Ledger.Core (
+  EraPParams,
+  EraScript (..),
+  EraTxCert (..),
+  SafeToHash (..),
+  ScriptHash,
+ )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
@@ -50,8 +80,10 @@ import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLang
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
-import Data.Word (Word32)
+import Data.Typeable (Proxy (..), Typeable)
+import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -64,6 +96,124 @@ data DijkstraPlutusPurpose f era
   | DijkstraProposing !(f Word32 (ProposalProcedure era))
   | DijkstraGuarding !(f Word32 ScriptHash)
   deriving (Generic)
+
+instance Inject (ConwayPlutusPurpose f era) (DijkstraPlutusPurpose f era) where
+  inject = \case
+    ConwaySpending p -> DijkstraSpending p
+    ConwayMinting p -> DijkstraMinting p
+    ConwayCertifying p -> DijkstraCertifying p
+    ConwayRewarding p -> DijkstraRewarding p
+    ConwayVoting p -> DijkstraVoting p
+    ConwayProposing p -> DijkstraProposing p
+
+deriving via
+  CBORGroup (DijkstraPlutusPurpose f era)
+  instance
+    ( Typeable f
+    , EraPParams era
+    , forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+    , forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , EraTxCert era
+    ) =>
+    DecCBOR (DijkstraPlutusPurpose f era)
+
+deriving via
+  CBORGroup (DijkstraPlutusPurpose f era)
+  instance
+    ( Typeable f
+    , EraPParams era
+    , forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , EraTxCert era
+    ) =>
+    EncCBOR (DijkstraPlutusPurpose f era)
+
+instance
+  ( Typeable f
+  , EraPParams era
+  , forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+  , DecCBOR (TxCert era)
+  ) =>
+  DecCBORGroup (DijkstraPlutusPurpose f era)
+  where
+  decCBORGroup =
+    decodeWord8 >>= \case
+      0 -> DijkstraSpending <$> decCBOR
+      1 -> DijkstraMinting <$> decCBOR
+      2 -> DijkstraCertifying <$> decCBOR
+      3 -> DijkstraRewarding <$> decCBOR
+      4 -> DijkstraVoting <$> decCBOR
+      5 -> DijkstraProposing <$> decCBOR
+      6 -> DijkstraGuarding <$> decCBOR
+      n -> fail $ "Unexpected tag for DijkstraPlutusPurpose: " <> show n
+
+instance
+  ( Typeable f
+  , EraPParams era
+  , forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+  , EncCBOR (TxCert era)
+  ) =>
+  EncCBORGroup (DijkstraPlutusPurpose f era)
+  where
+  listLen _ = 2
+  listLenBound _ = 2
+  encCBORGroup = \case
+    DijkstraSpending p -> encodeWord8 0 <> encCBOR p
+    DijkstraMinting p -> encodeWord8 1 <> encCBOR p
+    DijkstraCertifying p -> encodeWord8 2 <> encCBOR p
+    DijkstraRewarding p -> encodeWord8 3 <> encCBOR p
+    DijkstraVoting p -> encodeWord8 4 <> encCBOR p
+    DijkstraProposing p -> encodeWord8 5 <> encCBOR p
+    DijkstraGuarding p -> encodeWord8 6 <> encCBOR p
+  encodedGroupSizeExpr size_ _proxy =
+    encodedSizeExpr size_ (Proxy @Word8) + encodedSizeExpr size_ (Proxy @Word16)
+
+instance
+  ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
+  , ToJSON (TxCert era)
+  , EraPParams era
+  ) =>
+  ToJSON (DijkstraPlutusPurpose f era)
+  where
+  toJSON = \case
+    DijkstraSpending n -> kindObjectWithValue "DijkstraSpending" n
+    DijkstraMinting n -> kindObjectWithValue "DijkstraMinting" n
+    DijkstraCertifying n -> kindObjectWithValue "DijkstraCertifying" n
+    DijkstraRewarding n -> kindObjectWithValue "DijkstraRewarding" n
+    DijkstraVoting n -> kindObjectWithValue "DijkstraVoting" n
+    DijkstraProposing n -> kindObjectWithValue "DijkstraProposing" n
+    DijkstraGuarding n -> kindObjectWithValue "DijkstraGuarding" n
+    where
+      kindObjectWithValue name n = kindObject name ["value" .= n]
+
+deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsItem era)
+
+deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsIx era)
+
+deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsIxItem era)
+
+instance (EraPParams era, NFData (TxCert era)) => NFData (DijkstraPlutusPurpose AsItem era)
+
+instance (EraPParams era, NFData (TxCert era)) => NFData (DijkstraPlutusPurpose AsIx era)
+
+instance (EraPParams era, NFData (TxCert era)) => NFData (DijkstraPlutusPurpose AsIxItem era)
+
+instance (EraPParams era, NoThunks (TxCert era)) => NoThunks (DijkstraPlutusPurpose AsItem era)
+
+instance (EraPParams era, NoThunks (TxCert era)) => NoThunks (DijkstraPlutusPurpose AsIx era)
+
+instance (EraPParams era, NoThunks (TxCert era)) => NoThunks (DijkstraPlutusPurpose AsIxItem era)
+
+deriving instance (EraPParams era, EraTxCert era) => Ord (DijkstraPlutusPurpose AsItem era)
+
+deriving instance (EraPParams era, EraTxCert era) => Ord (DijkstraPlutusPurpose AsIx era)
+
+deriving instance (EraPParams era, EraTxCert era) => Ord (DijkstraPlutusPurpose AsIxItem era)
+
+deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsItem era)
+
+deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIx era)
+
+deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIxItem era)
 
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
@@ -119,7 +269,7 @@ instance AlonzoEraScript DijkstraEra where
     | DijkstraPlutusV4 !(Plutus 'PlutusV4)
     deriving (Eq, Ord, Show, Generic)
 
-  type PlutusPurpose f DijkstraEra = ConwayPlutusPurpose f DijkstraEra
+  type PlutusPurpose f DijkstraEra = DijkstraPlutusPurpose f DijkstraEra
 
   eraMaxLanguage = PlutusV3
 
@@ -136,51 +286,41 @@ instance AlonzoEraScript DijkstraEra where
   withPlutusScript (DijkstraPlutusV4 plutus) f = f plutus
 
   hoistPlutusPurpose f = \case
-    ConwaySpending x -> ConwaySpending $ f x
-    ConwayMinting x -> ConwayMinting $ f x
-    ConwayCertifying x -> ConwayCertifying $ f x
-    ConwayRewarding x -> ConwayRewarding $ f x
-    ConwayVoting x -> ConwayVoting $ f x
-    ConwayProposing x -> ConwayProposing $ f x
+    DijkstraSpending x -> DijkstraSpending $ f x
+    DijkstraMinting x -> DijkstraMinting $ f x
+    DijkstraCertifying x -> DijkstraCertifying $ f x
+    DijkstraRewarding x -> DijkstraRewarding $ f x
+    DijkstraVoting x -> DijkstraVoting $ f x
+    DijkstraProposing x -> DijkstraProposing $ f x
+    DijkstraGuarding x -> DijkstraGuarding $ f x
 
-  mkSpendingPurpose = ConwaySpending
+  mkSpendingPurpose = DijkstraSpending
 
-  toSpendingPurpose (ConwaySpending i) = Just i
+  toSpendingPurpose (DijkstraSpending i) = Just i
   toSpendingPurpose _ = Nothing
 
-  mkMintingPurpose = ConwayMinting
+  mkMintingPurpose = DijkstraMinting
 
-  toMintingPurpose (ConwayMinting i) = Just i
+  toMintingPurpose (DijkstraMinting i) = Just i
   toMintingPurpose _ = Nothing
 
-  mkCertifyingPurpose = ConwayCertifying
+  mkCertifyingPurpose = DijkstraCertifying
 
-  toCertifyingPurpose (ConwayCertifying i) = Just i
+  toCertifyingPurpose (DijkstraCertifying i) = Just i
   toCertifyingPurpose _ = Nothing
 
-  mkRewardingPurpose = ConwayRewarding
+  mkRewardingPurpose = DijkstraRewarding
 
-  toRewardingPurpose (ConwayRewarding i) = Just i
+  toRewardingPurpose (DijkstraRewarding i) = Just i
   toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIx = \case
-    ConwaySpending (AsIx ix) -> ConwaySpending (AsIx ix)
-    ConwayMinting (AsIx ix) -> ConwayMinting (AsIx ix)
-    ConwayCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
-    ConwayRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
-    ConwayVoting (AsIx ix) -> ConwayVoting (AsIx ix)
-    ConwayProposing (AsIx ix) -> ConwayProposing (AsIx ix)
-
-instance ConwayEraScript DijkstraEra where
-  mkVotingPurpose = ConwayVoting
-
-  toVotingPurpose (ConwayVoting i) = Just i
-  toVotingPurpose _ = Nothing
-
-  mkProposingPurpose = ConwayProposing
-
-  toProposingPurpose (ConwayProposing i) = Just i
-  toProposingPurpose _ = Nothing
+    ConwaySpending (AsIx ix) -> DijkstraSpending (AsIx ix)
+    ConwayMinting (AsIx ix) -> DijkstraMinting (AsIx ix)
+    ConwayCertifying (AsIx ix) -> DijkstraCertifying (AsIx ix)
+    ConwayRewarding (AsIx ix) -> DijkstraRewarding (AsIx ix)
+    ConwayVoting (AsIx ix) -> DijkstraVoting (AsIx ix)
+    ConwayProposing (AsIx ix) -> DijkstraProposing (AsIx ix)
 
 instance ShelleyEraScript DijkstraEra where
   mkRequireSignature = mkRequireSignatureTimelock
@@ -201,3 +341,30 @@ instance AllegraEraScript DijkstraEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+instance ConwayEraScript DijkstraEra where
+  mkVotingPurpose = DijkstraVoting
+
+  toVotingPurpose (DijkstraVoting i) = Just i
+  toVotingPurpose _ = Nothing
+
+  mkProposingPurpose = DijkstraProposing
+
+  toProposingPurpose (DijkstraProposing i) = Just i
+  toProposingPurpose _ = Nothing
+
+class DijkstraEraScript era where
+  mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
+  toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+
+instance DijkstraEraScript DijkstraEra where
+  mkGuardingPurpose = DijkstraGuarding
+
+  toGuardingPurpose (DijkstraGuarding i) = Just i
+  toGuardingPurpose _ = Nothing
+
+pattern GuardingPurpose ::
+  DijkstraEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
+pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
+  where
+    GuardingPurpose c = mkGuardingPurpose c
