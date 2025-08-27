@@ -41,8 +41,6 @@ module Cardano.Ledger.State.CertState (
   psStakePoolsL,
   psFutureStakePoolsL,
   psRetiringL,
-  psDepositsG,
-  psDepositsCompactG,
   psVRFKeyHashesL,
 ) where
 
@@ -385,16 +383,10 @@ instance Default InstantaneousRewards where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 instance Default (Accounts era) => Default (DState era) where
-  def =
-    DState
-      def
-      Map.empty
-      (GenDelegs Map.empty)
-      def
+  def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def =
-    PState Set.empty Map.empty Map.empty Map.empty
+  def = PState Set.empty Map.empty Map.empty Map.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -450,12 +442,6 @@ psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools =
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
-
-psDepositsCompactG :: SimpleGetter (PState era) (Map (KeyHash 'StakePool) (CompactForm Coin))
-psDepositsCompactG = to (fmap spsDeposit . psStakePools)
-
-psDepositsG :: SimpleGetter (PState era) (Map (KeyHash 'StakePool) Coin)
-psDepositsG = psDepositsCompactG . to (fmap fromCompact)
 
 psVRFKeyHashesL :: Lens' (PState era) (Set (VRFVerKeyHash 'StakePoolVRF))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})
