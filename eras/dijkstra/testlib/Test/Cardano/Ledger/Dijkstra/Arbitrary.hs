@@ -1,7 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
@@ -11,6 +14,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose)
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
@@ -56,5 +60,11 @@ instance Arbitrary DijkstraGenesis where
 
 instance Arbitrary (TransitionConfig DijkstraEra) where
   arbitrary = DijkstraTransitionConfig <$> arbitrary <*> arbitrary
+
+instance
+  (forall a b. (Arbitrary a, Arbitrary b) => Arbitrary (f a b)) =>
+  Arbitrary (DijkstraPlutusPurpose f DijkstraEra)
+  where
+  arbitrary = genericArbitraryU
 
 deriving newtype instance Arbitrary (Tx DijkstraEra)
