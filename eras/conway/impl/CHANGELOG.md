@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Rename `transScriptPurpose` to `transPlutusPurposeV3`
 * Make `transValidityInterval` implicit to eras instead of protocol versions.
   * Implement `transValidityInterval` for Conway.
 * Add `NFData` for `ConwayGenesis`

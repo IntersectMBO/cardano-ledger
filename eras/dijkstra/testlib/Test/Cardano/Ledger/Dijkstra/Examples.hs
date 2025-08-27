@@ -16,8 +16,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -72,7 +72,7 @@ ledgerExamples =
     exampleDijkstraGenesis
 
 exampleTxDijkstra :: Tx DijkstraEra
-exampleTxDijkstra = exampleTx exampleTxBodyDijkstra (ConwaySpending $ AsIx 0)
+exampleTxDijkstra = exampleTx exampleTxBodyDijkstra (DijkstraSpending $ AsIx 0)
 
 exampleTxBodyDijkstra :: TxBody DijkstraEra
 exampleTxBodyDijkstra =

@@ -2,6 +2,7 @@
 
 ## 1.2.5.0
 
+* Add `mapMaybeR`, `mapMaybeL`
 * Add `decodeOSet`
 
 ## 1.2.4.0
