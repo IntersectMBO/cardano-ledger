@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Babbage.Imp (spec) where
+module Test.Cardano.Ledger.Babbage.Imp (spec, babbageEraSpecificSpec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Rules (
@@ -15,12 +15,11 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure, ShelleyEraTxCert)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -31,13 +30,13 @@ import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as ShelleyImp
 
 spec ::
   forall era.
   ( AlonzoEraImp era
   , EraSpecificSpec era
   , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
@@ -57,7 +56,20 @@ spec = do
       Utxow.spec
       Utxos.spec @era
 
+babbageEraSpecificSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , BabbageEraTxBody era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+babbageEraSpecificSpec = do
+  describe "Babbage era specific Imp spec" $
+    describe "Certificates without deposits" $
+      describe "UTXOW" Utxow.babbageEraSpecificSpec
+
 instance EraSpecificSpec BabbageEra where
   eraSpecificSpec =
-    AlonzoImp.alonzoEraSpecificSpec
-      >> Utxow.babbageEraSpecificSpec
+    ShelleyImp.shelleyEraSpecificSpec
+      >> AlonzoImp.alonzoEraSpecificSpec
+      >> babbageEraSpecificSpec

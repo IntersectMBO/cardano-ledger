@@ -37,6 +37,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
