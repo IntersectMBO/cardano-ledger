@@ -94,6 +94,7 @@ spec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   ) =>
   Spec
