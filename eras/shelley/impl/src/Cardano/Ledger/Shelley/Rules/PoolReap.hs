@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   prChainAccountStateL,
   prUTxOStateL,
   PredicateFailure,
-  ShelleyPoolreapPredFailure,
 ) where
 
 import Cardano.Ledger.Address
@@ -55,9 +54,9 @@ import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
@@ -77,11 +76,6 @@ prChainAccountStateL = lens prChainAccountState $ \sprs x -> sprs {prChainAccoun
 prCertStateL :: Lens' (ShelleyPoolreapState era) (CertState era)
 prCertStateL = lens prCertState $ \sprs x -> sprs {prCertState = x}
 
-data ShelleyPoolreapPredFailure era -- No predicate failures
-  deriving (Show, Eq, Generic)
-
-instance NFData (ShelleyPoolreapPredFailure era)
-
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools ::
       Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) (CompactForm Coin))
@@ -94,8 +88,6 @@ data ShelleyPoolreapEvent era = RetiredPools
 deriving instance Eq (ShelleyPoolreapEvent era)
 
 instance NFData (ShelleyPoolreapEvent era)
-
-instance NoThunks (ShelleyPoolreapPredFailure era)
 
 instance (Default (UTxOState era), Default (CertState era)) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def
@@ -114,7 +106,7 @@ instance
   type Signal (ShelleyPOOLREAP era) = EpochNo
   type Environment (ShelleyPOOLREAP era) = ()
   type BaseM (ShelleyPOOLREAP era) = ShelleyBase
-  type PredicateFailure (ShelleyPOOLREAP era) = ShelleyPoolreapPredFailure era
+  type PredicateFailure (ShelleyPOOLREAP era) = Void
   type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
   transitionRules = [poolReapTransition]
 
