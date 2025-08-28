@@ -35,6 +35,7 @@ import Test.Cardano.Ledger.Conway.CDDL hiding (
   proposal_procedures,
   protocol_param_update,
   protocol_version,
+  redeemers,
   script_data_hash,
   single_host_name,
   transaction,
@@ -347,6 +348,20 @@ protocol_param_update =
       , opt (idx 37 ==> positive_interval) //- "refScript cost multiplier"
       ]
 
+redeemers :: Rule -> Rule
+redeemers redeemer_tag =
+  "redeemers"
+    =:= mp
+      [ 1
+          <+ asKey
+            ( arr
+                [ "tag" ==> redeemer_tag
+                , "index" ==> (VUInt `sized` (4 :: Word64))
+                ]
+            )
+          ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
+      ]
+
 -- TODO: add entry for Plutus v4
 transaction_witness_set :: Rule
 transaction_witness_set =
@@ -372,6 +387,7 @@ dijkstra_redeemer_tag =
     / (int 3 //- "reward")
     / (int 4 //- "voting")
     / (int 5 //- "proposing")
+    / (int 6 //- "guarding")
 
 -- TODO: add Plutus V4
 language :: Rule

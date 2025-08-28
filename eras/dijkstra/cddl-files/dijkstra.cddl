@@ -684,24 +684,14 @@ bootstrap_witness =
   ]
 
 
-; Flat Array support is included for backwards compatibility and
-; will be removed in the next era. It is recommended for tools to
-; adopt using a Map instead of Array going forward.
 redeemers = 
-  [ + [ tag      : redeemer_tag
-  , index    : uint .size 4
-  , data     : plutus_data 
-  , ex_units : ex_units    
-  ]
-
-
-  ]
-  / { + [tag : redeemer_tag, index : uint .size 4] => [ data     : plutus_data
-                                                      , ex_units : ex_units
-                                                      ]
+  { + [tag : redeemer_tag, index : uint .size 4] => [ data     : plutus_data
+                                                    , ex_units : ex_units
+                                                    ]
 
 
   }
+
 
 redeemer_tag = 
   0 ; spend    
@@ -710,7 +700,7 @@ redeemer_tag =
   / 3 ; reward   
   / 4 ; voting   
   / 5 ; proposing
-  / 6 ; guarding
+  / 6 ; guarding 
 
 transaction_index = uint .size 2
 
