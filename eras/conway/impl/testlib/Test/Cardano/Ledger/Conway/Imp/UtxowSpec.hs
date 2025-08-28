@@ -9,7 +9,6 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxowSpec (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Babbage.Tx (ScriptIntegrity (..), getLanguageView)
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -47,7 +46,6 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  , EraPlutusTxInfo PlutusV2 era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -30,6 +31,7 @@ class
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsIxItem era)
   , Script era ~ AlonzoScript era
+  , EraPlutusTxInfo PlutusV1 era
   ) =>
   AlonzoEraTest era
 

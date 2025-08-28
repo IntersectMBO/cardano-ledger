@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -6,6 +8,7 @@ module Test.Cardano.Ledger.Babbage.Era (
   BabbageEraTest,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Plutus (Language (..))
@@ -18,6 +21,7 @@ class
   ( AlonzoEraTest era
   , BabbageEraTxBody era
   , BabbageEraPParams era
+  , EraPlutusTxInfo PlutusV2 era
   ) =>
   BabbageEraTest era
 

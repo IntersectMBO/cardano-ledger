@@ -9,12 +9,7 @@ module Test.Cardano.Ledger.Alonzo.TxInfoSpec (spec) where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  ContextError,
-  LedgerTxInfo (..),
-  toPlutusTxInfo,
- )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValidityInterval)
+import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -27,14 +22,12 @@ import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import qualified Data.Map.Strict as Map
-import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
@@ -104,20 +97,6 @@ silentlyIgnore tx =
         Right _ -> pure ()
         Left e -> expectationFailure $ "no translation error was expected, but got: " <> show e
 
--- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
--- by returning close upper bound of the validaty interval.
-transVITimeUpperBoundIsClosed :: Expectation
-transVITimeUpperBoundIsClosed = do
-  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transValidityInterval (Proxy @AlonzoEra) ei ss interval of
-    Left (e :: ContextError AlonzoEra) ->
-      expectationFailure $ "no translation error was expected, but got: " <> show e
-    Right t ->
-      t
-        `shouldBe` PV1.Interval
-          (PV1.LowerBound PV1.NegInf True)
-          (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
-
 spec :: Spec
 spec = describe "txInfo translation" $ do
   -- TODO: convert to Imp: https://github.com/IntersectMBO/cardano-ledger/issues/5210
@@ -126,9 +105,6 @@ spec = describe "txInfo translation" $ do
       silentlyIgnore (txEx shelleyInput byronOutput)
     it "silently ignore byron txin" $
       silentlyIgnore (txEx byronInput shelleyOutput)
-  describe "transVITime" $ do
-    it "validity interval's upper bound is closed when protocol < 9" $
-      transVITimeUpperBoundIsClosed
 
 genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Conway.TxInfoSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (ContextError),
-  EraPlutusTxInfo,
   toPlutusTxCert,
  )
 import Cardano.Ledger.BaseTypes
@@ -38,7 +37,6 @@ import Test.Cardano.Ledger.Conway.Genesis ()
 spec ::
   forall era.
   ( ConwayEraTest era
-  , EraPlutusTxInfo PlutusV3 era
   , TxCert era ~ ConwayTxCert era
   ) =>
   Spec

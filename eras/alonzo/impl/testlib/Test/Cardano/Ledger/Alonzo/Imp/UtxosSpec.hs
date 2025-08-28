@@ -12,6 +12,7 @@
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -23,16 +24,26 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  ProtVer (..),
+  SlotNo (..),
+  StrictMaybe (..),
+  natVersion,
+ )
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)
+import qualified Cardano.Ledger.Plutus.Language as L
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.Monad.Reader (asks)
 import Data.Either (isLeft)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
-import Lens.Micro (set, (%~), (&), (.~), (<>~), (^.), _2)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Lens.Micro (set, to, (%~), (&), (.~), (<>~), (^.), _2)
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V1 as PV1
@@ -53,7 +64,42 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = describe "UTXOS" $
+spec = describe "UTXOS" $ do
+  it
+    "transaction validity interval has closed upper bound when protocol version < 9 and open otherwise"
+    $ do
+      ei <- use $ impGlobalsL . to epochInfo
+      ss@(SystemStart sysStart) <- use $ impGlobalsL . to systemStart
+      SlotNo currentSlot <- use impLastTickG
+      protVer <- getProtVer
+      utxo <- getUTxO
+      let txValidity = 7200
+          -- We must provide a non-Nothing upper bound so that the "closed" vs "open" case can be tested.
+          interval = ValidityInterval SNothing $ SJust $ SlotNo $ currentSlot + txValidity
+          startPOSIX = floor $ utcTimeToPOSIXSeconds sysStart
+          expectedUpperBound = (startPOSIX + fromIntegral (currentSlot + txValidity)) * 1000
+          tx = mkBasicTx mkBasicTxBody & bodyTxL . vldtTxBodyL .~ interval
+          lti =
+            LedgerTxInfo
+              { ltiProtVer = protVer
+              , ltiEpochInfo = ei
+              , ltiSystemStart = ss
+              , ltiUTxO = utxo
+              , ltiTx = tx
+              }
+      case toPlutusTxInfo (Proxy @L.PlutusV1) lti of
+        Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
+        Right txInfo ->
+          PV1.txInfoValidRange txInfo
+            `shouldBe` PV1.Interval
+              (PV1.LowerBound PV1.NegInf True)
+              ( PV1.UpperBound
+                  ( PV1.Finite
+                      (PV1.POSIXTime expectedUpperBound)
+                  )
+                  (pvMajor protVer < natVersion @9) -- The upper bound.
+              )
+
   forM_ (eraLanguages @era) $ \lang ->
     describe (show lang) $
       withSLanguage lang $ \slang -> do
