@@ -914,6 +914,15 @@ instance Arbitrary PV1.Data where
               ]
         | otherwise = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
+instance Arbitrary PV1.ExBudget where
+  arbitrary = PV1.ExBudget <$> arbitrary <*> arbitrary
+
+instance Arbitrary PV1.ExCPU where
+  arbitrary = fromInteger . getNonNegative <$> arbitrary
+
+instance Arbitrary PV1.ExMemory where
+  arbitrary = fromInteger . getNonNegative <$> arbitrary
+
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do
   newParamValues <- vectorOf (costModelInitParamCount lang) arbitrary

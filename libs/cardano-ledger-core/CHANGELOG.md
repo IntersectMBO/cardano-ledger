@@ -106,10 +106,12 @@
 * Remove `EqRaw` instance for `WitVKey`
 * Replace `Block'` constructor with `Block`
 * Remove patterns: `Block`, `UnserialisedBlock` and `UnsafeUnserialisedBlock`
-* Add ` EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`
+* Add `EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`
 
 ### `testlib`
 
+* Add `Arbitrary` instances for `PlutusLedgerApi.V1.Ex{Budget,CPU,Memory}`
+* Add `Test.Cardano.Ledger.Plutus.ExUnits`
 * Added `genericShrinkMemo`
 * Add `maxWord32` and `posWord32` rules to CDDL
 * Add `registerTestAccount` and `accountsFromUMap`

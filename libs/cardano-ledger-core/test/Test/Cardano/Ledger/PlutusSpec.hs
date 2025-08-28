@@ -2,6 +2,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,12 +24,13 @@ import Data.Word
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Plutus.ExUnits qualified as ExUnits
 import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec)
 
 spec :: Spec
 spec = do
   costModelsSpec
-  describe "roundtrip ToPlutusData" $ do
+  describe "RoundTrip ToPlutusData" $ do
     roundTripPlutusDataSpec @Version
     roundTripPlutusDataSpec @Word
     roundTripPlutusDataSpec @Word8
@@ -48,6 +50,8 @@ spec = do
     roundTripPlutusDataSpec @ProtVer
     roundTripPlutusDataSpec @CostModels
     roundTripPlutusDataSpec @Integer
+  describe "ExUnits" $ do
+    ExUnits.spec
 
 costModelsSpec :: Spec
 costModelsSpec = do
