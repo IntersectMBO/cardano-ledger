@@ -14,7 +14,6 @@
 module Cardano.Ledger.Shelley.Rules.Mir (
   ShelleyMIR,
   PredicateFailure,
-  ShelleyMirPredFailure,
   ShelleyMirEvent (..),
   emptyInstantaneousRewards,
 ) where
@@ -51,14 +50,9 @@ import Control.State.Transition (
 import Data.Default (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
-
-data ShelleyMirPredFailure era
-  deriving (Show, Generic, Eq)
-
-instance NFData (ShelleyMirPredFailure era)
 
 data ShelleyMirEvent era
   = MirTransfer InstantaneousRewards
@@ -72,8 +66,6 @@ deriving instance Eq (ShelleyMirEvent era)
 
 instance NFData (ShelleyMirEvent era)
 
-instance NoThunks (ShelleyMirPredFailure era)
-
 instance
   ( Default (EpochState era)
   , EraGov era
@@ -86,7 +78,7 @@ instance
   type Environment (ShelleyMIR era) = ()
   type BaseM (ShelleyMIR era) = ShelleyBase
   type Event (ShelleyMIR era) = ShelleyMirEvent era
-  type PredicateFailure (ShelleyMIR era) = ShelleyMirPredFailure era
+  type PredicateFailure (ShelleyMIR era) = Void
 
   transitionRules = [mirTransition]
 

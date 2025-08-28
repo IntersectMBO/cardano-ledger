@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.API.Validation (
   applyBlockEitherNoEvents,
   applyBlockNoValidaton,
   applyTickNoEvents,
-  TickTransitionError (..),
   BlockTransitionError (..),
   chainChecks,
 ) where
@@ -222,22 +221,6 @@ updateNewEpochState ::
   NewEpochState era
 updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
-
-newtype TickTransitionError era
-  = TickTransitionError (NonEmpty (STS.PredicateFailure (EraRule "TICK" era)))
-  deriving (Generic)
-
-instance
-  NoThunks (STS.PredicateFailure (EraRule "TICK" era)) =>
-  NoThunks (TickTransitionError era)
-
-deriving stock instance
-  Eq (STS.PredicateFailure (EraRule "TICK" era)) =>
-  Eq (TickTransitionError era)
-
-deriving stock instance
-  Show (STS.PredicateFailure (EraRule "TICK" era)) =>
-  Show (TickTransitionError era)
 
 newtype BlockTransitionError era
   = BlockTransitionError (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))

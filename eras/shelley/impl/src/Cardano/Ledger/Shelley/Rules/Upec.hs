@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,7 +20,6 @@
 module Cardano.Ledger.Shelley.Rules.Upec (
   ShelleyUPEC,
   UpecState (..),
-  ShelleyUpecPredFailure (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -35,7 +36,6 @@ import Cardano.Ledger.Shelley.Rules.Newpp (
   ShelleyNEWPP,
   ShelleyNewppState (..),
  )
-import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -44,8 +44,7 @@ import Control.State.Transition (
   trans,
  )
 import Data.Default (Default)
-import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import Data.Void (Void)
 
 data UpecState era = UpecState
   { usCurPParams :: !(PParams era)
@@ -57,14 +56,6 @@ data UpecState era = UpecState
 deriving stock instance
   (Show (PParams era), Show (PParamsUpdate era)) =>
   Show (UpecState era)
-
-newtype ShelleyUpecPredFailure era
-  = NewPpFailure (PredicateFailure (ShelleyNEWPP era))
-  deriving (Eq, Show, Generic)
-
-instance NoThunks (ShelleyUpecPredFailure era)
-
-instance NFData (ShelleyUpecPredFailure era)
 
 instance
   ( EraGov era
@@ -78,7 +69,7 @@ instance
   type Signal (ShelleyUPEC era) = ()
   type Environment (ShelleyUPEC era) = LedgerState era
   type BaseM (ShelleyUPEC era) = ShelleyBase
-  type PredicateFailure (ShelleyUPEC era) = ShelleyUpecPredFailure era
+  type PredicateFailure (ShelleyUPEC era) = Void
   initialRules = []
   transitionRules =
     [ do
@@ -101,4 +92,4 @@ instance
   (Era era, STS (ShelleyNEWPP era)) =>
   Embed (ShelleyNEWPP era) (ShelleyUPEC era)
   where
-  wrapFailed = NewPpFailure
+  wrapFailed = \case {}

@@ -295,33 +295,4 @@ instance
   ToExpr (State (EraRule "LEDGERS" era)) =>
   ToExpr (ShelleyBbodyState era)
 
-instance
-  ( ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
-  , ToExpr (PredicateFailure (EraRule "RUPD" era))
-  ) =>
-  ToExpr (ShelleyTickPredFailure era)
-
-instance
-  ( ToExpr (PredicateFailure (EraRule "EPOCH" era))
-  , ToExpr (PredicateFailure (EraRule "MIR" era))
-  ) =>
-  ToExpr (ShelleyNewEpochPredFailure era)
-
-instance
-  ( ToExpr (UpecPredFailure era)
-  , ToExpr (PredicateFailure (EraRule "POOLREAP" era))
-  , ToExpr (PredicateFailure (EraRule "SNAP" era))
-  ) =>
-  ToExpr (ShelleyEpochPredFailure era)
-
-instance ToExpr (ShelleyUpecPredFailure era)
-
-instance ToExpr (ShelleyPoolreapPredFailure era)
-
-instance ToExpr (ShelleySnapPredFailure era)
-
-instance ToExpr (ShelleyMirPredFailure era)
-
-instance ToExpr (ShelleyRupdPredFailure era)
-
 instance ToExpr (Tx ShelleyEra)
