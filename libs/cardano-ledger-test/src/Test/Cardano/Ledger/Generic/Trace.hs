@@ -294,8 +294,6 @@ instance
   , Reflect era
   , EraTest era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  , ToExpr (PredicateFailure (EraRule "NEWEPOCH" era))
-  , ToExpr (PredicateFailure (EraRule "RUPD" era))
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
   where

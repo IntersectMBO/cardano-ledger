@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -69,7 +71,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyState (..),
   ShelleyTICK,
   ShelleyTickEvent,
-  ShelleyTickPredFailure,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
@@ -142,7 +143,6 @@ chainStateNesL = lens chainNes $ \x y -> x {chainNes = y}
 data TestChainPredicateFailure era
   = RealChainPredicateFailure ChainPredicateFailure
   | BbodyFailure (PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
-  | TickFailure (PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure (PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
   | PrtclFailure (PredicateFailure (PRTCL MockCrypto)) -- Subtransition Failures
   | PrtclSeqFailure PrtlSeqFailure -- Subtransition Failures
@@ -409,12 +409,11 @@ instance
   ( Era era
   , Era era
   , STS (ShelleyTICK era)
-  , PredicateFailure (EraRule "TICK" era) ~ ShelleyTickPredFailure era
   , Event (EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
   Embed (ShelleyTICK era) (CHAIN era)
   where
-  wrapFailed = TickFailure
+  wrapFailed = \case {}
   wrapEvent = TickEvent
 
 instance Era era => Embed (PRTCL MockCrypto) (CHAIN era) where

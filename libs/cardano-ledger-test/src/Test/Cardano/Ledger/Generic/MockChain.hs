@@ -1,8 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,7 +36,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure,
   ShelleyTICK,
   ShelleyTickEvent,
-  ShelleyTickPredFailure,
  )
 import Cardano.Ledger.State
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
@@ -66,17 +67,14 @@ data MOCKCHAIN era -- This is a Testing only STS instance
 type instance EraRule "MOCKCHAIN" era = MOCKCHAIN era
 
 data MockChainFailure era
-  = MockChainFromTickFailure !(ShelleyTickPredFailure era)
-  | MockChainFromLedgersFailure !(ShelleyLedgersPredFailure era)
+  = MockChainFromLedgersFailure !(ShelleyLedgersPredFailure era)
   | BlocksOutOfOrder
       !SlotNo -- The last applied block SlotNo
       !SlotNo -- The candidate block SlotNo
   deriving (Generic)
 
 instance
-  ( ToExpr (ShelleyTickPredFailure era)
-  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
+  ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (MockChainFailure era)
 
 data MockChainEvent era
@@ -186,7 +184,7 @@ instance
   ) =>
   Embed (ShelleyTICK era) (MOCKCHAIN era)
   where
-  wrapFailed = MockChainFromTickFailure
+  wrapFailed = \case {}
   wrapEvent = MockChainFromTickEvent
 
 instance
@@ -208,12 +206,9 @@ deriving instance
 deriving instance
   (Eq (ShelleyTickEvent era), Eq (ShelleyLedgersEvent era)) => Eq (MockChainEvent era)
 
-deriving instance
-  (Show (ShelleyTickPredFailure era), Show (ShelleyLedgersPredFailure era)) =>
-  Show (MockChainFailure era)
+deriving instance Show (ShelleyLedgersPredFailure era) => Show (MockChainFailure era)
 
-deriving instance
-  (Eq (ShelleyTickPredFailure era), Eq (ShelleyLedgersPredFailure era)) => Eq (MockChainFailure era)
+deriving instance Eq (ShelleyLedgersPredFailure era) => Eq (MockChainFailure era)
 
 ppMockChainState ::
   (Reflect era, ShelleyEraTest era) =>

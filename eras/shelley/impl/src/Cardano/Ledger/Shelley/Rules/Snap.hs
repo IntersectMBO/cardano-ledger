@@ -12,7 +12,6 @@
 module Cardano.Ledger.Shelley.Rules.Snap (
   ShelleySNAP,
   PredicateFailure,
-  ShelleySnapPredFailure,
   SnapEvent (..),
   SnapEnv (..),
 ) where
@@ -39,18 +38,11 @@ import Control.State.Transition (
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
-
-data ShelleySnapPredFailure era -- No predicate failures
-  deriving (Show, Generic, Eq)
-
-instance NFData (ShelleySnapPredFailure era)
-
-instance NoThunks (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
   = StakeDistEvent
@@ -68,7 +60,7 @@ instance (EraTxOut era, EraStake era, EraCertState era) => STS (ShelleySNAP era)
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
   type BaseM (ShelleySNAP era) = ShelleyBase
-  type PredicateFailure (ShelleySNAP era) = ShelleySnapPredFailure era
+  type PredicateFailure (ShelleySNAP era) = Void
   type Event (ShelleySNAP era) = SnapEvent era
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]

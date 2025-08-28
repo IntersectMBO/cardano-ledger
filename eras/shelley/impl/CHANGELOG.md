@@ -2,6 +2,18 @@
 
 ## 1.17.0.0
 
+* Remove:
+  * `ShelleyEpochPredFailure`
+  * `ShelleyMirPredFailure`
+  * `ShelleyNewEpochPredFailure`
+  * `ShelleyPoolreapPredFailure`
+  * `ShelleyRupdPredFailure`
+  * `ShelleySnapPredFailure`
+  * `ShelleyTickPredFailure`
+  * `ShelleyTickfPredFailure`
+  * `ShelleyUpecPredFailure`
+  * `TickTransitionError`
+  * `UpecPredFailure`
 * Remove `withCborRoundTripFailures` 
 * Refactor pool deposits to use `StakePoolState`. #5234
   * Update `Pool` rule to store deposits in individual `StakePoolState` records
