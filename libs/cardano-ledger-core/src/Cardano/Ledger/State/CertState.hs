@@ -34,6 +34,8 @@ module Cardano.Ledger.State.CertState (
   lookupRewardDState,
   Obligations (..),
   sumObligation,
+  addVRFKeyHashOccurrence,
+  removeVRFKeyHashOccurrence,
   -- Lenses
   dsGenDelegsL,
   dsIRewardsL,
@@ -48,8 +50,14 @@ import Cardano.Ledger.BaseTypes (
   Anchor (..),
   AnchorData,
   KeyValuePairs (..),
+  NonZero,
   StrictMaybe,
   ToKeyValuePairs (..),
+  knownNonZeroBounded,
+  mapNonZero,
+  nonZero,
+  nonZeroOr,
+  unNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -84,8 +92,9 @@ import qualified Data.Foldable as F
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -221,7 +230,7 @@ lookupRewardDState DState {dsAccounts} cred = do
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psVRFKeyHashes :: !(Set (VRFVerKeyHash 'StakePoolVRF))
+  { psVRFKeyHashes :: !(Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
   -- ^ VRF key hashes that have been registered via PoolParams
   , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of current stake pools.
@@ -236,6 +245,24 @@ data PState era = PState
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (PState era)
+
+addVRFKeyHashOccurrence ::
+  VRFVerKeyHash 'StakePoolVRF ->
+  Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
+addVRFKeyHashOccurrence vrfKeyHash =
+  Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
+  where
+    -- Saturates at maxBound: if (+1) would overflow to 0, keep existing value
+    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
+
+removeVRFKeyHashOccurrence ::
+  VRFVerKeyHash 'StakePoolVRF ->
+  Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
+removeVRFKeyHashOccurrence =
+  -- Removes the key from the map if the value drops to 0
+  Map.update (mapNonZero (\n -> n - 1))
 
 instance NoThunks (PState era)
 
@@ -386,7 +413,7 @@ instance Default (Accounts era) => Default (DState era) where
   def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def = PState Set.empty Map.empty Map.empty Map.empty
+  def = PState Map.empty Map.empty Map.empty Map.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -443,5 +470,5 @@ psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools =
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
-psVRFKeyHashesL :: Lens' (PState era) (Set (VRFVerKeyHash 'StakePoolVRF))
+psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})

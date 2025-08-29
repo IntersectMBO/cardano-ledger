@@ -15,7 +15,9 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Debug.Trace
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
@@ -28,6 +30,38 @@ spec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
+  it "xxx" $ do
+    whenMajorVersion @10 $ do
+      (kh1, vrf1) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
+      registerStakePool kh1 vrf1
+      (kh2, vrf2) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
+      registerStakePool kh2 vrf1
+      vrf3 <- freshKeyHashVRF
+      -- -- re-register with a new key, so vrf1 should not be present after the hard fork
+      kh3 <- freshKeyHash
+      registerStakePool kh3 vrf1
+      -- -- register a new pool with an existing vrf
+      registerStakePool kh3 vrf2
+      -- -- register and retire a pool before the hard fork, so vrf4 should not be present after the hard fork
+
+      enactHardForkV11
+      printVrfs
+
+      pState <- getPState
+      let m1 = addVRFKeyHashOccurrence vrf1 (pState ^. psVRFKeyHashesL)
+      let !_ = trace ("\n Add vrf1:" <> (show m1) <> "\n") (True)
+      let m2 = addVRFKeyHashOccurrence vrf2 m1
+      let !_ = trace ("\n Add vrf2:" <> (show m2) <> "\n") (True)
+      let m3 = removeVRFKeyHashOccurrence vrf1 m2
+      let !_ = trace ("\n Remove vrf1:" <> (show m3) <> "\n") (True)
+      let m4 = removeVRFKeyHashOccurrence vrf1 m3
+      let !_ = trace ("\n Remove vrf1:" <> (show m4) <> "\n") (True)
+      let m5 = removeVRFKeyHashOccurrence vrf1 m4
+      let !_ = trace ("\n Remove vrf1:" <> (show m5) <> "\n") (True)
+      let m6 = removeVRFKeyHashOccurrence vrf1 m5
+      let !_ = trace ("\n Remove vrf1:" <> (show m6) <> "\n") (True)
+      pure ()
+
   it "VRF Keyhashes get populated at v11 HardFork" $ do
     -- Since we're testing the HardFork to 11, the test only makes sense for protocol version 10
     whenMajorVersion @10 $ do
@@ -52,7 +86,7 @@ spec = do
 
       expectVRFs [] -- VRF keyhashes in PState is not yet populated
       enactHardForkV11
-      expectVRFs [vrf2, vrf3, vrf5]
+      expectVRFs [(vrf2, 2), (vrf3, 1), (vrf5, 1)]
 
   it "Retiring a stake pool with a duplicate VRF Keyhash after v11 HardFork" $ do
     whenMajorVersion @10 $ do
@@ -61,21 +95,31 @@ spec = do
       registerStakePool kh1 vrf
       kh2 <- freshKeyHash
       registerStakePool kh2 vrf
+      kh3 <- freshKeyHash
+      registerStakePool kh3 vrf
 
       enactHardForkV11
-      expectVRFs [vrf]
+      expectVRFs [(vrf, 3)]
       -- retire one of the pools after the hard fork
       retireStakePool kh1 (EpochInterval 1)
+      retireStakePool kh2 (EpochInterval 1)
       passEpoch
       -- the vrf keyhash should still be present, since another pool is registered with it
-      expectVRFs [vrf]
+      expectVRFs [(vrf, 1)]
 
       -- registration of the same vrf should be disallowed
-      kh3 <- freshKeyHash
-      registerStakePoolTx kh3 vrf >>= \tx ->
+      kh4 <- freshKeyHash
+      registerStakePoolTx kh4 vrf >>= \tx ->
         submitFailingTx
           tx
-          [injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf]
+          [injectFailure $ VRFKeyHashAlreadyRegistered kh4 vrf]
+
+      retireStakePool kh3 (EpochInterval 1)
+      passEpoch
+      expectVRFs []
+
+      registerStakePool kh4 vrf
+      expectVRFs [(vrf, 1)]
   where
     enactHardForkV11 = do
       modifyPParams $ \pp ->
@@ -102,5 +146,11 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
     expectVRFs vrfs =
-      psVRFKeyHashes <$> getPState `shouldReturn` Set.fromList vrfs
+      psVRFKeyHashes
+        <$> getPState
+          `shouldReturn` Map.fromList [(k, unsafeNonZero v) | (k, v) <- vrfs]
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL
+    printVrfs = do
+      allVrfs <- psVRFKeyHashes <$> getPState
+      let !_ = trace ("\n VRFS:" <> (show allVrfs) <> "\n") (True)
+      pure ()

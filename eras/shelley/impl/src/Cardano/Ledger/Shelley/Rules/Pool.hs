@@ -34,6 +34,8 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   addEpochInterval,
   invalidKey,
+  knownNonZero,
+  knownNonZeroBounded,
   networkId,
  )
 import Cardano.Ledger.Binary (
@@ -242,6 +244,7 @@ poolDelegationTransition = do
                   ?! PoolMedataHashTooBig ppId s
 
       let minPoolCost = pp ^. ppMinPoolCostL
+      let addNewVRFKeyHash vrfKeyHash = Map.insert vrfKeyHash (knownNonZeroBounded @1)
       ppCost
         >= minPoolCost
           ?! StakePoolCostTooLowPOOL
@@ -253,9 +256,9 @@ poolDelegationTransition = do
         -- register new, Pool-Reg
         Nothing -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+            Map.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
           let updateVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv = Set.insert ppVrf
+                | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert ppVrf (knownNonZeroBounded @1)
                 | otherwise = id
           tellEvent $ RegisterPool ppId
           pure $
@@ -266,17 +269,18 @@ poolDelegationTransition = do
         Just stakePoolState -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
             ppVrf == stakePoolState ^. spsVrfL
-              || Set.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
+              || Map.notMember ppVrf psVRFKeyHashes ?! VRFKeyHashAlreadyRegistered ppId ppVrf
           let updateFutureVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv =
-                    -- If a pool re-registers with a fresh VRF, we have to add it to the list,
+                    -- If a pool re-registers with a fresh VRF, we have to record it in the map,
                     -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
                     -- which we retrieve from futureStakePools.
                     case Map.lookup ppId psFutureStakePools of
-                      Nothing -> Set.insert ppVrf
+                      Nothing -> Map.insert ppVrf (knownNonZeroBounded @1)
                       Just futureStakePoolState
                         | futureStakePoolState ^. spsVrfL /= ppVrf ->
-                            Set.insert ppVrf . Set.delete (futureStakePoolState ^. spsVrfL)
+                            (Map.insert ppVrf (knownNonZeroBounded @1))
+                              . Map.delete (futureStakePoolState ^. spsVrfL)
                         | otherwise -> id
                 | otherwise = id
           tellEvent $ ReregisterPool ppId
