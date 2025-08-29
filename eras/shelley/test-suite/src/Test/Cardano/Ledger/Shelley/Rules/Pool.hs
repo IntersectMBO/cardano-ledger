@@ -152,7 +152,7 @@ poolRegistrationProp
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePools targetSt) === Just (mkStakePoolState mempty poolParams))
+                  ((stakePoolStateToPoolParams hk <$> Map.lookup hk (psStakePools targetSt)) === Just poolParams)
               , counterexample
                   "PoolParams are not present in 'future pool params'"
                   (eval (hk ∉ dom (psFutureStakePools targetSt)) :: Bool)
