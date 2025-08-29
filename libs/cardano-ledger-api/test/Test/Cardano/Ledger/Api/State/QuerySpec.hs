@@ -16,6 +16,7 @@ import Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+  QueryPoolStateResult,
   getNextEpochCommitteeMembers,
   queryCommitteeMembersState,
   queryStakePoolDelegsAndRewards,
@@ -54,12 +55,22 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Era (ShelleyEraTest)
 import Test.Cardano.Ledger.Core.Arbitrary (genValidUMapWithCreds)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Era (accountsFromUMap)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do
+  describe "API Types" $ do
+    describe "Roundtrip" $ do
+      prop "Shelley" $ roundTripEraExpectation @ShelleyEra @QueryPoolStateResult
+      prop "Allegra" $ roundTripEraExpectation @AllegraEra @QueryPoolStateResult
+      prop "Mary" $ roundTripEraExpectation @MaryEra @QueryPoolStateResult
+      prop "Alonzo" $ roundTripEraExpectation @AlonzoEra @QueryPoolStateResult
+      prop "Babbage" $ roundTripEraExpectation @BabbageEra @QueryPoolStateResult
+      prop "Conway" $ roundTripEraExpectation @ConwayEra @QueryPoolStateResult
+      prop "Dijkstra" $ roundTripEraExpectation @DijkstraEra @QueryPoolStateResult
   queryStakePoolDelegsAndRewardsSpec @ShelleyEra
   queryStakePoolDelegsAndRewardsSpec @AllegraEra
   queryStakePoolDelegsAndRewardsSpec @MaryEra

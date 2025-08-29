@@ -1,8 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
@@ -58,9 +63,15 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetRatifyState@
   queryRatifyState,
 
-  -- * @GetStakePoolDefaultVote
+  -- * @GetStakePoolDefaultVote@
   queryStakePoolDefaultVote,
   DefaultVote (..),
+
+  -- * @GetPoolState@
+  queryPoolParameters,
+  queryPoolState,
+  QueryPoolStateResult (..),
+  mkQueryPoolStateResult,
 
   -- * For testing
   getNextEpochCommitteeMembers,
@@ -74,6 +85,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
  )
 import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -426,3 +438,61 @@ queryStakePoolDefaultVote ::
 queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
     nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+
+-- | Used only for the `queryPoolState` query. This resembles the older way of
+-- representing StakePoolState in Ledger.
+data QueryPoolStateResult = QueryPoolStateResult
+  { qpsrStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , qpsrFutureStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , qpsrRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
+  , qpsrDeposits :: !(Map (KeyHash 'StakePool) Coin)
+  }
+  deriving (Show, Eq)
+
+instance EncCBOR QueryPoolStateResult where
+  encCBOR (QueryPoolStateResult a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+
+instance DecCBOR QueryPoolStateResult where
+  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 4) $ do
+    qpsrStakePoolParams <- decCBOR
+    qpsrFutureStakePoolParams <- decCBOR
+    qpsrRetiring <- decCBOR
+    qpsrDeposits <- decCBOR
+    pure
+      QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
+
+mkQueryPoolStateResult ::
+  (forall x. Map.Map (KeyHash 'StakePool) x -> Map.Map (KeyHash 'StakePool) x) ->
+  PState era ->
+  QueryPoolStateResult
+mkQueryPoolStateResult f ps =
+  QueryPoolStateResult
+    { qpsrStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams restrictedStakePools
+    , qpsrFutureStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams restrictedStakePools
+    , qpsrRetiring = f $ psRetiring ps
+    , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
+    }
+  where
+    restrictedStakePools = f $ psStakePools ps
+
+-- | Query the QueryPoolStateResult. This is slightly different from the internal
+-- representation used by Ledger and is intended to resemble how the internal
+-- representation used to be.
+queryPoolState ::
+  EraCertState era => NewEpochState era -> Maybe (Set (KeyHash 'StakePool)) -> QueryPoolStateResult
+queryPoolState nes mPoolKeys =
+  let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+      f :: forall x. Map.Map (KeyHash 'StakePool) x -> Map.Map (KeyHash 'StakePool) x
+      f = case mPoolKeys of
+        Nothing -> id
+        Just keys -> (`Map.restrictKeys` keys)
+   in mkQueryPoolStateResult f pstate
+
+-- | Query the current PoolParams.
+queryPoolParameters ::
+  EraCertState era =>
+  NewEpochState era -> Set (KeyHash 'StakePool) -> Map (KeyHash 'StakePool) PoolParams
+queryPoolParameters nes poolKeys =
+  let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+   in Map.mapWithKey stakePoolStateToPoolParams $ Map.restrictKeys pools poolKeys
