@@ -8,11 +8,13 @@
 module Test.Cardano.Ledger.Alonzo.Imp where
 
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
+import qualified Cardano.Ledger.Plutus.Language as L
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
@@ -36,6 +38,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , EraPlutusTxInfo L.PlutusV1 era
   ) =>
   Spec
 spec = do

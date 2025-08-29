@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -17,6 +17,7 @@ import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
+import qualified Cardano.Ledger.Plutus.Language as L
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
@@ -44,6 +45,7 @@ spec ::
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
+  , EraPlutusTxInfo L.PlutusV1 era
   ) =>
   Spec
 spec = do
