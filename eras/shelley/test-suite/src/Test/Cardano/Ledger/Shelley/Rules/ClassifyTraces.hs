@@ -434,7 +434,7 @@ txSizeBound ::
   EraTx era =>
   Tx era ->
   Integer
-txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
+txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + toInteger rest
   where
     uint = 5
     smallArray = 1

@@ -120,6 +120,7 @@ import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
+import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
@@ -130,6 +131,7 @@ import Data.Maybe.Strict (
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
@@ -217,10 +219,12 @@ auxDataAlonzoTxL = lens atAuxData (\tx txTxAuxData -> tx {atAuxData = txTxAuxDat
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Integer
+sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Word32
 sizeAlonzoTxF =
   to $
-    fromIntegral
+    -- This conversion is safe, because length is non-negative and Word32
+    -- contains the max bound of Int64
+    fromIntegral @Int64 @Word32
       . LBS.length
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation

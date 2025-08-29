@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Changed `sizeTxF` and `sizeTxForFeeCalculation` to use `Word32`
 * Move pool deposits from `PState` into `StakePoolState`. #5234
   * Add `spsDeposit` field to `StakePoolState`
   * Remove `psDeposits` field from `PState` data constructor

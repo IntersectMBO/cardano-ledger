@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Changed `MaxTxSizeUTxO` and `sizeShelleyTxF` to use `Word32`
 * Refactor pool deposits to use `StakePoolState`. #5234
   * Update `Pool` rule to store deposits in individual `StakePoolState` records
   * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`

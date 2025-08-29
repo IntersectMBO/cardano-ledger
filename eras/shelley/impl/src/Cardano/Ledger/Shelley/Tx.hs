@@ -56,10 +56,12 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
+import Data.Int (Int64)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   strictMaybeToMaybe,
  )
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -144,10 +146,12 @@ toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
     <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Integer
+sizeShelleyTxF :: forall era. EraTx era => SimpleGetter (ShelleyTx era) Word32
 sizeShelleyTxF =
   to $
-    fromIntegral
+    -- This conversion is safe, because length is non-negative and Word32
+    -- contains the max bound of Int64
+    fromIntegral @Int64 @Word32
       . LBS.length
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation
