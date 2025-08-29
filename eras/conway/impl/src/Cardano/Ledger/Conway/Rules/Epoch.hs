@@ -83,12 +83,9 @@ import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOLREAP,
   ShelleyPoolreapEvent,
-  ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
   ShelleySNAP,
-  ShelleySnapPredFailure,
   SnapEnv (..),
-  UpecPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
@@ -164,8 +161,6 @@ instance
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Eq (UpecPredFailure era)
-  , Show (UpecPredFailure era)
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
   , GovState era ~ ConwayGovState era
@@ -258,8 +253,6 @@ epochTransition ::
   ( RunConwayRatify era
   , ConwayEraCertState era
   , EraTxOut era
-  , Eq (UpecPredFailure era)
-  , Show (UpecPredFailure era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
@@ -388,7 +381,6 @@ epochTransition = do
 instance
   ( Era era
   , STS (ShelleyPOOLREAP era)
-  , PredicateFailure (EraRule "POOLREAP" era) ~ ShelleyPoolreapPredFailure era
   , Event (EraRule "POOLREAP" era) ~ ShelleyPoolreapEvent era
   ) =>
   Embed (ShelleyPOOLREAP era) (ConwayEPOCH era)
@@ -400,7 +392,6 @@ instance
   ( EraTxOut era
   , EraStake era
   , EraCertState era
-  , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)

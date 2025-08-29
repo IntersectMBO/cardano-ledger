@@ -3,9 +3,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,12 +20,10 @@
 module Cardano.Ledger.Shelley.Rules.Tick (
   ShelleyTICK,
   State,
-  ShelleyTickPredFailure (..),
   ShelleyTickEvent (..),
   PredicateFailure,
   adoptGenesisDelegs,
   ShelleyTICKF,
-  ShelleyTickfPredFailure,
   validatingTickTransition,
   validatingTickTransitionFORECAST,
   solidifyNextEpochPParams,
@@ -46,18 +46,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   newEpochStateGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (
-  ShelleyNEWEPOCH,
-  ShelleyNewEpochEvent,
-  ShelleyNewEpochPredFailure,
- )
+import Cardano.Ledger.Shelley.Rules.NewEpoch (ShelleyNEWEPOCH, ShelleyNewEpochEvent)
 import Cardano.Ledger.Shelley.Rules.Rupd (
   RupdEnv (..),
   RupdEvent,
   ShelleyRUPD,
-  ShelleyRupdPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
+import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
 import Cardano.Ledger.State (EraCertState (..), SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Control.DeepSeq (NFData)
@@ -67,38 +62,8 @@ import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
-
-data ShelleyTickPredFailure era
-  = NewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
-  | RupdFailure (PredicateFailure (EraRule "RUPD" era)) -- Subtransition Failures
-  deriving (Generic)
-
-deriving stock instance
-  ( Show (PredicateFailure (EraRule "NEWEPOCH" era))
-  , Show (PredicateFailure (EraRule "RUPD" era))
-  ) =>
-  Show (ShelleyTickPredFailure era)
-
-deriving stock instance
-  ( Eq (PredicateFailure (EraRule "NEWEPOCH" era))
-  , Eq (PredicateFailure (EraRule "RUPD" era))
-  ) =>
-  Eq (ShelleyTickPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era))
-  , NoThunks (PredicateFailure (EraRule "RUPD" era))
-  ) =>
-  NoThunks (ShelleyTickPredFailure era)
-
-instance
-  ( NFData (PredicateFailure (EraRule "NEWEPOCH" era))
-  , NFData (PredicateFailure (EraRule "RUPD" era))
-  ) =>
-  NFData (ShelleyTickPredFailure era)
 
 data ShelleyTickEvent era
   = TickNewEpochEvent (Event (EraRule "NEWEPOCH" era))
@@ -139,7 +104,7 @@ instance
   type Signal (ShelleyTICK era) = SlotNo
   type Environment (ShelleyTICK era) = ()
   type BaseM (ShelleyTICK era) = ShelleyBase
-  type PredicateFailure (ShelleyTICK era) = ShelleyTickPredFailure era
+  type PredicateFailure (ShelleyTICK era) = Void
   type Event (ShelleyTICK era) = ShelleyTickEvent era
 
   initialRules = []
@@ -316,23 +281,21 @@ bheadTransition = do
 
 instance
   ( STS (ShelleyNEWEPOCH era)
-  , PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era
   , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
   Embed (ShelleyNEWEPOCH era) (ShelleyTICK era)
   where
-  wrapFailed = NewEpochFailure
+  wrapFailed = \case {}
   wrapEvent = TickNewEpochEvent
 
 instance
   ( Era era
   , STS (ShelleyRUPD era)
-  , PredicateFailure (EraRule "RUPD" era) ~ ShelleyRupdPredFailure era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   Embed (ShelleyRUPD era) (ShelleyTICK era)
   where
-  wrapFailed = RupdFailure
+  wrapFailed = \case {}
   wrapEvent = TickRupdEvent
 
 {------------------------------------------------------------------------------
@@ -341,26 +304,6 @@ instance
 -- This is a variant on the TICK transition called only by the consensus layer
 to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
-
-newtype ShelleyTickfPredFailure era
-  = TickfUpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
-  deriving (Generic)
-
-deriving stock instance
-  ( Era era
-  , Show (PredicateFailure (EraRule "UPEC" era))
-  ) =>
-  Show (ShelleyTickfPredFailure era)
-
-deriving stock instance
-  ( Era era
-  , Eq (PredicateFailure (EraRule "UPEC" era))
-  ) =>
-  Eq (ShelleyTickfPredFailure era)
-
-instance
-  NoThunks (PredicateFailure (EraRule "UPEC" era)) =>
-  NoThunks (ShelleyTickfPredFailure era)
 
 newtype ShelleyTickfEvent era
   = TickfUpecEvent (Event (EraRule "UPEC" era)) -- Subtransition Events
@@ -381,7 +324,7 @@ instance
   type Signal (ShelleyTICKF era) = SlotNo
   type Environment (ShelleyTICKF era) = ()
   type BaseM (ShelleyTICKF era) = ShelleyBase
-  type PredicateFailure (ShelleyTICKF era) = ShelleyTickfPredFailure era
+  type PredicateFailure (ShelleyTICKF era) = Void
   type Event (ShelleyTICKF era) = ShelleyTickfEvent era
 
   initialRules = []
@@ -394,10 +337,9 @@ instance
 instance
   ( Era era
   , STS (ShelleyUPEC era)
-  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
   , Event (EraRule "UPEC" era) ~ Void
   ) =>
   Embed (ShelleyUPEC era) (ShelleyTICKF era)
   where
-  wrapFailed = TickfUpecFailure
+  wrapFailed = \case {}
   wrapEvent = TickfUpecEvent

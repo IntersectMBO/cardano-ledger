@@ -47,7 +47,6 @@ import Cardano.Ledger.Shelley.Rules (
   RupdEvent (..),
   ShelleyTICK,
   ShelleyTickEvent (..),
-  ShelleyTickPredFailure (..),
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.State
@@ -221,7 +220,7 @@ instance
   ) =>
   Embed (ConwayNEWEPOCH era) (ShelleyTICK era)
   where
-  wrapFailed = NewEpochFailure
+  wrapFailed = \case {}
   wrapEvent = TickNewEpochEvent
 
 instance

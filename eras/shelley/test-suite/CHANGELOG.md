@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Removed `MockChainFromTickFailure` constructor from `MockChainFailure`
 * Removed `Test.Cardano.Ledger.Shelley.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
 * Remove `EncCBOR` instance for `RawSeed` (moved to `cardano-ledger-shelley` testlib)
 * Remove `Test.Cardano.Ledger.Shelley.LaxBlock` as unused

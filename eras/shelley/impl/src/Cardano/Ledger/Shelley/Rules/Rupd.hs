@@ -11,7 +11,6 @@ module Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   RupdEnv (..),
   PredicateFailure,
-  ShelleyRupdPredFailure,
   epochInfoRange,
   PulsingRewUpdate (..),
   startStep,
@@ -70,18 +69,11 @@ import Control.State.Transition (
  )
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Void (Void)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data RupdEnv era
   = RupdEnv BlocksMade (EpochState era)
-
-data ShelleyRupdPredFailure era -- No predicate failures
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (ShelleyRupdPredFailure era)
-
-instance NFData (ShelleyRupdPredFailure era)
 
 instance
   ( Era era
@@ -94,7 +86,7 @@ instance
   type Signal (ShelleyRUPD era) = SlotNo
   type Environment (ShelleyRUPD era) = RupdEnv era
   type BaseM (ShelleyRUPD era) = ShelleyBase
-  type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
+  type PredicateFailure (ShelleyRUPD era) = Void
   type Event (ShelleyRUPD era) = RupdEvent
 
   initialRules = [pure SNothing]
