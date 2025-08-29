@@ -133,7 +133,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
   withPostFixup,
   withPreFixup,
-  withCborRoundTripFailures,
   impNESL,
   impGlobalsL,
   impLastTickG,
@@ -260,7 +259,6 @@ import Numeric.Natural (Natural)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import qualified System.Random.Stateful as R
-import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), mkStakeRef, mkWitnessesVKey)
@@ -290,7 +288,6 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
         { impInitEnv =
             ImpTestEnv
               { iteFixup = fixupTx
-              , iteCborRoundTripFailures = True
               , itePostSubmitTxHook = \_ _ _ -> pure ()
               }
         , impInitState = initState
@@ -766,8 +763,6 @@ data ImpTestEnv era = ImpTestEnv
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       ImpM t ()
-  , iteCborRoundTripFailures :: Bool
-  -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
@@ -786,9 +781,6 @@ itePostSubmitTxHookL ::
       ImpM t ()
     )
 itePostSubmitTxHookL = lens itePostSubmitTxHook (\x y -> x {itePostSubmitTxHook = y})
-
-iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
-iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
 
 instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
@@ -1088,7 +1080,6 @@ trySubmitTx tx = do
   lEnv <- impLedgerEnv st
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
-  roundTripCheck <- asks iteCborRoundTripFailures
   globals <- use impGlobalsL
   let trc = TRC (lEnv, st ^. nesEsL . esLStateL, txFixed)
 
@@ -1098,14 +1089,7 @@ trySubmitTx tx = do
   case res of
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
-      if roundTripCheck
-        then liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-        else
-          liftIO $
-            roundTripCborRangeFailureExpectation
-              (eraProtVerLow @era)
-              (eraProtVerHigh @era)
-              predFailures
+      liftIO $ forM_ predFailures $ roundTripEraExpectation @era
       pure $ Left (predFailures, txFixed)
     Right (st', events) -> do
       let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
@@ -1579,9 +1563,6 @@ registerAndRetirePoolToMakeReward stakingCred = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RetirePoolTxCert poolId poolExpiry)
   passNEpochs $ fromIntegral poolLifetime
-
-withCborRoundTripFailures :: ImpTestM era a -> ImpTestM era a
-withCborRoundTripFailures = local $ iteCborRoundTripFailuresL .~ False
 
 -- | Compose given function with the configured fixup
 withCustomFixup ::

@@ -370,18 +370,7 @@ alonzoToConwayUtxoPredFailure = \case
   Alonzo.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Alonzo.UtxosFailure x -> UtxosFailure x
   Alonzo.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Alonzo.TriesToForgeADA ->
-    error
-      "Impossible case, soon to be removed. See: https://github.com/IntersectMBO/cardano-ledger/issues/4085"
-  Alonzo.OutputTooBigUTxO xs ->
-    let
-      -- TODO: Remove this once the other eras will make the switch from Integer to Int
-      -- as per #4015.
-      -- https://github.com/IntersectMBO/cardano-ledger/issues/4085
-      toRestricted :: (Integer, Integer, TxOut era) -> (Int, Int, TxOut era)
-      toRestricted (sz, mv, out) = (fromIntegral sz, fromIntegral mv, out)
-     in
-      OutputTooBigUTxO $ map toRestricted xs
+  Alonzo.OutputTooBigUTxO xs -> OutputTooBigUTxO xs
   Alonzo.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Alonzo.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u
   Alonzo.ExUnitsTooBigUTxO m -> ExUnitsTooBigUTxO m
@@ -408,7 +397,4 @@ allegraToConwayUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> absurdEraRule @"PPUP" @era x
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Allegra.TriesToForgeADA ->
-    error
-      "Impossible case, soon to be removed. See: https://github.com/IntersectMBO/cardano-ledger/issues/4085"
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)

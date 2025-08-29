@@ -87,8 +87,6 @@ data AllegraUtxoPredFailure era
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       [TxOut era] -- list of supplied bad transaction outputs
-  | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
-    TriesToForgeADA -- TODO: remove
   | OutputTooBigUTxO
       [TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
@@ -361,7 +359,6 @@ instance
       WrongNetwork right wrongs -> Sum WrongNetwork 8 !> To right !> To wrongs
       WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
-      TriesToForgeADA -> Sum TriesToForgeADA 11
       OutputTooBigUTxO outs -> Sum OutputTooBigUTxO 12 !> To outs
 
 instance
@@ -382,7 +379,6 @@ instance
     8 -> SumD WrongNetwork <! From <! From
     9 -> SumD WrongNetworkWithdrawal <! From <! From
     10 -> SumD OutputBootAddrAttrsTooBig <! From
-    11 -> SumD TriesToForgeADA
     12 -> SumD OutputTooBigUTxO <! From
     k -> Invalid k
 

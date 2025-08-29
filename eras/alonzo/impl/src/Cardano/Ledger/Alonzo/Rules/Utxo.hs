@@ -148,11 +148,9 @@ data AlonzoUtxoPredFailure era
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
       [TxOut era]
-  | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
-    TriesToForgeADA
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      [(Integer, Integer, TxOut era)]
+      [(Int, Int, TxOut era)]
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -645,8 +643,6 @@ encFail (WrongNetworkWithdrawal right wrongs) =
   Sum (WrongNetworkWithdrawal @era) 9 !> To right !> To wrongs
 encFail (OutputBootAddrAttrsTooBig outs) =
   Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
-encFail TriesToForgeADA =
-  Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
   Sum (OutputTooBigUTxO @era) 12 !> To outs
 encFail (InsufficientCollateral a b) =
@@ -685,11 +681,7 @@ decFail 7 = SumD UtxosFailure <! From
 decFail 8 = SumD WrongNetwork <! From <! From
 decFail 9 = SumD WrongNetworkWithdrawal <! From <! From
 decFail 10 = SumD OutputBootAddrAttrsTooBig <! From
-decFail 11 = SumD TriesToForgeADA
-decFail 12 =
-  let fromRestricted :: (Int, Int, TxOut era) -> (Integer, Integer, TxOut era)
-      fromRestricted (sz, mv, txOut) = (toInteger sz, toInteger mv, txOut)
-   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> decCBOR)
+decFail 12 = SumD OutputTooBigUTxO <! From
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
 decFail 15 = SumD ExUnitsTooBigUTxO <! From
@@ -732,6 +724,5 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
-  Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
-  Allegra.TriesToForgeADA -> TriesToForgeADA
+  Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)

@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Remove `TriesToForgeADA`
+* Change the type of `actualSize` and `PParameterMaxValue` fields in `OutputTooBigUTxO` to `Int`
 * Added `COMPLETE` pragma for `TxCert AllegraEra`
 * Added `COMPLETE` pragma for `NativeScript AllegraEra`
 * Move to `testlib` `DecCBOR` instances for: `TxBody AllegraEra`, `AllegraTxAuxDataRaw`, `AllegraTxAuxData`, `TimelockRaw`, `Timelock`

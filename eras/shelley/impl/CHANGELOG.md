@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Remove `withCborRoundTripFailures` 
 * Refactor pool deposits to use `StakePoolState`. #5234
   * Update `Pool` rule to store deposits in individual `StakePoolState` records
   * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
