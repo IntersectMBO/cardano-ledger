@@ -589,10 +589,10 @@ instance SpecTranslate ctx RewardAccount where
   toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
 
 instance SpecTranslate ctx PoolParams where
-  type SpecRep PoolParams = Agda.PoolParams
+  type SpecRep PoolParams = Agda.StakePoolParams
 
   toSpecRep PoolParams {..} =
-    Agda.PoolParams
+    Agda.StakePoolParams
       <$> toSpecRep ppOwners
       <*> toSpecRep ppCost
       <*> toSpecRep ppMargin

@@ -104,9 +104,11 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   defaultInitImpTestState,
   impEraStartEpochNo,
   impSetSeed,
-  modifyImpInitProtVer,
+  shelleyModifyImpInitProtVer,
   modifyImpInitPostSubmitTxHook,
   disableImpInitPostSubmitTxHook,
+  modifyImpInitPostEpochBoundaryHook,
+  disableImpInitPostEpochBoundaryHook,
   minorFollow,
   majorFollow,
   cantFollow,
@@ -292,6 +294,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
               , itePostSubmitTxHook = \_ _ _ -> pure ()
+              , itePostEpochBoundaryHook = \_ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -432,6 +435,9 @@ class
   , NFData (EraRuleEvent "TICK" era)
   , Typeable (EraRuleEvent "TICK" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , Environment (EraRule "NEWEPOCH" era) ~ ()
+  , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
   ShelleyEraImp era
   where
@@ -485,6 +491,12 @@ class
     (PParams era -> PParams era) ->
     ImpTestM era ()
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
+
+  modifyImpInitProtVer ::
+    ShelleyEraImp era =>
+    Version ->
+    SpecWith (ImpInit (LedgerSpec era)) ->
+    SpecWith (ImpInit (LedgerSpec era))
 
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
@@ -581,22 +593,18 @@ withEachEraVersion specWith =
       describe (show protVer) $
         modifyImpInitProtVer protVer specWith
 
-modifyImpInitProtVer ::
+shelleyModifyImpInitProtVer ::
   forall era.
   ShelleyEraImp era =>
   Version ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
-modifyImpInitProtVer ver =
+shelleyModifyImpInitProtVer ver =
   modifyImpInit $ \impInit ->
     impInit
       { impInitState =
           impInitState impInit
-            & impNESL
-              . nesEsL
-              . curPParamsEpochStateL
-              . ppProtocolVersionL
-              .~ ProtVer ver 0
+            & impNESL . nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer ver 0
       }
 
 modifyImpInitPostSubmitTxHook ::
@@ -623,6 +631,29 @@ disableImpInitPostSubmitTxHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
 disableImpInitPostSubmitTxHook =
+  modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
+
+modifyImpInitPostEpochBoundaryHook ::
+  forall era.
+  ( forall t.
+    Globals ->
+    TRC (EraRule "NEWEPOCH" era) ->
+    State (EraRule "NEWEPOCH" era) ->
+    ImpM t ()
+  ) ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitPostEpochBoundaryHook f = modifyImpInit $ \impInit ->
+  impInit
+    { impInitEnv =
+        impInitEnv impInit
+          & itePostEpochBoundaryHookL .~ f
+    }
+
+disableImpInitPostEpochBoundaryHook ::
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+disableImpInitPostEpochBoundaryHook =
   modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
@@ -733,6 +764,7 @@ instance
 
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
+  modifyImpInitProtVer = shelleyModifyImpInitProtVer
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -766,6 +798,12 @@ data ImpTestEnv era = ImpTestEnv
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       ImpM t ()
+  , itePostEpochBoundaryHook ::
+      forall t.
+      Globals ->
+      TRC (EraRule "NEWEPOCH" era) ->
+      State (EraRule "NEWEPOCH" era) ->
+      ImpM t ()
   , iteCborRoundTripFailures :: Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
@@ -786,6 +824,18 @@ itePostSubmitTxHookL ::
       ImpM t ()
     )
 itePostSubmitTxHookL = lens itePostSubmitTxHook (\x y -> x {itePostSubmitTxHook = y})
+
+itePostEpochBoundaryHookL ::
+  forall era.
+  Lens'
+    (ImpTestEnv era)
+    ( forall t.
+      Globals ->
+      TRC (EraRule "NEWEPOCH" era) ->
+      State (EraRule "NEWEPOCH" era) ->
+      ImpM t ()
+    )
+itePostEpochBoundaryHookL = lens itePostEpochBoundaryHook (\x y -> x {itePostEpochBoundaryHook = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1258,9 +1308,15 @@ passEpoch ::
 passEpoch = do
   let
     tickUntilNewEpoch curEpochNo = do
+      oldNES <- getsNES id
       passTick @era
       newEpochNo <- getsNES nesELL
-      unless (newEpochNo > curEpochNo) $ tickUntilNewEpoch curEpochNo
+      if newEpochNo > curEpochNo
+        then do
+          globals <- use impGlobalsL
+          newNES <- getsNES id
+          asks itePostEpochBoundaryHook >>= (\f -> f globals (TRC ((), oldNES, newEpochNo)) newNES)
+        else tickUntilNewEpoch curEpochNo
   preNES <- gets impNES
   let startEpoch = preNES ^. nesELL
   logDoc $ "Entering " <> ansiExpr (succ startEpoch)
@@ -1293,7 +1349,9 @@ passNEpochs ::
   Natural ->
   ImpTestM era ()
 passNEpochs n =
-  replicateM_ (fromIntegral n) passEpoch
+  impAnn ("Passing " <> show n <> " epochs") $
+    forM_ ([1 .. n] :: [Natural]) $ \i ->
+      impAnn ("Passing epoch (" <> show i <> ")") $ passEpoch
 
 -- | Runs the TICK rule until the `n` epochs are passed, running the `checks`
 -- each time.
