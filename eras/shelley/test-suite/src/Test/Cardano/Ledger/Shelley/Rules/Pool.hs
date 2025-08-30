@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Block (bheader)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   curPParamsEpochStateL,
@@ -82,9 +81,7 @@ tests =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolRetirement ::
-  ( ChainProperty era
-  , ShelleyEraTxBody era
-  ) =>
+  ChainProperty era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
@@ -99,9 +96,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
 poolRegistration ::
-  ( ChainProperty era
-  , ShelleyEraTxBody era
-  ) =>
+  ChainProperty era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
@@ -113,9 +108,7 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
-  ( ChainProperty era
-  , ShelleyEraTxBody era
-  ) =>
+  ChainProperty era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
