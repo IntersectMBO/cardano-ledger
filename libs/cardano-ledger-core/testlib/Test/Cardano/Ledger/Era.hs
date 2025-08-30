@@ -92,6 +92,11 @@ class
   where
   zeroCostModels :: CostModels
 
+  -- | Produce the full file path from relative path for the package. This has only one legitimate
+  -- implementation, namely @getDataFileName@ that is imported from @Paths_cardano_ledger_[era]@
+  -- module.
+  getEraDataFileName :: FilePath -> IO FilePath
+
   -- | This is a helper function that allows for creation of an `AccountState` in era agnostic
   -- fashion. There is no equivalent function outside of testing since arguments required for
   -- creation of `AccountState` varies between eras and we can get away with such function in

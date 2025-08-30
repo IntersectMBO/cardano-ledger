@@ -180,7 +180,9 @@ library testlib
     Test.Cardano.Ledger.Core.Rational
     Test.Cardano.Ledger.Core.Utils
     Test.Cardano.Ledger.Era
+    Test.Cardano.Ledger.Era.Spec
     Test.Cardano.Ledger.Imp.Common
+    Test.Cardano.Ledger.ImpTest
     Test.Cardano.Ledger.Plutus
     Test.Cardano.Ledger.Plutus.ExUnits
     Test.Cardano.Ledger.Plutus.Examples
@@ -216,20 +218,24 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.5,
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,
-    cardano-slotting,
+    cardano-slotting:{cardano-slotting, testlib},
     containers,
     cuddle >=0.4,
     data-default,
     deepseq,
+    filepath,
     generic-random,
     genvalidity,
     hedgehog-quickcheck,
     heredoc,
     hspec,
     microlens,
+    microlens-mtl,
     mtl,
     nothunks,
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+    prettyprinter,
+    prettyprinter-ansi-terminal,
     primitive,
     quickcheck-transformer,
     random ^>=1.2,

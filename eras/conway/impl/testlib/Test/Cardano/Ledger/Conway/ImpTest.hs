@@ -238,7 +238,7 @@ conwayModifyPParams f = modifyNES $ \nes ->
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
 
-instance ShelleyEraImp ConwayEra where
+instance EraImp ConwayEra where
   initGenesis = do
     kh1 <- freshKeyHash
     kh2 <- freshKeyHash
@@ -291,6 +291,7 @@ instance ShelleyEraImp ConwayEra where
         , cgInitialDReps = mempty
         }
 
+instance ShelleyEraImp ConwayEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
