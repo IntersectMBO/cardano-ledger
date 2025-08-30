@@ -80,6 +80,8 @@ class HasZero a where
   default isZero :: (Eq a, Num a) => a -> Bool
   isZero = (== 0)
 
+instance HasZero Word
+
 instance HasZero Word8
 
 instance HasZero Word16

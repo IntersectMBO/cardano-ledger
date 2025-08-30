@@ -24,7 +24,7 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -50,11 +50,13 @@ import Control.State.Transition (
   tellEvent,
  )
 import Data.Default (Default, def)
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldl')
 import qualified Data.Map.Merge.Strict as Map
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -143,17 +145,17 @@ poolReapTransition = do
     ps0 = cs0 ^. certPStateL
     -- find the set of VRF key hashes that are no longer relevant, since they have been overwritten
     -- via pool re-registration
-    danglingVrfKeyHashes =
-      Set.fromList $
-        Map.elems $
-          Map.merge
-            Map.dropMissing
-            Map.dropMissing
-            ( Map.zipWithMaybeMatched $ \_ sps spsF ->
-                if sps ^. spsVrfL /= spsF ^. spsVrfL then Just (sps ^. spsVrfL) else Nothing
-            )
-            (ps0 ^. psStakePoolsL)
-            (ps0 ^. psFutureStakePoolsL)
+    danglingVRFKeyHashes =
+      -- Set.fromList $
+      Map.elems $
+        Map.merge
+          Map.dropMissing
+          Map.dropMissing
+          ( Map.zipWithMaybeMatched $ \_ sps spsF ->
+              if sps ^. spsVrfL /= spsF ^. spsVrfL then Just (sps ^. spsVrfL) else Nothing
+          )
+          (ps0 ^. psStakePoolsL)
+          (ps0 ^. psFutureStakePoolsL)
 
     -- activate future stakePools
     ps =
@@ -171,7 +173,12 @@ poolReapTransition = do
     retiringPools :: Map.Map (KeyHash 'StakePool) StakePoolState
     retiringPools = Map.restrictKeys (psStakePools ps) retired
     -- collect all accounts for stake pools that will retire
-    retiredVRFs = foldMap (Set.singleton . spsVrf) retiringPools
+
+    -- TODO: either Keep track of how many retired, as a Map and then do a Map.merge
+    -- or keep a list which duplicates, and then for each, do a `removeVRFKeyHashOccurrence`,
+    -- retiredVRFs = foldMap (Set.singleton . spsVrf) retiringPools
+    retiredVRFKeyHashes = spsVrf <$> Map.elems retiringPools
+
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential 'Staking) (CompactForm Coin)
     accountRefunds =
@@ -217,8 +224,14 @@ poolReapTransition = do
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psVRFKeyHashesL
-            %~ ((`Set.difference` retiredVRFs) . (`Set.difference` danglingVrfKeyHashes))
+            %~ (removeVRFKeyHashOccurrences (retiredVRFKeyHashes <> danglingVRFKeyHashes))
       )
+  where
+    removeVRFKeyHashOccurrences ::
+      [VRFVerKeyHash 'StakePoolVRF] ->
+      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
+      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
+    removeVRFKeyHashOccurrences vrfs map = foldl' (flip removeVRFKeyHashOccurrence) map vrfs
 
 renderPoolReapViolation ::
   ( EraGov era

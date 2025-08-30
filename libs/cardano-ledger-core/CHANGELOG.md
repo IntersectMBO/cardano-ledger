@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `NonZero` instance of `Word`
 * Move pool deposits from `PState` into `StakePoolState`. #5234
   * Add `spsDeposit` field to `StakePoolState`
   * Remove `psDeposits` field from `PState` data constructor
