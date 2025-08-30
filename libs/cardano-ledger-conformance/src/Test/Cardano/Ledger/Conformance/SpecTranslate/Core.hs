@@ -1,120 +1,110 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
-  SpecTranslate (..),
-  SpecNormalize (..),
-  OpaqueErrorString (..),
-  SpecTransM,
-  runSpecTransM,
-  askCtx,
-  withCtx,
-  unComputationResult,
-  unComputationResult_,
-  toSpecRep_,
-) where
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Core () where
 
-import Cardano.Ledger.BaseTypes (Inject (..))
-import Control.DeepSeq (NFData)
-import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
-import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
-import Data.Kind (Type)
-import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Void (Void)
-import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
+  Network (..),
+  ProtVer (..),
+  SlotNo (..),
+  getVersion,
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (Hash, KeyHash (..), ScriptHash (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Plutus.CostModels (CostModels)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
+import Control.Monad.Except (throwError)
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
-import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
+import Test.Cardano.Ledger.Conformance (
+  SpecTranslate (..),
+  hashToInteger,
+ )
 
-newtype SpecTransM ctx a
-  = SpecTransM (ExceptT Text (Reader ctx) a)
-  deriving (Functor, Applicative, Monad, MonadError Text, MonadReader ctx)
+instance SpecTranslate ctx StakeReference where
+  type SpecRep StakeReference = Maybe Agda.Credential
 
-runSpecTransM :: ctx -> SpecTransM ctx a -> Either Text a
-runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
+  toSpecRep (StakeRefBase c) = Just <$> toSpecRep c
+  toSpecRep (StakeRefPtr _) = pure Nothing
+  toSpecRep StakeRefNull = pure Nothing
 
-class SpecTranslate ctx a where
-  type SpecRep a :: Type
+instance SpecTranslate ctx BootstrapAddress where
+  type SpecRep BootstrapAddress = Agda.BootstrapAddr
 
-  toSpecRep :: a -> SpecTransM ctx (SpecRep a)
+  toSpecRep _ = throwError "Cannot translate bootstrap addresses"
 
-class GSpecNormalize f where
-  genericSpecNormalize :: f a -> f a
+instance SpecTranslate ctx Addr where
+  type SpecRep Addr = Agda.Addr
 
-instance GSpecNormalize U1 where
-  genericSpecNormalize U1 = U1
+  toSpecRep (Addr nw pc sr) =
+    Left
+      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr)
+  toSpecRep (AddrBootstrap ba) = Right <$> toSpecRep ba
 
-instance GSpecNormalize V1 where
-  genericSpecNormalize = \case {}
+instance SpecTranslate ctx (Hash a b) where
+  type SpecRep (Hash a b) = Integer
 
-instance (GSpecNormalize f, GSpecNormalize g) => GSpecNormalize (f :*: g) where
-  genericSpecNormalize (f :*: g) = genericSpecNormalize f :*: genericSpecNormalize g
+  toSpecRep = pure . hashToInteger
 
-instance (GSpecNormalize f, GSpecNormalize g) => GSpecNormalize (f :+: g) where
-  genericSpecNormalize (L1 f) = L1 $ genericSpecNormalize f
-  genericSpecNormalize (R1 f) = R1 $ genericSpecNormalize f
+instance SpecTranslate ctx ScriptHash where
+  type SpecRep ScriptHash = Integer
 
-instance GSpecNormalize a => GSpecNormalize (M1 i c a) where
-  genericSpecNormalize (M1 x) = M1 $ genericSpecNormalize x
+  toSpecRep (ScriptHash h) = toSpecRep h
 
-instance SpecNormalize a => GSpecNormalize (K1 i a) where
-  genericSpecNormalize (K1 x) = K1 $ specNormalize x
+instance SpecTranslate ctx (KeyHash r) where
+  type SpecRep (KeyHash r) = Integer
 
-class SpecNormalize a where
-  specNormalize :: a -> a
-  default specNormalize :: (Generic a, GSpecNormalize (Rep a)) => a -> a
-  specNormalize = to . genericSpecNormalize . from
+  toSpecRep (KeyHash h) = toSpecRep h
 
-askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
-askCtx = asks inject
+instance SpecTranslate ctx (Credential k) where
+  type SpecRep (Credential k) = Agda.Credential
 
-withCtx :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
-withCtx ctx m = do
-  case runSpecTransM ctx m of
-    Right x -> pure x
-    Left e -> throwError e
+  toSpecRep (KeyHashObj h) = Agda.KeyHashObj <$> toSpecRep h
+  toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
 
--- | OpaqueErrorString behaves like unit in comparisons, but contains an
--- error string that can be displayed.
-newtype OpaqueErrorString = OpaqueErrorString (NonEmpty Text)
-  deriving (Generic, Show, Semigroup)
+instance SpecTranslate ctx Network where
+  type SpecRep Network = Integer
 
--- | This implementation violates referential transparency. Do not rely on it
--- unless you know what you're doing.
-instance Eq OpaqueErrorString where
-  _ == _ = True
+  toSpecRep = pure . fromIntegral . fromEnum
 
-instance ToExpr OpaqueErrorString where
-  toExpr (OpaqueErrorString x) = App "OpaqueErrorString" [toExpr x]
+deriving instance SpecTranslate ctx Coin
 
-instance NFData OpaqueErrorString
+deriving instance SpecTranslate ctx SlotNo
 
-unComputationResult :: Agda.ComputationResult Text a -> Either Text a
-unComputationResult (Agda.Success x) = Right x
-unComputationResult (Agda.Failure e) = Left e
+deriving instance SpecTranslate ctx EpochNo
 
-unComputationResult_ :: Agda.ComputationResult Void a -> Either e a
-unComputationResult_ (Agda.Success x) = Right x
-unComputationResult_ (Agda.Failure x) = case x of {}
+deriving instance SpecTranslate ctx EpochInterval
 
-toSpecRep_ ::
-  SpecTranslate () a =>
-  a ->
-  SpecRep a
-toSpecRep_ x = case runSpecTransM () $ toSpecRep x of
-  Right res -> res
-  Left v -> error $ "Failed to translate:\n" <> T.unpack v
+instance SpecTranslate ctx ProtVer where
+  type SpecRep ProtVer = (Integer, Integer)
+
+  toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
+
+instance SpecTranslate ctx CostModels where
+  type SpecRep CostModels = ()
+
+  toSpecRep _ = pure ()
+
+instance SpecTranslate ctx Prices where
+  type SpecRep Prices = ()
+
+  toSpecRep _ = pure ()
+
+instance SpecTranslate ctx ExUnits where
+  type SpecRep ExUnits = Agda.ExUnits
+
+  toSpecRep (ExUnits a b) = pure (toInteger a, toInteger b)
+
+instance SpecTranslate ctx RewardAccount where
+  type SpecRep RewardAccount = Agda.RwdAddr
+
+  toSpecRep (RewardAccount n c) = Agda.RwdAddr <$> toSpecRep n <*> toSpecRep c
