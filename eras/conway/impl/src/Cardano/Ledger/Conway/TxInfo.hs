@@ -381,7 +381,8 @@ guardConwayFeaturesForPlutusV1V2 tx = do
       Left $ inject $ CurrentTreasuryFieldNotSupported @era treasury
 
 transTxCertV1V2 ::
-  ( ConwayEraTxCert era
+  ( ShelleyEraTxCert era
+  , ConwayEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
   TxCert era ->
@@ -546,7 +547,8 @@ transTxBodyWithdrawals txBody =
 -- version 9 has been exercised on Mainnet, therefore this conditional translation can never be
 -- removed for Conway era (#4863)
 transTxCert ::
-  (ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) => ProtVer -> TxCert era -> PV3.TxCert
+  (ShelleyEraTxCert era, ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) =>
+  ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister

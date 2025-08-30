@@ -24,6 +24,7 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   LedgerSpec,
+  EraSpecificSpec (..),
   SomeSTSEvent (..),
   ImpTestState,
   ImpTestEnv (..),
@@ -68,7 +69,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   tryRunImpRuleNoAssertions,
   delegateStake,
   registerRewardAccount,
-  registerStakeCredential,
+  shelleyRegisterStakeCredential,
   getRewardAccountFor,
   getReward,
   lookupReward,
@@ -299,6 +300,10 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
   -- number of the current era
   impPrepAction = passTick
 
+class EraTest era => EraSpecificSpec era where
+  eraSpecificSpec :: SpecWith (ImpInit (LedgerSpec era))
+  eraSpecificSpec = pure ()
+
 data SomeSTSEvent era
   = forall (rule :: Symbol).
     ( Typeable (Event (EraRule rule era))
@@ -390,8 +395,7 @@ impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
 class
-  ( ShelleyEraTxCert era
-  , ShelleyEraTest era
+  ( ShelleyEraTest era
   , -- For BBODY rule
     STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
@@ -486,6 +490,8 @@ class
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
+
+  registerStakeCredential :: HasCallStack => Credential 'Staking -> ImpTestM era RewardAccount
 
 defaultInitNewEpochState ::
   forall era g s m.
@@ -730,6 +736,7 @@ instance
 
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
+  registerStakeCredential = shelleyRegisterStakeCredential
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1462,14 +1469,15 @@ getRewardAccountFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingC
 
-registerStakeCredential ::
+shelleyRegisterStakeCredential ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
-registerStakeCredential cred = do
+shelleyRegisterStakeCredential cred = do
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
@@ -1478,7 +1486,9 @@ registerStakeCredential cred = do
   pure $ RewardAccount networkId cred
 
 delegateStake ::
-  ShelleyEraImp era =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   Credential 'Staking ->
   KeyHash 'StakePool ->
   ImpTestM era ()
@@ -1493,6 +1503,7 @@ registerRewardAccount ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
+  , ShelleyEraTxCert era
   ) =>
   ImpTestM era RewardAccount
 registerRewardAccount = do
@@ -1532,7 +1543,9 @@ freshPoolParams khPool rewardAccount = do
       }
 
 registerPool ::
-  ShelleyEraImp era =>
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  ) =>
   KeyHash 'StakePool ->
   ImpTestM era ()
 registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool

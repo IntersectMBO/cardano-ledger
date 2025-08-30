@@ -20,7 +20,7 @@
 
 module Test.Cardano.Ledger.Conway.ImpTest (
   module Test.Cardano.Ledger.Babbage.ImpTest,
-  ConwayEraImp,
+  ConwayEraImp (..),
   enactConstitution,
   enactTreasuryWithdrawals,
   submitGovAction,
@@ -50,7 +50,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerDRep,
   unRegisterDRep,
   updateDRep,
-  delegateToDRep,
   setupSingleDRep,
   setupDRepWithoutStake,
   setupPoolWithStake,
@@ -133,6 +132,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
   getCommittee,
+  conwayRegisterStakeCredential,
+  registerPoolWithDeposit,
+  registerRewardAccountWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -146,6 +148,7 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   binOpEpochNo,
   inject,
+  networkId,
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -173,7 +176,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -213,6 +216,7 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
+import Lens.Micro.Mtl (use)
 import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -297,6 +301,7 @@ instance ShelleyEraImp ConwayEra where
 
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
+  registerStakeCredential = conwayRegisterStakeCredential
 
 instance MaryEraImp ConwayEra
 
@@ -309,7 +314,6 @@ instance AlonzoEraImp ConwayEra where
 class
   ( AlonzoEraImp era
   , ConwayEraTest era
-  , ConwayEraTxCert era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
@@ -319,8 +323,26 @@ class
   , GovState era ~ ConwayGovState era
   ) =>
   ConwayEraImp era
+  where
+  delegateToDRep ::
+    Credential 'Staking ->
+    Coin ->
+    DRep ->
+    ImpTestM era (KeyPair 'Payment, RewardAccount)
 
-instance ConwayEraImp ConwayEra
+instance ConwayEraImp ConwayEra where
+  delegateToDRep cred stake dRep = do
+    ra <- registerStakeCredential cred
+    (_, spendingKP) <- freshKeyPair
+
+    submitTxAnn_ "Delegate to DRep" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
+        & bodyTxL . certsTxBodyL
+          .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
+
+    pure (spendingKP, ra)
 
 registerInitialCommittee ::
   (HasCallStack, ConwayEraImp era) =>
@@ -371,6 +393,7 @@ unRegisterDRep drep = do
 genUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxCert era
   ) =>
   Credential 'Staking ->
@@ -388,6 +411,7 @@ genUnRegTxCert stakingCredential = do
 genRegTxCert ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraTxCert era
   , ConwayEraTxCert era
   ) =>
   Credential 'Staking ->
@@ -441,33 +465,10 @@ setupSingleDRep ::
   ImpTestM era (Credential 'DRepRole, Credential 'Staking, KeyPair 'Payment)
 setupSingleDRep stake = do
   drepKH <- registerDRep
-  delegatorKH <- freshKeyHash
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-  let tx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.fromList [RegDepositTxCert (KeyHashObj delegatorKH) deposit]
-  submitTx_ tx
-  spendingKP <-
-    delegateToDRep (KeyHashObj delegatorKH) (Coin stake) (DRepCredential (KeyHashObj drepKH))
-  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
-
-delegateToDRep ::
-  ConwayEraImp era =>
-  Credential 'Staking ->
-  Coin ->
-  DRep ->
-  ImpTestM era (KeyPair 'Payment)
-delegateToDRep cred stake dRep = do
-  (_, spendingKP) <- freshKeyPair
-
-  submitTxAnn_ "Delegate to DRep" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
-  pure spendingKP
+  kh <- freshKeyHash
+  (spendingKP, _) <-
+    delegateToDRep (KeyHashObj kh) (Coin stake) (DRepCredential (KeyHashObj drepKH))
+  pure (KeyHashObj drepKH, KeyHashObj kh, spendingKP)
 
 getDRepState ::
   (HasCallStack, ConwayEraCertState era) =>
@@ -485,12 +486,12 @@ getDRepState dRepCred = do
 -- in Conway. The Shelley version of this function would have to separately
 -- register the staking credential and then delegate it.
 setupPoolWithStake ::
-  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  ConwayEraImp era =>
   Coin ->
   ImpTestM era (KeyHash 'StakePool, Credential 'Payment, Credential 'Staking)
 setupPoolWithStake delegCoin = do
   khPool <- freshKeyHash
-  registerPool khPool
+  registerPoolWithDeposit khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   sendCoinTo_ (mkAddr credDelegatorPayment credDelegatorStaking) delegCoin
@@ -507,11 +508,11 @@ setupPoolWithStake delegCoin = do
   pure (khPool, credDelegatorPayment, credDelegatorStaking)
 
 setupPoolWithoutStake ::
-  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  ConwayEraImp era =>
   ImpTestM era (KeyHash 'StakePool, Credential 'Staking)
 setupPoolWithoutStake = do
   khPool <- freshKeyHash
-  registerPool khPool
+  registerPoolWithDeposit khPool
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to stake pool" $
@@ -681,9 +682,7 @@ submitFailingProposal proposal expectedFailure =
 -- | Submits a transaction that proposes the given governance action. For proposing
 -- multiple actions in the same transaciton use `trySubmitGovActions` instead.
 trySubmitGovAction ::
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
-  ) =>
+  ConwayEraImp era =>
   GovAction era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
@@ -713,7 +712,7 @@ submitAndExpireProposalToMakeReward stakingC = do
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitGovActions ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ConwayEraImp era =>
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
@@ -737,17 +736,16 @@ mkProposalWithRewardAccount ga rewardAccount = do
       }
 
 mkProposal ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ConwayEraImp era =>
   GovAction era ->
   ImpTestM era (ProposalProcedure era)
 mkProposal ga = do
-  rewardAccount <- registerRewardAccount
+  rewardAccount <- registerRewardAccountWithDeposit
   mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , HasCallStack
   ) =>
   GovAction era ->
@@ -758,8 +756,7 @@ submitGovAction ga = do
 
 submitGovAction_ ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , HasCallStack
   ) =>
   GovAction era ->
@@ -768,8 +765,7 @@ submitGovAction_ = void . submitGovAction
 
 submitGovActions ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , HasCallStack
   ) =>
   NE.NonEmpty (GovAction era) ->
@@ -787,10 +783,7 @@ mkTreasuryWithdrawalsGovAction wdrls =
   TreasuryWithdrawals (Map.fromList wdrls) <$> getGovPolicy
 
 submitTreasuryWithdrawals ::
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
-  , ConwayEraGov era
-  ) =>
+  ConwayEraImp era =>
   [(RewardAccount, Coin)] ->
   ImpTestM era GovActionId
 submitTreasuryWithdrawals wdrls =
@@ -840,8 +833,7 @@ getGovPolicy =
 
 submitFailingGovAction ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
+  ( ConwayEraImp era
   , HasCallStack
   ) =>
   GovAction era ->
@@ -1802,3 +1794,34 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
 
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
 getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+
+conwayRegisterStakeCredential ::
+  forall era.
+  ( HasCallStack
+  , ConwayEraImp era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era RewardAccount
+conwayRegisterStakeCredential cred = do
+  deposit <- getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList [RegDepositTxCert cred deposit]
+  networkId <- use (impGlobalsL . to networkId)
+  pure $ RewardAccount networkId cred
+
+registerPoolWithDeposit ::
+  ConwayEraImp era =>
+  KeyHash 'StakePool ->
+  ImpTestM era ()
+registerPoolWithDeposit khPool =
+  (freshKeyHash >>= registerStakeCredential . KeyHashObj)
+    >>= registerPoolWithRewardAccount khPool
+
+registerRewardAccountWithDeposit ::
+  forall era.
+  ConwayEraImp era =>
+  ImpTestM era RewardAccount
+registerRewardAccountWithDeposit = do
+  freshKeyHash >>= registerStakeCredential . KeyHashObj

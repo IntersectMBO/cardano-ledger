@@ -27,6 +27,7 @@ instance ShelleyEraImp MaryEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
+  registerStakeCredential = shelleyRegisterStakeCredential
 
 class
   ( ShelleyEraImp era

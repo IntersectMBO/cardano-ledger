@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
+module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec, shelleyEraSpecificSpec) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -15,7 +15,8 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.State (PoolMetadata (..), ppCostL, ppMetadataL, ppVrfL, spsVrf)
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
+import Cardano.Ledger.State (PoolMetadata (..), PoolParams, ppCostL, ppMetadataL, ppVrfL, spsVrf)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
@@ -31,16 +32,6 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
-    it "register a pool with too low cost" $ do
-      (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
-      minPoolCost <- getsPParams ppMinPoolCostL
-      tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
-      let pps = (\p -> p & ppCostL .~ tooLowCost) <$> poolParams kh vrf
-      registerPoolTx <$> pps >>= \tx ->
-        submitFailingTx
-          tx
-          [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
-
     it "register a pool with a reward account having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
       rewardCredential <- KeyHashObj <$> freshKeyHash
@@ -57,6 +48,31 @@ spec = describe "POOL" $ do
             submitTx_ tx
           else
             submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
+
+  describe "Retiring pools" $ do
+    it "retire an unregistered pool" $ do
+      khNew <- freshKeyHash
+      retirePoolTx khNew (EpochInterval 10) >>= \tx ->
+        submitFailingTx tx [injectFailure $ StakePoolNotRegisteredOnKeyPOOL khNew]
+
+shelleyEraSpecificSpec ::
+  forall era.
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyEraSpecificSpec = describe "POOL" $ do
+  describe "Register and re-register pools" $ do
+    it "register a pool with too low cost" $ do
+      (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
+      minPoolCost <- getsPParams ppMinPoolCostL
+      tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
+      let pps = (\p -> p & ppCostL .~ tooLowCost) <$> poolParams kh vrf
+      registerPoolTx <$> pps >>= \tx ->
+        submitFailingTx
+          tx
+          [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
     it "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
@@ -197,11 +213,6 @@ spec = describe "POOL" $ do
             submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
 
   describe "Retiring pools" $ do
-    it "retire an unregistered pool" $ do
-      khNew <- freshKeyHash
-      retirePoolTx khNew (EpochInterval 10) >>= \tx ->
-        submitFailingTx tx [injectFailure $ StakePoolNotRegisteredOnKeyPOOL khNew]
-
     it "retire a pool with too high a retirement epoch" $ do
       (kh, _) <- registerNewPool
       maxRetireInterval <- getsPParams ppEMaxL
@@ -322,15 +333,6 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams kh vrf >>= submitTx_
       expectPool kh (Just vrf)
       pure (kh, vrf)
-    registerPoolTx pps =
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps]
-    retirePoolTx kh retirementInterval = do
-      curEpochNo <- getsNES nesELL
-      let retirement = addEpochInterval curEpochNo retirementInterval
-      pure $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
     expectPool poolKh mbVrf = do
       pps <- psStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh pps `shouldBe` mbVrf
@@ -349,3 +351,17 @@ spec = describe "POOL" $ do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $ pps & ppVrfL .~ vrf
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL
+
+registerPoolTx :: ShelleyEraImp era => PoolParams -> Tx era
+registerPoolTx pps =
+  mkBasicTx mkBasicTxBody
+    & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps]
+
+retirePoolTx ::
+  ShelleyEraImp era => KeyHash 'StakePool -> EpochInterval -> ImpM (LedgerSpec era) (Tx era)
+retirePoolTx kh retirementInterval = do
+  curEpochNo <- getsNES nesELL
+  let retirement = addEpochInterval curEpochNo retirementInterval
+  pure $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
