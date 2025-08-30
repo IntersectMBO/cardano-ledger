@@ -16,7 +16,6 @@ source-repository head
 
 library
   exposed-modules:
-    Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.Constrained.Conway
     Test.Cardano.Ledger.Constrained.Conway.Cert
     Test.Cardano.Ledger.Constrained.Conway.Certs

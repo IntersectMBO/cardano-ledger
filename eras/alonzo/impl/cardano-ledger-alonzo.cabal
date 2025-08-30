@@ -164,6 +164,7 @@ library testlib
     heredoc,
     microlens,
     microlens-mtl,
+    mtl,
     plutus-ledger-api,
     serialise,
     text,
