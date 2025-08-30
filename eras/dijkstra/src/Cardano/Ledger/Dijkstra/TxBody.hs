@@ -47,6 +47,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   DijkstraTxBodyRaw (..),
 ) where
 
+import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.TxBody (
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
@@ -90,13 +91,11 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.TxBody (
   conwayProposalsDeposits,
-  conwayRedeemerPointer,
-  conwayRedeemerPointerInverse,
  )
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Scripts ()
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
@@ -505,6 +504,64 @@ dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody
 
+-- | This newtype wrapper lets us index into the guards with a ScriptHash. It
+-- will return the index of the credential when using `indexOf` and the `fromIndex`
+-- method returns a `Nothing` if the credential at the index being looked up is
+-- actually a keyhash.
+newtype GuardsScriptHashView = GuardsScriptHashView (OSet (Credential Guard))
+
+instance Indexable ScriptHash GuardsScriptHashView where
+  indexOf (AsItem sh) (GuardsScriptHashView s) =
+    coerce $ indexOf @(Credential Guard) (AsItem $ ScriptHashObj sh) s
+  fromIndex (AsIx i) (GuardsScriptHashView s) = toScriptHash =<< fromIndex @(Credential Guard) (AsIx i) s
+    where
+      toScriptHash (AsIxItem idx (ScriptHashObj sh)) = SJust $ AsIxItem idx sh
+      toScriptHash _ = SNothing
+
+dijkstraRedeemerPointer ::
+  forall era.
+  DijkstraEraTxBody era =>
+  TxBody era ->
+  DijkstraPlutusPurpose AsItem era ->
+  StrictMaybe (DijkstraPlutusPurpose AsIx era)
+dijkstraRedeemerPointer txBody = \case
+  DijkstraMinting policyID ->
+    DijkstraMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
+  DijkstraSpending txIn ->
+    DijkstraSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
+  DijkstraRewarding rewardAccount ->
+    DijkstraRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  DijkstraCertifying txCert ->
+    DijkstraCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
+  DijkstraVoting votingProcedure ->
+    DijkstraVoting <$> indexOf votingProcedure (txBody ^. votingProceduresTxBodyL)
+  DijkstraProposing proposalProcedure ->
+    DijkstraProposing <$> indexOf proposalProcedure (txBody ^. proposalProceduresTxBodyL)
+  DijkstraGuarding scriptHash ->
+    DijkstraGuarding
+      <$> indexOf scriptHash (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
+
+dijkstraRedeemerPointerInverse ::
+  DijkstraEraTxBody era =>
+  TxBody era ->
+  DijkstraPlutusPurpose AsIx era ->
+  StrictMaybe (DijkstraPlutusPurpose AsIxItem era)
+dijkstraRedeemerPointerInverse txBody = \case
+  DijkstraMinting idx ->
+    DijkstraMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+  DijkstraSpending idx ->
+    DijkstraSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
+  DijkstraRewarding idx ->
+    DijkstraRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  DijkstraCertifying idx ->
+    DijkstraCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
+  DijkstraVoting idx ->
+    DijkstraVoting <$> fromIndex idx (txBody ^. votingProceduresTxBodyL)
+  DijkstraProposing idx ->
+    DijkstraProposing <$> fromIndex idx (txBody ^. proposalProceduresTxBodyL)
+  DijkstraGuarding idx ->
+    DijkstraGuarding <$> fromIndex idx (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
+
 instance AllegraEraTxBody DijkstraEra where
   vldtTxBodyL = lensMemoRawType @DijkstraEra dtbrVldt $
     \txb x -> txb {dtbrVldt = x}
@@ -542,9 +599,9 @@ instance AlonzoEraTxBody DijkstraEra where
     \txb x -> txb {dtbrNetworkId = x}
   {-# INLINE networkIdTxBodyL #-}
 
-  redeemerPointer = conwayRedeemerPointer
+  redeemerPointer = dijkstraRedeemerPointer
 
-  redeemerPointerInverse = conwayRedeemerPointerInverse
+  redeemerPointerInverse = dijkstraRedeemerPointerInverse
 
 instance BabbageEraTxBody DijkstraEra where
   sizedOutputsTxBodyL = lensMemoRawType @DijkstraEra dtbrOutputs $

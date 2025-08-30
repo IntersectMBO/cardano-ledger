@@ -4,15 +4,23 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.TxInfo () where
+module Cardano.Ledger.Dijkstra.TxInfo (
+  transPlutusPurposeV1V2,
+  transPlutusPurposeV3,
+) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  PlutusTxCert,
   PlutusTxInfo,
   SupportedLanguage (..),
   toPlutusWithContext,
@@ -20,8 +28,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (ProtVer (..), strictMaybe)
+import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
   ConwayEraPlutusTxInfo (..),
@@ -29,9 +38,7 @@ import Cardano.Ledger.Conway.TxInfo (
   scriptPurposeToScriptInfo,
   toPlutusV3Args,
   transMintValue,
-  transPlutusPurposeV1V2,
   transProposal,
-  transScriptPurpose,
   transTxBodyId,
   transTxBodyWithdrawals,
   transTxCert,
@@ -39,12 +46,13 @@ import Cardano.Ledger.Conway.TxInfo (
   transTxInInfoV1,
   transTxInInfoV3,
   transTxOutV1,
+  transValidityInterval,
   transVotingProcedures,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Scripts (PlutusScript (..))
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Dijkstra.TxCert ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (
@@ -62,6 +70,7 @@ import Control.Monad (zipWithM)
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1
@@ -102,15 +111,55 @@ instance EraPlutusContext DijkstraEra where
     DijkstraPlutusV3 p -> toPlutusWithContext $ Left p
     DijkstraPlutusV4 p -> toPlutusWithContext $ Left p
 
+transPlutusPurposeV1V2 ::
+  forall l era proxy.
+  ( EraPlutusTxInfo l era
+  , PlutusTxCert l ~ PV2.DCert
+  , Inject (ConwayPlutusPurpose AsItem era) (PlutusPurpose AsItem era)
+  , Inject (DijkstraPlutusPurpose AsItem era) (PlutusPurpose AsItem era)
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  proxy l ->
+  ProtVer ->
+  DijkstraPlutusPurpose AsItem era ->
+  Either (ContextError era) PV2.ScriptPurpose
+transPlutusPurposeV1V2 proxy pv = \case
+  DijkstraSpending txIn -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwaySpending txIn
+  DijkstraMinting policyId -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayMinting policyId
+  DijkstraCertifying txCert -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayCertifying txCert
+  DijkstraRewarding rewardAccount -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayRewarding rewardAccount
+  DijkstraVoting voting -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayVoting voting
+  DijkstraProposing proposing -> Conway.transPlutusPurposeV1V2 proxy pv $ ConwayProposing proposing
+  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ inject purpose
+
+transPlutusPurposeV3 ::
+  forall era.
+  ( ConwayEraPlutusTxInfo PlutusV3 era
+  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (DijkstraPlutusPurpose AsIxItem era) (PlutusPurpose AsIxItem era)
+  ) =>
+  ProtVer ->
+  DijkstraPlutusPurpose AsIxItem era ->
+  Either (ContextError era) PV3.ScriptPurpose
+transPlutusPurposeV3 pv = \case
+  DijkstraSpending txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwaySpending txIn
+  DijkstraMinting txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwayMinting txIn
+  DijkstraCertifying txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwayCertifying txIn
+  DijkstraRewarding txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwayRewarding txIn
+  DijkstraVoting txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwayVoting txIn
+  DijkstraProposing txIn -> Conway.transPlutusPurposeV3 @PlutusV3 @era Proxy pv $ ConwayProposing txIn
+  purpose ->
+    Left $ inject $ PlutusPurposeNotSupported @era . hoistPlutusPurpose @era toAsItem $ inject purpose
+
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose proxy pv =
+    transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
-    timeRange <-
-      Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    timeRange <- transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     mapM_ (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -145,7 +194,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
     timeRange <-
-      Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -178,11 +227,11 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
-  toPlutusScriptPurpose = transScriptPurpose
+  toPlutusScriptPurpose _ = transPlutusPurposeV3
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     let
       txInputs = txBody ^. inputsTxBodyL
       refInputs = txBody ^. referenceInputsTxBodyL
@@ -238,11 +287,11 @@ instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
-  toPlutusScriptPurpose = transScriptPurpose
+  toPlutusScriptPurpose _ = error "stub: PlutusV4 not yet implemented"
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     let
       txInputs = txBody ^. inputsTxBodyL
       refInputs = txBody ^. referenceInputsTxBodyL

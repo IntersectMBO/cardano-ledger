@@ -36,6 +36,8 @@ module Data.OSet.Strict (
   filter,
   mapL,
   mapR,
+  mapMaybeR,
+  mapMaybeL,
   decodeOSet,
 ) where
 
@@ -294,3 +296,17 @@ mapR f = F.foldr' ((:<|:) . f) Empty
 -- duplicates
 mapL :: Ord b => (a -> b) -> OSet a -> OSet b
 mapL f = F.foldl' (\x y -> x :|>: f y) Empty
+
+-- | Map a function over the elements, discarding elements on which the
+-- function returns `Nothing`. Right-biased.
+mapMaybeR :: Ord b => (a -> Maybe b) -> OSet a -> OSet b
+mapMaybeR f = F.foldr' helper Empty
+  where
+    helper x s = maybe s (:<|: s) $ f x
+
+-- | Map a function over the elements, discarding elements on which the
+-- function returns `Nothing`. Left-biased.
+mapMaybeL :: Ord b => (a -> Maybe b) -> OSet a -> OSet b
+mapMaybeL f = F.foldl' helper Empty
+  where
+    helper s x = maybe s (s :|>:) $ f x
