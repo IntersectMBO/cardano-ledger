@@ -1,8 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
@@ -58,9 +63,13 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetRatifyState@
   queryRatifyState,
 
-  -- * @GetStakePoolDefaultVote
+  -- * @GetStakePoolDefaultVote@
   queryStakePoolDefaultVote,
   DefaultVote (..),
+
+  -- * @GetPoolState@
+  queryPoolState,
+  PState' (..),
 
   -- * For testing
   getNextEpochCommitteeMembers,
@@ -74,6 +83,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
  )
 import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -426,3 +436,48 @@ queryStakePoolDefaultVote ::
 queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
     nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+
+-- | Used only for the `queryPoolState` query. This resembles the older way of
+-- representing StakePoolState in Ledger.
+data PState' = PState'
+  { psStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , psRetiring' :: !(Map (KeyHash 'StakePool) EpochNo)
+  , psDeposits :: !(Map (KeyHash 'StakePool) Coin)
+  }
+  deriving (Show, Eq)
+
+instance EncCBOR PState' where
+  encCBOR (PState' a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+
+instance DecShareCBOR PState' where
+  type Share PState' = Interns (KeyHash 'StakePool)
+  decSharePlusCBOR = decodeRecordNamedT "PState'" (const 4) $ do
+    psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psRetiring' <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    pure PState' {psStakePoolParams, psFutureStakePoolParams, psRetiring', psDeposits}
+
+instance DecShareCBOR PState' => DecCBOR PState' where
+  decCBOR = decNoShareCBOR
+
+-- | Query the PState'. This is slightly different from the internal
+-- representation used by Ledger and is intended to resemble how the internal
+-- representation used to be.
+queryPoolState ::
+  EraCertState era => NewEpochState era -> Maybe (Set (KeyHash 'StakePool)) -> PState'
+queryPoolState nes mPoolKeys =
+  let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+      mkPState' :: (forall b. Map.Map (KeyHash 'StakePool) b -> Map.Map (KeyHash 'StakePool) b) -> PState'
+      mkPState' f =
+        PState'
+          { psStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams $ f $ psStakePools pstate
+          , psFutureStakePoolParams = Map.mapWithKey stakePoolStateToPoolParams $ f $ psFutureStakePools pstate
+          , psRetiring' = f $ psRetiring pstate
+          , psDeposits = Map.map (fromCompact . spsDeposit) $ f $ psStakePools pstate
+          }
+   in case mPoolKeys of
+        Nothing -> mkPState' id
+        Just keys -> mkPState' (`Map.restrictKeys` keys)
