@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -10,6 +11,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   exampleDijkstraGenesis,
   DijkstraEraImp,
+  dijkstraGenRegTxCert,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -25,6 +27,8 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure (..),
   ConwayLedgerPredFailure (..),
  )
+import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -56,6 +60,7 @@ instance ShelleyEraImp DijkstraEra where
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
+  genRegTxCert = dijkstraGenRegTxCert
 
 instance MaryEraImp DijkstraEra
 
@@ -102,3 +107,14 @@ exampleDijkstraGenesis =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           }
     }
+
+dijkstraGenRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+dijkstraGenRegTxCert stakingCredential =
+  RegDepositTxCert stakingCredential
+    <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
