@@ -27,6 +27,7 @@ instance ShelleyEraImp MaryEra where
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
 
 class
   ( ShelleyEraImp era

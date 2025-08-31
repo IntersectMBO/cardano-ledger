@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -13,6 +14,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   exampleDijkstraGenesis,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
+  dijkstraGenRegTxCert,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -32,6 +34,8 @@ import Cardano.Ledger.Conway.Rules (
   ConwayDelegPredFailure (..),
   ConwayLedgerPredFailure (..),
  )
+import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -78,6 +82,7 @@ instance ShelleyEraImp DijkstraEra where
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
+  genRegTxCert = dijkstraGenRegTxCert
 
 instance MaryEraImp DijkstraEra
 
@@ -154,3 +159,14 @@ impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do
       | evalDijkstraNativeScript mempty vi guards ns -> pure $ Just mempty
       | otherwise -> pure Nothing
     _ -> error "Impossible: All NativeScripts should have been accounted for"
+
+dijkstraGenRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+dijkstraGenRegTxCert stakingCredential =
+  RegDepositTxCert stakingCredential
+    <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
