@@ -96,6 +96,8 @@
 ### `testlib`
 
 * Remove `shelleyAccountsToUMap` corresponding to the removal of `UMap` from core.
+* Added `shelleyGenUnRegTxCert`
+* Added `genUnRegTxCert` to `ShelleyEraImp`
 * Added `shelleyGenRegTxCert`
 * Added `genRegTxCert` to `ShelleyEraImp`
 * Added `impSatisfySignature` and `impSatisfyMNativeScripts`

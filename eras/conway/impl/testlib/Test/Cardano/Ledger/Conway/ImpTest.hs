@@ -46,7 +46,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitYesVote_,
   submitFailingVote,
   trySubmitVote,
-  genUnRegTxCert,
   registerDRep,
   unRegisterDRep,
   updateDRep,
@@ -307,6 +306,7 @@ instance ShelleyEraImp ConwayEra where
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = conwayGenRegTxCert
+  genUnRegTxCert = conwayGenUnRegTxCert
 
 conwayModifyImpInitProtVer ::
   forall era.
@@ -393,7 +393,7 @@ unRegisterDRep drep = do
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton (UnRegDRepTxCert drep refund)
 
-genUnRegTxCert ::
+conwayGenUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
   , ShelleyEraTxCert era
@@ -401,7 +401,7 @@ genUnRegTxCert ::
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
-genUnRegTxCert stakingCredential = do
+conwayGenUnRegTxCert stakingCredential = do
   accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
   case lookupAccountState stakingCredential accounts of
     Nothing -> pure $ UnRegTxCert stakingCredential
