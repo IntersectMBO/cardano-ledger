@@ -429,6 +429,7 @@ instance ShelleyEraImp AlonzoEra where
   fixupTx = alonzoFixupTx
   expectTxSuccess = impAlonzoExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
+  genRegTxCert = shelleyGenRegTxCert
 
 instance MaryEraImp AlonzoEra
 

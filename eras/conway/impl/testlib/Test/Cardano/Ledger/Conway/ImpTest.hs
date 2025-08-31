@@ -45,7 +45,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitYesVote_,
   submitFailingVote,
   trySubmitVote,
-  genRegTxCert,
   genUnRegTxCert,
   registerDRep,
   unRegisterDRep,
@@ -302,6 +301,7 @@ instance ShelleyEraImp ConwayEra where
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   registerStakeCredential = conwayRegisterStakeCredential
+  genRegTxCert = conwayGenRegTxCert
 
 instance MaryEraImp ConwayEra
 
@@ -408,20 +408,22 @@ genUnRegTxCert stakingCredential = do
         , UnRegDepositTxCert stakingCredential (fromCompact (accountState ^. depositAccountStateL))
         ]
 
-genRegTxCert ::
+conwayGenRegTxCert ::
   forall era.
   ( ShelleyEraImp era
   , ShelleyEraTxCert era
   , ConwayEraTxCert era
   ) =>
-  Credential 'Staking ->
-  ImpTestM era (TxCert era)
-genRegTxCert stakingCredential =
-  oneof
-    [ pure $ RegTxCert stakingCredential
-    , RegDepositTxCert stakingCredential
-        <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
-    ]
+  ImpTestM era (TxCert era, Credential 'Staking)
+conwayGenRegTxCert = do
+  stakingCredential <- KeyHashObj <$> freshKeyHash
+  cert <-
+    oneof
+      [ pure $ RegTxCert stakingCredential
+      , RegDepositTxCert stakingCredential
+          <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+      ]
+  pure (cert, stakingCredential)
 
 -- | Submit a transaction that updates a given DRep
 updateDRep ::

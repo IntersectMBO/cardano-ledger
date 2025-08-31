@@ -728,37 +728,33 @@ conwayEraSpecificSpec ::
 conwayEraSpecificSpec = do
   describe "Register stake credential" $ do
     it "Without any deposit" $ do
-      freshKeyHash >>= \kh -> do
-        let cred = KeyHashObj kh
-        regTxCert <- genRegTxCert cred
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [regTxCert]
-        expectRegistered cred
+      (regTxCert, cred) <- genRegTxCert
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [regTxCert]
+      expectRegistered cred
 
   describe "Delegate stake" $ do
     it "Register and delegate in the same transaction" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
+      (regTxCert1, cred1) <- genRegTxCert
       poolKh <- freshKeyHash
       registerPoolWithDeposit poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ [ RegDepositTxCert cred expectedDeposit
-               , DelegTxCert cred (DelegStake poolKh)
+            .~ [ regTxCert1
+               , DelegTxCert cred1 (DelegStake poolKh)
                ]
-      expectDelegatedToPool cred poolKh
+      expectDelegatedToPool cred1 poolKh
 
-      freshKeyHash >>= \kh -> do
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [ RegDepositTxCert (KeyHashObj kh) expectedDeposit
-                 , DelegStakeTxCert (KeyHashObj kh) poolKh -- using the pattern from Shelley
-                 ]
-        expectDelegatedToPool (KeyHashObj kh) poolKh
+      (regTxCert2, cred2) <- genRegTxCert
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ regTxCert2
+               , DelegStakeTxCert cred2 poolKh -- using the pattern from Shelley
+               ]
+      expectDelegatedToPool cred2 poolKh
 
 expectRegistered :: (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
 expectRegistered cred = do
