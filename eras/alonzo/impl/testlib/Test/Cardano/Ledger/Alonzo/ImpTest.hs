@@ -434,6 +434,7 @@ instance ShelleyEraImp AlonzoEra where
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 instance MaryEraImp AlonzoEra
 

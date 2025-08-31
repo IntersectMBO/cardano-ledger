@@ -30,6 +30,7 @@ instance ShelleyEraImp MaryEra where
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 class
   ( ShelleyEraImp era
