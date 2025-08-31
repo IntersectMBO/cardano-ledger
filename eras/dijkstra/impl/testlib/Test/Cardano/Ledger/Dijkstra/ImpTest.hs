@@ -14,12 +14,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   dijkstraGenRegTxCert,
 ) where
 
-import Cardano.Ledger.BaseTypes (
-  BoundedRational (..),
-  EpochInterval (..),
-  addEpochInterval,
-  knownNonZeroBounded,
- )
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
@@ -37,6 +33,7 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State
 import Data.Maybe (fromJust)
 import Lens.Micro ((%~), (&))
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -61,6 +58,7 @@ instance ShelleyEraImp DijkstraEra where
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
+  genUnRegTxCert = dijkstraGenUnRegTxCert
 
 instance MaryEraImp DijkstraEra
 
@@ -118,3 +116,17 @@ dijkstraGenRegTxCert ::
 dijkstraGenRegTxCert stakingCredential =
   RegDepositTxCert stakingCredential
     <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+
+dijkstraGenUnRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+dijkstraGenUnRegTxCert stakingCredential = do
+  accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
+  case lookupAccountState stakingCredential accounts of
+    Nothing -> error "TODO"
+    Just accountState ->
+      pure $ UnRegDepositTxCert stakingCredential (fromCompact (accountState ^. depositAccountStateL))
