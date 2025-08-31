@@ -41,6 +41,7 @@ instance ShelleyEraImp AllegraEra where
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
 
 impAllegraSatisfyNativeScript ::
   ( ShelleyEraImp era

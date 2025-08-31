@@ -123,6 +123,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withEachEraVersion,
   impSatisfyMNativeScripts,
   impSatisfySignature,
+  shelleyGenRegTxCert,
 
   -- * Logging
   Doc,
@@ -507,6 +508,8 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
+  genRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
+
 impSatisfySignature ::
   KeyHash 'Witness ->
   Set.Set (KeyHash 'Witness) ->
@@ -800,6 +803,7 @@ instance
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1851,3 +1855,10 @@ simulateThenRestore sim = do
   result <- sim
   put snapshot
   pure result
+
+shelleyGenRegTxCert ::
+  forall era.
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+shelleyGenRegTxCert = pure . RegTxCert
