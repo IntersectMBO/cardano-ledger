@@ -118,6 +118,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getsPParams,
   withEachEraVersion,
   shelleyGenRegTxCert,
+  shelleyGenUnRegTxCert,
 
   -- * Logging
   Doc,
@@ -499,6 +500,8 @@ class
 
   genRegTxCert :: HasCallStack => ImpTestM era (TxCert era, Credential 'Staking)
 
+  genUnRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
+
 defaultInitNewEpochState ::
   forall era g s m.
   ( MonadState s m
@@ -744,6 +747,7 @@ instance
   expectTxSuccess = impShelleyExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1793,3 +1797,10 @@ shelleyGenRegTxCert ::
 shelleyGenRegTxCert = do
   stakingCredential <- KeyHashObj <$> freshKeyHash
   pure (RegTxCert stakingCredential, stakingCredential)
+
+shelleyGenUnRegTxCert ::
+  forall era.
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+shelleyGenUnRegTxCert = pure . UnRegTxCert

@@ -44,6 +44,7 @@ instance ShelleyEraImp AllegraEra where
   expectTxSuccess = impShelleyExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 impAllegraSatisfyNativeScript ::
   ( AllegraEraScript era

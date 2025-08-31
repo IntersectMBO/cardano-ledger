@@ -29,6 +29,7 @@ instance ShelleyEraImp MaryEra where
   expectTxSuccess = impShelleyExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 class
   ( ShelleyEraImp era

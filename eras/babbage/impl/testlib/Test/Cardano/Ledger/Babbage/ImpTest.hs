@@ -55,6 +55,7 @@ instance ShelleyEraImp BabbageEra where
   expectTxSuccess = impBabbageExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 babbageFixupTx ::
   ( HasCallStack

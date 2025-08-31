@@ -430,6 +430,7 @@ instance ShelleyEraImp AlonzoEra where
   expectTxSuccess = impAlonzoExpectTxSuccess
   registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 instance MaryEraImp AlonzoEra
 

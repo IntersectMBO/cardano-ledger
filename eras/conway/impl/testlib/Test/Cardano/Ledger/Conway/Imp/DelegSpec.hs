@@ -230,7 +230,7 @@ spec = do
       expectRegisteredRewardAddress otherRewardAccount
       submitAndExpireProposalToMakeReward otherStakeCred
       getBalance otherStakeCred `shouldReturn` govActionDeposit
-      let unRegTxCert = UnRegDepositTxCert stakeCred keyDeposit
+      unRegTxCert <- genUnRegTxCert stakeCred
       submitTx_ . mkBasicTx $
         mkBasicTxBody
           & certsTxBodyL .~ SSeq.fromList [unRegTxCert]
