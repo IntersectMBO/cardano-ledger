@@ -74,7 +74,7 @@ import NoThunks.Class (NoThunks)
 data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
   -- ^ Structured transaction metadata
-  , atadrTimelock :: !(StrictSeq (Timelock era))
+  , atadrNativeScripts :: !(StrictSeq (Timelock era))
   -- ^ Pre-images of script hashes found within the TxBody, but which are not
   -- required as witnesses. Examples include:
   -- - Token policy IDs appearing in transaction outputs
@@ -108,8 +108,8 @@ timelockScriptsAllegraTxAuxDataL ::
   Era era =>
   Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
 timelockScriptsAllegraTxAuxDataL =
-  lensMemoRawType @era atadrTimelock $
-    \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
+  lensMemoRawType @era atadrNativeScripts $
+    \txAuxDataRaw ts -> txAuxDataRaw {atadrNativeScripts = ts}
 
 deriving instance Show (AllegraTxAuxDataRaw era)
 

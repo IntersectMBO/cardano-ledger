@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Mary.TreeDiff
 -- Scripts
 instance ToExpr (PlutusScript AlonzoEra)
 
-instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
+instance (ToExpr (PlutusScript era), ToExpr (NativeScript era)) => ToExpr (AlonzoScript era)
 
 instance ToExpr (AlonzoPlutusPurpose AsIx era)
 
@@ -57,9 +57,9 @@ instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsIxItem era)
 deriving newtype instance ToExpr CoinPerWord
 
 -- TxAuxData
-instance ToExpr (AlonzoTxAuxDataRaw era)
+instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxDataRaw era)
 
-instance ToExpr (AlonzoTxAuxData era)
+instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxData era)
 
 -- PParams
 deriving newtype instance ToExpr OrdExUnits

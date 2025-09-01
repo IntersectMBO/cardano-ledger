@@ -112,7 +112,10 @@ instance
         <! D (decodeNullStrictMaybe decCBOR)
   {-# INLINE decCBOR #-}
 
-instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
+instance
+  (Era era, Typeable (NativeScript era), DecCBOR (NativeScript era)) =>
+  DecCBOR (AlonzoTxAuxDataRaw era)
+  where
   decCBOR =
     decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
       decodeShelley
@@ -132,13 +135,13 @@ instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
 
       auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
       auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
-      auxDataField 1 = field (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x}) From
+      auxDataField 1 = field (\x ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> x}) From
       auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
       auxDataField n = invalidField n
 
-deriving newtype instance Era era => DecCBOR (AlonzoTxAuxData era)
+deriving newtype instance (Era era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxAuxData era)
 
 instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxWitsRaw era) where
   decCBOR =
@@ -238,11 +241,11 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
 
 deriving newtype instance AlonzoEraScript era => DecCBOR (Redeemers era)
 
-instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
+instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoScript era) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)
     where
       decodeScript = \case
-        0 -> SumD TimelockScript <! From
+        0 -> SumD NativeScript <! From
         1 -> decodePlutus SPlutusV1
         2 -> decodePlutus SPlutusV2
         3 -> decodePlutus SPlutusV3

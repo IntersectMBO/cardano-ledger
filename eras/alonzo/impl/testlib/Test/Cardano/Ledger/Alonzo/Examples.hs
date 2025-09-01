@@ -159,7 +159,7 @@ exampleTx txBody scriptPurpose =
       .~ SJust
         ( mkAlonzoTxAuxData
             exampleAuxDataMap
-            [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf @era mempty]
+            [alwaysFails @'PlutusV1 2, NativeScript $ RequireAllOf @era mempty]
         )
 
 exampleTxBodyAlonzo :: TxBody AlonzoEra

@@ -103,7 +103,7 @@ import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (left)
 import Control.Monad (unless, when)
 import Data.Bifunctor (Bifunctor (first))
-import Data.Coerce (coerce)
+import Data.Coerce (Coercible, coerce)
 import Data.Default (def)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
@@ -369,7 +369,7 @@ instance EraApi AlonzoEra where
     mkMemoizedEra @AlonzoEra $
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
-        , atadrTimelock = translateTimelock <$> scripts
+        , atadrNativeScripts = translateTimelock <$> scripts
         , atadrPlutus = mempty
         }
 
@@ -400,15 +400,19 @@ upgradeTxDats ::
 upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
 
 translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2) =>
+  ( AlonzoEraScript era1
+  , AlonzoEraScript era2
+  , Coercible (NativeScript era1) (NativeScript era2)
+  ) =>
   AlonzoTxAuxData era1 ->
   AlonzoTxAuxData era2
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNative, atadPlutus} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
-    , atadTimelock = translateTimelock <$> atadTimelock
+    , atadNative = coerce atadNative
     , atadPlutus = atadPlutus
     }
+{-# DEPRECATED translateAlonzoTxAuxData "Use upgradeTxAuxData instead" #-}
 
 newtype BabbageTxUpgradeError
   = BTUEBodyUpgradeError BabbageTxBodyUpgradeError

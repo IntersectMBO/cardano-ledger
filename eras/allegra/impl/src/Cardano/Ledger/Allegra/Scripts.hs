@@ -1,5 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -73,7 +75,7 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra)
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra, ShelleyEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   MemoBytes (Memo),
@@ -99,6 +101,7 @@ import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
+import Data.Coerce (Coercible, coerce)
 import Data.Foldable as F (foldl')
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
@@ -155,6 +158,12 @@ class ShelleyEraScript era => AllegraEraScript era where
 
   mkTimeExpire :: SlotNo -> NativeScript era
   getTimeExpire :: NativeScript era -> Maybe SlotNo
+
+  upgradeNativeScript :: NativeScript (PreviousEra era) -> NativeScript era
+  default upgradeNativeScript ::
+    Coercible (NativeScript (PreviousEra era)) (NativeScript era) =>
+    NativeScript (PreviousEra era) -> NativeScript era
+  upgradeNativeScript = coerce
 
 deriving instance Era era => NoThunks (TimelockRaw era)
 
@@ -244,6 +253,14 @@ deriving instance Show (Timelock era)
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
+upgradeMultiSig :: NativeScript ShelleyEra -> NativeScript AllegraEra
+upgradeMultiSig = \case
+  RequireSignature keyHash -> RequireSignature keyHash
+  RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
+  RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
+  RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
+  _ -> error "Impossible: All NativeScripts should have been accounted for"
+
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
@@ -251,12 +268,7 @@ instance EraScript AllegraEra where
   type Script AllegraEra = Timelock AllegraEra
   type NativeScript AllegraEra = Timelock AllegraEra
 
-  upgradeScript = \case
-    RequireSignature keyHash -> RequireSignature keyHash
-    RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
-    RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
-    RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
-    _ -> error "Impossible: All NativeScripts should have been accounted for"
+  upgradeScript = upgradeMultiSig
 
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
@@ -283,6 +295,8 @@ instance AllegraEraScript AllegraEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+  upgradeNativeScript = upgradeMultiSig
 
 pattern RequireTimeExpire :: AllegraEraScript era => SlotNo -> NativeScript era
 pattern RequireTimeExpire mslot <- (getTimeExpire -> Just mslot)
@@ -448,8 +462,6 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ F.foldl' accum ")" 
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
 showTimelock _ = error "Impossible: All NativeScripts should have been accounted for"
 
--- | Check the equality of two underlying types, while ignoring their binary
--- representation, which `Eq` instance normally does. This is used for testing.
 eqTimelockRaw :: Timelock era -> Timelock era -> Bool
 eqTimelockRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
   where
