@@ -50,5 +50,4 @@ shelleyEraSpecificSpec = do
       Deleg.shelleyEraSpecificSpec
 
 instance EraSpecificSpec ShelleyEra where
-  eraSpecificSpec =
-    describe "DELEG" Deleg.shelleyEraSpecificSpec
+  eraSpecificSpec = shelleyEraSpecificSpec

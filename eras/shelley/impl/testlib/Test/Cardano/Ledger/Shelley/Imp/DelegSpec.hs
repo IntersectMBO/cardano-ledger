@@ -204,13 +204,13 @@ spec = do
     it "Register and delegate in the same transaction" $ do
       poolKh <- freshKeyHash
       registerPool poolKh
-      freshKeyHash >>= \kh -> do
-        regTxCert <- genRegTxCert (KeyHashObj kh)
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [regTxCert, delegStakeTxCert (KeyHashObj kh) poolKh]
-        expectDelegatedToPool (KeyHashObj kh) poolKh
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [regTxCert, delegStakeTxCert cred poolKh]
+      expectDelegatedToPool cred poolKh
 
     it "Delegate unregistered stake credentials" $ do
       cred <- KeyHashObj <$> freshKeyHash
