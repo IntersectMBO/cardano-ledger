@@ -19,6 +19,7 @@ import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as Utxo
 import Test.Cardano.Ledger.Mary.ImpTest
+import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 spec ::
   forall era.
@@ -35,4 +36,5 @@ spec = do
     withEachEraVersion @era $
       Utxo.spec
 
-instance EraSpecificSpec MaryEra
+instance EraSpecificSpec MaryEra where
+  eraSpecificSpec = ShelleyImp.shelleyEraSpecificSpec

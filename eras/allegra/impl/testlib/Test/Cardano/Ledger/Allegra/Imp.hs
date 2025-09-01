@@ -34,4 +34,5 @@ spec = do
   describe "AllegraImpSpec" . withEachEraVersion @era $
     UtxowSpec.spec
 
-instance EraSpecificSpec AllegraEra
+instance EraSpecificSpec AllegraEra where
+  eraSpecificSpec = ShelleyImp.shelleyEraSpecificSpec
