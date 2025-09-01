@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as Pool
@@ -37,6 +38,7 @@ spec = do
   describe "Era specific tests" . withEachEraVersion @era $ eraSpecificSpec
   describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
     Epoch.spec
+    Deleg.spec
     Ledger.spec
     Pool.spec
     Utxow.spec
