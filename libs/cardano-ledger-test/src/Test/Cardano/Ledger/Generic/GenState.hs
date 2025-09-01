@@ -669,7 +669,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         instantaneousRewardsZero
     pstate =
       PState
-        Set.empty
+        Map.empty
         (mkStakePoolState poolDeposit <$> pools)
         Map.empty
         Map.empty

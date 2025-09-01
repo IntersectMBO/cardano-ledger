@@ -344,7 +344,7 @@ spec = describe "POOL" $ do
         $ Map.member poolKh retiring == isRetiring
     expectVRFs vrfs = do
       whenMajorVersionAtLeast @11 $
-        psVRFKeyHashes <$> getPState `shouldReturn` vrfs
+        Map.keysSet . psVRFKeyHashes <$> getPState `shouldReturn` vrfs
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $ pps & ppVrfL .~ vrf
