@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Conway.Spec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -45,7 +45,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.API (ApplyTx)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
@@ -75,10 +74,7 @@ import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 spec ::
   forall era.
-  ( EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  , EraPlutusTxInfo PlutusV3 era
-  , RuleListEra era
+  ( RuleListEra era
   , ConwayEraImp era
   , ApplyTx era
   , DecCBOR (TxWits era)

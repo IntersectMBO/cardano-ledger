@@ -252,6 +252,5 @@ test-suite tests
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    plutus-ledger-api,
     testlib,
     time,

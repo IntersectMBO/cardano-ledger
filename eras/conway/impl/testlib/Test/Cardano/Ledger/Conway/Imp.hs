@@ -8,10 +8,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (ContextError),
-  EraPlutusTxInfo,
- )
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (ContextError))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -35,7 +32,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure,
@@ -94,7 +90,6 @@ spec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
-  , EraPlutusTxInfo PlutusV2 era
   ) =>
   Spec
 spec = do
@@ -128,7 +123,6 @@ conwaySpec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
-  , EraPlutusTxInfo PlutusV2 era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwaySpec = do

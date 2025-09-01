@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -9,6 +10,7 @@ module Test.Cardano.Ledger.Conway.Era (
   conwayAccountsToUMap,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
@@ -32,6 +34,7 @@ class
   , ConwayEraCertState era
   , ConwayEraGov era
   , ConwayEraAccounts era
+  , EraPlutusTxInfo PlutusV3 era
   ) =>
   ConwayEraTest era
 
