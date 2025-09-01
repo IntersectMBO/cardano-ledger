@@ -6,8 +6,8 @@ module Cardano.Ledger.Dijkstra.TxAuxData () where
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   metadataAlonzoTxAuxDataL,
+  nativeScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
-  timelockScriptsAlonzoTxAuxDataL,
   validateAlonzoTxAuxData,
  )
 import Cardano.Ledger.Conway.Core (
@@ -28,7 +28,7 @@ instance EraTxAuxData DijkstraEra where
   validateTxAuxData = validateAlonzoTxAuxData
 
 instance AllegraEraTxAuxData DijkstraEra where
-  timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+  nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
 
 instance AlonzoEraTxAuxData DijkstraEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

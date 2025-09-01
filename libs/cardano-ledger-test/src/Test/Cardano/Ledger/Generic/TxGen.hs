@@ -211,13 +211,13 @@ genGenericScriptWitness mTag script =
     Allegra -> mkTimelockWit mTag script
     Mary -> mkTimelockWit mTag script
     Alonzo -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
+      NativeScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const id)
     Babbage -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
+      NativeScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const id)
     Conway -> case script of
-      TimelockScript timelock -> mkTimelockWit mTag timelock
+      NativeScript timelock -> mkTimelockWit mTag timelock
       PlutusScript _ -> pure (const id)
 
 -- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts

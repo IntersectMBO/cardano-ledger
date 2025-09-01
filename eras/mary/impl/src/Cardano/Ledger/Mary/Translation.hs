@@ -17,7 +17,7 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Mary.Scripts (Timelock)
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -163,7 +163,7 @@ instance TranslateEra MaryEra Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
 
 instance TranslateEra MaryEra Timelock where
-  translateEra _ = pure . translateTimelock
+  translateEra _ = pure . coerce
 
 instance TranslateEra MaryEra AllegraTxAuxData where
   translateEra ctx (AllegraTxAuxData md as) =

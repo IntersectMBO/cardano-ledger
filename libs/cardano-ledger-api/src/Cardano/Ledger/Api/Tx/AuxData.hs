@@ -11,7 +11,7 @@ module Cardano.Ledger.Api.Tx.AuxData (
 
   -- * Allegra
   AllegraEraTxAuxData,
-  timelockScriptsTxAuxDataL,
+  nativeScriptsTxAuxDataL,
   AllegraTxAuxData (..),
 
   -- * Alonzo

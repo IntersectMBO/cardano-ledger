@@ -15,7 +15,6 @@ import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
-  Timelock (..),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
@@ -173,7 +172,8 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScriptsGoldenTest :: forall era. Era era => TestTree
+metadataNoScriptsGoldenTest ::
+  forall era. (AllegraEraScript era, DecCBOR (NativeScript era)) => TestTree
 metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
@@ -191,7 +191,7 @@ metadataNoScriptsGoldenTest =
 -- CONTINUE also Scripts
 metadataWithScriptsGoldenTest ::
   forall era.
-  (ShelleyEraScript era, NativeScript era ~ Timelock era) =>
+  (AllegraEraScript era, DecCBOR (NativeScript era)) =>
   TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated

@@ -69,7 +69,7 @@ module Cardano.Ledger.Api.Era (
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (translateTimelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), ValidityInterval (..))
 import qualified Cardano.Ledger.Allegra.TxBody as Allegra (TxBody (..))
@@ -374,10 +374,10 @@ instance EraApi AlonzoEra where
               m
 
   upgradeTxAuxData (AllegraTxAuxData md scripts) =
-    mkMemoizedEra @AlonzoEra $
+    mkMemoizedEra @AllegraEra $
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
-        , atadrTimelock = translateTimelock <$> scripts
+        , atadrNativeScripts = upgradeNativeScript <$> scripts
         , atadrPlutus = mempty
         }
 
@@ -408,13 +408,13 @@ upgradeTxDats ::
 upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
 
 translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2) =>
-  AlonzoTxAuxData era1 ->
-  AlonzoTxAuxData era2
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
+  (AlonzoEraScript (PreviousEra era), AlonzoEraScript era) =>
+  AlonzoTxAuxData (PreviousEra era) ->
+  AlonzoTxAuxData era
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutus} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
-    , atadTimelock = translateTimelock <$> atadTimelock
+    , atadNativeScripts = upgradeNativeScript <$> atadNativeScripts
     , atadPlutus = atadPlutus
     }
 

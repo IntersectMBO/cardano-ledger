@@ -24,7 +24,7 @@
 
 module Cardano.Ledger.Alonzo.Scripts (
   PlutusBinary (..),
-  AlonzoScript (TimelockScript, PlutusScript),
+  AlonzoScript (NativeScript, PlutusScript),
   Script,
   isPlutusScript,
   validScript,
@@ -111,6 +111,7 @@ import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (guard, (>=>))
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
@@ -426,44 +427,52 @@ pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
 
 -- Alonzo Script ===============================================================
 
--- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
+-- | Scripts in the Alonzo Era, Either a native script or a Plutus script.
 data AlonzoScript era
-  = TimelockScript !(Timelock era)
+  = NativeScript !(NativeScript era)
   | PlutusScript !(PlutusScript era)
   deriving (Generic)
 
-instance (Era era, MemPack (PlutusScript era)) => MemPack (AlonzoScript era) where
+instance
+  ( Era era
+  , MemPack (PlutusScript era)
+  , MemPack (NativeScript era)
+  ) =>
+  MemPack (AlonzoScript era)
+  where
   packedByteCount = \case
-    TimelockScript script -> packedTagByteCount + packedByteCount script
+    NativeScript script -> packedTagByteCount + packedByteCount script
     PlutusScript script -> packedTagByteCount + packedByteCount script
   packM = \case
-    TimelockScript script -> packTagM 0 >> packM script
+    NativeScript script -> packTagM 0 >> packM script
     PlutusScript script -> packTagM 1 >> packM script
   {-# INLINE packM #-}
   unpackM =
     unpackTagM >>= \case
-      0 -> TimelockScript <$> unpackM
+      0 -> NativeScript <$> unpackM
       1 -> PlutusScript <$> unpackM
       n -> unknownTagM @(AlonzoScript era) n
   {-# INLINE unpackM #-}
 
-deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
+deriving instance (Eq (PlutusScript era), Eq (NativeScript era)) => Eq (AlonzoScript era)
 
-instance (Era era, NoThunks (PlutusScript era)) => NoThunks (AlonzoScript era)
+instance
+  (Era era, NoThunks (PlutusScript era), NoThunks (NativeScript era)) =>
+  NoThunks (AlonzoScript era)
 
-instance NFData (PlutusScript era) => NFData (AlonzoScript era) where
+instance (NFData (PlutusScript era), NFData (NativeScript era)) => NFData (AlonzoScript era) where
   rnf = \case
-    TimelockScript ts -> rnf ts
+    NativeScript ts -> rnf ts
     PlutusScript ps -> rnf ps
 
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
-  show (TimelockScript x) = "TimelockScript " ++ show x
+  show (NativeScript x) = "NativeScript " ++ show x
   show s@(PlutusScript plutus) =
     "PlutusScript " ++ show (plutusScriptLanguage plutus) ++ " " ++ show (hashScript @era s)
 
 -- | Both constructors know their original bytes
-instance SafeToHash (PlutusScript era) => SafeToHash (AlonzoScript era) where
-  originalBytes (TimelockScript t) = originalBytes t
+instance (SafeToHash (PlutusScript era), SafeToHash (NativeScript era)) => SafeToHash (AlonzoScript era) where
+  originalBytes (NativeScript t) = originalBytes t
   originalBytes (PlutusScript plutus) = originalBytes plutus
 
 isPlutusScript :: AlonzoEraScript era => Script era -> Bool
@@ -473,22 +482,22 @@ instance EraScript AlonzoEra where
   type Script AlonzoEra = AlonzoScript AlonzoEra
   type NativeScript AlonzoEra = Timelock AlonzoEra
 
-  upgradeScript = TimelockScript . translateTimelock
+  upgradeScript = NativeScript . coerce
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 alonzoScriptPrefixTag ::
   (AlonzoEraScript era, AlonzoScript era ~ Script era) =>
   Script era ->
   BS.ByteString
 alonzoScriptPrefixTag = \case
-  TimelockScript _ -> nativeMultiSigTag -- "\x00"
+  NativeScript _ -> nativeMultiSigTag -- "\x00"
   PlutusScript plutusScript -> BS.singleton (withPlutusScript plutusScript plutusLanguageTag)
 
 instance ShelleyEraScript AlonzoEra where
@@ -555,7 +564,12 @@ instance AlonzoEraScript AlonzoEra where
   upgradePlutusPurposeAsIx =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"
 
-instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
+instance
+  ( Eq (PlutusScript era)
+  , EqRaw (NativeScript era)
+  ) =>
+  EqRaw (AlonzoScript era)
+  where
   eqRaw = eqAlonzoScriptRaw
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
@@ -598,7 +612,7 @@ instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
 
 encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript = \case
-  TimelockScript i -> Sum TimelockScript 0 !> To i
+  NativeScript i -> Sum NativeScript 0 !> To i
   PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
     case plutusSLanguage plutus of
       SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
@@ -614,7 +628,7 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
       {-# INLINE decodeAnnPlutus #-}
       decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
       decodeScript = \case
-        0 -> Ann (SumD TimelockScript) <*! From
+        0 -> Ann (SumD NativeScript) <*! From
         1 -> decodeAnnPlutus SPlutusV1
         2 -> decodeAnnPlutus SPlutusV2
         3 -> decodeAnnPlutus SPlutusV3
@@ -636,8 +650,12 @@ validScript pv script =
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.
-eqAlonzoScriptRaw :: Eq (PlutusScript era) => AlonzoScript era -> AlonzoScript era -> Bool
-eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
+eqAlonzoScriptRaw ::
+  ( Eq (PlutusScript era)
+  , EqRaw (NativeScript era)
+  ) =>
+  AlonzoScript era -> AlonzoScript era -> Bool
+eqAlonzoScriptRaw (NativeScript t1) (NativeScript t2) = eqRaw t1 t2
 eqAlonzoScriptRaw (PlutusScript ps1) (PlutusScript ps2) = ps1 == ps2
 eqAlonzoScriptRaw _ _ = False
 

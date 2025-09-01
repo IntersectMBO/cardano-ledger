@@ -1,5 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -49,8 +51,6 @@ module Cardano.Ledger.Allegra.Scripts (
   ValidityInterval (..),
   encodeVI,
   decodeVI,
-  -- translate,
-  translateTimelock,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -73,7 +73,7 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra)
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra, ShelleyEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   MemoBytes (Memo),
@@ -84,7 +84,6 @@ import Cardano.Ledger.MemoBytes (
   packMemoBytesM,
   unpackMemoBytesM,
  )
-import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
@@ -97,8 +96,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
-import Data.ByteString.Lazy (fromStrict)
-import Data.ByteString.Short (fromShort)
+import Data.Coerce (Coercible, coerce)
 import Data.Foldable as F (foldl')
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
@@ -156,29 +154,15 @@ class ShelleyEraScript era => AllegraEraScript era where
   mkTimeExpire :: SlotNo -> NativeScript era
   getTimeExpire :: NativeScript era -> Maybe SlotNo
 
+  upgradeNativeScript :: NativeScript (PreviousEra era) -> NativeScript era
+  default upgradeNativeScript ::
+    Coercible (NativeScript (PreviousEra era)) (NativeScript era) =>
+    NativeScript (PreviousEra era) -> NativeScript era
+  upgradeNativeScript = coerce
+
 deriving instance Era era => NoThunks (TimelockRaw era)
 
 deriving instance Show (TimelockRaw era)
-
--- | This function deconstructs and then reconstructs the timelock script
--- to prove the compiler that we can arbirarily switch out the eras as long
--- as the cryptos for both eras are the same.
-translateTimelock ::
-  forall era1 era2.
-  ( Era era1
-  , Era era2
-  ) =>
-  Timelock era1 ->
-  Timelock era2
-translateTimelock (MkTimelock (Memo tl bs)) =
-  let rewrap rtl = MkTimelock $ mkMemoBytes rtl (fromStrict $ fromShort bs)
-   in case tl of
-        TimelockSignature s -> rewrap $ TimelockSignature s
-        TimelockAllOf l -> rewrap . TimelockAllOf $ translateTimelock <$> l
-        TimelockAnyOf l -> rewrap . TimelockAnyOf $ translateTimelock <$> l
-        TimelockMOf n l -> rewrap $ TimelockMOf n (translateTimelock <$> l)
-        TimelockTimeStart x -> rewrap $ TimelockTimeStart x
-        TimelockTimeExpire x -> rewrap $ TimelockTimeExpire x
 
 -- These coding choices are chosen so that a MultiSig script
 -- can be deserialised as a Timelock script
@@ -244,6 +228,14 @@ deriving instance Show (Timelock era)
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
+upgradeMultiSig :: NativeScript ShelleyEra -> NativeScript AllegraEra
+upgradeMultiSig = \case
+  RequireSignature keyHash -> RequireSignature keyHash
+  RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
+  RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
+  RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
+  _ -> error "Impossible: All NativeScripts should have been accounted for"
+
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
@@ -251,12 +243,7 @@ instance EraScript AllegraEra where
   type Script AllegraEra = Timelock AllegraEra
   type NativeScript AllegraEra = Timelock AllegraEra
 
-  upgradeScript = \case
-    RequireSignature keyHash -> RequireSignature keyHash
-    RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
-    RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
-    RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
-    _ -> error "Impossible: All NativeScripts should have been accounted for"
+  upgradeScript = upgradeMultiSig
 
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
@@ -283,6 +270,8 @@ instance AllegraEraScript AllegraEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+  upgradeNativeScript = upgradeMultiSig
 
 pattern RequireTimeExpire :: AllegraEraScript era => SlotNo -> NativeScript era
 pattern RequireTimeExpire mslot <- (getTimeExpire -> Just mslot)

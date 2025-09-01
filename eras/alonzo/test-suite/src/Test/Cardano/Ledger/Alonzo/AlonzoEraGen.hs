@@ -17,7 +17,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
-  translateTimelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
@@ -83,6 +82,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
+import Data.Coerce (coerce)
 import Data.Foldable as F
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -265,23 +265,23 @@ genAux constants = do
   maybeAux <- genEraAuxiliaryData @MaryEra constants
   pure $
     fmap
-      (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
+      (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (NativeScript . coerce <$> y))
       maybeAux
 
 instance ScriptClass AlonzoEra where
   basescript = someLeaf
-  isKey _ (TimelockScript x) = isKey (Proxy @MaryEra) $ translateTimelock x
+  isKey _ (NativeScript x) = isKey (Proxy @MaryEra) $ coerce x
   isKey _ (PlutusScript _) = Nothing
-  isOnePhase _ (TimelockScript _) = True
+  isOnePhase _ (NativeScript _) = True
   isOnePhase _ (PlutusScript _) = False
-  quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @MaryEra) (translateTimelock x))
+  quantify _ (NativeScript x) = fmap (NativeScript . coerce) (quantify (Proxy @MaryEra) (coerce x))
   quantify _ x = Leaf x
   unQuantify _ quant =
-    TimelockScript . translateTimelock $
-      unQuantify (Proxy @MaryEra) (fmap (translateTimelock . unTime) quant)
+    NativeScript . coerce $
+      unQuantify (Proxy @MaryEra) (fmap (coerce . unTime) quant)
 
-unTime :: AlonzoScript era -> Timelock era
-unTime (TimelockScript x) = x
+unTime :: AlonzoScript era -> NativeScript era
+unTime (NativeScript x) = x
 unTime (PlutusScript _) = error "Plutus in Timelock"
 
 okAsCollateral :: UTxO AlonzoEra -> TxIn -> Bool
@@ -331,7 +331,7 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
         )
         auxDHash
         netid
-    , List.map TimelockScript scriptsFromPolicies <> plutusScripts
+    , List.map NativeScript scriptsFromPolicies <> plutusScripts
     )
 
 genSlotAfter :: SlotNo -> Gen SlotNo
@@ -632,9 +632,9 @@ someLeaf _proxy keyHash =
    in
     case mode of
       0 ->
-        TimelockScript $
+        NativeScript $
           (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
-      _ -> TimelockScript $ RequireSignature keyHash
+      _ -> NativeScript $ RequireSignature keyHash
 
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
