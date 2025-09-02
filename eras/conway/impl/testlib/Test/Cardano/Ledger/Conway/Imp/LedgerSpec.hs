@@ -274,7 +274,7 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccountWithDeposit
+        rewardAccount <- registerRewardAccount
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
       let

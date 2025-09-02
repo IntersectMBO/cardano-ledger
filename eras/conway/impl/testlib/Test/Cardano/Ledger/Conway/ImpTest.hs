@@ -132,7 +132,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
   getCommittee,
   conwayRegisterStakeCredential,
-  registerRewardAccountWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -762,7 +761,7 @@ mkProposal ::
   GovAction era ->
   ImpTestM era (ProposalProcedure era)
 mkProposal ga = do
-  rewardAccount <- registerRewardAccountWithDeposit
+  rewardAccount <- registerRewardAccount
   mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
@@ -1835,10 +1834,3 @@ conwayRegisterStakeCredential cred = do
         .~ SSeq.fromList [RegDepositTxCert cred deposit]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
-
-registerRewardAccountWithDeposit ::
-  forall era.
-  ConwayEraImp era =>
-  ImpTestM era RewardAccount
-registerRewardAccountWithDeposit = do
-  freshKeyHash >>= registerStakeCredential . KeyHashObj
