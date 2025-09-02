@@ -109,6 +109,7 @@
 
 ### `testlib`
 
+* Removed `registerPoolWithDeposit`
 * Removed `registerStakeCredentialWithDeposit`
 * Added `EraSpecificSpec ConwayEra` instance
 * Added `registerRewardAccountWithDeposit`
