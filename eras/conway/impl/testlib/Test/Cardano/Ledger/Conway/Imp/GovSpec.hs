@@ -119,7 +119,7 @@ predicateFailuresSpec =
             }
 
     it "ProposalDepositIncorrect" $ do
-      rewardAccount <- registerRewardAccountWithDeposit
+      rewardAccount <- registerRewardAccount
       actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       anchor <- arbitrary
       submitFailingProposal
@@ -711,7 +711,7 @@ proposalsSpec = do
       it "Proposals are stored in the expected order" $ whenPostBootstrap $ do
         modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
         ens <- getEnactState
-        returnAddr <- registerRewardAccountWithDeposit
+        returnAddr <- registerRewardAccount
         withdrawal <-
           (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
@@ -1013,7 +1013,7 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust scriptHash)) >>= submitProposal_
 
       impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
-        rewardAccount <- registerRewardAccountWithDeposit
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust scriptHash)) >>= submitProposal_
 
@@ -1025,7 +1025,7 @@ policySpec =
             [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
-        rewardAccount <- registerRewardAccountWithDeposit
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
@@ -1079,7 +1079,7 @@ withdrawalsSpec =
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
       policy <- getGovPolicy
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      registeredRewardAccount <- registerRewardAccountWithDeposit
+      registeredRewardAccount <- registerRewardAccount
       let genPositiveCoin = Coin . getPositive <$> arbitrary
       withdrawals <-
         sequence
@@ -1124,10 +1124,10 @@ withdrawalsSpec =
     it "Fails for empty withdrawals" $ do
       mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount1 <- registerRewardAccountWithDeposit
+      rwdAccount1 <- registerRewardAccount
       mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount2 <- registerRewardAccountWithDeposit
+      rwdAccount2 <- registerRewardAccount
       let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
 
       mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
@@ -1299,7 +1299,7 @@ bootstrapPhaseSpec =
       submitYesVote_ (StakePoolVoter spo) gid
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
-      rewardAccount <- registerRewardAccountWithDeposit
+      rewardAccount <- registerRewardAccount
       action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
       proposal <- mkProposalWithRewardAccount action rewardAccount
       checkProposalFailure proposal

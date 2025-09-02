@@ -401,7 +401,7 @@ spec = do
           expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
-      RewardAccount _ cred <- registerRewardAccountWithDeposit
+      RewardAccount _ cred <- registerRewardAccount
       drepCred <- KeyHashObj <$> freshKeyHash
       let tx =
             mkBasicTx mkBasicTxBody
@@ -564,7 +564,7 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      rewardAccount <- registerRewardAccountWithDeposit
+      rewardAccount <- registerRewardAccount
       registerPool poolKh
       drepCred <- KeyHashObj <$> registerDRep
 

@@ -88,7 +88,7 @@ proposalsSpec =
         pp
           & ppGovActionLifetimeL .~ EpochInterval 1
           & ppGovActionDepositL .~ deposit
-      rewardAccount <- registerRewardAccountWithDeposit
+      rewardAccount <- registerRewardAccount
 
       initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
 
@@ -404,8 +404,8 @@ treasurySpec =
 
     it "TreasuryWithdrawalExtra" $ whenPostBootstrap $ do
       disableTreasuryExpansion
-      rewardAccount <- registerRewardAccountWithDeposit
-      rewardAccountOther <- registerRewardAccountWithDeposit
+      rewardAccount <- registerRewardAccount
+      rewardAccountOther <- registerRewardAccount
       govPolicy <- getGovPolicy
       treasuryWithdrawalExpectation
         [ TreasuryWithdrawals (Map.singleton rewardAccount (Coin 667)) govPolicy
@@ -430,7 +430,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES treasuryL
   treasuryStart `shouldBe` withdrawalAmount
-  rewardAccount <- registerRewardAccountWithDeposit
+  rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
   (govActionId NE.:| _) <-
     submitGovActions $
@@ -459,7 +459,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
       & ppGovActionLifetimeL .~ EpochInterval 8
       & ppGovActionDepositL .~ Coin 100
       & ppCommitteeMaxTermLengthL .~ EpochInterval 0
-  returnAddr <- registerRewardAccountWithDeposit
+  returnAddr <- registerRewardAccount
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   keyDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   govPolicy <- getGovPolicy
@@ -516,7 +516,7 @@ eventsSpec = describe "Events" $ do
             (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
       (proposalA, checkProposedParameterA) <- proposeParameterChange
       (proposalB, _) <- proposeParameterChange
-      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccountWithDeposit
+      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- CoinPerByte . Coin <$> choose (3000, 6500)

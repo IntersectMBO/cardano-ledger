@@ -1600,12 +1600,9 @@ registerRewardAccount ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   ImpTestM era RewardAccount
-registerRewardAccount = do
-  khDelegator <- freshKeyHash
-  registerStakeCredential (KeyHashObj khDelegator)
+registerRewardAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
 
 lookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
 lookupReward = lookupBalance
