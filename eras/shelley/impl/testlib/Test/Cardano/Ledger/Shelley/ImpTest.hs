@@ -69,7 +69,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   tryRunImpRuleNoAssertions,
   delegateStake,
   registerRewardAccount,
-  shelleyRegisterStakeCredential,
+  registerStakeCredential,
   getRewardAccountFor,
   getReward,
   lookupReward,
@@ -505,8 +505,6 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
-  registerStakeCredential :: HasCallStack => Credential 'Staking -> ImpTestM era RewardAccount
-
   genRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
 
   genUnRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
@@ -774,7 +772,6 @@ instance
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
-  registerStakeCredential = shelleyRegisterStakeCredential
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
 
@@ -1535,19 +1532,19 @@ getRewardAccountFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingC
 
-shelleyRegisterStakeCredential ::
+registerStakeCredential ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
-shelleyRegisterStakeCredential cred = do
+registerStakeCredential cred = do
+  regTxCert <- genRegTxCert cred
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert cred]
+        .~ SSeq.fromList [regTxCert]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
 

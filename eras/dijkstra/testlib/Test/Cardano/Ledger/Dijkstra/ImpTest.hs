@@ -59,7 +59,6 @@ instance ShelleyEraImp DijkstraEra where
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
-  registerStakeCredential = conwayRegisterStakeCredential
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
 
