@@ -133,7 +133,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
   getCommittee,
-  registerRewardAccountWithDeposit,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -780,7 +779,7 @@ mkProposal ::
   GovAction era ->
   ImpTestM era (ProposalProcedure era)
 mkProposal ga = do
-  rewardAccount <- registerRewardAccountWithDeposit
+  rewardAccount <- registerRewardAccount
   mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
@@ -1837,10 +1836,3 @@ instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
 
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
 getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
-
-registerRewardAccountWithDeposit ::
-  forall era.
-  ConwayEraImp era =>
-  ImpTestM era RewardAccount
-registerRewardAccountWithDeposit = do
-  freshKeyHash >>= registerStakeCredential . KeyHashObj

@@ -458,7 +458,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
         submitTreasuryWithdrawal amount = do
-          rewardAccount <- registerRewardAccountWithDeposit
+          rewardAccount <- registerRewardAccount
           submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
@@ -877,7 +877,7 @@ votingSpec =
 
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          rewardAccount <- registerRewardAccountWithDeposit
+          rewardAccount <- registerRewardAccount
           govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
 
           submitYesVote_ (CommitteeVoter comMember) govId
