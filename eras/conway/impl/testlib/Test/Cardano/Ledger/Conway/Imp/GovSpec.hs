@@ -893,7 +893,7 @@ votingSpec =
       conAnchor `shouldNotBe` anchor
     it "can submit SPO votes" $ do
       spoHash <- freshKeyHash
-      registerPoolWithDeposit spoHash
+      registerPool spoHash
       passNEpochs 3
       gaId <-
         submitParameterChange SNothing $

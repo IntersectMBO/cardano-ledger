@@ -218,7 +218,7 @@ spec = do
       otherStakeCred <- KeyHashObj <$> freshKeyHash
       otherRewardAccount <- getRewardAccountFor otherStakeCred
       khStakePool <- freshKeyHash
-      registerPoolWithDeposit khStakePool
+      registerPool khStakePool
       submitTx_ . mkBasicTx $
         mkBasicTxBody
           & certsTxBodyL
@@ -255,7 +255,7 @@ spec = do
             .~ [RegDepositTxCert cred expectedDeposit]
 
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -268,7 +268,7 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       freshKeyHash >>= \kh -> do
         submitTx_ $
           mkBasicTx mkBasicTxBody
@@ -279,7 +279,7 @@ spec = do
     it "Delegate unregistered stake credentials" $ do
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
@@ -313,7 +313,7 @@ spec = do
 
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -328,7 +328,7 @@ spec = do
       expectDelegatedToPool cred poolKh
 
       poolKh1 <- freshKeyHash
-      registerPoolWithDeposit poolKh1
+      registerPool poolKh1
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -336,9 +336,9 @@ spec = do
       expectDelegatedToPool cred poolKh1
 
       poolKh2 <- freshKeyHash
-      registerPoolWithDeposit poolKh2
+      registerPool poolKh2
       poolKh3 <- freshKeyHash
-      registerPoolWithDeposit poolKh3
+      registerPool poolKh3
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -354,7 +354,7 @@ spec = do
 
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -565,7 +565,7 @@ spec = do
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
       rewardAccount <- registerRewardAccountWithDeposit
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
@@ -633,7 +633,7 @@ spec = do
 
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
@@ -658,7 +658,7 @@ spec = do
 
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
@@ -673,7 +673,7 @@ spec = do
       expectDelegatedVote cred (DRepCredential drepCred)
 
       poolKh' <- freshKeyHash
-      registerPoolWithDeposit poolKh'
+      registerPool poolKh'
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -741,7 +741,7 @@ conwayEraSpecificSpec = do
       cred1 <- KeyHashObj <$> freshKeyHash
       regTxCert1 <- genRegTxCert cred1
       poolKh <- freshKeyHash
-      registerPoolWithDeposit poolKh
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
