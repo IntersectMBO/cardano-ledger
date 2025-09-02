@@ -48,6 +48,7 @@ import Cardano.Ledger.BaseTypes (
   Anchor (..),
   AnchorData,
   KeyValuePairs (..),
+  NonZero,
   StrictMaybe,
   ToKeyValuePairs (..),
  )
@@ -84,8 +85,8 @@ import qualified Data.Foldable as F
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -221,7 +222,7 @@ lookupRewardDState DState {dsAccounts} cred = do
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psVRFKeyHashes :: !(Set (VRFVerKeyHash 'StakePoolVRF))
+  { psVRFKeyHashes :: !(Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
   -- ^ VRF key hashes that have been registered via PoolParams
   , psStakePools :: !(Map (KeyHash 'StakePool) StakePoolState)
   -- ^ The state of current stake pools.
@@ -386,7 +387,7 @@ instance Default (Accounts era) => Default (DState era) where
   def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def = PState Set.empty Map.empty Map.empty Map.empty
+  def = PState Map.empty Map.empty Map.empty Map.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -443,5 +444,5 @@ psFutureStakePoolsL = lens psFutureStakePools (\ps u -> ps {psFutureStakePools =
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
-psVRFKeyHashesL :: Lens' (PState era) (Set (VRFVerKeyHash 'StakePoolVRF))
+psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})

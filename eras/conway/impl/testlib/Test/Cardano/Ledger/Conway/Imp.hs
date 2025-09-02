@@ -112,6 +112,7 @@ conwaySpec ::
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era

@@ -4,6 +4,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,7 +17,7 @@ module Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHardForkEvent (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
 import Cardano.Ledger.Conway.State
@@ -36,9 +37,12 @@ import Control.State.Transition (
   tellEvent,
   transitionRules,
  )
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Void (Void)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -102,8 +106,19 @@ updateDRepDelegations certState =
 
 populateVRFKeyHashes :: PState era -> PState era
 populateVRFKeyHashes pState =
-  let allVRFKeyHashes =
-        spsVrf
-          <$> Map.elems (pState ^. psStakePoolsL)
-            <> Map.elems (pState ^. psFutureStakePoolsL)
-   in pState & psVRFKeyHashesL .~ Set.fromList allVRFKeyHashes
+  pState
+    & psVRFKeyHashesL
+      %~ accumulateVRFKeyHashes (pState ^. psStakePoolsL)
+        . accumulateVRFKeyHashes (pState ^. psFutureStakePoolsL)
+  where
+    accumulateVRFKeyHashes ::
+      Map (KeyHash 'StakePool) StakePoolState ->
+      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64) ->
+      Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64)
+    accumulateVRFKeyHashes spsMap acc =
+      Map.foldr' (\sps -> addVRFKeyHashOccurrence (sps ^. spsVrfL)) acc spsMap
+    addVRFKeyHashOccurrence vrfKeyHash =
+      Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
+      where
+        -- Saturates at maxBound: if (+1) would overflow to 0, keep existing value
+        combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal

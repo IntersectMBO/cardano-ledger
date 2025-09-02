@@ -14,7 +14,8 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import qualified Data.Set as Set
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
+import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
@@ -22,7 +23,10 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "VRF Keyhashes get populated at v11 HardFork" $ do
     -- Since we're testing the HardFork to 11, the test only makes sense for protocol version 10
@@ -48,7 +52,40 @@ spec = do
 
       expectVRFs [] -- VRF keyhashes in PState is not yet populated
       enactHardForkV11
-      expectVRFs [vrf2, vrf3, vrf5]
+      expectVRFs [(vrf2, 2), (vrf3, 1), (vrf5, 1)]
+
+  it "Retiring a stake pool with a duplicate VRF Keyhash after v11 HardFork" $ do
+    whenMajorVersion @10 $ do
+      -- register two pools with the same vrf keyhash before the hard fork
+      (kh1, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
+      registerStakePool kh1 vrf
+      kh2 <- freshKeyHash
+      registerStakePool kh2 vrf
+      kh3 <- freshKeyHash
+      registerStakePool kh3 vrf
+
+      enactHardForkV11
+      expectVRFs [(vrf, 3)]
+      -- retire one of the pools after the hard fork
+      retireStakePool kh1 (EpochInterval 1)
+      retireStakePool kh2 (EpochInterval 1)
+      passEpoch
+      -- the vrf keyhash should still be present, since another pool is registered with it
+      expectVRFs [(vrf, 1)]
+
+      -- registration of the same vrf should be disallowed
+      kh4 <- freshKeyHash
+      registerStakePoolTx kh4 vrf >>= \tx ->
+        submitFailingTx
+          tx
+          [injectFailure $ VRFKeyHashAlreadyRegistered kh4 vrf]
+
+      retireStakePool kh3 (EpochInterval 1)
+      passEpoch
+      expectVRFs []
+
+      registerStakePool kh4 vrf
+      expectVRFs [(vrf, 1)]
   where
     enactHardForkV11 = do
       modifyPParams $ \pp ->
@@ -61,11 +98,13 @@ spec = do
       submitYesVoteCCs_ committee govActionId
       passNEpochs 2
       getProtVer `shouldReturn` pv11
-    registerStakePool kh vrf = do
+    registerStakePoolTx kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
-      submitTx_ $
+      pure $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & ppVrfL .~ vrf]
+    registerStakePool kh vrf =
+      registerStakePoolTx kh vrf >>= submitTx_
     retireStakePool kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       let retirement = addEpochInterval curEpochNo retirementInterval
@@ -73,5 +112,7 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
     expectVRFs vrfs =
-      psVRFKeyHashes <$> getPState `shouldReturn` Set.fromList vrfs
+      psVRFKeyHashes
+        <$> getPState
+          `shouldReturn` Map.fromList [(k, unsafeNonZero v) | (k, v) <- vrfs]
     getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

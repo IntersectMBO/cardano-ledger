@@ -418,3 +418,10 @@ class
   ppToSubset :: PParams era -> SimplePParams era
   updateToPPU :: SimplePPUpdate -> PParamsUpdate era
   ppuToUpdate :: PParamsUpdate era -> SimplePPUpdate
+
+instance HasSimpleRep (NonZero Word64) where
+  type SimpleRep (NonZero Word64) = Word64
+  toSimpleRep = unNonZero
+  fromSimpleRep = unsafeNonZero
+
+instance HasSpec (NonZero Word64)
