@@ -23,11 +23,11 @@ module Cardano.Ledger.Allegra.TxAuxData (
   AllegraTxAuxDataRaw (..),
   metadataAllegraTxAuxDataL,
   AllegraEraTxAuxData (..),
-  timelockScriptsAllegraTxAuxDataL,
+  nativeScriptsAllegraTxAuxDataL,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -63,6 +63,7 @@ import Control.DeepSeq (NFData, deepseq)
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens')
@@ -74,16 +75,18 @@ import NoThunks.Class (NoThunks)
 data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
   -- ^ Structured transaction metadata
-  , atadrNativeScripts :: !(StrictSeq (Timelock era))
+  , atadrNative :: !(StrictSeq (NativeScript era))
   -- ^ Pre-images of script hashes found within the TxBody, but which are not
   -- required as witnesses. Examples include:
   -- - Token policy IDs appearing in transaction outputs
   -- - Pool reward account registrations
   }
-  deriving (Generic, Eq)
+  deriving (Generic)
+
+deriving instance Eq (NativeScript era) => Eq (AllegraTxAuxDataRaw era)
 
 class EraTxAuxData era => AllegraEraTxAuxData era where
-  timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
+  nativeScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (NativeScript era))
 
 instance EraTxAuxData AllegraEra where
   type TxAuxData AllegraEra = AllegraTxAuxData AllegraEra
@@ -95,31 +98,37 @@ instance EraTxAuxData AllegraEra where
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
 metadataAllegraTxAuxDataL ::
-  forall era. Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
+  forall era.
+  ( Era era
+  , EncCBOR (NativeScript era)
+  ) =>
+  Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
 metadataAllegraTxAuxDataL =
   lensMemoRawType @era atadrMetadata $
     \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 instance AllegraEraTxAuxData AllegraEra where
-  timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
+  nativeScriptsTxAuxDataL = nativeScriptsAllegraTxAuxDataL
 
-timelockScriptsAllegraTxAuxDataL ::
+nativeScriptsAllegraTxAuxDataL ::
   forall era.
-  Era era =>
-  Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
-timelockScriptsAllegraTxAuxDataL =
-  lensMemoRawType @era atadrNativeScripts $
-    \txAuxDataRaw ts -> txAuxDataRaw {atadrNativeScripts = ts}
+  (Era era, EncCBOR (NativeScript era)) =>
+  Lens' (AllegraTxAuxData era) (StrictSeq (NativeScript era))
+nativeScriptsAllegraTxAuxDataL =
+  lensMemoRawType @era atadrNative $
+    \txAuxDataRaw ts -> txAuxDataRaw {atadrNative = ts}
 
-deriving instance Show (AllegraTxAuxDataRaw era)
+deriving instance Show (NativeScript era) => Show (AllegraTxAuxDataRaw era)
 
-deriving instance Era era => NoThunks (AllegraTxAuxDataRaw era)
+deriving instance (Era era, NoThunks (NativeScript era)) => NoThunks (AllegraTxAuxDataRaw era)
 
-instance NFData (AllegraTxAuxDataRaw era)
+instance NFData (NativeScript era) => NFData (AllegraTxAuxDataRaw era)
 
 newtype AllegraTxAuxData era = MkAlegraTxAuxData (MemoBytes (AllegraTxAuxDataRaw era))
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, SafeToHash)
+  deriving newtype (ToCBOR, SafeToHash)
+
+deriving instance Eq (NativeScript era) => Eq (AllegraTxAuxData era)
 
 instance Memoized (AllegraTxAuxData era) where
   type RawType (AllegraTxAuxData era) = AllegraTxAuxDataRaw era
@@ -127,26 +136,28 @@ instance Memoized (AllegraTxAuxData era) where
 deriving via
   (Mem (AllegraTxAuxDataRaw era))
   instance
-    Era era => DecCBOR (Annotator (AllegraTxAuxData era))
+    AllegraEraScript era => DecCBOR (Annotator (AllegraTxAuxData era))
 
 type instance MemoHashIndex (AllegraTxAuxDataRaw era) = EraIndependentTxAuxData
 
 instance HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
 
-deriving newtype instance Show (AllegraTxAuxData era)
+deriving newtype instance Show (NativeScript era) => Show (AllegraTxAuxData era)
 
-deriving newtype instance Era era => NoThunks (AllegraTxAuxData era)
+deriving newtype instance (Era era, NoThunks (NativeScript era)) => NoThunks (AllegraTxAuxData era)
 
-deriving newtype instance NFData (AllegraTxAuxData era)
+deriving newtype instance NFData (NativeScript era) => NFData (AllegraTxAuxData era)
 
-instance EqRaw (AllegraTxAuxData era)
+instance Eq (NativeScript era) => EqRaw (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
   forall era.
-  Era era =>
+  ( Era era
+  , EncCBOR (NativeScript era)
+  ) =>
   Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
+  StrictSeq (NativeScript era) ->
   AllegraTxAuxData era
 pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob sp)
   where
@@ -158,14 +169,17 @@ pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob 
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance Era era => EncCBOR (AllegraTxAuxDataRaw era) where
+instance (Era era, EncCBOR (NativeScript era)) => EncCBOR (AllegraTxAuxDataRaw era) where
   encCBOR (AllegraTxAuxDataRaw blob sp) =
     encode (Rec AllegraTxAuxDataRaw !> To blob !> To sp)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AllegraTxAuxData era)
 
-instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
+instance
+  (Era era, Typeable (NativeScript era), DecCBOR (Annotator (NativeScript era))) =>
+  DecCBOR (Annotator (AllegraTxAuxDataRaw era))
+  where
   decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap

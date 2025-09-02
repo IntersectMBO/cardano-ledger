@@ -135,7 +135,7 @@ instance
 
       auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
       auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
-      auxDataField 1 = field (\x ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> x}) From
+      auxDataField 1 = field (\x ad -> ad {atadrNative = atadrNative ad <> x}) From
       auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))

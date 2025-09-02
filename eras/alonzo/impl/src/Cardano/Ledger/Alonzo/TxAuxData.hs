@@ -39,7 +39,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
   metadataAlonzoTxAuxDataL,
-  timelockScriptsAlonzoTxAuxDataL,
+  nativeScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
   addPlutusScripts,
   decodeTxAuxDataByTokenType,
@@ -102,7 +102,7 @@ class AllegraEraTxAuxData era => AlonzoEraTxAuxData era where
 
 data AlonzoTxAuxDataRaw era = AlonzoTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
-  , atadrNativeScripts :: !(StrictSeq (NativeScript era))
+  , atadrNative :: !(StrictSeq (NativeScript era))
   , atadrPlutus :: !(Map Language (NE.NonEmpty PlutusBinary))
   }
   deriving (Generic)
@@ -122,7 +122,7 @@ deriving via
 instance Era era => EncCBOR (AlonzoTxAuxData era)
 
 instance (Era era, EncCBOR (NativeScript era)) => EncCBOR (AlonzoTxAuxDataRaw era) where
-  encCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrNativeScripts, atadrPlutus} =
+  encCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrNative, atadrPlutus} =
     encode $
       Tag 259 $
         Keyed
@@ -139,7 +139,7 @@ instance (Era era, EncCBOR (NativeScript era)) => EncCBOR (AlonzoTxAuxDataRaw er
                   ]
           )
           !> Omit null (Key 0 $ To atadrMetadata)
-          !> Omit null (Key 1 $ To atadrNativeScripts)
+          !> Omit null (Key 1 $ To atadrNative)
           !> Omit isNothing (Key 2 $ E (maybe mempty encCBOR) (Map.lookup PlutusV1 atadrPlutus))
           !> Omit isNothing (Key 3 $ E (maybe mempty encCBOR) (Map.lookup PlutusV2 atadrPlutus))
           !> Omit isNothing (Key 4 $ E (maybe mempty encCBOR) (Map.lookup PlutusV3 atadrPlutus))
@@ -156,7 +156,7 @@ mkAlonzoTxAuxData ::
   AlonzoTxAuxData era
 mkAlonzoTxAuxData atadrMetadata allScripts =
   mkMemoizedEra @era $
-    AlonzoTxAuxDataRaw {atadrMetadata, atadrNativeScripts, atadrPlutus}
+    AlonzoTxAuxDataRaw {atadrMetadata, atadrNative, atadrPlutus}
   where
     partitionScripts (tss, pss) =
       \case
@@ -165,7 +165,7 @@ mkAlonzoTxAuxData atadrMetadata allScripts =
           let lang = plutusScriptLanguage ps
               bs = plutusScriptBinary ps
            in (tss, Map.alter (Just . maybe (pure bs) (NE.cons bs)) lang pss)
-    (atadrNativeScripts, atadrPlutus) =
+    (atadrNative, atadrPlutus) =
       foldr (flip partitionScripts) (mempty, Map.empty) allScripts
 
 getAlonzoTxAuxDataScripts ::
@@ -223,7 +223,7 @@ instance
       auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
       auxDataField 1 =
         fieldAA
-          (\x ad -> ad {atadrNativeScripts = atadrNativeScripts ad <> x})
+          (\x ad -> ad {atadrNative = atadrNative ad <> x})
           (D (sequence <$> decodeStrictSeq decCBOR))
       auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
@@ -306,14 +306,14 @@ validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
     && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
 
 instance AllegraEraTxAuxData AlonzoEra where
-  timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+  nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
 
-timelockScriptsAlonzoTxAuxDataL ::
+nativeScriptsAlonzoTxAuxDataL ::
   forall era.
   (Era era, EncCBOR (NativeScript era)) => Lens' (AlonzoTxAuxData era) (StrictSeq (NativeScript era))
-timelockScriptsAlonzoTxAuxDataL =
-  lensMemoRawType @era atadrNativeScripts $
-    \txAuxDataRaw ts -> txAuxDataRaw {atadrNativeScripts = ts}
+nativeScriptsAlonzoTxAuxDataL =
+  lensMemoRawType @era atadrNative $
+    \txAuxDataRaw ts -> txAuxDataRaw {atadrNative = ts}
 
 instance AlonzoEraTxAuxData AlonzoEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL
@@ -355,7 +355,7 @@ pattern AlonzoTxAuxData ::
 pattern AlonzoTxAuxData {atadMetadata, atadNative, atadPlutus} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata atadNative atadPlutus)
   where
-    AlonzoTxAuxData atadrMetadata atadrNativeScripts atadrPlutus =
+    AlonzoTxAuxData atadrMetadata atadrNative atadrPlutus =
       let unsupportedScripts =
             Map.filterWithKey (\lang _ -> lang > eraMaxLanguage @era) atadrPlutus
           prefix =
@@ -363,7 +363,7 @@ pattern AlonzoTxAuxData {atadMetadata, atadNative, atadPlutus} <-
               ++ if Map.size unsupportedScripts > 1 then " languages are" else " language is"
        in if Map.null unsupportedScripts
             then
-              mkMemoizedEra @era $ AlonzoTxAuxDataRaw {atadrMetadata, atadrNativeScripts, atadrPlutus}
+              mkMemoizedEra @era $ AlonzoTxAuxDataRaw {atadrMetadata, atadrNative, atadrPlutus}
             else error $ prefix ++ " not supported in " ++ eraName @era
 
 {-# COMPLETE AlonzoTxAuxData #-}

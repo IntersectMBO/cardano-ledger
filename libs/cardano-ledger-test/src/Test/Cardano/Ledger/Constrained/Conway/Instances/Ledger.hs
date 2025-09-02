@@ -1582,10 +1582,13 @@ instance
 -- NOTE: we don't generate or talk about plutus scripts (yet!)
 type AllegraTxAuxDataTypes era =
   '[ Map Word64 Metadatum
-   , StrictSeq (Timelock era)
+   , StrictSeq (NativeScript era)
    ]
 
-instance Era era => HasSimpleRep (AllegraTxAuxData era) where
+instance
+  (Era era, Typeable (NativeScript era), EncCBOR (NativeScript era)) =>
+  HasSimpleRep (AllegraTxAuxData era)
+  where
   type
     TheSop (AllegraTxAuxData era) =
       '["AllegraTxOutData" ::: AllegraTxAuxDataTypes era]

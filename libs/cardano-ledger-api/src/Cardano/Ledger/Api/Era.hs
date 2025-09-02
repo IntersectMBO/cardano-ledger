@@ -369,7 +369,7 @@ instance EraApi AlonzoEra where
     mkMemoizedEra @AlonzoEra $
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
-        , atadrNativeScripts = translateTimelock <$> scripts
+        , atadrNative = translateTimelock <$> scripts
         , atadrPlutus = mempty
         }
 

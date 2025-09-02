@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Deprecate `translateAlonzoTxAuxData` in favor of `upgradeTxAuxData`
 * Add `queryDRepDelegations` state query
 * Remove `filterStakePoolDelegsAndRewards` as unnecessary. Use `queryStakePoolDelegsAndRewards` instead
 * Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`

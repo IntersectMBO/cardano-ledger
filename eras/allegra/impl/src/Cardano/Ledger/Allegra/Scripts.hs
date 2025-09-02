@@ -462,6 +462,8 @@ showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ F.foldl' accum ")" 
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"
 showTimelock _ = error "Impossible: All NativeScripts should have been accounted for"
 
+-- | Check the equality of two underlying types, while ignoring their binary
+-- representation, which `Eq` instance normally does. This is used for testing.
 eqTimelockRaw :: Timelock era -> Timelock era -> Bool
 eqTimelockRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
   where

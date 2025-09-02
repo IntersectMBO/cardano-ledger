@@ -29,7 +29,13 @@ import Test.Cardano.Ledger.Shelley.Binary.Annotator
 
 deriving newtype instance DecCBOR (TxBody AllegraEra)
 
-instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
+instance
+  ( Era era
+  , AllegraEraScript era
+  , DecCBOR (NativeScript era)
+  ) =>
+  DecCBOR (AllegraTxAuxDataRaw era)
+  where
   decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap
@@ -53,7 +59,8 @@ instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
               <! From
           )
 
-deriving newtype instance Era era => DecCBOR (AllegraTxAuxData era)
+deriving newtype instance
+  (AllegraEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AllegraTxAuxData era)
 
 instance Era era => DecCBOR (TimelockRaw era) where
   decCBOR = decode $ Summands "TimelockRaw" $ \case
