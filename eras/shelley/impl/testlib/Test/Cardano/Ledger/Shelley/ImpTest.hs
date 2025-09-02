@@ -1629,9 +1629,7 @@ freshPoolParams khPool rewardAccount = do
       }
 
 registerPool ::
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ShelleyEraImp era =>
   KeyHash 'StakePool ->
   ImpTestM era ()
 registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool
