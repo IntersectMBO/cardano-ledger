@@ -132,7 +132,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
   getCommittee,
   conwayRegisterStakeCredential,
-  registerPoolWithDeposit,
   registerRewardAccountWithDeposit,
 ) where
 
@@ -513,7 +512,7 @@ setupPoolWithStake ::
   ImpTestM era (KeyHash 'StakePool, Credential 'Payment, Credential 'Staking)
 setupPoolWithStake delegCoin = impAnn "Set up pool with stake" $ do
   khPool <- freshKeyHash
-  registerPoolWithDeposit khPool
+  registerPool khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   sendCoinTo_ (mkAddr credDelegatorPayment credDelegatorStaking) delegCoin
@@ -534,7 +533,7 @@ setupPoolWithoutStake ::
   ImpTestM era (KeyHash 'StakePool, Credential 'Staking)
 setupPoolWithoutStake = do
   khPool <- freshKeyHash
-  registerPoolWithDeposit khPool
+  registerPool khPool
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to stake pool" $
@@ -1836,14 +1835,6 @@ conwayRegisterStakeCredential cred = do
         .~ SSeq.fromList [RegDepositTxCert cred deposit]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
-
-registerPoolWithDeposit ::
-  ConwayEraImp era =>
-  KeyHash 'StakePool ->
-  ImpTestM era ()
-registerPoolWithDeposit khPool =
-  (freshKeyHash >>= registerStakeCredential . KeyHashObj)
-    >>= registerPoolWithRewardAccount khPool
 
 registerRewardAccountWithDeposit ::
   forall era.
