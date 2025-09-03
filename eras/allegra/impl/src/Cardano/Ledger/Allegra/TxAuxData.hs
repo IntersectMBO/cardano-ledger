@@ -75,7 +75,7 @@ import NoThunks.Class (NoThunks)
 data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
   -- ^ Structured transaction metadata
-  , atadrNative :: !(StrictSeq (NativeScript era))
+  , atadrNativeScripts :: !(StrictSeq (NativeScript era))
   -- ^ Pre-images of script hashes found within the TxBody, but which are not
   -- required as witnesses. Examples include:
   -- - Token policy IDs appearing in transaction outputs
