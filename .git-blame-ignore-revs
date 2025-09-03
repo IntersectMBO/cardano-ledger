@@ -3,6 +3,14 @@
 # from the repository's root to tell `git blame` to ignore
 # the commits below.
 
+# Use different bullet characters for different list levels in CHANGELOGs
+# CommitDate: Thu Sep 4 22:48:33 2025 -0600
+dd81c3f9e2acd33e58911cff1688232fd3593680
+
+# Fix formatting inconsistencies and errors in CHANGELOG files
+# CommitDate: Thu Sep 4 22:48:33 2025 -0600
+d91a32057ba6c0caa97a5282b652c36c8b6a601a
+
 # Apply `fourmolu` with `respectful: false`
 # CommitDate: Mon May 12 14:08:08 2025 -0600
 4b79a7a9fb54aabe567e2a4f83825616046f7ab3
