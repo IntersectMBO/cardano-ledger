@@ -426,7 +426,7 @@ pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
 
 -- Alonzo Script ===============================================================
 
--- | Scripts in the Alonzo Era, Either a nativve script or a Plutus script.
+-- | Scripts in the Alonzo Era, Either a native script or a Plutus script.
 data AlonzoScript era
   = NativeScript !(NativeScript era)
   | PlutusScript !(PlutusScript era)
