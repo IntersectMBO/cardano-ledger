@@ -693,7 +693,7 @@ spec = do
         accountState <- expectJust $ lookupAccountState cred accounts
         expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
 
-    expectDelegatedVote :: Credential 'Staking -> DRep -> ImpTestM era ()
+    expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
     expectDelegatedVote cred drep = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
       dreps <- getsNES $ nesEsL . epochStateRegDrepL

@@ -92,6 +92,16 @@ data DijkstraDelegCert
 
 instance EncCBOR DijkstraDelegCert where
   encCBOR = \case
+    DijkstraRegCert cred deposit ->
+      encodeListLen 3
+        <> encodeWord8 7
+        <> encCBOR cred
+        <> encCBOR deposit
+    DijkstraUnRegCert cred deposit ->
+      encodeListLen 3
+        <> encodeWord8 8
+        <> encCBOR cred
+        <> encCBOR deposit
     DijkstraDelegCert cred (DelegStake poolId) -> encodeShelleyDelegCert $ ShelleyDelegCert cred poolId
     DijkstraDelegCert cred (DelegVote drep) ->
       encodeListLen 3
@@ -104,16 +114,6 @@ instance EncCBOR DijkstraDelegCert where
         <> encCBOR cred
         <> encCBOR poolId
         <> encCBOR dRep
-    DijkstraRegCert cred deposit ->
-      encodeListLen 3
-        <> encodeWord8 7
-        <> encCBOR cred
-        <> encCBOR deposit
-    DijkstraUnRegCert cred deposit ->
-      encodeListLen 3
-        <> encodeWord8 8
-        <> encCBOR cred
-        <> encCBOR deposit
     DijkstraRegDelegCert cred (DelegStake poolId) deposit ->
       encodeListLen 4
         <> encodeWord8 11

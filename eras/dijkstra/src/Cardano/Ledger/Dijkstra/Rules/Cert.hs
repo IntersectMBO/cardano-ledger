@@ -47,7 +47,6 @@ instance InjectRuleFailure "CERT" ConwayGovCertPredFailure DijkstraEra where
   injectFailure = GovCertFailure
 
 instance
-  forall era.
   ( Era era
   , State (EraRule "DELEG" era) ~ CertState era
   , State (EraRule "POOL" era) ~ PState era
