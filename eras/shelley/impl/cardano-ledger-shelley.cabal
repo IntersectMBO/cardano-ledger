@@ -144,6 +144,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.CDDL
     Test.Cardano.Ledger.Shelley.Constants
     Test.Cardano.Ledger.Shelley.Era
+    Test.Cardano.Ledger.Shelley.Era.Spec
     Test.Cardano.Ledger.Shelley.Examples
     Test.Cardano.Ledger.Shelley.Imp
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec
@@ -193,14 +194,11 @@ library testlib
     microlens,
     microlens-mtl,
     mtl,
-    prettyprinter,
-    prettyprinter-ansi-terminal,
     random,
     small-steps >=1.1,
     text,
     time,
     transformers,
-    tree-diff,
     unliftio,
     vector-map,
 

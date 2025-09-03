@@ -10,6 +10,7 @@ import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Plutus (emptyCostModels)
+import Paths_cardano_ledger_allegra
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Era
@@ -24,6 +25,8 @@ class
 
 instance EraTest AllegraEra where
   zeroCostModels = emptyCostModels
+
+  getEraDataFileName = getDataFileName
 
   mkTestAccountState = mkShelleyTestAccountState
 

@@ -23,6 +23,8 @@ import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Era
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 
+instance EraImp MaryEra
+
 instance ShelleyEraImp MaryEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx

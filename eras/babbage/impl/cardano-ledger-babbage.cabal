@@ -107,6 +107,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Binary.Twiddle
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Era
+    Test.Cardano.Ledger.Babbage.Era.Spec
     Test.Cardano.Ledger.Babbage.Examples
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxoSpec

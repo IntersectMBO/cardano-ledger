@@ -39,6 +39,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
+import Test.Cardano.Ledger.Core.Utils (nextMajorProtVer, nextMinorProtVer)
 import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
 spec ::
@@ -166,12 +167,12 @@ hardForkSpec ::
 hardForkSpec =
   describe "HardFork" $ do
     describe "Hardfork is the first one (doesn't have a GovPurposeId) " $ do
-      it "Hardfork minorFollow" (firstHardForkFollows minorFollow)
-      it "Hardfork majorFollow" (firstHardForkFollows majorFollow)
+      it "Hardfork minorFollow" (firstHardForkFollows nextMinorProtVer)
+      it "Hardfork majorFollow" (firstHardForkFollows nextMajorProtVer)
       it "Hardfork cantFollow" firstHardForkCantFollow
     describe "Hardfork is the second one (has a GovPurposeId)" $ do
-      it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
-      it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
+      it "Hardfork minorFollow" (secondHardForkFollows nextMinorProtVer)
+      it "Hardfork majorFollow" (secondHardForkFollows nextMajorProtVer)
       it "Hardfork cantFollow" secondHardForkCantFollow
 
 pparamUpdateSpec ::
@@ -1166,7 +1167,7 @@ firstHardForkCantFollow ::
   ImpTestM era ()
 firstHardForkCantFollow = do
   protver0 <- getProtVer
-  let protver1 = minorFollow protver0
+  let protver1 = nextMinorProtVer protver0
       protver2 = cantFollow protver1
   proposal <- mkProposal $ HardForkInitiation SNothing protver2
   submitFailingProposal
@@ -1187,7 +1188,7 @@ secondHardForkFollows ::
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
   protver0 <- getProtVer
-  let protver1 = minorFollow protver0
+  let protver1 = nextMinorProtVer protver0
       protver2 = computeNewFromOld protver1
   gaid1 <- submitGovAction $ HardForkInitiation SNothing protver1
   submitGovAction_ $ HardForkInitiation (SJust (GovPurposeId gaid1)) protver2
@@ -1202,7 +1203,7 @@ secondHardForkCantFollow ::
   ImpTestM era ()
 secondHardForkCantFollow = do
   protver0 <- getProtVer
-  let protver1 = minorFollow protver0
+  let protver1 = nextMinorProtVer protver0
       protver2 = cantFollow protver1
   gaid1 <- mkProposal (HardForkInitiation SNothing protver1) >>= submitProposal
   mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protver2)

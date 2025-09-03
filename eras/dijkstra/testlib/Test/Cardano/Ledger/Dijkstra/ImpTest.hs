@@ -36,9 +36,10 @@ import Lens.Micro ((%~), (&))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era ()
 
-instance ShelleyEraImp DijkstraEra where
+instance EraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
 
+instance ShelleyEraImp DijkstraEra where
   initNewEpochState = defaultInitNewEpochState $ \nes ->
     nes
       & nesEsL . epochStateGovStateL . committeeGovStateL %~ fmap updateCommitteeExpiry

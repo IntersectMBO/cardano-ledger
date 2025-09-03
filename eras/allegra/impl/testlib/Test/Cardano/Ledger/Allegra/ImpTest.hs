@@ -37,6 +37,8 @@ import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
+instance EraImp AllegraEra
+
 instance ShelleyEraImp AllegraEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
@@ -55,7 +57,7 @@ impAllegraSatisfyNativeScript ::
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
   impState <- get
   let
-    keyPairs = impState ^. impKeyPairsG
+    keyPairs = impState ^. keyPairsL
     vi = txBody ^. vldtTxBodyL
     satisfyMOf m Empty
       | m <= 0 = Just mempty

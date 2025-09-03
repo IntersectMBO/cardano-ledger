@@ -102,6 +102,7 @@ library testlib
     Test.Cardano.Ledger.Mary.Binary.Cddl
     Test.Cardano.Ledger.Mary.CDDL
     Test.Cardano.Ledger.Mary.Era
+    Test.Cardano.Ledger.Mary.Era.Spec
     Test.Cardano.Ledger.Mary.Examples
     Test.Cardano.Ledger.Mary.Imp
     Test.Cardano.Ledger.Mary.Imp.UtxoSpec
