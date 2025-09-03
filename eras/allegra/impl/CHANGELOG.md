@@ -27,19 +27,19 @@
 ## 1.7.0.0
 
 * Add `DecCBOR` instances for:
-  * `Timelock`
-  * `AllegraTxAuxData`
-  * `AllegraTxBody`
+  - `Timelock`
+  - `AllegraTxAuxData`
+  - `AllegraTxBody`
 * Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
 * Add `Era era` constraint to `NoThunks` instance for `TimeLock`
 * Remove `Era era` constraint from:
-  * `getRequireSignatureTimelock`
-  * `getRequireAllOfTimelock`
-  * `getRequireAnyOfTimelock`
-  * `getRequireMOfTimelock`
-  * `getTimeStartTimelock`
-  * `getTimeExpireTimelock`
+  - `getRequireSignatureTimelock`
+  - `getRequireAllOfTimelock`
+  - `getRequireAnyOfTimelock`
+  - `getRequireMOfTimelock`
+  - `getTimeStartTimelock`
+  - `getTimeExpireTimelock`
 * Add `MemPack` instance for `Timelock`
 * Remove deprecated `AuxiliaryData` type synonym
 * Deprecate `Allegra` type synonym
@@ -64,24 +64,24 @@
 ## 1.5.0.0
 
 * Replace patterns within `Timelock` with `AllegraEraScript`- constrained ones:
-  * `RequireTimeExpire`
-  * `RequireTimeStart`
+  - `RequireTimeExpire`
+  - `RequireTimeStart`
 * Remove `Timelock` patterns:
-  * `RequireSignature`
-  * `RequireAllOf`
-  * `RequireAnyOf`
-  * `RequireMOf`
+  - `RequireSignature`
+  - `RequireAllOf`
+  - `RequireAnyOf`
+  - `RequireMOf`
 * Introduce `AllegraEraScript` class
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AllegraEra`
 * Change signatures of `evalTimelock` and `validateTimelock`:
-  * replace `Era` constraint with `AllegraEraScript`
-  * replace `Timelock` with `NativeScript`
+  - replace `Era` constraint with `AllegraEraScript`
+  - replace `Timelock` with `NativeScript`
 
 ### testlib
 
 * Change signatures of `Arbitrary` instances for `Timelock` and `AllegraTxAuxData era`:
-  * replace `Era` constraint with `AllegraEraScript`
-  * add `NativeScript era ~ Timelock era` constraint
+  - replace `Era` constraint with `AllegraEraScript`
+  - add `NativeScript era ~ Timelock era` constraint
 
 ## 1.4.1.0
 
@@ -179,9 +179,9 @@
 ## 1.1.1.0
 
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 
 ## 1.1.0.0
 
