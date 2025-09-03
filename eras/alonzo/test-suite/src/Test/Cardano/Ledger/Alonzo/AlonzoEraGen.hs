@@ -616,9 +616,7 @@ addMaybeDataHashToTxOut (AlonzoTxOut addr val _) = AlonzoTxOut addr val (dataFro
 
 someLeaf ::
   forall era.
-  ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
+  AllegraEraScript era =>
   Proxy era ->
   KeyHash 'Witness ->
   AlonzoScript era

@@ -266,6 +266,7 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
@@ -429,6 +430,7 @@ class
   , NFData (EraRuleEvent "TICK" era)
   , Typeable (EraRuleEvent "TICK" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , DecCBOR (NativeScript era)
   ) =>
   ShelleyEraImp era
   where
