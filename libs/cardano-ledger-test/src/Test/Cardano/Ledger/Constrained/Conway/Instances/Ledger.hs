@@ -457,16 +457,16 @@ instance Typeable era => HasSimpleRep (Datum era)
 instance (Era era, HasSpec (Data era)) => HasSpec (Datum era)
 
 -- TODO: here we are cheating to get out of having to deal with Plutus scripts
-instance Typeable era => HasSimpleRep (AlonzoScript era) where
-  type SimpleRep (AlonzoScript era) = Timelock era
-  toSimpleRep (TimelockScript tl) = tl
+instance (Era era, Typeable (NativeScript era)) => HasSimpleRep (AlonzoScript era) where
+  type SimpleRep (AlonzoScript era) = NativeScript era
+  toSimpleRep (NativeScript tl) = tl
   toSimpleRep (PlutusScript _) = error "toSimpleRep for AlonzoScript on a PlutusScript"
-  fromSimpleRep = TimelockScript
+  fromSimpleRep = NativeScript
 
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , HasSpec (NativeScript era)
   ) =>
   HasSpec (AlonzoScript era)
 
@@ -525,9 +525,7 @@ instance Era era => HasSimpleRep (Timelock era) where
 -}
 
 instance
-  ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
+  AllegraEraScript era =>
   HasSpec (Timelock era)
   where
   type TypeSpec (Timelock era) = ()
@@ -1557,7 +1555,7 @@ instance HasSpec IsValid
 -- NOTE: we don't generate or talk about plutus scripts (yet!)
 type AlonzoTxAuxDataTypes era =
   '[ Map Word64 Metadatum
-   , StrictSeq (Timelock era)
+   , StrictSeq (NativeScript era)
    ]
 
 instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
@@ -1575,17 +1573,19 @@ instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
 instance
   ( Era era
   , AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (AlonzoTxAuxData era)
 
 -- NOTE: we don't generate or talk about plutus scripts (yet!)
 type AllegraTxAuxDataTypes era =
   '[ Map Word64 Metadatum
-   , StrictSeq (Timelock era)
+   , StrictSeq (NativeScript era)
    ]
 
-instance Era era => HasSimpleRep (AllegraTxAuxData era) where
+instance
+  (Era era, Typeable (NativeScript era), EncCBOR (NativeScript era)) =>
+  HasSimpleRep (AllegraTxAuxData era)
+  where
   type
     TheSop (AllegraTxAuxData era) =
       '["AllegraTxOutData" ::: AllegraTxAuxDataTypes era]
@@ -1600,7 +1600,6 @@ instance Era era => HasSimpleRep (AllegraTxAuxData era) where
 instance
   ( Era era
   , AllegraEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (AllegraTxAuxData era)
 
@@ -1622,7 +1621,6 @@ instance Era era => HasSimpleRep (ShelleyTxAuxData era) where
 instance
   ( Era era
   , AllegraEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (ShelleyTxAuxData era)
 

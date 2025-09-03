@@ -33,6 +33,7 @@ import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Coerce (coerce)
 import Data.MemPack
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
@@ -42,16 +43,16 @@ instance EraScript BabbageEra where
   type NativeScript BabbageEra = Timelock BabbageEra
 
   upgradeScript = \case
-    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ coerce ts
     PlutusScript (AlonzoPlutusV1 ps) -> PlutusScript $ BabbagePlutusV1 ps
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 instance AlonzoEraScript BabbageEra where
   data PlutusScript BabbageEra

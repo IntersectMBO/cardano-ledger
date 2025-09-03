@@ -2,6 +2,9 @@
 
 ## 1.14.0.0
 
+* Replace `timelockScriptsAlonzoTxAuxDataL` with `nativeScriptsAlonzoTxAuxDataL`
+* Replace `atadTimelock` with `atadNative`
+* Replace `TimelockScript` constructor of `AlonzoScript` with a new constructor `NativeScript`
 * Make `transValidityInterval` based on eras instead of protocol versions.
   * Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
   * Remove protocol version from arguments to `transValidityInterval`.

@@ -2,6 +2,9 @@
 
 ## 1.8.0.0
 
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Replace `timelockScriptsAllegraTxAuxDataL` with `nativeScriptsAllegraTxAuxDataL`
+* Add `upgradeNativeScript` method to `AllegraEraScript`
 * Remove `TriesToForgeADA`
 * Change the type of `actualSize` and `PParameterMaxValue` fields in `OutputTooBigUTxO` to `Int`
 * Added `COMPLETE` pragma for `TxCert AllegraEra`

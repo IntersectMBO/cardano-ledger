@@ -176,7 +176,6 @@ instance Era era => SpecTranslate ctx (Datum era) where
 
 instance
   ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
   SpecTranslate ctx (Timelock era)
@@ -186,7 +185,7 @@ instance
   toSpecRep tl =
     Agda.HSTimelock
       <$> timelockToSpecRep tl
-      <*> toSpecRep (hashScript @era $ TimelockScript tl)
+      <*> toSpecRep (hashScript @era $ NativeScript tl)
       <*> pure (fromIntegral $ originalBytesSize tl)
     where
       timelockToSpecRep x =
@@ -208,7 +207,6 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
   SpecTranslate ctx (PlutusScript era)
@@ -223,13 +221,12 @@ instance
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
   SpecTranslate ctx (AlonzoScript era)
   where
   type SpecRep (AlonzoScript era) = Agda.Script
 
-  toSpecRep (TimelockScript s) = Left <$> toSpecRep s
+  toSpecRep (NativeScript s) = Left <$> toSpecRep s
   toSpecRep (PlutusScript s) = Right <$> toSpecRep s
 
 instance
@@ -537,7 +534,6 @@ instance
   , SpecTranslate ctx (PlutusPurpose AsIx era)
   , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
   SpecTranslate ctx (AlonzoTxWits era)
   where

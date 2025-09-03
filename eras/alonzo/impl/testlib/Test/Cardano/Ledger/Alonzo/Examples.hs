@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Alonzo.Examples (
   exampleAlonzoGenesis,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
@@ -137,7 +136,6 @@ exampleTx ::
   , EraPlutusTxInfo 'PlutusV1 era
   , TxAuxData era ~ AlonzoTxAuxData era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
   TxBody era -> PlutusPurpose AsIx era -> Tx era
 exampleTx txBody scriptPurpose =
@@ -159,7 +157,7 @@ exampleTx txBody scriptPurpose =
       .~ SJust
         ( mkAlonzoTxAuxData
             exampleAuxDataMap
-            [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf @era mempty]
+            [alwaysFails @'PlutusV1 2, NativeScript $ RequireAllOf @era mempty]
         )
 
 exampleTxBodyAlonzo :: TxBody AlonzoEra
