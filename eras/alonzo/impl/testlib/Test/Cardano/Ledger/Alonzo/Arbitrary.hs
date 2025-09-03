@@ -23,7 +23,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   alwaysFailsLang,
   genEraLanguage,
   genAlonzoScript,
-  genNativeScript,
   genNonEmptyRedeemers,
   genNonEmptyTxDats,
   genPlutusScript,
@@ -33,7 +32,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoPlutusPurposePointer,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (AlonzoBlockBody))
 import Cardano.Ledger.Alonzo.Core
@@ -220,7 +218,7 @@ instance EraPlutusContext era => Arbitrary (SupportedLanguage era) where
 instance
   ( EraPlutusContext era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   ) =>
   Arbitrary (AlonzoScript era)
   where
@@ -229,20 +227,15 @@ instance
 genAlonzoScript ::
   ( EraPlutusContext era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   ) =>
   SupportedLanguage era ->
   Gen (AlonzoScript era)
 genAlonzoScript lang =
   frequency
     [ (2, fromPlutusScript <$> genPlutusScript lang)
-    , (8, fromNativeScript <$> genNativeScript)
+    , (8, fromNativeScript <$> arbitrary)
     ]
-
-genNativeScript ::
-  Arbitrary (NativeScript era) =>
-  Gen (NativeScript era)
-genNativeScript = arbitrary
 
 genPlutusScript ::
   SupportedLanguage era ->

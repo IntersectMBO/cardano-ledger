@@ -26,7 +26,7 @@ import Cardano.Ledger.Allegra.Scripts (
   Timelock (..),
   ValidityInterval (..),
   pattern RequireTimeExpire,
-  pattern RequireTimeStart,
+  pattern RequireTimeStart, mkRequireSignatureTimelock, mkTimeStartTimelock, mkTimeExpireTimelock,
  )
 import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedNativeScriptGens)
+import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedMultiSigGens)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
@@ -53,23 +53,24 @@ maxTimelockDepth :: Int
 maxTimelockDepth = 3
 
 sizedTimelock ::
+  forall era.
   AllegraEraScript era =>
   Int ->
-  Gen (NativeScript era)
-sizedTimelock 0 = RequireSignature <$> arbitrary
+  Gen (Timelock era)
+sizedTimelock 0 = mkRequireSignatureTimelock <$> arbitrary
 sizedTimelock n =
   oneof $
-    sizedNativeScriptGens n
-      <> [ RequireTimeStart <$> arbitrary
-         , RequireTimeExpire <$> arbitrary
+    upgradeMultiSig (sizedMultiSigGens n)
+      <> [ mkTimeStartTimelock <$> arbitrary
+         , mkTimeExpireTimelock <$> arbitrary
          ]
 
 -- TODO Generate metadata with script preimages
 instance
   forall era.
   ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
   , Arbitrary (Script era)
+  , Arbitrary (NativeScript era)
   , Era era
   ) =>
   Arbitrary (AllegraTxAuxData era)
@@ -119,11 +120,10 @@ instance Arbitrary (TxBody AllegraEra) where
 
 instance
   ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   Arbitrary (Timelock era)
   where
-  arbitrary = sizedTimelock maxTimelockDepth
+  arbitrary = sizedTimelock @era maxTimelockDepth
 
 instance Arbitrary ValidityInterval where
   arbitrary = genericArbitraryU

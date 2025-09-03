@@ -726,7 +726,7 @@ genScript tag = case reify @era of
 -- Adds to gsScripts
 genTimelockScript ::
   forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  (AllegraEraScript era) =>
   GenRS era ScriptHash
 genTimelockScript = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval

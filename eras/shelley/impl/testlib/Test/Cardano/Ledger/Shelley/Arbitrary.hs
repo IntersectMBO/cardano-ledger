@@ -24,7 +24,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   RawSeed (..),
   ASC (..),
   StakeProportion (..),
-  sizedNativeScriptGens,
+  sizedMultiSigGens,
 ) where
 
 import qualified Cardano.Chain.UTxO as Byron
@@ -65,10 +65,10 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
-  pattern RequireAllOf,
-  pattern RequireAnyOf,
-  pattern RequireMOf,
-  pattern RequireSignature,
+  mkRequireAllOfMultiSig,
+  mkRequireAnyOfMultiSig,
+  mkRequireMOfMultiSig,
+  mkRequireSignatureMultiSig,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
@@ -571,19 +571,18 @@ maxMultiSigDepth = 3
 maxMultiSigListLens :: Int
 maxMultiSigListLens = 4
 
-sizedMultiSig :: ShelleyEraScript era => Int -> Gen (NativeScript era)
-sizedMultiSig 0 = RequireSignature <$> arbitrary
-sizedMultiSig n = oneof $ sizedNativeScriptGens n
+sizedMultiSig :: ShelleyEraScript era => Int -> Gen (MultiSig era)
+sizedMultiSig 0 = mkRequireSignatureMultiSig <$> arbitrary
+sizedMultiSig n = oneof $ sizedMultiSigGens n
 
-sizedNativeScriptGens :: ShelleyEraScript era => Int -> [Gen (NativeScript era)]
-sizedNativeScriptGens n =
-  [ RequireSignature <$> arbitrary
-  , RequireAllOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
-  , RequireAnyOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
+sizedMultiSigGens :: ShelleyEraScript era => Int -> [Gen (MultiSig era)]
+sizedMultiSigGens n =
+  [ mkRequireSignatureMultiSig <$> arbitrary
+  , mkRequireAllOfMultiSig . fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+  , mkRequireAnyOfMultiSig . fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
   , do
       subs <- resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
-      let i = length subs
-      RequireMOf <$> choose (0, i) <*> pure (fromList subs)
+      mkRequireMOfMultiSig <$> choose (0, length subs) <*> pure (fromList subs)
   ]
 
 instance

@@ -466,7 +466,7 @@ instance (Era era, Typeable (NativeScript era)) => HasSimpleRep (AlonzoScript er
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , HasSpec (NativeScript era)
   ) =>
   HasSpec (AlonzoScript era)
 
@@ -525,9 +525,7 @@ instance Era era => HasSimpleRep (Timelock era) where
 -}
 
 instance
-  ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
+  AllegraEraScript era =>
   HasSpec (Timelock era)
   where
   type TypeSpec (Timelock era) = ()
@@ -1575,7 +1573,6 @@ instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
 instance
   ( Era era
   , AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (AlonzoTxAuxData era)
 
@@ -1603,7 +1600,6 @@ instance
 instance
   ( Era era
   , AllegraEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (AllegraTxAuxData era)
 
@@ -1625,7 +1621,6 @@ instance Era era => HasSimpleRep (ShelleyTxAuxData era) where
 instance
   ( Era era
   , AllegraEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   HasSpec (ShelleyTxAuxData era)
 
