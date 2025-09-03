@@ -174,8 +174,8 @@ decShareLensCBOR l = do
   lift $ decShareCBOR (s ^. l)
 
 -- | Using this function it is possible to compose two lenses. One will extract
--- a value and another will used it for placing it into a empty monoid. Here is
--- an example of how a second element of a tuple can be projected on the third
+-- a value and another will place it into an empty monoid.
+-- Here is an example of how a second element of a tuple can be projected on the third
 -- element of a 3-tuple.
 --
 -- > toMemptyLens _3 _2 == lens (\(_, b) -> (mempty, mempty, b)) (\(a, _) (_, _, b) -> (a, b))

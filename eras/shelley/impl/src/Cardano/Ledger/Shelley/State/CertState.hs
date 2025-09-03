@@ -42,7 +42,7 @@ import Data.Default (Default (..))
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (.~), (^.), _2)
+import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyCertState era = ShelleyCertState
@@ -133,7 +133,9 @@ instance EraAccounts era => DecShareCBOR (ShelleyCertState era) where
       , Interns (Credential 'HotCommitteeRole)
       )
   decSharePlusCBOR = decodeRecordNamedT "ShelleyCertState" (const 2) $ do
-    shelleyCertPState <- decSharePlusLensCBOR _2
+    shelleyCertPState <-
+      decSharePlusLensCBOR $
+        lens (\(_, ks, _, _) -> (mempty, ks)) (\(cs, _, cd, ch) (_, ks) -> (cs, ks, cd, ch))
     shelleyCertDState <-
       decSharePlusLensCBOR $
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
