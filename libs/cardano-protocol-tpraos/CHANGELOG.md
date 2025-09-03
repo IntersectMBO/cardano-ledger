@@ -50,6 +50,7 @@
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 
 ## 1.1.0.0
+
 * Change the type of `bsize` and `hBbsize` to `Word32`
 
 ## 1.0.3.7
@@ -102,10 +103,10 @@
 * Add `mkBHeader`
 * Move from `cardano-ledger-shelley-test`: `mkOCert`, `mkBHBody`, `mkBlock`
 * Move `AllIssuerKeys` from `cardano-ledegr-shelley-test`. Rename its fields:
-  *  `cold` - > `aikCold`
-  *  `hot` - > `aikHot`
-  *  `vrf` - > `aikVrf`
-  *  `hk` - > `aikColdKeyHash`
+  * `cold` - > `aikCold`
+  * `hot` - > `aikHot`
+  * `vrf` - > `aikVrf`
+  * `hk` - > `aikColdKeyHash`
 * Bring back `genBlock`
 * Move `genCoherentBlock` from `cardano-ledegr-shelley-test` and change it to accept
   `AllIssuerKeys` as an argument.

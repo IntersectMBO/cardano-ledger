@@ -15,7 +15,7 @@
   * `ShelleyUpecPredFailure`
   * `TickTransitionError`
   * `UpecPredFailure`
-* Remove `withCborRoundTripFailures` 
+* Remove `withCborRoundTripFailures`
 * Refactor pool deposits to use `StakePoolState`. #5234
   * Update `Pool` rule to store deposits in individual `StakePoolState` records
   * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
@@ -46,7 +46,7 @@
   * `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
   * `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
   * `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
-  - Delete the `Shelley.HardForks` module.
+  * Delete the `Shelley.HardForks` module.
 * Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
   * This tests if the protocol version is greater than 10.
 * Deprecated `toShelleyGenesisPairs`
@@ -234,7 +234,7 @@
 * Remove export of deprecated `RewardAcnt` and `poolCWitness`
 * Change type of VRF key hash in `GenesisDelegCert`, `GenesisDelegTxCert` and `DuplicateGenesisVRFDELEG` to `VRFVerKeyHash`
 * Added `EncCBOR` instance for `LedgerEnv`
-* Use `Mismatch` to clarify _some more_ predicate failures. #4711
+* Use `Mismatch` to clarify *some more* predicate failures. #4711
   * `Shelley/InsufficientForInstantaneousRewardsDELEG`
   * `Shelley/MIRCertificateTooLateinEpochDELEG`
   * `Shelley/InsufficientForTransferDELEG`
@@ -259,11 +259,11 @@
 * Added `expectUTxOContent`
 * Added `disableTreasuryExpansion`
 * Added a `MonadFail` constraint to two methods of `ShelleyEraImp`:
-  - `initGenesis`
-  - `initNewEpochState`
+  * `initGenesis`
+  * `initNewEpochState`
 * Added a `MonadFail` constraint to:
-  - `defaultInitNewEpochState`
-  - `defaultInitImpTestState`
+  * `defaultInitNewEpochState`
+  * `defaultInitImpTestState`
 * Added `logText`
 * Added `ToExpr` instance for `LedgerEnv`
 * Added `tryRunImpRuleNoAssertions` to `ImpTest`
@@ -656,7 +656,7 @@
 * Add `eqMultiSigRaw`, `shelleyEqTxRaw` and `shelleyEqTxWitsRaw`
 * Add `EqRaw` instance for `MultiSig`, `ShelleyTxWits`, `ShelleyTxAuxData`, `TxBody` and `Tx`
 * Add `ToExpr` instance for `GenesisDelegCert`, `MIRPot`, `MirTarget`, `MIRCert`,
-	`ShelleyTxCert`, `ShelleyDelegCert`, `MultiSig` and `MultiSigRaw`
+  `ShelleyTxCert`, `ShelleyDelegCert`, `MultiSig` and `MultiSigRaw`
 
 ## 1.5.1.0
 

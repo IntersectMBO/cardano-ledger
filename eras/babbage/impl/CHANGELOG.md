@@ -215,7 +215,7 @@
 * Removed validation function `validateOutputTooBigUTxO`, in favor of the same function
   from `cardano-ledger-alonzo`.
 
-###`testlib`
+### `testlib`
 
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 

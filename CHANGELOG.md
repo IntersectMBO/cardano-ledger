@@ -98,7 +98,6 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 - Stopped counting expired committee members in active committee size calculation.
 - Included rewards accounts in `DRep` distribution calculation.
 - Added `AccountState` ledger state query.
-
 - Bug fixes:
   - Stopped embedding `UTXO` and `UTXOS` predicate failures from previous eras.
   - Fixed predicate failure deserialisation bug when re-submitting a `Conway` transaction with an invalid plutus script.
@@ -117,7 +116,6 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
   - Era-specific queries: Conway functionality supported only starting with Conway era
   - Change committee query to return non-optional `CommitteeMembersState`
   - Add optional `Anchor` to resigned status in `CommitteeMembersState`
-
 - Important bug fixes:
   - Use the correct stake pool distribution for voting (instead of one that is an epoch too old)
   - Fix DRep stake distribution to correctly add rewards to deleged stake
@@ -138,7 +136,6 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 - Increasing the limit for Url in Anchors to 128 bytes
 - Provide accurate transaction fee estimation functionality for Haskell tools
 - Important bug fixes:
-
   - missing `"protocolVersion"` field in JSON instance for Babbage and Conway protocol parameters
   - requiring witnesses for DRep registration
   - new committee governance action ratification was implemented incorrectly
@@ -255,37 +252,39 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
   - We fixed the incorrect conversion of the validity interval's upper bound in `transVITime`.
   - Starting in version 9, duplicate keys in CBOR maps and sets are no longer allowed.
   - Starting in version 9, `CostModel`s can now be deserialized from any map of Word8 values to lists of integers. Only valid cost models are actually converted to evaluation contexts that can be used. Errors and unrecognized language versions are stored in the `CostModel` type so that:
-      - They can accept cost models that they do not yet understand.
-      - Upon deserializing after a software update, new cost models are available from the prior serialization.
+    - They can accept cost models that they do not yet understand.
+    - Upon deserializing after a software update, new cost models are available from the prior serialization.
 
-# Deprecated changlog
+## 1.2.0
+
+Release tag `ledger/1.2.0`
+
+**Deprecated changelog**
 
 Below was the last `cardano-ledger` repository branch based release and we now have fully
 switched to [CHaPs](https://github.com/input-output-hk/cardano-haskell-packages).
 
-## Release tag `ledger/1.2.0`
-
 Changes recorded below are for all of the package versions in the list:
 
-  * `small-steps-1.0.0.0`
-  * `vector-map-1.0.0.0`
-  * `cardano-data-1.0.0.0`
-  * `set-algebra-1.0.0.0`
-  * `cardano-ledger-binary-1.0.0.0`
-  * `cardano-ledger-core-1.0.0.0`
-  * `cardano-protocol-tpraos-1.0.0.0`
-  * `cardano-ledger-api-1.0.0.0`
-  * `cardano-ledger-pretty-1.0.0.0`
-  * `cardano-ledger-shelley-1.0.0.0`
-  * `cardano-ledger-allegra-1.0.0.0`
-  * `cardano-ledger-mary-1.0.0.0`
-  * `cardano-ledger-alonzo-1.0.0.0`
-  * `cardano-ledger-babbage-1.0.0.0`
-  * `cardano-ledger-conway-1.0.0.0`
-  * `cardano-ledger-shelley-ma-1.0.0.0`
-  * `cardano-ledger-alonzo-test-1.0.0.0`
-  * `cardano-ledger-shelley-ma-test-1.0.0.0`
-  * `cardano-ledger-shelley-test-1.0.0.0`
+- `small-steps-1.0.0.0`
+- `vector-map-1.0.0.0`
+- `cardano-data-1.0.0.0`
+- `set-algebra-1.0.0.0`
+- `cardano-ledger-binary-1.0.0.0`
+- `cardano-ledger-core-1.0.0.0`
+- `cardano-protocol-tpraos-1.0.0.0`
+- `cardano-ledger-api-1.0.0.0`
+- `cardano-ledger-pretty-1.0.0.0`
+- `cardano-ledger-shelley-1.0.0.0`
+- `cardano-ledger-allegra-1.0.0.0`
+- `cardano-ledger-mary-1.0.0.0`
+- `cardano-ledger-alonzo-1.0.0.0`
+- `cardano-ledger-babbage-1.0.0.0`
+- `cardano-ledger-conway-1.0.0.0`
+- `cardano-ledger-shelley-ma-1.0.0.0`
+- `cardano-ledger-alonzo-test-1.0.0.0`
+- `cardano-ledger-shelley-ma-test-1.0.0.0`
+- `cardano-ledger-shelley-test-1.0.0.0`
 
 ### Added
 
@@ -393,7 +392,7 @@ Changes recorded below are for all of the package versions in the list:
   - Since the old file was hidden, this will have no noticeable effects.
 - Changed the API function Cardano.Ledger.Shelley.API.Wallet(evaluateTransactionBalance) to take DPState as input. This can no lnger be computed without the DPState
 - Changed UtxoEnv by replacing pool info (Map (KeyHash 'StakePool c) (PoolParams c)) with DPState
-    to show differences in two NewEpochState's.
+  to show differences in two NewEpochState's.
 - Split `cardano-ledger-shelley-ma` into `cardano-ledger-allegra` and `cardano-ledger-mary` #3175:
   - Moved `ShelleyMA.AuxiliaryData` -> `Allegra.TxAuxData`
   - Moved `ShelleyMA.Timelocks` -> `Allegra.Scripts`
@@ -464,23 +463,23 @@ Changes recorded below are for all of the package versions in the list:
     - `_ttl` to `stbTTL`
     - `_txUpdate` to `stbUpdate`
     - `_mdHash` to `stbMDHash`
- - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3118
-  - `Shelley.LedgerState.Types.AccountState`
-    - `_treasury -> asTreasury`
-    - `_reserves -> asReserves`
-  - `PoolParams.PoolParams`
-    - `_poolId -> ppId`
-    - `_poolVrf -> ppVrf`
-    - `_poolPledge -> ppPledge`
-    - `_poolCost -> ppCost`
-    - `_poolMargin -> ppMargin`
-    - `_poolRAcnt -> ppRewardAcnt`
-    - `_poolOwners -> ppOwners`
-    - `_poolRelays -> ppRelays`
-    - `_poolMD -> ppMetadata`
-  - `PoolParams.PoolMetadata`
-    - `_poolMDUrl -> pmUrl`
-    - `_poolMDHash -> pmHash`
+- Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3118
+- `Shelley.LedgerState.Types.AccountState`
+  - `_treasury -> asTreasury`
+  - `_reserves -> asReserves`
+- `PoolParams.PoolParams`
+  - `_poolId -> ppId`
+  - `_poolVrf -> ppVrf`
+  - `_poolPledge -> ppPledge`
+  - `_poolCost -> ppCost`
+  - `_poolMargin -> ppMargin`
+  - `_poolRAcnt -> ppRewardAcnt`
+  - `_poolOwners -> ppOwners`
+  - `_poolRelays -> ppRelays`
+  - `_poolMD -> ppMetadata`
+- `PoolParams.PoolMetadata`
+  - `_poolMDUrl -> pmUrl`
+  - `_poolMDHash -> pmHash`
 - Renamed records fields in `Cardano.Ledger` to names without `_` (underscores) #3120
   - `Shelley.Delegation.Certificates`
     - `_delegator` to `dDelegator`
@@ -529,7 +528,6 @@ Changes recorded below are for all of the package versions in the list:
   - `addrWitsL` to `addrTxWitsL`
   - `bootAddrWitsL` to `bootAddrTxWitsL`
   - `scriptWitsL` to `scriptTxWitsL`
-
 - Renamed in (new) module `Cardano.Ledger.Alonzo.TxWits` (renamed from `Cardano.Ledger.Alonzo.TxWitness`) #2976:
   - `AlonzoEraWitnesses` to `AlonzoEraTxWits`
   - `TxWitness` to `AlonzoTxWits`
@@ -540,7 +538,6 @@ Changes recorded below are for all of the package versions in the list:
   - `datsAlonzoWitsL` to `datsAlonzoTxWitsL`
   - `rdmrsWitsL` to `rdmrsTxWitsL`
   - `rdmrsAlonzoWitsL` to `rdmrsAlonzoTxWitsL`
-
 - Renamed in (new) module `Cardano.Ledger.Shelley.TxWits` (extracted from `Cardano.Ledger.Shelley.Tx`) #2976:
   - `ShelleyWitnesses` to `ShelleyTxWits`
   - `addrShelleyWitsL` to `addrShelleyTxWitsL`
@@ -563,9 +560,9 @@ Changes recorded below are for all of the package versions in the list:
 - Starting in version 9, CostModels can now be deserialized from any map of Word8 values to lists of integers.
   Only valid cost models are actually converted to evaluation contexts that can be used.
   Errors and unrecognized language versions are stored in the CostModels type so that:
-    - they can accept cost models that they do not yet understand
-    - upon deserializing after a software update, new cost models are available from the prior serialization.
-  #3283
+  - they can accept cost models that they do not yet understand
+  - upon deserializing after a software update, new cost models are available from the prior serialization.
+    #3283
 
 ### Removed
 
@@ -628,9 +625,14 @@ Changes recorded below are for all of the package versions in the list:
 - Enforce that the CostModel deserializers expect a specific length prior to version 9.
 - Starting in version 9, duplicate keys in CBOR maps are not longer allowed
 
-## Release tag `ledger/1.1.0`
+## 1.1.0
+
+Release tag `ledger/1.1.0`
+
+**Deprecated changelog**
 
 ### Added
+
 - New `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new
   filter argument to only include the stake pool ids (stake pool key hashes) that are needed.
   #2957
@@ -642,39 +644,41 @@ Changes recorded below are for all of the package versions in the list:
 - Era specific type classes: `ShelleyEraTxBody`, `ShelleyMAEraTxBody`,
   `AlonzoEraTxBody`, `AlonzoEraTxOut`, `AlonzoEraTx`, `BabbageEraTxBody`, `BabbageEraTxOut`
 - Type class hierarchy:
-```
-EraSegWits --> EraTx --> EraTxBody --> EraTxOut --> Era
-                     \             `--> EraPParams --> Era
-                      `--> EraTxWits --> EraScript --> Era
-                       `--> EraAuxiliaryData --> Era
-```
+  ``` 
+  EraSegWits --> EraTx --> EraTxBody --> EraTxOut --> Era
+                       \             `--> EraPParams --> Era
+                        `--> EraTxWits --> EraScript --> Era
+                         `--> EraAuxiliaryData --> Era
+  ```
 - Shelley:
-```
-ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
-```
+  ``` 
+  ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
+  ```
 - ShelleyMA:
-```
-ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
-```
+  ``` 
+  ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
+  ```
 - Alonzo:
-```
-AlonzoEraTx --> EraTx --> ...
-           `--> AlonzoEraTxBody --> ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> ...
-                                `--> AlonzoEraTxOut -> ShelleyEraTxOut --> EraTxOut --> ...
-```
+  ``` 
+  AlonzoEraTx --> EraTx --> ...
+             `--> AlonzoEraTxBody --> ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> ...
+                                  `--> AlonzoEraTxOut -> ShelleyEraTxOut --> EraTxOut --> ...
+  ```
 - Babbage:
-```
-BabbageEraTxBody --> AlonzoEraTxBody --> ....
-                `--> BabbageEraTxOut -> AlonzoEraTxOut -->
-```
+  ``` 
+  BabbageEraTxBody --> AlonzoEraTxBody --> ....
+                  `--> BabbageEraTxOut -> AlonzoEraTxOut -->
+  ```
+
 ### Changed
+
 - Introduced a new switch in `HardForks` that turns off pointer address resolution in `IncrementalStake` starting with version 9
 - Some types have been moved:
   - The `WitVKey` type has been moved into its own module in core.
   - The `HKD` type has been moved to `cardano-ledger-core`.
   - The `PoolParams` type has been moved into its own module
   - The `DCert` type and related functionality from `TxBody` to `Cardano.Ledger.Shelley.Delegation.Certificates`.
-  #2880
+    #2880
 - The initial funds and staking in the Shelley genesis type (used only for testing) now use `ListMap` instead of `Map`.
   #2871, #2890, #2892, #2895
 - Renamed `SupportsSegWit` to `EraSegWits`
@@ -778,7 +782,9 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
       - `FromAlonzoUtxoFail` -> `AlonzoInBabbageUtxoPredFailure`
     - `BabbageUtxowPred` -> `BabbageUtxowPredFailure` and constructor:
       - `FromAlonzoUtxowFail` -> `AlonzoInBabbageUtxowPredFailure`
+
 ### Deprecated
+
 - The provenance for the reward calculation has been removed.
   The type signature to the API function `getRewardProvenance` has not change,
   it just returns an empty provenance value.
@@ -791,7 +797,9 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
 - `getTxOutBootstrapAddress txOut` in favor of `txOut ^. bootAddrTxOutF`
 - `getAllInputs txBody` in favor of ` txBody ^. allInputsTxBodyF`
 - `getCoin txOut` in favor of `txOut ^. coinTxOutL`
+
 ### Removed
+
 - The `StakeCreds` type was unused and is now removed.
   #2880
 - The`Ord` instance for `MemoBytes` was removed.
@@ -823,7 +831,11 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
 - The error message for failed Plutus V2 scripts was being obscured by a bug which has now been fixed.
   #2888
 
-## Release tag `ledger/1.0.0`
+## 1.0.0
+
+Release tag `ledger/1.0.0`
+
+**Deprecated changelog**
 
 The first release branch in the cardano-ledger repository,
 namely `release/1.0.0`, branches from the

@@ -43,8 +43,8 @@
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
-  - `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
-  - `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
+  * `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
+  * `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
 * Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
 * Change the type of `authorizedELectedCommitteeCredentials` to
   `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091
@@ -465,7 +465,7 @@
 * Changed `GovActionState` to have 1 field (`gasProposalProcedure`) rather than 3 (`gasDeposit`, `gasAction`, `gasReturnAddr`)
   * the old field names (`gasDeposit`, `gasAction`, `gasReturnAddr`) become functions, and the lenses
   * (`gasDepositL`, `gasActionL`, `gasReturnAddrL`) have the same type, but behave differently.
-  *  Added the lenses: `pProcDepositL`, `pProcGovActionL`, `pProcReturnAddrL`,  `pProcAnchorL`, `gasProposalProcedureL`.
+  * Added the lenses: `pProcDepositL`, `pProcGovActionL`, `pProcReturnAddrL`,  `pProcAnchorL`, `gasProposalProcedureL`.
 * Add `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `ConwayEraGov` #4033
   * Move `Constitution` to `Conway.Governance.Procedures`
 * Add implementation for `getMinFeeTxUtxo`
@@ -512,13 +512,13 @@
   * `ConwayGovEvent`
 * Change the types of some functions in `Test.Cardano.Ledger.Conway.ImpTest`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
-  - `submitFailingVote`
-  - `trySubmitVote`
-  - `trySubmitProposal`
-  - `trySubmitProposals`
-  - `submitFailingProposal`
-  - `trySubmitGovAction`
-  - `trySubmitGovActions`
+  * `submitFailingVote`
+  * `trySubmitVote`
+  * `trySubmitProposal`
+  * `trySubmitProposals`
+  * `submitFailingProposal`
+  * `trySubmitGovAction`
+  * `trySubmitGovActions`
 * Add `Test.Cardano.Ledger.Conway.Imp.GovCertSpec`
 * Add `RuleListEra` instance for Conway
 * Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097
@@ -928,17 +928,17 @@
   * Add `PoolVotingThresholds`
   * Add `DRepVotingThresholds`
 * Rename:
-   * `cgTally` -> `cgGovActionsState`
-   * `cgTallyL` -> `cgGovActionsStateL`
-   * `VDelFailure` -> `GovCertFailure`
-   * `VDelEvent` -> `GovCertEvent`
-   * `certVState` -> `certGState`
-   * `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
-   * `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
-   * `TallyEnv` -> `GovEnv`
-   * `ConwayTallyState` -> `ConwayGovState`
-   * `TALLY` -> `GOV`
-   * `VDEL` -> `GOVCERT`
+  * `cgTally` -> `cgGovActionsState`
+  * `cgTallyL` -> `cgGovActionsStateL`
+  * `VDelFailure` -> `GovCertFailure`
+  * `VDelEvent` -> `GovCertEvent`
+  * `certVState` -> `certGState`
+  * `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
+  * `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
+  * `TallyEnv` -> `GovEnv`
+  * `ConwayTallyState` -> `ConwayGovState`
+  * `TALLY` -> `GOV`
+  * `VDEL` -> `GOVCERT`
 * Make `Anchor` required in `ProposalProcedure`.
 * Add `ConwayUTXO`
 * Add `indexedGovProps`
