@@ -75,14 +75,14 @@
 * Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping. #5004
 * Change `TxBody` to an associated `data` family
 * Remove `HeapWords` instances for: #5001
-  - `Coin`
-  - `DeltaCoin`
-  - `CompactFormCoin`
-  - `CompactFormDeltaCoin`
-  - `SafeHash`
-  - `StrictMaybe DataHash`
-  - `TxId`
-  - `TxIn`
+  * `Coin`
+  * `DeltaCoin`
+  * `CompactFormCoin`
+  * `CompactFormDeltaCoin`
+  * `SafeHash`
+  * `StrictMaybe DataHash`
+  * `TxId`
+  * `TxIn`
 * Add `addCompactCoin` to `Cardano.Ledger.Coin` and deprecate `Cardano.Ledger.UMap.addCompact`
   in its favor
 * Move `sumCompactCoin` to `Cardano.Ledger.Coin`
@@ -321,10 +321,10 @@
 * Rename `uniformSubset` to `uniformSubSet`
 * Add `tracedDiscard`
 * Add re-exported functions that were added in `cardano-ledger-binary-1.4.0.0`
-  - `ansiExpr`
-  - `ansiExprString`
-  - `diffExprString`
-  - `diffExprCompactString`
+  * `ansiExpr`
+  * `ansiExprString`
+  * `diffExprString`
+  * `diffExprCompactString`
 * Existing re-exported functions `diffExpr` and `diffExprCompact` have new return types
   per `cardano-ledger-binary-1.4.0.0`
 * Add a function `expectRawEqual`
@@ -517,8 +517,8 @@
   * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
     in decoded or binary format. `pwcProtocolVersion` was added too.
   * `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
-      `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
-      protocol version has been added to `PlutusWithContext`
+    `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
+    protocol version has been added to `PlutusWithContext`
   * Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
     record names: `scriptFailureMessage` and `scriptFailurePlutus`
   * Remove `PlutusDebugLang`, `PlutusDebug`, `PlutusData` and `PlutusError`
