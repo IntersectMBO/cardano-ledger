@@ -111,6 +111,7 @@ import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (guard, (>=>))
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
@@ -481,7 +482,7 @@ instance EraScript AlonzoEra where
   type Script AlonzoEra = AlonzoScript AlonzoEra
   type NativeScript AlonzoEra = Timelock AlonzoEra
 
-  upgradeScript = NativeScript . translateTimelock
+  upgradeScript = NativeScript . coerce
 
   scriptPrefixTag = alonzoScriptPrefixTag
 

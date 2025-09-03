@@ -63,7 +63,6 @@ module Cardano.Ledger.Api.Era (
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), ValidityInterval (..))
 import qualified Cardano.Ledger.Allegra.TxBody as Allegra (TxBody (..))
@@ -369,7 +368,7 @@ instance EraApi AlonzoEra where
     mkMemoizedEra @AlonzoEra $
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
-        , atadrNative = translateTimelock <$> scripts
+        , atadrNativeScripts = coerce <$> scripts
         , atadrPlutus = mempty
         }
 
@@ -406,10 +405,10 @@ translateAlonzoTxAuxData ::
   ) =>
   AlonzoTxAuxData era1 ->
   AlonzoTxAuxData era2
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNative, atadPlutus} =
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutus} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
-    , atadNative = coerce atadNative
+    , atadNativeScripts = coerce atadNativeScripts
     , atadPlutus = atadPlutus
     }
 {-# DEPRECATED translateAlonzoTxAuxData "Use upgradeTxAuxData instead" #-}

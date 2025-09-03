@@ -38,7 +38,6 @@ import Cardano.Ledger.Allegra.Scripts (
   mkRequireSignatureTimelock,
   mkTimeExpireTimelock,
   mkTimeStartTimelock,
-  translateTimelock,
  )
 import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -81,6 +80,7 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
+import Data.Coerce (coerce)
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word16, Word32, Word8)
@@ -220,7 +220,7 @@ instance EraScript DijkstraEra where
   type NativeScript DijkstraEra = Timelock DijkstraEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ coerce ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s

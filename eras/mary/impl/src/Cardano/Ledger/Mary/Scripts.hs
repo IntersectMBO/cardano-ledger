@@ -21,8 +21,6 @@ instance EraScript MaryEra where
   type Script MaryEra = Timelock MaryEra
   type NativeScript MaryEra = Timelock MaryEra
 
-  upgradeScript = translateTimelock
-
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
   getNativeScript = Just

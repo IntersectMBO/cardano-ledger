@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -13,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -27,7 +29,7 @@ module Cardano.Ledger.Allegra.TxAuxData (
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, Timelock)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -87,9 +89,10 @@ deriving instance Eq (NativeScript era) => Eq (AllegraTxAuxDataRaw era)
 
 class EraTxAuxData era => AllegraEraTxAuxData era where
   nativeScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (NativeScript era))
-  
+
   timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
-  default timelockScriptsTxAuxDataL :: NativeScript era ~ Timelock era => Lens' (TxAuxData era) (StrictSeq (Timelock era))
+  default timelockScriptsTxAuxDataL ::
+    NativeScript era ~ Timelock era => Lens' (TxAuxData era) (StrictSeq (Timelock era))
   timelockScriptsTxAuxDataL = nativeScriptsTxAuxDataL
 
 {-# DEPRECATED timelockScriptsTxAuxDataL "In favor of `nativeScriptsTxAuxDataL`" #-}
@@ -121,8 +124,8 @@ nativeScriptsAllegraTxAuxDataL ::
   (Era era, EncCBOR (NativeScript era)) =>
   Lens' (AllegraTxAuxData era) (StrictSeq (NativeScript era))
 nativeScriptsAllegraTxAuxDataL =
-  lensMemoRawType @era atadrNative $
-    \txAuxDataRaw ts -> txAuxDataRaw {atadrNative = ts}
+  lensMemoRawType @era atadrNativeScripts $
+    \txAuxDataRaw ts -> txAuxDataRaw {atadrNativeScripts = ts}
 
 deriving instance Show (NativeScript era) => Show (AllegraTxAuxDataRaw era)
 

@@ -114,8 +114,8 @@ import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
 
 instance
   ( Arbitrary (AlonzoScript era)
+  , Arbitrary (NativeScript era)
   , AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   ) =>
   Arbitrary (AlonzoTxAuxData era)
   where
