@@ -22,11 +22,11 @@
 * Move `Crypto` and `StandardCrypto` definitions from `cardano-ledger-core` into new
   `Cardano.Protocol.Crypto` module.
 * Remove crypto parametrization from types:
-  * `LedgerView`, `ChainDepState`
-  * `HashHeader` `PrevHash`, `LastAppliedBlock`
-  * `OCertEnv`, `OcertPredicateFailure`
-  * `OverlayEnv`, `OBftSlot`
-  * `PrtclState`, `PrtclEnv`, `PrtlSeqFailure`
+  - `LedgerView`, `ChainDepState`
+  - `HashHeader` `PrevHash`, `LastAppliedBlock`
+  - `OCertEnv`, `OcertPredicateFailure`
+  - `OverlayEnv`, `OBftSlot`
+  - `PrtclState`, `PrtclEnv`, `PrtlSeqFailure`
 
 ### `testlib`
 
@@ -103,10 +103,10 @@
 * Add `mkBHeader`
 * Move from `cardano-ledger-shelley-test`: `mkOCert`, `mkBHBody`, `mkBlock`
 * Move `AllIssuerKeys` from `cardano-ledegr-shelley-test`. Rename its fields:
-  * `cold` - > `aikCold`
-  * `hot` - > `aikHot`
-  * `vrf` - > `aikVrf`
-  * `hk` - > `aikColdKeyHash`
+  - `cold` - > `aikCold`
+  - `hot` - > `aikHot`
+  - `vrf` - > `aikVrf`
+  - `hk` - > `aikColdKeyHash`
 * Bring back `genBlock`
 * Move `genCoherentBlock` from `cardano-ledegr-shelley-test` and change it to accept
   `AllIssuerKeys` as an argument.

@@ -3,21 +3,21 @@
 ## 1.20.0.0
 
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
-  * `DecCBOR ConwayTxCert`
-  * `transTxCert`
-  * `transTxCertV1V2`
+  - `DecCBOR ConwayTxCert`
+  - `transTxCert`
+  - `transTxCertV1V2`
 * Added `conwayGovCertVKeyWitness`
 * Added `conwayTxCertDelegDecoder`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Rename `transScriptPurpose` to `transPlutusPurposeV3`
 * Make `transValidityInterval` implicit to eras instead of protocol versions.
-  * Implement `transValidityInterval` for Conway.
+  - Implement `transValidityInterval` for Conway.
 * Add `NFData` for `ConwayGenesis`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
-  * Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
+  - Update `DRepPulser` and `RatifyEnv` to use `StakePoolState` instead of `PoolParams`.
 * Better predicate failures for incorrect deposits and refunds.
-  * Add `hardforkConwayDELEGIncorrectDepositsAndRefunds` for protocol 11 onwards, to `Conway.Era`.
-  * Add `DepositIncorrectDELEG` and `RefundIncorrectDELEG` to `ConwayDelegPredFailure`.
+  - Add `hardforkConwayDELEGIncorrectDepositsAndRefunds` for protocol 11 onwards, to `Conway.Era`.
+  - Add `DepositIncorrectDELEG` and `RefundIncorrectDELEG` to `ConwayDelegPredFailure`.
 * Add `ScriptIntegrityHashMismatch`
 * Change the type of `cppDRepDeposit` to `CompactForm Coin`
 * Add `ppDRepDepositCompactL` and `ppuDRepDepositCompactL`
@@ -25,15 +25,15 @@
 * Delete `Tx` newtype wrapper
 * Hide `Cardano.Ledger.Conway.Translation` module and remove its re-exports: `addrPtrNormalize` and `translateDatum`
 * Removed:
-  * `maxRefScriptSizePerTx`
-  * `maxRefScriptSizePerBlock`
-  * `refScriptCostMultiplier`
-  * `refScriptCostStride`
+  - `maxRefScriptSizePerTx`
+  - `maxRefScriptSizePerBlock`
+  - `refScriptCostMultiplier`
+  - `refScriptCostStride`
 * Added:
-  * `ppMaxRefScriptSizePerTxG`
-  * `ppMaxRefScriptSizePerBlockG`
-  * `ppRefScriptCostMultiplierG`
-  * `ppRefScriptCostStrideG`
+  - `ppMaxRefScriptSizePerTxG`
+  - `ppMaxRefScriptSizePerBlockG`
+  - `ppRefScriptCostMultiplierG`
+  - `ppRefScriptCostStrideG`
 * Add `mkDelegatee` and `getDRepDelegatee`
 * Depercated `getVoteDelegatee` in favor of `getDRepDelegatee`
 * Add `conwayRegisterInitialFundsThenStaking`
@@ -43,8 +43,8 @@
 * Add `AlonzoEraTx` constraint to `STS` instance for `ConwayBBODY`
 * Add `totalRefScriptSizeInBlock`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Conway` module.
-  * `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
-  * `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
+  - `bootstrapPhase` to `hardforkConwayBootstrapPhase`.
+  - `disallowUnelectedCommitteeFromVoting` to `hardforkConwayDisallowUnelectedCommitteeFromVoting`.
 * Add `UnelectedCommitteeVoters` to `ConwayGovPredFailure` #5091
 * Change the type of `authorizedELectedCommitteeCredentials` to
   `StrictMaybe (Committee era) -> CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)` #5091
@@ -56,21 +56,21 @@
 * Export `registerDRepsThenDelegs`
 * Deprecated `toUpgradeConwayPParamsUpdatePairs` and `toConwayGenesisPairs`
 * Add:
-  * `alonzoToConwayUtxosPredFailure`
-  * `alonzoToConwayUtxosEvent`
-  * `getConwayScriptsNeeded`
-  * `getConwayMinFeeTxUtxo`
-  * `getConwayMinFeeTx`
-  * `conwayRedeemerPointer`
-  * `conwayRedeemerPointerInverse`
-  * `transMintValue`
-  * `transTxBodyId`
-  * `transVotingProcedures`
-  * `transProposal`
-  * `transTxCertV1V2`
-  * `transPlutusPurposeV1V2`
-  * `guardConwayFeaturesForPlutusV1V2`
-  * `transTxInInfoV3`
+  - `alonzoToConwayUtxosPredFailure`
+  - `alonzoToConwayUtxosEvent`
+  - `getConwayScriptsNeeded`
+  - `getConwayMinFeeTxUtxo`
+  - `getConwayMinFeeTx`
+  - `conwayRedeemerPointer`
+  - `conwayRedeemerPointerInverse`
+  - `transMintValue`
+  - `transTxBodyId`
+  - `transVotingProcedures`
+  - `transProposal`
+  - `transTxCertV1V2`
+  - `transPlutusPurposeV1V2`
+  - `guardConwayFeaturesForPlutusV1V2`
+  - `transTxInInfoV3`
 * Remove era parametrization from `GovPurposeId`, `GovRelation`
 * Move to `testlib` the `DecCBOR` instance for `TxBody ConwayEra`
 * Add `ReferenceInputsNotDisjointFromInputs`
@@ -102,19 +102,19 @@
 * Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`
 * Generalised the following helpers and thus changed their constraints to `ConwayEraImp`:
-  * `setupPoolWithStake`
-  * `setupPoolWithoutStake`
-  * `trySubmitGovAction`
-  * `trySubmitGovActions`
-  * `mkProposal`
-  * `submitGovAction`
-  * `submitGovAction_`
-  * `submitGovActions`
-  * `submitTreasuryWithdrawals`
-  * `submitFailingGovAction`
+  - `setupPoolWithStake`
+  - `setupPoolWithoutStake`
+  - `trySubmitGovAction`
+  - `trySubmitGovActions`
+  - `mkProposal`
+  - `submitGovAction`
+  - `submitGovAction_`
+  - `submitGovActions`
+  - `submitTreasuryWithdrawals`
+  - `submitFailingGovAction`
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
-  * `genUnRegTxCert`
-  * `genRegTxCert`
+  - `genUnRegTxCert`
+  - `genRegTxCert`
 * Added `registerPoolWithDeposit`
 * Added `registerStakeCredentialWithDeposit`
 * Added `Examples` module with: `ledgerExamples`, `exampleConwayCerts`
@@ -124,9 +124,9 @@
 * Fixed `Arbitrary` instance for `ConwayGenesis`
 * Added `Arbitrary` instance for `TransitionConfig ConwayEra`
 * Added `ToExpr` instances for:
-  * `ConwayPlutusPurpose AsIxItem`
-  * `DRepPulser`
-  * `ConwayBbodyPredFailure`
+  - `ConwayPlutusPurpose AsIxItem`
+  - `DRepPulser`
+  - `ConwayBbodyPredFailure`
 * Added `Era` module with `ConwayEraTest` class
 
 ## 1.19.0.0
@@ -191,8 +191,8 @@
 * Add `HardForkEvent` constructor to `ConwayEpochEvent`
 * Add `HardFork` module, `ConwayHARDFORK` and `ConwayHardForkEvent`
 * Add predicate failures to guard against invalid reward accounts (return addresses) in proposals and treasury withdrawals. #4639
-  * `ProposalReturnAddressDoesNotExist`, and
-  * `TreasuryWithdrawalReturnAddressDoesNotExist`.
+  - `ProposalReturnAddressDoesNotExist`, and
+  - `TreasuryWithdrawalReturnAddressDoesNotExist`.
 * Add `refScriptCostStride` and `refScriptCostMultiplier`
 * Added protocol version argument to `ppuWellFormed`
 * Add `ConwayMempoolEvent` type
@@ -201,22 +201,22 @@
 * Add `ConwayMempoolFailure` to `ConwayLedgerPredFailure`
 * Add `ZeroTreasuryWithdrawals` to `ConwayGovPredFailure`
 * Add `ProtVer` argument to `TxInfo` functions:
-  * `transTxCert`
-  * `transScriptPurpose`
-  * `transPlutusPurposeV1V2`
-  * `toPlutusV3Args`
+  - `transTxCert`
+  - `transScriptPurpose`
+  - `transPlutusPurposeV1V2`
+  - `toPlutusV3Args`
 * Changed `ConwayWdrlNotDelegatedToDRep` to wrap `NonEmpty KeyHash`
 * Removed `DRepAlreadyRegisteredForStakeKeyDELEG`
 * Add `showGovActionType`, `acceptedByEveryone`
 * Added `unRatifySignal`
 * Added lenses:
-  * `ratifySignalL`
-  * `reStakeDistrL`
-  * `reStakePoolDistrL`
-  * `reDRepDistrL`
-  * `reDRepStateL`
-  * `reCurrentEpochL`
-  * `reCommitteeStateL`
+  - `ratifySignalL`
+  - `reStakeDistrL`
+  - `reStakePoolDistrL`
+  - `reDRepDistrL`
+  - `reDRepStateL`
+  - `reCurrentEpochL`
+  - `reCommitteeStateL`
 * Add a new field to `GovInfoEvent` and change "unclaimed" field from `Set` to a `Map`.
 * Changed return type of `proposalsShowDebug`
 * Added `gen-golden` executable needed for golden tests: #4629
@@ -230,7 +230,7 @@
 * Removed `redelegateDRep` from `ImpTest`
 * Changed signature of `delegateToDRep` to take a `Credential` parameter
 * Move `TxInfo` golden tests over from the older `-test` package. #4599
-  * Also move the `gen-golden` executable over.
+  - Also move the `gen-golden` executable over.
 * Added Test.Cardano.Ledger.Conway.CDDL with CDDL definitions in Conway.
 * Change `ImpException` to contain `Doc`
 * Add `impAnnDoc`
@@ -286,19 +286,19 @@
 * Add `psPoolDistrL` lens.
 * Add `psPoolDistr` field to `PulsingSnapshot` for tracking the pool stake distribution.
 * Fix DRep expiry updates based on the number of dormant epochs.
-  * Remove `DRepPulser.dormantEpoch`.
-  * Add `CERTS.updateDormantDRepExpiry`.
-  * Fix `updateNumDormantEpochs` to take current proposals, rather than ones from the pulser.
-  * In `GOVCERT`, make `ConwayUpdateDRep` calculate `currentEpochNo + drepActivity - numDormantEpochs`.
-    * Add `GOVCERT.updateDRepExpiry` to calculate this way.
-  * Add `CertState.vsActualDRepExpiry` to get the actual expiry of a DRep considering `numDormantEpochs`.
+  - Remove `DRepPulser.dormantEpoch`.
+  - Add `CERTS.updateDormantDRepExpiry`.
+  - Fix `updateNumDormantEpochs` to take current proposals, rather than ones from the pulser.
+  - In `GOVCERT`, make `ConwayUpdateDRep` calculate `currentEpochNo + drepActivity - numDormantEpochs`.
+    + Add `GOVCERT.updateDRepExpiry` to calculate this way.
+  - Add `CertState.vsActualDRepExpiry` to get the actual expiry of a DRep considering `numDormantEpochs`.
 * Add `NFData` instance for `ConwayDelegEnv`
 * Add `NFData` instances for:
-  * `RatifySignal`
-  * `EnactSignal`
+  - `RatifySignal`
+  - `EnactSignal`
 * Add instances for `ConwayGovCertEnv`. #4348
-  * `NFData`
-  * `ToExpr`
+  - `NFData`
+  - `ToExpr`
 * Add `NFData` instance for `RatifySignal`
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `ConwayEra`
 
@@ -306,17 +306,17 @@
 
 * Add `submitYesVoteCCs_` utility to Conway ImpTest
 * Add tests for DRep expiry, considering dormant epochs.
-  * Add `unregisterDRep`.
-  * Add `updateDRep`.
-  * Add `expectDRepResigned`
-  * Add `isDRepExpired`.
-  * Remove `expectExtaDRepExpiry` in favour of `expectDRepExpiry`.
-  * Add `expectActualDRepExpiry` that considers `numDormantEpochs`.
-  * Add `passNEpochsChecking`.
+  - Add `unregisterDRep`.
+  - Add `updateDRep`.
+  - Add `expectDRepResigned`
+  - Add `isDRepExpired`.
+  - Remove `expectExtaDRepExpiry` in favour of `expectDRepExpiry`.
+  - Add `expectActualDRepExpiry` that considers `numDormantEpochs`.
+  - Add `passNEpochsChecking`.
 * Add `ToExpr` instance for `RatifySignal`
 * Add `ToExpr` instances for:
-  * `RatifySignal`
-  * `EnactSignal`
+  - `RatifySignal`
+  - `EnactSignal`
 
 ## 1.14.0.0
 
@@ -325,63 +325,63 @@
 * Moved `DelegateeNotRegisteredDELEG` to `ConwayDelegPredFailure`
 * Remove `gePrevGovActionIds` from `GovEnv`
 * Include proposal deposits in the DRep active voting stake. #4309
-  * Add `proposalsDeposits` to `Governance.Proposals`.
-    * This extracts a `Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)` from reward-account-staking-credential to deposit amounts
-  * Add `dpProposalDeposits` field to `DRepPulser`.
-  * Change `computeDRepDistr` to also take as argument the `dpProposalDeposits`.
+  - Add `proposalsDeposits` to `Governance.Proposals`.
+    + This extracts a `Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)` from reward-account-staking-credential to deposit amounts
+  - Add `dpProposalDeposits` field to `DRepPulser`.
+  - Change `computeDRepDistr` to also take as argument the `dpProposalDeposits`.
 * Add lenses:
-  * `dvtHardForkInitiationL`
-  * `dvtMotionNoConfidenceL`
-  * `dvtTreasuryWithdrawalL`
+  - `dvtHardForkInitiationL`
+  - `dvtMotionNoConfidenceL`
+  - `dvtTreasuryWithdrawalL`
 * Add`DisallowedProposalDuringBootstrap` and `DisallowedVotesDuringBootstrap` to `ConwayGovPredFailure`
 * Make `DRepDistr` calculation include rewards when no UTxO stake is delegated. #4273
-  * Rename `computeDrepPulser` to `computeDRepPulser`.
+  - Rename `computeDrepPulser` to `computeDRepPulser`.
 * Implement `NoThunks` instance for:
-  * `ConwayUtxoPredFailure`
-  * `ConwayUtxowPredFailure`
+  - `ConwayUtxoPredFailure`
+  - `ConwayUtxowPredFailure`
 * Add `ConwayUtxowPredFailure` era rule failure:
-  * Implement its `InjectRuleFailure` instances for:
-    * `BBODY`
-    * `LEDGER`
-    * `LEDGERS`
-    * `UTXOW`
-  * Implement instances:
-    * `Generic`
-    * `Show`
-    * `Eq`
-    * `EncCBOR`
-    * `DecCBOR`
-    * `NFData`
-  * Add mappings:
-    * `babbageToConwayUtxowPredFailure`
-    * `alonzoToConwayUtxowPredFailure`
-    * `shelleyToConwayUtxowPredFailure`
-  * Update `Embed (ConwayUTXO era) (ConwayUTXOW era)` instance
+  - Implement its `InjectRuleFailure` instances for:
+    + `BBODY`
+    + `LEDGER`
+    + `LEDGERS`
+    + `UTXOW`
+  - Implement instances:
+    + `Generic`
+    + `Show`
+    + `Eq`
+    + `EncCBOR`
+    + `DecCBOR`
+    + `NFData`
+  - Add mappings:
+    + `babbageToConwayUtxowPredFailure`
+    + `alonzoToConwayUtxowPredFailure`
+    + `shelleyToConwayUtxowPredFailure`
+  - Update `Embed (ConwayUTXO era) (ConwayUTXOW era)` instance
 * Add `ConwayUtxoPredFailure` era rule failure:
-  * Implement its `InjectRuleFailure` instances for:
-    * `BBODY`
-    * `LEDGER`
-    * `LEDGERS`
-    * `UTXO`
-    * `UTXOW`
-  * Implement instances:
-    * `Generic`
-    * `Show`
-    * `Eq`
-    * `EncCBOR`
-    * `DecCBOR`
-    * `NFData`
-  * Add mappings:
-    * `babbageToConwayUtxoPredFailure`
-    * `alonzoToConwayUtxoPredFailure`
-  * Update `allegraToConwayUtxoPredFailure` mapping
+  - Implement its `InjectRuleFailure` instances for:
+    + `BBODY`
+    + `LEDGER`
+    + `LEDGERS`
+    + `UTXO`
+    + `UTXOW`
+  - Implement instances:
+    + `Generic`
+    + `Show`
+    + `Eq`
+    + `EncCBOR`
+    + `DecCBOR`
+    + `NFData`
+  - Add mappings:
+    + `babbageToConwayUtxoPredFailure`
+    + `alonzoToConwayUtxoPredFailure`
+  - Update `allegraToConwayUtxoPredFailure` mapping
 * Add `ConwayUTXO` era rule:
-  * Implement instances:
-    * `STS`
-    * `Embed (ConwayUTXOS era) (ConwayUTXO era)`
-    * `Embed (ConwayUTXO era) (ConwayUTXOW era)`
+  - Implement instances:
+    + `STS`
+    + `Embed (ConwayUTXOS era) (ConwayUTXO era)`
+    + `Embed (ConwayUTXO era) (ConwayUTXOW era)`
 * Add `ucppPlutusV3CostModel` to `UpgradeConwayPParams`. #4252
-  * Remove the `Default` instance for `ConwayGenesis`.
+  - Remove the `Default` instance for `ConwayGenesis`.
 * Add `foldrVotingProcedures`.
 
 ### `testlib`
@@ -390,22 +390,22 @@
 * Add `withPostBootstrap` to Conway ImpTest
 * Add `withImpStateWithProtVer` to Conway ImpTest
 * Add the following utilities. #4273
-  * to `Conway.ImpTest`
-    * `setupDRepWithoutStake`
-    * `setupPoolWithoutStake`
-    * `submitAndExpireProposalToMakeReward`
-  * to `Shelley.ImpTest`
-    * `getRewardAccountFor`
-    * `registerAndRetirePoolToMakeReward`
+  - to `Conway.ImpTest`
+    + `setupDRepWithoutStake`
+    + `setupPoolWithoutStake`
+    + `submitAndExpireProposalToMakeReward`
+  - to `Shelley.ImpTest`
+    + `getRewardAccountFor`
+    + `registerAndRetirePoolToMakeReward`
 * Add `getConstitution` to Conway ImpTest
 * Change return type of `setupSingleDRep` to Credential instead of KeyHash
 * Add `registerInitialCommittee` and `getCommitteeMembers` to Conway ImpTest
 * Implement `ConwayUtxowPredFailure` instances:
-  * `Arbitrary`
-  * `ToExpr`
+  - `Arbitrary`
+  - `ToExpr`
 * Implement `ConwayUtxoPredFailure` instances:
-  * `Arbitrary`
-  * `ToExpr`
+  - `Arbitrary`
+  - `ToExpr`
 * Updated `exampleConwayGenesis` to `conway-genesis.json`. #4252
 
 ## 1.13.1.0
@@ -424,21 +424,21 @@
 * Add `ConwayUtxosEvent`
 * Add `Generic`, `Eq` and `NFData` instances for `ConwayEpochEvent`
 * Add `Eq` and `NFData` instances for:
-  * `ConwayGovEvent`
-  * `ConwayCertEvent`
-  * `ConwayCertsEvent`
-  * `ConwayLedgerEvent`
-  * `ConwayNewEpochEvent`
+  - `ConwayGovEvent`
+  - `ConwayCertEvent`
+  - `ConwayCertsEvent`
+  - `ConwayLedgerEvent`
+  - `ConwayNewEpochEvent`
 * Add type `EraRuleEvent` instances for the event type of:
-  * `UPEC`
-  * `NEWPP`
-  * `PPUP`
-  * `MIR`
-  * `DELEGS`
-  * `TICK`
-  * `ENACT`
-  * `LEDGER`
-  * `UTXOS`
+  - `UPEC`
+  - `NEWPP`
+  - `PPUP`
+  - `MIR`
+  - `DELEGS`
+  - `TICK`
+  - `ENACT`
+  - `LEDGER`
+  - `UTXOS`
 * Add `ConwayDRepIncorrectRefund`
 * Stop exporting `utxosGovStateL` from `Cardano.Ledger.Conway.Governance`
 * Remove deprecated `curPParamsConwayGovStateL` and `prevPParamsConwayGovStateL`
@@ -446,28 +446,28 @@
 * Add `ConwayUtxosPredFailure`
 * Support for intra-era hard fork with `ProtVerHigh` set to `10`
 * Guard Conway-specific features in transactions that use Plutus v1 or v2. #4112
-  * Add `PlutusContextError` variants:
-    * `CurrentTreasuryValueFieldNotSupported`
-    * `VotingProceduresFieldNotSupported`
-    * `ProposalProceduresFieldNotSupported`
-    * `TreasuryDonationFieldNotSupported`
-  * Allow `RegDepositTxCert` and `UnRegDepositTxCert` to pass by ignoring the deposit or refund values, respectively.
+  - Add `PlutusContextError` variants:
+    + `CurrentTreasuryValueFieldNotSupported`
+    + `VotingProceduresFieldNotSupported`
+    + `ProposalProceduresFieldNotSupported`
+    + `TreasuryDonationFieldNotSupported`
+  - Allow `RegDepositTxCert` and `UnRegDepositTxCert` to pass by ignoring the deposit or refund values, respectively.
 * Switch `EPOCH` rule environment back to `()`. Start using the latest stake pool
   distribution: #4115
 * Add:
-  * `transTxInInfoV1`
-  * `transTxOutV1`
+  - `transTxInInfoV1`
+  - `transTxOutV1`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Remove `ConwayPOOL` rule, in favor of `ShelleyPOOL`
 * Add `NFData` instance for `BabbageUtxoPredFailure`
 * Rename `MinFeeRefScriptCoinsPerByte` to `MinFeeRefScriptCostPerByte` and change its type from `CoinsPerByte` to `NonNegativeInterval` #4055
 * Rename `committeeQuorum` to `committeeThreshold` #4053
 * Changed `GovActionState` to have 1 field (`gasProposalProcedure`) rather than 3 (`gasDeposit`, `gasAction`, `gasReturnAddr`)
-  * the old field names (`gasDeposit`, `gasAction`, `gasReturnAddr`) become functions, and the lenses
-  * (`gasDepositL`, `gasActionL`, `gasReturnAddrL`) have the same type, but behave differently.
-  * Added the lenses: `pProcDepositL`, `pProcGovActionL`, `pProcReturnAddrL`,  `pProcAnchorL`, `gasProposalProcedureL`.
+  - the old field names (`gasDeposit`, `gasAction`, `gasReturnAddr`) become functions, and the lenses
+  - (`gasDepositL`, `gasActionL`, `gasReturnAddrL`) have the same type, but behave differently.
+  - Added the lenses: `pProcDepositL`, `pProcGovActionL`, `pProcReturnAddrL`,  `pProcAnchorL`, `gasProposalProcedureL`.
 * Add `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `ConwayEraGov` #4033
-  * Move `Constitution` to `Conway.Governance.Procedures`
+  - Move `Constitution` to `Conway.Governance.Procedures`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `cppMinFeeRefScriptCoinsPerByte` to `ConwayPParams` and `ppMinFeeRefScriptCoinsPerByteL`
 * Add `ucppMinFeeRefScriptCoinsPerByte` to `UpgradeConwayPParams` and `ppuMinFeeRefScriptCoinsPerByteL`
@@ -479,20 +479,20 @@
 * Add upgrade failure: `CTBUEContainsDuplicateCerts`
 * Rename `proposalsRemoveDescendentIds` to `proposalsRemoveWithDescendants` (fixed spelling too)
 * Rename:
-  * `pfPParamUpdateL` to `grPParamUpdateL`
-  * `pfHardForkL` to `grHardForkL`
-  * `pfCommitteeL` to `grCommitteeL`
-  * `pfConstitutionL` to `grConstitutionL`
+  - `pfPParamUpdateL` to `grPParamUpdateL`
+  - `pfHardForkL` to `grHardForkL`
+  - `pfCommitteeL` to `grCommitteeL`
+  - `pfConstitutionL` to `grConstitutionL`
 * Rename:
-  * `cgProposalsL` to `cgsProposalsL`
-  * `cgEnactStateL` to `cgsEnactStateL`
-  * `cgDRepPulsingStateL` to `cgsDRepPulsingStateL`
+  - `cgProposalsL` to `cgsProposalsL`
+  - `cgEnactStateL` to `cgsEnactStateL`
+  - `cgDRepPulsingStateL` to `cgsDRepPulsingStateL`
 * Add:
-  * `cgsPrevPParamsL`
-  * `cgsCommitteeL`
-  * `cgsConstitutionL`
-  * `govStatePrevGovActionIds`
-  * `mkEnactState`
+  - `cgsPrevPParamsL`
+  - `cgsCommitteeL`
+  - `cgsConstitutionL`
+  - `govStatePrevGovActionIds`
+  - `mkEnactState`
 * Deprecated `curPParamsConwayGovStateL` and `curPParamsConwayGovStateL`
 * Rename `PForest` to `GovRelation`
 * Add `hoistGovRelation` and `withGovActionParent`
@@ -504,29 +504,29 @@
 ### `testlib`
 
 * Add `ToExpr` instances for:
-  * `ConwayNewEpochEvent`
-  * `ConwayEpochEvent`
-  * `ConwayLedgerEvent`
-  * `ConwayCertsEvent`
-  * `ConwayCertEvent`
-  * `ConwayGovEvent`
+  - `ConwayNewEpochEvent`
+  - `ConwayEpochEvent`
+  - `ConwayLedgerEvent`
+  - `ConwayCertsEvent`
+  - `ConwayCertEvent`
+  - `ConwayGovEvent`
 * Change the types of some functions in `Test.Cardano.Ledger.Conway.ImpTest`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
-  * `submitFailingVote`
-  * `trySubmitVote`
-  * `trySubmitProposal`
-  * `trySubmitProposals`
-  * `submitFailingProposal`
-  * `trySubmitGovAction`
-  * `trySubmitGovActions`
+  - `submitFailingVote`
+  - `trySubmitVote`
+  - `trySubmitProposal`
+  - `trySubmitProposals`
+  - `submitFailingProposal`
+  - `trySubmitGovAction`
+  - `trySubmitGovActions`
 * Add `Test.Cardano.Ledger.Conway.Imp.GovCertSpec`
 * Add `RuleListEra` instance for Conway
 * Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097
-  * Add `isSPOAccepted`
-  * Change `setupSingleDRep` to return relevant keyhashes
-  * Change `setupPoolWithStake` to return relevant keyhashes
-  * Add `getLastEnactedCommittee`
-  * Add `getRatifyEnvAndState`
+  - Add `isSPOAccepted`
+  - Change `setupSingleDRep` to return relevant keyhashes
+  - Change `setupPoolWithStake` to return relevant keyhashes
+  - Add `getLastEnactedCommittee`
+  - Add `getRatifyEnvAndState`
 * Add `Test.Cardano.Ledger.Conway.Imp.UtxosSpec`
 * Add `getGovPolicy`
 * Add `submitGovActions` and `trySubmitGovActions`
@@ -540,10 +540,10 @@
 * Add `FromJSON`, `EncCBOR` and `DecCBOR` instances for `Delegatee`
 * Add `pvtPPSecurityGroup`
 * Add lenses:
-  * `pvtCommitteeNormalL`
-  * `pvtCommitteeNoConfidenceL`
-  * `pvtPPSecurityGroupL`
-  * `dvtCommitteeNoConfidenceL`
+  - `pvtCommitteeNormalL`
+  - `pvtCommitteeNoConfidenceL`
+  - `pvtPPSecurityGroupL`
+  - `dvtCommitteeNoConfidenceL`
 * Add `PPGroups` and `StakePoolGroup`
 * Add `ToStakePoolGroup` typeclass
 * Add `DRepGroup` and `ToDRepGroup` typeclass
@@ -573,16 +573,16 @@
 * Remove deprcated `translateScript`
 * Add `getVoteDelegatee`
 * Track and prune unreachable proposals #3855 #3919 #3978 #3981
-  * Consolidate the entire proposals-tree under the `Proposals` module and expose all its operations in a convenient manner
-  * Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`
-  * Add `rsEnacted` field to `RatifyState` to track enacted proposals separately from removed ones and rename `rsRemoved` to `rsExpired` in order to better represent its role
-  * Add `ProposalsSerializable` as an accompanying type used to correctly serialize `Proposals` in a space-efficient way
-  * Add the following operations to `Governance.Proposals`
-    * `mkProposals` as the only way to reconstruct the `Proposals` tree from, for instance, a deserialized one
-    * `proposalsAddAction` as the only way to add new proposals to the system
-    * `proposalsApplyEnactment` as the only way to replay from `ENACT` operations upon `Proposals` in the ledger state, outside of the pulser.
-    * Rename `PrevGovActionId purpose (EraCrypto era)` to `GovPurposeId purpose era`
-    * Add the following accessors and lenses, among others:
+  - Consolidate the entire proposals-tree under the `Proposals` module and expose all its operations in a convenient manner
+  - Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`
+  - Add `rsEnacted` field to `RatifyState` to track enacted proposals separately from removed ones and rename `rsRemoved` to `rsExpired` in order to better represent its role
+  - Add `ProposalsSerializable` as an accompanying type used to correctly serialize `Proposals` in a space-efficient way
+  - Add the following operations to `Governance.Proposals`
+    + `mkProposals` as the only way to reconstruct the `Proposals` tree from, for instance, a deserialized one
+    + `proposalsAddAction` as the only way to add new proposals to the system
+    + `proposalsApplyEnactment` as the only way to replay from `ENACT` operations upon `Proposals` in the ledger state, outside of the pulser.
+    + Rename `PrevGovActionId purpose (EraCrypto era)` to `GovPurposeId purpose era`
+    + Add the following accessors and lenses, among others:
       * `PForest`
       * `PRoot`
       * `PEdges`
@@ -597,11 +597,11 @@
       * `pfHardForkL`
       * `pfCommitteeL`
       * `pfConstitutionL`
-  * Add the pruning functionality and the deposit refunds in the `EPOCH` rule
-  * In the `Gov` rule
-    * Modify the rule transition implementation to accept new proposals into the `Proposals` forests based on proposal purpose
-  * In the `Ratify` rule
-    * Account for the tracking of enacted and expired proposals
+  - Add the pruning functionality and the deposit refunds in the `EPOCH` rule
+  - In the `Gov` rule
+    + Modify the rule transition implementation to accept new proposals into the `Proposals` forests based on proposal purpose
+  - In the `Ratify` rule
+    + Account for the tracking of enacted and expired proposals
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of ConwayPParams fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
@@ -613,14 +613,14 @@
 * Add the previous governance action ID to the outputs of `electBasicCommittee`
 * Add `setupPoolWithStake`
 * Add:
-  * `registerPool`
-  * `sendCoinTo` and `sendValueTo`
+  - `registerPool`
+  - `sendCoinTo` and `sendValueTo`
 * Add `submitProposal_`
 * Add `submitTreasuryWithdrawals`
 * Track and prune unreachable proposals #3855 #3919 #3978 #3981
-  * Add invariant-respecting `Arbitrary` generators for `Proposals`
-  * Add property tests for all `Proposals` operations
-  * Add procedural unit tests for all `Proposals` operations
+  - Add invariant-respecting `Arbitrary` generators for `Proposals`
+  - Add property tests for all `Proposals` operations
+  - Add procedural unit tests for all `Proposals` operations
 * Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
   with a new property test in `Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec`
 
@@ -631,8 +631,8 @@
 * Add `conwayDRepDepositsTxCerts`, `conwayDRepRefundsTxCerts`,
   `conwayTotalDepositsTxCerts` and `conwayTotalRefundsTxCerts`
 * Rename data-type `ProposalsSnapshot` to `Proposals`. #3859
-  * Rename module `Governance.Snapshots` to `Governance.Proposals`.
-  * Rename all the functions related to the data-type.
+  - Rename module `Governance.Snapshots` to `Governance.Proposals`.
+  - Rename all the functions related to the data-type.
 * Switch to using `OMap` for `ProposalsSnapshot` #3791
 * Add `VotingOnExpiredGovAction` predicate failure in `GOV` #3825
 * Rename `modifiedGroups` -> `modifiedPPGroups` and move into `ConwayEraPParams`
@@ -673,30 +673,30 @@
 * Rename `ensPParams` to `ensCurPParams`.
 * Add `ToJSON` instance for `RatifyState`
 * Change `ToJSON` instance for `ConwayGovState`:
-  * Add `"nextRatifyState"` field
-  * Rename `"ratify"` to `"enactState"`
-  * Rename `"gov"` to `"proposals"`
+  - Add `"nextRatifyState"` field
+  - Rename `"ratify"` to `"enactState"`
+  - Rename `"gov"` to `"proposals"`
 * Fix `ToJSON` instance for `EnactState`:
-  * Current PParams were wrongfully used for `"prevPParams"`.
-  * Remove `"treasury"` and `"withdrawals"` as those are temporary bindings needed only
+  - Current PParams were wrongfully used for `"prevPParams"`.
+  - Remove `"treasury"` and `"withdrawals"` as those are temporary bindings needed only
     for `ENACT` rule
 * Add an anchor argument to `ResignCommitteeColdTxCert`
 * Prevent invalid previous gov-action ids in proposals #3768
-  * Also, add lenses
-    * `govProceduresProposalsL`
-    * `pProcGovActionL`
-    * `gasActionL`
+  - Also, add lenses
+    + `govProceduresProposalsL`
+    + `pProcGovActionL`
+    + `gasActionL`
 * Add `ToExpr` instance for:
-  * `Voter`
-  * `ConwayCertPredFailure`
-  * `ConwayCertsPredFailure`
-  * `ConwayDelegPredFailure`
-  * `ConwayGovPredFailure`
-  * `ConwayGovCertPredFailure`
-  * `ConwayLedgerPredFailure`
-  * `ConwayTxBody`
+  - `Voter`
+  - `ConwayCertPredFailure`
+  - `ConwayCertsPredFailure`
+  - `ConwayDelegPredFailure`
+  - `ConwayGovPredFailure`
+  - `ConwayGovCertPredFailure`
+  - `ConwayLedgerPredFailure`
+  - `ConwayTxBody`
 * Add `Generic` and `NFData` instance for:
-  * `ConwayNewEpochPredFailure`
+  - `ConwayNewEpochPredFailure`
 * Add `totalObligation`
 * Add `utxosDepositedL`
 * Add `conwayWitsVKeyNeeded`
@@ -712,29 +712,29 @@
 
 * Add `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Add `ToExpr` instance for:
-  * `Voter`
-  * `VotingProcedures`
-  * `VotingProcedure`
-  * `ProposalProcedure`
-  * `ConwayTxBody`
+  - `Voter`
+  - `VotingProcedures`
+  - `VotingProcedure`
+  - `ProposalProcedure`
+  - `ConwayTxBody`
 * Add `ConwayTxBodyUpgradeError`, `ConwayTxCertUpgradeError`
 * Add to `Ratify`:
-  * `committeeAccepted`
-  * `committeeAcceptedRatio`
+  - `committeeAccepted`
+  - `committeeAcceptedRatio`
 * Add `reCommitteeState` to `RatifyEnv`
 * Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
 * Expose `toConwayGenesisPairs` and `toUpgradeConwayPParamsUpdatePairs`
 * Rename `ConwayPParams` to be consistent with the Agda specification. #3739
-  * `govActionExpiration` to `govActionLifetime`
-  * `committeeTermLimit` to `committeeMaxTermLength`
-  * `minCommitteeSize` to `committeeMinSize`
+  - `govActionExpiration` to `govActionLifetime`
+  - `committeeTermLimit` to `committeeMaxTermLength`
+  - `minCommitteeSize` to `committeeMinSize`
 * Prevent `DRep` expiry when there are no active governance proposals to vote on (in
   ConwayCERTS). #3729
-  * Add `updateNumDormantEpochs` function in `ConwayEPOCH` to update the dormant-epochs counter
-  * Refactor access to `ConwayGovState` by making its lens part of `ConwayEraGov`.
-  * Export `gasExpiresAfterL` for use in tests
+  - Add `updateNumDormantEpochs` function in `ConwayEPOCH` to update the dormant-epochs counter
+  - Refactor access to `ConwayGovState` by making its lens part of `ConwayEraGov`.
+  - Export `gasExpiresAfterL` for use in tests
 * Add `ExpirationEpochTooSmall` data constructor to `ConwayGovPredFailure`
 * Add `ConflictingCommitteeUpdate` data constructor to `ConwayGovPredFailure`
 * Rename `NewCommitte` to `UpdateCommittee`
@@ -743,47 +743,47 @@
 * Remove `DecCBOR`/`EncCBOR` and `FromCBOR`/`ToCBOR` for `RatifyState`, since that state
   is ephemeral and is never serialized.
 * Add `PredicateFailure` for `Voter` - `GovAction` mismatches, with `checkVotesAreValid`. #3718
-  * Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))`
+  - Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))`
     inhabitant to the `ConwayGovPredFailure` data type.
-  * Fix naming for `toPrevGovActionIdsParis` to `toPrevGovActionIdsPairs`
+  - Fix naming for `toPrevGovActionIdsParis` to `toPrevGovActionIdsPairs`
 * Rename:
-  * `thresholdSPO` -> `votingStakePoolThreshold`
-  * `thresholdDRep` -> `votingDRepThreshold`
-  * `thresholdCC` -> `votingCommitteeThreshold`
+  - `thresholdSPO` -> `votingStakePoolThreshold`
+  - `thresholdDRep` -> `votingDRepThreshold`
+  - `thresholdCC` -> `votingCommitteeThreshold`
 * Add:
-  * `isStakePoolVotingAllowed`
-  * `isDRepVotingAllowed`
-  * `isCommitteeVotingAllowed`
+  - `isStakePoolVotingAllowed`
+  - `isDRepVotingAllowed`
+  - `isCommitteeVotingAllowed`
 * Fix `ConwayTxBodyRaw` decoder to disallow empty `Field`s #3712
-  * `certsTxBodyL`
-  * `withdrawalsTxBodyL`
-  * `mintTxBodyL`
-  * `collateralInputsTxBodyL`
-  * `reqSignerHashesTxBodyL`
-  * `referenceInputsTxBodyL`
-  * `votingProceduresTxBodyL`
-  * `proposalProceduresTxBodyL`
+  - `certsTxBodyL`
+  - `withdrawalsTxBodyL`
+  - `mintTxBodyL`
+  - `collateralInputsTxBodyL`
+  - `reqSignerHashesTxBodyL`
+  - `referenceInputsTxBodyL`
+  - `votingProceduresTxBodyL`
+  - `proposalProceduresTxBodyL`
 * Add `reorderActions`, `actionPriority`
 * Remove `ensProtVer` field from `EnactState`: #3705
 * Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`
 * Move `ConwayEraPParams` to `Cardano.Ledger.Conway.PParams`
 * Rename:
-  * `GovActionsState` to `GovSnapshots`
-  * `cgGovActionsStateL` to `cgGovSnapshotsL`
-  * `curGovActionsStateL` to `curGovSnapshotsL`
-  * `prevGovActionsStateL` to `prevGovSnapshotsL`
+  - `GovActionsState` to `GovSnapshots`
+  - `cgGovActionsStateL` to `cgGovSnapshotsL`
+  - `curGovActionsStateL` to `curGovSnapshotsL`
+  - `prevGovActionsStateL` to `prevGovSnapshotsL`
 * Add:
-  * `ProposalsSnapshot`
-  * `snapshotIds`
-  * `snapshotAddVote`
-  * `snapshotInsertGovAction`
-  * `snapshotActions`
-  * `snapshotRemoveIds`
-  * `fromGovActionStateSeq`
+  - `ProposalsSnapshot`
+  - `snapshotIds`
+  - `snapshotAddVote`
+  - `snapshotInsertGovAction`
+  - `snapshotActions`
+  - `snapshotRemoveIds`
+  - `fromGovActionStateSeq`
 * Add lenses:
-  * `gasCommitteeVotesL`
-  * `gasDRepVotesL`
-  * `gasStakePoolVotesL`
+  - `gasCommitteeVotesL`
+  - `gasDRepVotesL`
+  - `gasStakePoolVotesL`
 * Add `FromJSON` instance for `Committee`
 * Add `constitution` and `committee` fields to `ConwayGenesis`
 
@@ -803,14 +803,14 @@
 ## 1.8.1.0
 
 * Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
-  * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
+  - Add lenses `ensWithdrawalsL` and `ensTreasuryL`
 
 ## 1.8.0.0
 
 * Add all Conway `TxCert` to consumed/produced calculations in the `UTXO` rule. #3700
 * Change `ToJSONKey` implementation of `Voter` to flat text
 * Add DRep refund calculation #3688
-  * Add `conwayConsumedValue` as `getConsumedValue` for Conway
+  - Add `conwayConsumedValue` as `getConsumedValue` for Conway
 * Change `PredicateFailure (ConwayENACT era)` to `Void`
 * Remove `EnactPredFailure`
 * Change `PredicateFailure (ConwayEPOCH era)` to `Void`
@@ -818,18 +818,18 @@
 * Remove `EpochFailure` and `RatifyFailure` from `ConwayNewEpochPredFailure`
 * Change `PredicateFailure (ConwayRATIFY era)` to `Void`
 * Add:
-  * `rsDelayed`
-  * `PParamGroup`
-  * `ParamGrouper`
-  * `pGroup`
-  * `pUngrouped`
-  * `modifiedGroups`
-  * `dvtPPNetworkGroupL`
-  * `dvtPPGovGroupL`
-  * `dvtPPTechnicalGroupL`
-  * `dvtPPEconomicGroupL`
-  * `threshold`
-  * `ensCommitteeL`
+  - `rsDelayed`
+  - `PParamGroup`
+  - `ParamGrouper`
+  - `pGroup`
+  - `pUngrouped`
+  - `modifiedGroups`
+  - `dvtPPNetworkGroupL`
+  - `dvtPPGovGroupL`
+  - `dvtPPTechnicalGroupL`
+  - `dvtPPEconomicGroupL`
+  - `threshold`
+  - `ensCommitteeL`
 * Add `pparamsGroups` to `ConwayEraPParams`
 * Add `PrevGovActionIds`
 * Change `EnactState` to add `ensPrevGovActionIds`
@@ -837,45 +837,45 @@
 * Add `EnactSignal` and the signal of `Enact` to it
 * Remove `rsFuture` from `RatifyState`
 * Add to `GovActionsState`:
-  * `curGovActionsState`
-  * `prevGovActionsState`
-  * `prevDRepState`
-  * `prevCommitteeState`
+  - `curGovActionsState`
+  - `prevGovActionsState`
+  - `prevDRepState`
+  - `prevCommitteeState`
 * Add `ToExpr` instances to:
-  * `PoolVotingThresholds`
-  * `DRepVotingThresholds`
-  * `GovActionState`
-  * `GovActionsState`
-  * `EnactState`
-  * `RatifyState`
-  * `ConwayGovState`
-  * `GovActionIx`
-  * `GovActionId`
-  * `Vote`
-  * `Committee`
-  * `PrevGovActionId`
-  * `GovAction`
-  * `ConwayPParams` with `Identity` and `StrictMaybe`
+  - `PoolVotingThresholds`
+  - `DRepVotingThresholds`
+  - `GovActionState`
+  - `GovActionsState`
+  - `EnactState`
+  - `RatifyState`
+  - `ConwayGovState`
+  - `GovActionIx`
+  - `GovActionId`
+  - `Vote`
+  - `Committee`
+  - `PrevGovActionId`
+  - `GovAction`
+  - `ConwayPParams` with `Identity` and `StrictMaybe`
 * Add lenses:
-  * `cgEnactStateL`
-  * `curGovActionsStateL`
-  * `prevGovActionsStateL`
-  * `prevDRepStateL`
-  * `prevCommitteeStateL`
+  - `cgEnactStateL`
+  - `curGovActionsStateL`
+  - `prevGovActionsStateL`
+  - `prevDRepStateL`
+  - `prevCommitteeStateL`
 * Replace `cgRatifyState` with `cgEnactState`
 * Deprecate `cgRatifyStateL`
 * Add `ProposalDepositIncorrect` predicate failure, that is produced when `ProposalProcedure` deposit does not match `"govActionDeposit"` from `PParams` #3669
 * Add "minCommitteeSize" `PParam` validation for `NewCommittee` `GovAction` #3668
-  * Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`
-  * Add `NewCommitteeSizeTooSmall` `PredicateFailure` in `GOV`
+  - Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`
+  - Add `NewCommitteeSizeTooSmall` `PredicateFailure` in `GOV`
 * Add `EqRaw` instance for `ConwayTxBody`
 * Add `ToExpr` instance for `Delegatee`, `ConwayDelegCert`, `ConwayGovCert` and
   `ConwayTxCert`
 * Implement expiry for governance proposals #3664
-  * Update `ppGovActionExpiration` to be an `EpochNo`
-  * Add `gasExpiresAfter :: !EpochNo` to `GovActionState`
-  * Add `gePParams` to `GovEnv`
-  * Rename `teTxId` to `geTxId` and `teEpoch` to `geEpoch`
+  - Update `ppGovActionExpiration` to be an `EpochNo`
+  - Add `gasExpiresAfter :: !EpochNo` to `GovActionState`
+  - Add `gePParams` to `GovEnv`
+  - Rename `teTxId` to `geTxId` and `teEpoch` to `geEpoch`
 * Add `reDRepState` to `RatifyEnv`
 * Add field `gasId` to `GovActionState`
 * Add `insertGovActionsState`
@@ -890,9 +890,9 @@
 
 * Add `Network` validation for `ProposalProcedure` and `TreasuryWithdrawals` in GOV #3659
 * Make `DELEG`, `POOL` and `GOVCERT` conform to spec-v0.8 #3628
-  * Add `CertEnv` and `CertsEnv` to pass `EpochNo` down from `LEDGER` to sub-rules
-  * Add `drepDeposit` to `DRepState` to track deposits paid by `DRep`s
-  * Update `DRep` expiry in `LEDGER` for all `DRep`s who are voting in current `Tx`
+  - Add `CertEnv` and `CertsEnv` to pass `EpochNo` down from `LEDGER` to sub-rules
+  - Add `drepDeposit` to `DRepState` to track deposits paid by `DRep`s
+  - Update `DRep` expiry in `LEDGER` for all `DRep`s who are voting in current `Tx`
 * Add `ConwayGovCertEnv`
 * Change the environment of `GOVCERT` to `ConwayGovCertEnv`
 * Add `ConwayEraGov` with `constitutionGovStateL`
@@ -900,12 +900,12 @@
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
   `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
 * Rename `*governance*` to `*gov*` #3607
-  * `GovernanceAction` to `GovAction`
-  * `GovernanceActionId` to `GovActionId`
-  * `GovernanceActionIx` to `GovActionIx`
-  * `GovernanceActionState` to `GovActionState`
-  * `ConwayGovState` to `GovActionsState`
-  * `ConwayGovernance` to `ConwayGovState`
+  - `GovernanceAction` to `GovAction`
+  - `GovernanceActionId` to `GovActionId`
+  - `GovernanceActionIx` to `GovActionIx`
+  - `GovernanceActionState` to `GovActionState`
+  - `ConwayGovState` to `GovActionsState`
+  - `ConwayGovernance` to `ConwayGovState`
 * Add `MalformedProposal` to `ConwayGovPredFailure`
 * Add `ppuWellFormed` to `ConwayEraPParams`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary instead of on Babbage/Conway.
@@ -916,29 +916,29 @@
 * Add `currentTreasuryValue :: !(StrictMaybe Coin)` as a new field to Conway TxBody #3586
 * Add an optional Anchor to the Conway DRep registration certificate #3576
 * Change `ConwayCommitteeCert` to allow:
-  * committee cold keys to be script-hashes #3581
-  * committee hot keys to be script-hashes #3552
+  - committee cold keys to be script-hashes #3581
+  - committee hot keys to be script-hashes #3552
 * Change EnactState.ensConstitution #3556
-  * from `SafeHash (EraCrypto era) ByteString`
-  * to `Constitution era`
-  * Use this datatype for GovernanceAction.NewConstitution
+  - from `SafeHash (EraCrypto era) ByteString`
+  - to `Constitution era`
+  - Use this datatype for GovernanceAction.NewConstitution
 * Add `ConwayPParams` #3498
-  * Add `UpgradeConwayPParams`
-  * Add `ConwayEraPParams`
-  * Add `PoolVotingThresholds`
-  * Add `DRepVotingThresholds`
+  - Add `UpgradeConwayPParams`
+  - Add `ConwayEraPParams`
+  - Add `PoolVotingThresholds`
+  - Add `DRepVotingThresholds`
 * Rename:
-  * `cgTally` -> `cgGovActionsState`
-  * `cgTallyL` -> `cgGovActionsStateL`
-  * `VDelFailure` -> `GovCertFailure`
-  * `VDelEvent` -> `GovCertEvent`
-  * `certVState` -> `certGState`
-  * `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
-  * `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
-  * `TallyEnv` -> `GovEnv`
-  * `ConwayTallyState` -> `ConwayGovState`
-  * `TALLY` -> `GOV`
-  * `VDEL` -> `GOVCERT`
+  - `cgTally` -> `cgGovActionsState`
+  - `cgTallyL` -> `cgGovActionsStateL`
+  - `VDelFailure` -> `GovCertFailure`
+  - `VDelEvent` -> `GovCertEvent`
+  - `certVState` -> `certGState`
+  - `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
+  - `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
+  - `TallyEnv` -> `GovEnv`
+  - `ConwayTallyState` -> `ConwayGovState`
+  - `TALLY` -> `GOV`
+  - `VDEL` -> `GOVCERT`
 * Make `Anchor` required in `ProposalProcedure`.
 * Add `ConwayUTXO`
 * Add `indexedGovProps`
@@ -953,8 +953,8 @@
   reports all actions as a set, rather than one action per each individual failure.
 * Type of `gpVotingProcedures` in `GovernanceProcedures` was aslo changed to `GovernanceProcedures`
 * Rename:
-  * `ConwayCommitteeCert` -> `ConwayGovCert`
-  * `ConwayTxCertCommittee` -> `ConwayTxCertGov`
+  - `ConwayCommitteeCert` -> `ConwayGovCert`
+  - `ConwayTxCertCommittee` -> `ConwayTxCertGov`
 * Remove `DelegStakeTxCert` from the `COMPLETE` pragma for `TxCert`
 * Add `Committee` and adjust `NewCommittee` governance action
 * Add `treasuryDonationTxBodyL` to `ConwayEraTxBody`
@@ -962,8 +962,8 @@
 * Update `ProposalProcedure` return address to be a `RewardAcnt`
 * Add `ensPrevPParams` field to `EnactState`
 * Add lenses:
-  * `ensPrevPParamsL`
-  * `ensCurPParamsL`
+  - `ensPrevPParamsL`
+  - `ensCurPParamsL`
 
 ## 1.6.3.0
 
@@ -984,7 +984,7 @@
 ## 1.5.0.0
 
 * Add `ensConstitutionL` and `rsEnactStateL` to `Governance` #3506
-  * Override `getConsitutionHash` for Conway to return just the hash of the constitution
+  - Override `getConsitutionHash` for Conway to return just the hash of the constitution
 * Added `ConwayWdrlNotDelegatedToDRep` to `ConwayLedgerPredFailure`
 * Changed the type of voting delegatee from `Credential` to `DRep`
 * Removal of `VoterRole` in favor of `Voter`
@@ -1014,9 +1014,9 @@
 * Add `EncCBOR`/`DecCBOR` for `ConwayCertPredFailure`
 * Add `EncCBOR`/`DecCBOR` for `ConwayVDelPredFailure`
 * Add `POOL` rules to Conway #3464
-  * Make `ShelleyPOOL` rules reusable in Conway
+  - Make `ShelleyPOOL` rules reusable in Conway
 * Add `CERT` and `DELEG` rules to Conway #3412
-  * Add `domDeleteAll` to `UMap`.
+  - Add `domDeleteAll` to `UMap`.
 * Introduction of `TxCert` and `EraTxCert`
 * Add `ConwayEraTxCert`
 * Add `EraTxCert`, `ShelleyEraTxCert` and `ConwayEraTxCert` instances for `ConwayEra`
@@ -1034,9 +1034,9 @@
 * Removed `toShelleyDCert` and `fromShelleyDCertMaybe` #3372
 * Replace `DPState c` with `CertState era`
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 * Add `ConwayDelegsPredFailure`
 * Renamed `DELPL` to `CERT`
 * Added `ConwayDELEGS` rule
@@ -1056,19 +1056,19 @@
 * Added `RATIFY` rule
 * Added `ConwayGovernance`
 * Added lenses:
-  * `cgTallyL`
-  * `cgRatifyL`
-  * `cgVoterRolesL`
+  - `cgTallyL`
+  - `cgRatifyL`
+  - `cgVoterRolesL`
 * Removed `GovernanceActionInfo`
 * Replaced `ctbrVotes` and `ctbrGovActions` with `ctbrGovProcedure`
 * Renamed `ENACTMENT` to `ENACT`
 * Add `ToJSON` instance for: #3323
-  * `ConwayGovernance`
-  * `ConwayTallyState`
-  * `GovernanceAction`
-  * `GovernanceActionState`
-  * `GovernanceActionIx`
-  * `GovernanceActionId`
+  - `ConwayGovernance`
+  - `ConwayTallyState`
+  - `GovernanceAction`
+  - `GovernanceActionState`
+  - `GovernanceActionIx`
+  - `GovernanceActionId`
 * Add `ToJSONKey` instance for `GovernanceActionId` #3323
 * Fix `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyState` #3323
 * Add `Anchor` and `AnchorDataHash` types. #3323
@@ -1093,10 +1093,10 @@
 * Fix `Arbitrary` for `ConwayTallyState`. #3323
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 * Add `Arbitrary` instances for:
-  * `ConwayTallyPredFailure`
-  * `EnactState`
-  * `RatifyState`
-  * `ConwayGovernance`
+  - `ConwayTallyPredFailure`
+  - `EnactState`
+  - `RatifyState`
+  - `ConwayGovernance`
 * Fix `Arbitrary` for `ConwayTxBody`.
 
 ## 1.0.0.0

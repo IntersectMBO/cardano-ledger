@@ -4,33 +4,33 @@
 
 * Changed `MaxTxSizeUTxO` and `sizeShelleyTxF` to use `Word32`
 * Remove:
-  * `ShelleyEpochPredFailure`
-  * `ShelleyMirPredFailure`
-  * `ShelleyNewEpochPredFailure`
-  * `ShelleyPoolreapPredFailure`
-  * `ShelleyRupdPredFailure`
-  * `ShelleySnapPredFailure`
-  * `ShelleyTickPredFailure`
-  * `ShelleyTickfPredFailure`
-  * `ShelleyUpecPredFailure`
-  * `TickTransitionError`
-  * `UpecPredFailure`
+  - `ShelleyEpochPredFailure`
+  - `ShelleyMirPredFailure`
+  - `ShelleyNewEpochPredFailure`
+  - `ShelleyPoolreapPredFailure`
+  - `ShelleyRupdPredFailure`
+  - `ShelleySnapPredFailure`
+  - `ShelleyTickPredFailure`
+  - `ShelleyTickfPredFailure`
+  - `ShelleyUpecPredFailure`
+  - `TickTransitionError`
+  - `UpecPredFailure`
 * Remove `withCborRoundTripFailures`
 * Refactor pool deposits to use `StakePoolState`. #5234
-  * Update `Pool` rule to store deposits in individual `StakePoolState` records
-  * Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
-  * Update genesis stake pool registration to use `mempty` deposits for initial pools per specification
-  * Remove `epochStatePoolParamsL` lens.
-  * Remove `psDepositsL` as no longer necessary.
+  - Update `Pool` rule to store deposits in individual `StakePoolState` records
+  - Add and export `prUTxOStateL`, `prChainAccountStateL`, and `prCertStateL` lenses for `ShelleyPoolreapState`
+  - Update genesis stake pool registration to use `mempty` deposits for initial pools per specification
+  - Remove `epochStatePoolParamsL` lens.
+  - Remove `psDepositsL` as no longer necessary.
 * Add `hardforkConwayDisallowDuplicatedVRFKeys`
 * Add `VRFKeyHashAlreadyRegistered` to `ShelleyPoolPredFailure` type
 * Add `NFData` for `NominalDiffTimeMicro`, `ShelleyGenesisStaking` and `ShelleyGenesis`
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
-  * Deprecate the API `getPoolParameters` in favor of `getStakePools`.
-  * Deprecate the lens `epochStatePoolParamsL` in favor of `epochStateStakePoolsL`.
-  * Rename
-    * `psStakePoolParamsL` to `psStakePoolsL`
-    * `psFutureStakePoolParamsL` to `psFutureStakePoolsL`
+  - Deprecate the API `getPoolParameters` in favor of `getStakePools`.
+  - Deprecate the lens `epochStatePoolParamsL` in favor of `epochStateStakePoolsL`.
+  - Rename
+    + `psStakePoolParamsL` to `psStakePoolsL`
+    + `psFutureStakePoolParamsL` to `psFutureStakePoolsL`
 * Add `mkBasicBlockBodyShelley` and `txSeqBlockBodyShelleyL` to use in Allegra and Mary.
 * Add `Default` instance for `NewEpochState`
 * Remove `epochStateUMapL`, `unifiedL`, `rewards`, `delegations`, `ptrsMap` and `dsUnifiedL`
@@ -38,36 +38,36 @@
 * Add `ShelleyAccounts`, `ShelleyAccountState`, `shelleyAddAccountState`,  `registerShelleyAccount` and ` unregisterShelleyAccount`
 * Rename `registerInitialFundsThenStaking` to `shelleyRegisterInitialFundsThenStaking`
 * Deprecate `Cardano.Ledger.Shelley.BlockChain` in favor of `Cardano.Ledger.Shelley.BlockBody`. #5156
-  * Rename `ShelleyTxSeq` to `ShelleyBlockBody`
+  - Rename `ShelleyTxSeq` to `ShelleyBlockBody`
 * Rename `shelleyEqTxRaw` to `shelleyTxEqRaw`
 * Add `Generic` instances for `ShelleyBbodyEvent` and `ShelleyLedgersEvent`
 * Move some hard-fork triggers and export them from `Cardano.Ledger.Shelley` module:
-  * `aggregateRewards` to `hardforkAllegraAggregateRewards`.
-  * `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
-  * `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
-  * `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
-  * Delete the `Shelley.HardForks` module.
+  - `aggregateRewards` to `hardforkAllegraAggregateRewards`.
+  - `allowMIRTransfer` to `hardforkAlonzoAllowMIRTransfer`.
+  - `validatePoolRewardAccountNetID` to `hardforkAlonzoValidatePoolRewardAccountNetID`.
+  - `forgoRewardPrefilter` to `hardforkBabbageForgoRewardPrefilter`.
+  - Delete the `Shelley.HardForks` module.
 * Add `disallowUnelectedCommitteeFromVoting` to `Shelley.HardForks`. #5091
-  * This tests if the protocol version is greater than 10.
+  - This tests if the protocol version is greater than 10.
 * Deprecated `toShelleyGenesisPairs`
 * Add `ToJSON` and `FromJSON` instances for `FromByronTranslationContext`
 * Deprecated `toShelleyGenesisPairs` and `toShelleyTransitionConfigPairs`
 * Removed `toShelleyGenesisPairs`
 * Remove `ShelleyTxRaw`, `MkShelleyTx`, `segWitTx`, `unsafeConstructTxWithBytes`
 * Added `Generic` instances for:
-  * `ShelleyBbodyState`
-  * `ShelleyScriptsNeeded`
+  - `ShelleyBbodyState`
+  - `ShelleyScriptsNeeded`
 * Remove Bool argument from `auxDataSeqDecoder`
 * Move to `testlib` `DecCBOR` instances for: `ShelleyTxSeq`, `ShelleyTxRaw`, `ShelleyTx`, `TxBody ShelleyEra`, `ShelleyTxAuxData`, `ShelleyTxWitsRaw`, `ShelleyTxWits`, `MultiSigRaw`, `MultiSig`
 * Remove `segWitTx`
 * Add:
-  * `unlessMajorVersion`
-  * `whenMajorVersion`
-  * `whenMajorVersionAtLeast`
-  * `whenMajorVersionAtMost`
-  * `cantFollow`
-  * `majorFollow`
-  * `minorFollow`
+  - `unlessMajorVersion`
+  - `whenMajorVersion`
+  - `whenMajorVersionAtLeast`
+  - `whenMajorVersionAtMost`
+  - `cantFollow`
+  - `majorFollow`
+  - `minorFollow`
 * Remove `CorruptRewardUpdate` predicate failure and replace that check with an assertion. #5007
 * Added to `PParams`: `shelleyPParams`, `ppA0`,`ppD`,`ppEMax`,`ppExtraEntropy`,`ppMaxBBSize`,`ppKeyDeposit`,`ppMinFeeA`,`ppMinFeeB`,`ppMinPoolCost` `ppMaxBHSize`,`ppMaxTxSize`,`ppNOpt`,`ppProtocolVersion`,`ppPoolDeposit`,`ppRho`,`ppTau`
 * Removed from `PParams`: `shelleyCommonPParamsHKDPairs`,`shelleyCommonPParamsHKDPairsV6`,`shelleyCommonPParamsHKDPairsV8`
@@ -85,19 +85,19 @@
 * Removed `ShelleyPoolreapEnv` (became obsolete)
 * Removed `shelleyCertVState` from `ShelleyCertState`
 * Moved `CertState` to `State` module:
-  * `epochStateRegDRepL` moved to Conway
-  * `vsDRepsL` moved to Conway
-  * `vsCommitteeStateL` moved to Conway
+  - `epochStateRegDRepL` moved to Conway
+  - `vsDRepsL` moved to Conway
+  - `vsCommitteeStateL` moved to Conway
 
 ### `testlib`
 
 * Added `EraSpecificSpec ShelleyEra` instance
 * Added `EraSpecificSpec` class
 * Removed `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:
-  * `registerStakeCredential`
-  * `delegateStake`
-  * `registerRewardAccount`
-  * `registerPool`
+  - `registerStakeCredential`
+  - `delegateStake`
+  - `registerRewardAccount`
+  - `registerPool`
 * Added `withEachEraVersion`
 * Added `Examples` module with: `LedgerExamples`, `ledgerExamples`, `mkLedgerExamples`, `exampleCerts`,`exampleWithdrawals`, `exampleAuxDataMap`, `exampleNonMyopicRewards`, `exampleCoin`, `examplePayKey`, `exampleStakeKey`, `exampleNewEpochState`, `examplePoolDistr`, `examplePoolParams`, `exampleTxIns`, `exampleProposedPPUpdates`, `exampleByronAddress`, `testShelleyGenesis`, `keyToCredential`, `mkDSIGNKeyPair`, `mkKeyHash`, `mkScriptHash`, `mkWitnessesPreAlonzo`, `seedFromByte`, `seedFromWords`
 * Add `nativeAlwaysFails`, `nativeAlwaysSucceeds`
@@ -109,16 +109,16 @@
 * Added `Arbitrary` instance for `TransitionConfig ShelleyEra`
 * Rename `poolParams` to `freshPoolParams`
 * Added `ToExpr` instances for:
-  * `ShelleyScriptsNeeded`
-  * `ShelleyBbodyState`
-  * `ShelleyTickPredFailure`
-  * `ShelleyNewEpochPredFailure`
-  * `ShelleyEpochPredFailure`
-  * `ShelleyUpecPredFailure`
-  * `ShelleyPoolPredFailure`
-  * `ShelleySnapPredFailure`
-  * `ShelleyMirPredFailure`
-  * `ShelleyRupdPredFailure`
+  - `ShelleyScriptsNeeded`
+  - `ShelleyBbodyState`
+  - `ShelleyTickPredFailure`
+  - `ShelleyNewEpochPredFailure`
+  - `ShelleyEpochPredFailure`
+  - `ShelleyUpecPredFailure`
+  - `ShelleyPoolPredFailure`
+  - `ShelleySnapPredFailure`
+  - `ShelleyMirPredFailure`
+  - `ShelleyRupdPredFailure`
 * Added `Era` module with `ShelleyEraTest` class
 
 ## 1.16.0.0
@@ -138,11 +138,11 @@
   `applyBlockNoValidation`)  and `applyTickOpts` (in favor `applyTick`).
 * Disable validation level for `applyTick`
 * Add `DecCBOR` instances for:
-  * `ShelleyTxWits`
-  * `ShelleyTxAuxData`
-  * `ShelleyTxBody`
-  * `ShelleyTx`
-  * `ShelleyTxSeq`
+  - `ShelleyTxWits`
+  - `ShelleyTxAuxData`
+  - `ShelleyTxBody`
+  - `ShelleyTx`
+  - `ShelleyTxSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family
@@ -159,11 +159,11 @@
 * Made the fields of predicate failures and environments lazy
 * Changed the type of `sgSecurityParam` to `NonZero Word64`
 * Following functions now expect a `NonZero Word64` security parameter:
-  * `startStep`
-  * `createRUpd`
-  * `desirability`
-  * `getTopRankedPools`
-  * `getTopRankedPoolsVMap`
+  - `startStep`
+  - `createRUpd`
+  - `desirability`
+  - `getTopRankedPools`
+  - `getTopRankedPoolsVMap`
 * Remove `Era era` constraint from `sizeShelleyTxF` and `wireSizeShelleyTxF`
 * Add `MemPack` instance `ShelleyTxOut`
 * Deprecate `hashShelleyTxAuxData`
@@ -171,27 +171,27 @@
 * Deprecate `Shelley` type synonym
 * Deprecate `PPUpdateEnv`
 * Remove crypto parametrization from:
-  * `ShelleyEra`
-  * `ShelleyGenesisStaking`
-  * `ShelleyGenesis`
-  * `IncrementalStake`
-  * `NonMyopic`
-  * `RewardProvenancePool`, `RewardProvenance`
-  * `RewardAns`, `RewardUpdate`, `RewardSnapShot`, `FreeVars`, `RewardPulser`, `PulsingRewUpdate`
-  * `PulsingRewUpdate`, `PoolRewardInfo`
-  * `FromByronTranslationContext`
-  * `GenesisDelegCert`, `MIRTarget`, `MIRCert`, `ShelleyDelegCert`
+  - `ShelleyEra`
+  - `ShelleyGenesisStaking`
+  - `ShelleyGenesis`
+  - `IncrementalStake`
+  - `NonMyopic`
+  - `RewardProvenancePool`, `RewardProvenance`
+  - `RewardAns`, `RewardUpdate`, `RewardSnapShot`, `FreeVars`, `RewardPulser`, `PulsingRewUpdate`
+  - `PulsingRewUpdate`, `PoolRewardInfo`
+  - `FromByronTranslationContext`
+  - `GenesisDelegCert`, `MIRTarget`, `MIRCert`, `ShelleyDelegCert`
 
 ### `testlib`
 
 * Renamed:
-  * `lookupKeyPair` -> `getKeyPair`
-  * `lookupByronKeyPair` -> `getByronKeyPair`
-  * `tryLookupReward` -> `lookupReward`
-  * `lookupReward` -> `getReward`
-  * `lookupImpRootTxOut` -> `getImpRootTxOut`
-  * `impGetNativeScript` -> `impLookupNativeScript`
-  * `impLookupUTxO` -> `impGetUTxO`
+  - `lookupKeyPair` -> `getKeyPair`
+  - `lookupByronKeyPair` -> `getByronKeyPair`
+  - `tryLookupReward` -> `lookupReward`
+  - `lookupReward` -> `getReward`
+  - `lookupImpRootTxOut` -> `getImpRootTxOut`
+  - `impGetNativeScript` -> `impLookupNativeScript`
+  - `impLookupUTxO` -> `impGetUTxO`
 * Converted `CertState` to a type family
 * Add `disableImpInitExpectLedgerRuleConformance`. #4821
 
@@ -200,12 +200,12 @@
 * Change param of `PoolRank.desirability` to `Word16`
 * Change type of `nOpt` in `RewardParams` to `Word16`
 * Add lenses for `LedgerEnv`. #4748
-  * `ledgerSlotNoL`
-  * `ledgerEpochNoL`
-  * `ledgerIxL`
-  * `ledgerPpL`
-  * `ledgerAccountL`
-  * `ledgerMempoolL`
+  - `ledgerSlotNoL`
+  - `ledgerEpochNoL`
+  - `ledgerIxL`
+  - `ledgerPpL`
+  - `ledgerAccountL`
+  - `ledgerMempoolL`
 * Change `PoolEnv` to take `EpochNo` instead of `SlotNo`
 * Add `EpochNo` to `DelplEnv`
 * Add `Maybe EpochNo` to `LedgerEnv`
@@ -235,19 +235,19 @@
 * Change type of VRF key hash in `GenesisDelegCert`, `GenesisDelegTxCert` and `DuplicateGenesisVRFDELEG` to `VRFVerKeyHash`
 * Added `EncCBOR` instance for `LedgerEnv`
 * Use `Mismatch` to clarify *some more* predicate failures. #4711
-  * `Shelley/InsufficientForInstantaneousRewardsDELEG`
-  * `Shelley/MIRCertificateTooLateinEpochDELEG`
-  * `Shelley/InsufficientForTransferDELEG`
-  * `Shelley/ExpiredUTxO`
-  * `Shelley/ValueNotConservedUTxO`
+  - `Shelley/InsufficientForInstantaneousRewardsDELEG`
+  - `Shelley/MIRCertificateTooLateinEpochDELEG`
+  - `Shelley/InsufficientForTransferDELEG`
+  - `Shelley/ExpiredUTxO`
+  - `Shelley/ValueNotConservedUTxO`
 
 ### `testlib`
 
 * Changed the return type of `iteExpectLedgerRuleConformance`
 * Add `runSTS`
 * Add `iteExpectLedgerRuleConformance` to `ImpTestEnv` for additionally checking conformance with ImpTests. #4748
-  * Add lens `iteExpectLedgerRuleConformanceL`.
-  * Add `modifyImpInitExpectLedgerRuleConformance`.
+  - Add lens `iteExpectLedgerRuleConformanceL`.
+  - Add `modifyImpInitExpectLedgerRuleConformance`.
 * Added `tryLookupReward`
 * Switch to using `ImpSpec` package
 * Remove: `runImpTestM`, `runImpTestM_`, `evalImpTestM`, `execImpTestM`, `runImpTestGenM`, `runImpTestGenM_`, `evalImpTestGenM`, `execImpTestGenM`, `withImpState` and `withImpStateModified`.
@@ -259,11 +259,11 @@
 * Added `expectUTxOContent`
 * Added `disableTreasuryExpansion`
 * Added a `MonadFail` constraint to two methods of `ShelleyEraImp`:
-  * `initGenesis`
-  * `initNewEpochState`
+  - `initGenesis`
+  - `initNewEpochState`
 * Added a `MonadFail` constraint to:
-  * `defaultInitNewEpochState`
-  * `defaultInitImpTestState`
+  - `defaultInitNewEpochState`
+  - `defaultInitImpTestState`
 * Added `logText`
 * Added `ToExpr` instance for `LedgerEnv`
 * Added `tryRunImpRuleNoAssertions` to `ImpTest`
@@ -276,15 +276,15 @@
 
 * Remove `ShelleyNewppPredFailure`. #4649
 * Change predicate-failures and their serialization to use the `Mismatch` type to report supplied and expected values. #4649
-  * `MaxTxSizeUTxO`
-  * `FeeTooSmallUTxO`
-  * `WrongBlockBodySizeBBODY`
-  * `InvalidBodyHashBBODY`
-  * `ConflictingMetadataHash`
-  * `StakePoolRetirementWrongEpochPOOL`
-  * `StakePoolCostTooLowPOOL`
-  * `WrongNetworkPOOL`
-  * `NonGenesisUpdatePPUP`
+  - `MaxTxSizeUTxO`
+  - `FeeTooSmallUTxO`
+  - `WrongBlockBodySizeBBODY`
+  - `InvalidBodyHashBBODY`
+  - `ConflictingMetadataHash`
+  - `StakePoolRetirementWrongEpochPOOL`
+  - `StakePoolCostTooLowPOOL`
+  - `WrongNetworkPOOL`
+  - `NonGenesisUpdatePPUP`
 * Deprecated `applyTxs` and `applyTxsTransition` in `Mempool`
 * Replaced `applyTx` in `ApplyTx` class with `applyTxOpts`
 * Added and exposed `applyTx` in `Mempool`
@@ -292,8 +292,8 @@
 * Added `registerStakeCredential` and `delegateStake` to `ImpTest`
 * Remove protocol version argument from `mkShelleyGlobals` (`maxMajorPV` was removed from `Globals`)
 * Added `EncCBOR` instances for:
-  * `UtxoEnv`
-  * `CertEnv`
+  - `UtxoEnv`
+  - `CertEnv`
 * Expose `ptrMapL`
 
 ### `testlib`
@@ -343,16 +343,16 @@
 * Introduce `ShelleyEraScript` class
 * Add `ShelleyEraScript` for `ShelleyEra`
 * Replace patterns within `MultiSig` with `ShelleyEraScript`-constrained ones:
-  * `RequireSignature`
-  * `RequireAllOf`
-  * `RequireAnyOf`
-  * `RequireMOf`
+  - `RequireSignature`
+  - `RequireAllOf`
+  - `RequireAnyOf`
+  - `RequireMOf`
 * Change signatures of `evalMultiSig` and `validateMultiSig`:
-  * replace `Era` constraint with `ShelleyEraScript`
-  * replace `MultiSig` with `NativeScript`
+  - replace `Era` constraint with `ShelleyEraScript`
+  - replace `MultiSig` with `NativeScript`
 * Add `Inject` instances for:
-  * `UTxOState`
-  * `UtxoEnv`
+  - `UTxOState`
+  - `UtxoEnv`
 
 ### `testlib`
 
@@ -360,8 +360,8 @@
 * Add `ToExpr` for `PoolEnv`.
 * Add `withCborRoundTripFailures`
 * Change signatures of `Arbitrary` instances for `MultiSig`:
-  * replace `Era` constraint with `ShelleyEraScript`
-  * add `NativeScript era ~ MultiSig era` constraint
+  - replace `Era` constraint with `ShelleyEraScript`
+  - add `NativeScript era ~ MultiSig era` constraint
 
 ## 1.11.0.0
 
@@ -374,10 +374,10 @@
 * Export `impNESL` instead of of `impNESG` from `ImpTest`
 * Replace `initImpNES` with `initImpTestState` and change its return type to MonadState
 * Add functions to Shelley `ImpTest`:
-  * `withFixup`
-  * `withCustomFixup`
-  * `withPreFixup`
-  * `withPostFixup`
+  - `withFixup`
+  - `withCustomFixup`
+  - `withPreFixup`
+  - `withPostFixup`
 * Add `ToExpr` and `NFData` instances for `UtxoEnv`
 * Stop fixing up multi assets in the transaction.
 * Change how quickcheck generator is initialized in `runImpTestM` and others derived from it.
@@ -388,26 +388,26 @@
 * Remove the `missingScriptsSymmetricDifference` function
 * Add `NFData` instance for `AdaPots`, `ShelleyDelegEvent`
 * Add `Generic`, `Eq` and `NFData` instances for:
-  * `ShelleyDelegsEvent`
-  * `ShelleyDelplEvent`
-  * `ShelleyEpochEvent`
-  * `ShelleyLedgerEvent`
-  * `ShelleyMirEvent`
-  * `ShelleyNewEpochEvent`
-  * `PoolEvent`
-  * `PoolReap`
-  * `PpupEvent`
-  * `RupdEvent`
-  * `SnapEvent`
-  * `ShelleyTickEvent`
-  * `UtxoEvent`
-  * `ShelleyUtxowEvent`
+  - `ShelleyDelegsEvent`
+  - `ShelleyDelplEvent`
+  - `ShelleyEpochEvent`
+  - `ShelleyLedgerEvent`
+  - `ShelleyMirEvent`
+  - `ShelleyNewEpochEvent`
+  - `PoolEvent`
+  - `PoolReap`
+  - `PpupEvent`
+  - `RupdEvent`
+  - `SnapEvent`
+  - `ShelleyTickEvent`
+  - `UtxoEvent`
+  - `ShelleyUtxowEvent`
 * Rename `NewEpoch` constructor of `ShelleyDelegEvent` to `DelegNewEpoch`
 * Rename `ShelleyGovState` fields:
-  * `proposals` to `sgsCurProposals`
-  * `futureProposals` to `sgsFutureProposals`
-  * `sgovPp` to `sgsCurPParams`
-  * `sgovPrevPp` to `sgsPrevPParams`
+  - `proposals` to `sgsCurProposals`
+  - `futureProposals` to `sgsFutureProposals`
+  - `sgovPp` to `sgsCurPParams`
+  - `sgovPrevPp` to `sgsPrevPParams`
 * Change `UPEC` environment to `LedgerState`
 * Rename `currentPp` to `usCurPParams` and `ppupState` to `usGovState`
 * Change `ApplyTxError`, `TickTransitionError` and `BlockTransitionError`
@@ -420,7 +420,7 @@
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Remove `poolCertTransition`
 * Remove `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `EraGov` #4033
-  * Move `Constitution` to `Conway.Governance.Procedures`
+  - Move `Constitution` to `Conway.Governance.Procedures`
 * Deprecated `keyBy`
 * Add `getShelleyMinFeeTxUtxo`
 * Add implementation for `getMinFeeTxUtxo`
@@ -439,20 +439,20 @@
 ### `testlib`
 
 * Add `ToExpr` instances for:
-  * `ShelleyDelegsEvent`
-  * `ShelleyDelplEvent`
-  * `ShelleyEpochEvent`
-  * `ShelleyLedgerEvent`
-  * `ShelleyMirEvent`
-  * `ShelleyNewEpochEvent`
-  * `PoolEvent`
-  * `PoolReap`
-  * `PpupEvent`
-  * `RupdEvent`
-  * `SnapEvent`
-  * `ShelleyTickEvent`
-  * `UtxoEvent`
-  * `ShelleyUtxowEvent`
+  - `ShelleyDelegsEvent`
+  - `ShelleyDelplEvent`
+  - `ShelleyEpochEvent`
+  - `ShelleyLedgerEvent`
+  - `ShelleyMirEvent`
+  - `ShelleyNewEpochEvent`
+  - `PoolEvent`
+  - `PoolReap`
+  - `PpupEvent`
+  - `RupdEvent`
+  - `SnapEvent`
+  - `ShelleyTickEvent`
+  - `UtxoEvent`
+  - `ShelleyUtxowEvent`
 * Add `SomeSTSEvent`
 * Replaced `small-steps-test` dependency with `small-steps:testlib`
 * Change `submitFailingTx`, `tryRunImpRule` and `trySubmitTx`
@@ -465,22 +465,22 @@
 * Adjust `sendCointTo` and `sendValueTo` to return `TxIn`
 * Added `ToExpr` instance for `ShelleyTxAuxDataRaw`
 * Add:
-  * `PlutusArgs`
-  * `ScriptTestContext`
-  * `shelleyFixupTx`
-  * `impGetScriptTestContext`
-  * `impGetScriptContextMaybe`
-  * `updateAddrTxWits`
-  * `addNativeScriptTxWits`
-  * `addRootTxIn`
-  * `fixupFees`
-  * `logFeeMismatch`
-  * `impScriptsL`
-  * `impNativeScriptsG`
+  - `PlutusArgs`
+  - `ScriptTestContext`
+  - `shelleyFixupTx`
+  - `impGetScriptTestContext`
+  - `impGetScriptContextMaybe`
+  - `updateAddrTxWits`
+  - `addNativeScriptTxWits`
+  - `addRootTxIn`
+  - `fixupFees`
+  - `logFeeMismatch`
+  - `impScriptsL`
+  - `impNativeScriptsG`
 * Add:
-  * `expectRegisteredRewardAddress`
-  * `expectNotRegisteredRewardAddress`
-  * `expectTreasury`
+  - `expectRegisteredRewardAddress`
+  - `expectNotRegisteredRewardAddress`
+  - `expectTreasury`
 * Add `ToExpr` instances for `AdaPots` and `Obligations`
 
 ## 1.9.0.0
@@ -505,9 +505,9 @@
   `Cardano.Ledger.Shelley.Core`.
 * Deprecated unused `hashMultiSigScript`, `txwitsScript`
 * Delete deprecated modules:
-  * `Cardano.Ledger.Shelley.Orphans`
-  * `Cardano.Ledger.Shelley.Delegation.PoolParams`
-  * `Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits`
+  - `Cardano.Ledger.Shelley.Orphans`
+  - `Cardano.Ledger.Shelley.Delegation.PoolParams`
+  - `Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits`
 * Remove deprecated functions: `updateTxBodyG`, `totalCertsDeposits`,
   `totalCertsDepositsCertState`, `totalTxRefundsShelley`, `keyCertsRefunds`,
   `keyCertsRefundsCertState`, `totalTxDeposits`, `totalTxDepositsShelley` `minfee`,
@@ -583,29 +583,29 @@
 * Remove `validateDelegationRegistered` in favor of a new and more specific validating
   function `validateStakePoolDelegateeRegistered`.
 * Add `ToExpr` instances for:
-  * `ShelleyDelegPredFailure`
-  * `ShelleyDelegsPredFailure`
-  * `ShelleyDelplPredFailure`
-  * `ShelleyEpochPredFailure`
-  * `ShelleyLedgerPredFailure`
-  * `ShelleyPpupPredFailure`
-  * `ShelleyUtxoPredFailure`
-  * `VotingPeriod`
+  - `ShelleyDelegPredFailure`
+  - `ShelleyDelegsPredFailure`
+  - `ShelleyDelplPredFailure`
+  - `ShelleyEpochPredFailure`
+  - `ShelleyLedgerPredFailure`
+  - `ShelleyPpupPredFailure`
+  - `ShelleyUtxoPredFailure`
+  - `VotingPeriod`
 * Add `NFData` instances for:
-  * `ShelleyMirPredFailure`
-  * `ShelleyNewEpochPredFailure`
-  * `ShelleyNewppPredFailure`
-  * `ShelleyPoolreapPredFailure`
-  * `ShelleySnapPredFailure`
-  * `ShelleyUpecPredFailure`
+  - `ShelleyMirPredFailure`
+  - `ShelleyNewEpochPredFailure`
+  - `ShelleyNewppPredFailure`
+  - `ShelleyPoolreapPredFailure`
+  - `ShelleySnapPredFailure`
+  - `ShelleyUpecPredFailure`
 * Add `epochStateGovStateL`
 * Add `shelleyCommonPParamsHKDPairsV8`
 * Add `ToExpr` instances for:
-  * `ShelleyPoolPredFailure`
-  * `ShelleyUtxowPredFailure`
+  - `ShelleyPoolPredFailure`
+  - `ShelleyUtxowPredFailure`
 * Add `NFData` instance for:
-  * `ShelleyRupdPredFailure`
-  * `ShelleyTickPredFailure`
+  - `ShelleyRupdPredFailure`
+  - `ShelleyTickPredFailure`
 * Rename `validateFailedScripts` to `validateFailedNativeScripts` and change its
   arguments.
 * Change type of `validateMissingScripts`
@@ -619,10 +619,10 @@
 ## 1.6.1.0
 
 * Add `ToExpr` instance for:
-  * `Update`
-  * `ShelleyTx`
-  * `ShelleyTxBody`
-  * `ShelleyTxWits`
+  - `Update`
+  - `ShelleyTx`
+  - `ShelleyTxBody`
+  - `ShelleyTxWits`
 * Add `Generic` instance for `ShelleyTx`
 * Add `Memoized` instance for `ShelleyTx`
 * Introduce `Cardano.Ledger.Shelley.Transition` module with `EraTransition` interface.
@@ -634,8 +634,8 @@
 
 * Add `Arbitrary` instance for `Constitution`
 * `Test.Cardano.Ledger.Shelley.Binary.RoundTrip` module with:
-  * `roundTripShelleyCommonSpec`
-  * `roundTripStateEraTypesSpec`
+  - `roundTripShelleyCommonSpec`
+  - `roundTripStateEraTypesSpec`
 
 ## 1.6.1.0
 
@@ -671,43 +671,43 @@
 * Replace `constitutionHash` with `constitutionAnchor`
 * Add `upgradeShelleyTxCert`
 * Rename `*governance*` to `*gov*` #3607
-  * `EraGovernance` to `EraGov`
-  * `GovernanceState` to `GovState`
-  * `witsVKeyNeededNoGovernance` to `witsVKeyNeededNoGov`
-  * `witsVKeyNeededGovernance` to `witsVKeyNeededGov`
-  * `utxosGovernance` to `utxosGovState`
+  - `EraGovernance` to `EraGov`
+  - `GovernanceState` to `GovState`
+  - `witsVKeyNeededNoGovernance` to `witsVKeyNeededNoGov`
+  - `witsVKeyNeededGovernance` to `witsVKeyNeededGov`
+  - `utxosGovernance` to `utxosGovState`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary.
 * Rename `getProducedValue` to `shelleyProducedValue`
 * Change the constraints on `produced` and `evaluateTransactionBalance`
 * Add `lsCertStateL`
 * Make new `Constitution` datatype #3556
-  * Adopt some Default instances for example SafeHash
+  - Adopt some Default instances for example SafeHash
 * Add new methods to `EraGovernance`:
-  * `curPParamsGovStateL`
-  * `prevPParamsGovStateL`
+  - `curPParamsGovStateL`
+  - `prevPParamsGovStateL`
 * Rename `ShelleyPPUPState` to `ShelleyGovState`
 * Add new fields to `ShelleyGovState`:
-  * `sgovPp`
-  * `sgovPrevPp`
+  - `sgovPp`
+  - `sgovPrevPp`
 * Add lenses:
-  * `proposalsL`
-  * `futureProposalsL`
-  * `esAccountStateL`
-  * `esSnapshotsL`
-  * `esNonMyopicL`
+  - `proposalsL`
+  - `futureProposalsL`
+  - `esAccountStateL`
+  - `esSnapshotsL`
+  - `esNonMyopicL`
 * Remove `esPrevPp` and `esPp` from `EpochState`
 * Rename `esPrevPpL` to `prevPParamsEpochStateL`
 * Rename `esPpL` to `curPParamsEpochStateL`
 * Swap the order of `esSnapshots` and `esLState` in `EpochState`
 * Add lenses:
-  * `lsCertStateL`
-  * `utxosStakeDistrL`
-  * `utxosDonationL`
-  * `utxosUtxoL`
-  * `utxosDepositedL`
-  * `esAccountStateL`
-  * `asTreasuryL`
-  * `asReservesL`
+  - `lsCertStateL`
+  - `utxosStakeDistrL`
+  - `utxosDonationL`
+  - `utxosUtxoL`
+  - `utxosDepositedL`
+  - `esAccountStateL`
+  - `asTreasuryL`
+  - `asReservesL`
 
 ## 1.4.2.0
 
@@ -718,7 +718,7 @@
 ## 1.4.1.0
 
 * Add `getConstitutionHash` to `EraGovernance` #3506
-  * Also add `nesEpochStateL` to `LedgerState.Types`
+  - Also add `nesEpochStateL` to `LedgerState.Types`
 
 ## 1.4.0.0
 
@@ -727,9 +727,9 @@
 * Changed the signature of `validateNeededWitnesses`
 * Added `witsVKeyNeededGovernance` and `witsVKeyNeededNoGovernance`
 * Added protocol version bound to
-  * `STS (ShelleyUTXOW era)` instance
-  * `transitionRulesUTXOW`
-  * `witsVKeyNeeded`
+  - `STS (ShelleyUTXOW era)` instance
+  - `transitionRulesUTXOW`
+  - `witsVKeyNeeded`
 * Prevent using `getMirTxCert` from being used in eras after Babbage. This also affects
   all functions that use it
 * Prevent using `mkGenesisDelegTxCert`, `getGenesisDelegTxCert` and `GenesisDelegTxCert`
@@ -744,10 +744,10 @@
   `Cardano.Ledger.Shelley.Delegation.PoolParams` modules
 * Added `Cardano.Ledger.Shelley.TxCert` module
 * Make `DCert` parameterized on `era` instead of `c`rypto and rename it as `ShelleyTxCert`:
-  * `DCertDelegCert` -> `ShelleyTxCertDeleg`
-  * `DCertPool` -> `ShelleyTxCertPool`
-  * `DCertGenesis` -> `ShelleyTxCertGenesis`
-  * `DCertMir` -> `ShelleyTxCertMir`
+  - `DCertDelegCert` -> `ShelleyTxCertDeleg`
+  - `DCertPool` -> `ShelleyTxCertPool`
+  - `DCertGenesis` -> `ShelleyTxCertGenesis`
+  - `DCertMir` -> `ShelleyTxCertMir`
 * Introduce `TxCert` type family with pattern synonyms and rename the actual `DCert` type into
   `ShelleyTxCert`
 * Introduce `ShelleyEraTxCert` type class.
@@ -756,17 +756,17 @@
 * Add helper functions `shelleyTxCertDelegDecoder`, `commonTxCertDecoder`, `encodeShelleyDelegCert`,
   `encodePoolCert` and `encodeConstitutionalCert`
 * Deprecate:
-  * `RegKey` in favor of `ShelleyRegCert`
-  * `DeRegKey` in favor of `ShelleyUnRegCert`
-  * `Delegate` in favor of `ShelleyDelegCert`
+  - `RegKey` in favor of `ShelleyRegCert`
+  - `DeRegKey` in favor of `ShelleyUnRegCert`
+  - `Delegate` in favor of `ShelleyDelegCert`
 * Addition of `getVKeyWitnessShelleyTxCert` and `getScriptWitnessShelleyTxCert`
 * Deprecate:
-  * `extractKeyHashWitnessSet` in favor of `credKeyHashWitness`
-  * `scriptCred` in favor of `credScriptHash`
-  * `scriptStakeCred` in favor of `getScriptWitnessTxCert`
-  * `requiresVKeyWitness` in favor of `getVKeyWitnessTxCert`
-  * `delegCWitness` - no longer used.
-  * `propWits` - will become an internal function in the future version
+  - `extractKeyHashWitnessSet` in favor of `credKeyHashWitness`
+  - `scriptCred` in favor of `credScriptHash`
+  - `scriptStakeCred` in favor of `getScriptWitnessTxCert`
+  - `requiresVKeyWitness` in favor of `getVKeyWitnessTxCert`
+  - `delegCWitness` - no longer used.
+  - `propWits` - will become an internal function in the future version
 * `validateNeededWitnesses` no longer accepts `witsVKeyNeeded` as an argument.
 * Move `ConstitutionalDelegCert` from `cardano-ledger-core` as `GenesisDelegCert`.
 * Fixed `NoThunks (ShelleyGenesis c)` instance, as it was incorrectly disallowing thunks in its `sgInitialFunds` and `sgStaking` fields
@@ -779,9 +779,9 @@
 * Rename `keyCertsRefundsDPState` to `keyCertsRefundsCertState`
 * Rename `totalCertsDepositsDPState` to `totalCertsDepositsCertState`
 * Added new functions to `DELEGS` rule
-  * `drainWithdrawals`
-  * `validateZeroRewards`
-  * `validateDelegationRegistered`
+  - `drainWithdrawals`
+  - `validateZeroRewards`
+  - `validateDelegationRegistered`
 
 ## 1.1.1.0
 
@@ -791,29 +791,29 @@
 
 * Added a default implementation for `emptyGovernanceState`
 * Added lenses:
-  * `esAccountStateL`
-  * `esSnapshotsL`
-  * `esLStateL`
-  * `esPrevPpL`
-  * `esPpL`
-  * `esNonMyopicL`
-  * `lsUTxOState`
-  * `lsDPState`
-  * `utxosUtxo`
-  * `utxosDeposited`
-  * `utxosFees`
-  * `utxosGovernance`
-  * `utxosStakeDistr`
+  - `esAccountStateL`
+  - `esSnapshotsL`
+  - `esLStateL`
+  - `esPrevPpL`
+  - `esPpL`
+  - `esNonMyopicL`
+  - `lsUTxOState`
+  - `lsDPState`
+  - `utxosUtxo`
+  - `utxosDeposited`
+  - `utxosFees`
+  - `utxosGovernance`
+  - `utxosStakeDistr`
 * Added `ToJSON` instance for `ShelleyTxOut`
 * Added `ToJSON` instance for `AlonzoPParams StrictMaybe`
 * Added `ToJSON (GovernanceState era)` superclass constraint for `EraGovernance`
 * Added `ToJSON` instance for:
-  * `ShelleyTxOut`
-  * `AlonzoPParams StrictMaybe`
-  * `ProposedPPUpdates` and `ShelleyPPUPState`
-  * `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
-  * `Likelihood` and `NonMyopic`
-  * `RewardUpdate` and `PulsingRewUpdate`
+  - `ShelleyTxOut`
+  - `AlonzoPParams StrictMaybe`
+  - `ProposedPPUpdates` and `ShelleyPPUPState`
+  - `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
+  - `Likelihood` and `NonMyopic`
+  - `RewardUpdate` and `PulsingRewUpdate`
 * Added of `ToJSON`/`FromJSON` instances for `LogWeight`
 * Change `totalCertsDeposits` to accept a function that checks for registered pools,
   rather than the `DPState`. Use `totalCertsDepositsDPState` for the previous behavior
