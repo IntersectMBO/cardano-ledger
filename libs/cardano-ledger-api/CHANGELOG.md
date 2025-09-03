@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `queryPoolState` and bring back `queryPoolParameters` state query.
 * Add `queryDRepDelegations` state query
 * Remove `filterStakePoolDelegsAndRewards` as unnecessary. Use `queryStakePoolDelegsAndRewards` instead
 * Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`
