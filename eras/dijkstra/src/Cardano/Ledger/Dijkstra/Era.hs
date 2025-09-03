@@ -8,6 +8,7 @@
 
 module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
+  DijkstraCERT,
 ) where
 
 import Cardano.Ledger.Conway (ConwayEra)
@@ -90,7 +91,9 @@ type instance EraRule "RATIFY" DijkstraEra = ConwayRATIFY DijkstraEra
 
 type instance EraRule "CERTS" DijkstraEra = ConwayCERTS DijkstraEra
 
-type instance EraRule "CERT" DijkstraEra = ConwayCERT DijkstraEra
+data DijkstraCERT era
+
+type instance EraRule "CERT" DijkstraEra = DijkstraCERT DijkstraEra
 
 type instance EraRule "DELEG" DijkstraEra = ConwayDELEG DijkstraEra
 

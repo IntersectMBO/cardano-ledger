@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoEraSpecificSpec) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -73,7 +73,6 @@ spec = describe "Invalid transactions" $ do
       describe (show lang) $ do
         let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
             alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
-            alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang
 
         it "MissingRedeemers" $ do
           let scriptHash = redeemerSameAsDatumHash
@@ -156,25 +155,6 @@ spec = describe "Invalid transactions" $ do
             then submitPhase2Invalid_ tx
             else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
-        it "No ExtraRedeemers on same script certificates" $ do
-          Positive n <- arbitrary
-          replicateM_ n $ freshKeyHash >>= registerPool
-          pools <- getsNES $ nesEsL . epochStateStakePoolsL
-          poolId <- elements $ Map.keys pools
-          let scriptHash = alwaysSucceedsNoDatumHash
-              cred = ScriptHashObj scriptHash
-              certs =
-                [ mkRegTxCert cred
-                , mkDelegStakeTxCert cred poolId
-                , mkUnRegTxCert cred
-                ]
-          tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
-          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-          Map.keys redeemers
-            `shouldBe` [ mkCertifyingPurpose $ AsIx 1
-                       , mkCertifyingPurpose $ AsIx 2
-                       ]
-
         it "Missing phase-2 script witness" $ do
           let scriptHash = alwaysSucceedsWithDatumHash
           txIn <- produceScript scriptHash
@@ -252,6 +232,43 @@ spec = describe "Invalid transactions" $ do
             it "Spending" $
               testPurpose (mkSpendingPurpose $ AsIx 99)
 
+alonzoEraSpecificSpec ::
+  forall era.
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+alonzoEraSpecificSpec = describe "Invalid transactions" $ do
+  forM_ (eraLanguages @era) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        let alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+            alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang
+
+        it "No ExtraRedeemers on same script certificates" $ do
+          Positive n <- arbitrary
+          replicateM_ n $ freshKeyHash >>= registerPool
+          pools <- getsNES $ nesEsL . epochStateStakePoolsL
+          poolId <- elements $ Map.keys pools
+          let scriptHash = alwaysSucceedsNoDatumHash
+              cred = ScriptHashObj scriptHash
+              certs =
+                [ mkRegTxCert cred
+                , mkDelegStakeTxCert cred poolId
+                , mkUnRegTxCert cred
+                ]
+          tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
+          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+          Map.keys redeemers
+            `shouldBe` [ mkCertifyingPurpose $ AsIx 1
+                       , mkCertifyingPurpose $ AsIx 2
+                       ]
+
+        -- Post-Alonzo eras produce additional post-Alonzo predicate failures that we can't include here
+        unless (lang > eraMaxLanguage @AlonzoEra) $ do
+          describe "Extra Redeemer" $ do
             it "Multiple equal plutus-locked certs" $ do
               let scriptHash = alwaysSucceedsWithDatumHash
               Positive n <- arbitrary

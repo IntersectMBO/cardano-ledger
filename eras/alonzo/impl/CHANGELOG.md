@@ -54,6 +54,7 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec AlonzoEra` instance
 * Added shrinking to `AlonzoTxAuxData`, `Redeemers`, `TxDats`
 * Added `Examples` module with: `ledgerExamples`, `mkLedgerExamples`, `exampleTx`, `exampleDatum`, `exampleAlonzoGenesis`
 * Added `Twiddle` instances for Alonzo core types

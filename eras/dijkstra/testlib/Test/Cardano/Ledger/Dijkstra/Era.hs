@@ -1,7 +1,9 @@
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Era (
   module Test.Cardano.Ledger.Conway.Era,
+  DijkstraEraTest,
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -22,6 +24,10 @@ instance EraTest DijkstraEra where
 
   accountsToUMap = conwayAccountsToUMap
 
+class
+  ConwayEraTest era =>
+  DijkstraEraTest era
+
 instance ShelleyEraTest DijkstraEra
 
 instance AllegraEraTest DijkstraEra
@@ -33,3 +39,5 @@ instance AlonzoEraTest DijkstraEra
 instance BabbageEraTest DijkstraEra
 
 instance ConwayEraTest DijkstraEra
+
+instance DijkstraEraTest DijkstraEra

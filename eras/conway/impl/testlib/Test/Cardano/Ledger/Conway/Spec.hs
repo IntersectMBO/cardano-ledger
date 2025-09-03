@@ -18,18 +18,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Binary (DecCBOR)
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraScript (..),
-  AsIx,
-  EraRule,
-  EraTx (..),
-  EraTxBody (..),
-  EraTxCert (..),
-  EraTxWits (..),
-  InjectRuleEvent,
-  InjectRuleFailure,
-  SafeToHash,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
   ConwayCertsPredFailure,
@@ -49,7 +38,6 @@ import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.API (ApplyTx)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -65,7 +53,7 @@ import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, EraSpecificSpec)
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
@@ -76,6 +64,7 @@ spec ::
   forall era.
   ( RuleListEra era
   , ConwayEraImp era
+  , EraSpecificSpec era
   , ApplyTx era
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
@@ -96,7 +85,6 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
@@ -111,6 +99,7 @@ spec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "BBODY" era))
+  , ShelleyEraTxCert era
   , TxCert era ~ ConwayTxCert era
   ) =>
   Spec
@@ -122,7 +111,7 @@ spec =
     CommitteeRatify.spec @era
     SPORatifySpec.spec @era
     roundTripJsonEraSpec @era
-    describe "Imp" $
+    describe "Imp" $ do
       Imp.spec @era
     describe "CostModels" $ do
       CostModelsSpec.spec @era

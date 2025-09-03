@@ -8,7 +8,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
+  spec,
+  conwayEraSpecificSpec,
+) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
@@ -75,11 +78,11 @@ spec = do
                 [ RegPoolTxCert poolParams
                 , RegDRepTxCert dRepCred dRepDeposit anchor
                 , RegDepositDelegTxCert cred0 delegatee accountDeposit
-                , RegTxCert cred1
+                , RegDepositTxCert cred1 accountDeposit
                 , RegDepositTxCert cred2 accountDeposit
                 , RegDepositTxCert cred3 accountDeposit
-                , UnRegTxCert cred2
                 , UnRegDepositTxCert cred1 accountDeposit
+                , UnRegDepositTxCert cred2 accountDeposit
                 , RegDepositTxCert cred4 accountDeposit
                 ]
       utxoAfterRegister <- getUTxO
@@ -106,7 +109,7 @@ spec = do
               .~ SSeq.fromList
                 [ RetirePoolTxCert poolId (succ curEpochNo)
                 , UnRegDRepTxCert dRepCred dRepDeposit
-                , UnRegTxCert cred3
+                , UnRegDepositTxCert cred3 accountDeposit
                 , UnRegDepositTxCert cred4 accountDeposit
                 ]
       utxoAfterUnRegister <- getUTxO
@@ -178,3 +181,79 @@ spec = do
         [ injectFailure $
             CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era [txIn]]
         ]
+
+conwayEraSpecificSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , ShelleyEraTxCert era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwayEraSpecificSpec = do
+  describe "Certificates" $ do
+    it "Reg/UnReg collect and refund correct amounts" $ do
+      utxoStart <- getUTxO
+      accountDeposit <- getsPParams ppKeyDepositL
+      stakePoolDeposit <- getsPParams ppPoolDepositL
+      dRepDeposit <- getsPParams ppDRepDepositL
+      cred0 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred1 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred2 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred3 <- KeyHashObj <$> freshKeyHash @'Staking
+      cred4 <- KeyHashObj <$> freshKeyHash @'Staking
+      poolId <- freshKeyHash
+      poolParams <- freshPoolParams poolId (RewardAccount Testnet cred0)
+      dRepCred <- KeyHashObj <$> freshKeyHash @'DRepRole
+      let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
+      anchor <- arbitrary
+      txRegister <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.fromList
+                [ RegPoolTxCert poolParams
+                , RegDRepTxCert dRepCred dRepDeposit anchor
+                , RegDepositDelegTxCert cred0 delegatee accountDeposit
+                , RegTxCert cred1
+                , RegDepositTxCert cred2 accountDeposit
+                , RegDepositTxCert cred3 accountDeposit
+                , UnRegTxCert cred2
+                , UnRegDepositTxCert cred1 accountDeposit
+                , RegDepositTxCert cred4 accountDeposit
+                ]
+      utxoAfterRegister <- getUTxO
+      -- Overwrite deposit protocol parameters in order to ensure they does not affect refunds
+      modifyPParams
+        ( \pp ->
+            pp
+              & ppKeyDepositL .~ Coin 1
+              & ppPoolDepositL .~ Coin 2
+              & ppDRepDepositL .~ Coin 3
+        )
+      (sumUTxO utxoStart <-> sumUTxO utxoAfterRegister)
+        `shouldBe` inject
+          ( (txRegister ^. bodyTxL . feeTxBodyL)
+              <+> ((3 :: Int) <×> accountDeposit) -- Only three accounts retained that are still registered
+              <+> stakePoolDeposit
+              <+> dRepDeposit
+          )
+      curEpochNo <- getsNES nesELL
+      txUnRegister <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.fromList
+                [ RetirePoolTxCert poolId (succ curEpochNo)
+                , UnRegDRepTxCert dRepCred dRepDeposit
+                , UnRegTxCert cred3
+                , UnRegDepositTxCert cred4 accountDeposit
+                ]
+      utxoAfterUnRegister <- getUTxO
+      let totalFees = (txRegister ^. bodyTxL . feeTxBodyL) <+> (txUnRegister ^. bodyTxL . feeTxBodyL)
+      fees <- getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosFeesL)
+      totalFees `shouldBe` fees
+      -- only deposits for stake pool and its account are not refunded at this point
+      (sumUTxO utxoStart <-> sumUTxO utxoAfterUnRegister)
+        `shouldBe` inject (totalFees <+> stakePoolDeposit <+> accountDeposit)
+      passEpoch
+      -- Check for successfull pool refund
+      getBalance cred0 `shouldReturn` stakePoolDeposit

@@ -188,9 +188,7 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
   forall era.
-  ( ChainProperty era
-  , ShelleyEraTxBody era
-  ) =>
+  ChainProperty era =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
   (ChainState era, Trace (ShelleyPOOL era))

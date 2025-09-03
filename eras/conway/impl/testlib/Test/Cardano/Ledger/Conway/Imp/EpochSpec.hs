@@ -88,7 +88,7 @@ proposalsSpec =
         pp
           & ppGovActionLifetimeL .~ EpochInterval 1
           & ppGovActionDepositL .~ deposit
-      rewardAccount <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
 
       initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
 
@@ -398,8 +398,8 @@ treasurySpec =
 
     it "TreasuryWithdrawalExtra" $ whenPostBootstrap $ do
       disableTreasuryExpansion
-      rewardAccount <- registerRewardAccount
-      rewardAccountOther <- registerRewardAccount
+      rewardAccount <- registerRewardAccountWithDeposit
+      rewardAccountOther <- registerRewardAccountWithDeposit
       govPolicy <- getGovPolicy
       treasuryWithdrawalExpectation
         [ TreasuryWithdrawals (Map.singleton rewardAccount (Coin 667)) govPolicy
@@ -424,7 +424,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES treasuryL
   treasuryStart `shouldBe` withdrawalAmount
-  rewardAccount <- registerRewardAccount
+  rewardAccount <- registerRewardAccountWithDeposit
   govPolicy <- getGovPolicy
   (govActionId NE.:| _) <-
     submitGovActions $
@@ -443,7 +443,8 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   impAnn "Withdrawal received by reward account" $
     getBalance (raCredential rewardAccount) `shouldReturn` withdrawalAmount
 
-depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
+depositMovesToTreasuryWhenStakingAddressUnregisters ::
+  ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do
   disableTreasuryExpansion
   initialTreasury <- getsNES treasuryL
@@ -452,8 +453,9 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
       & ppGovActionLifetimeL .~ EpochInterval 8
       & ppGovActionDepositL .~ Coin 100
       & ppCommitteeMaxTermLengthL .~ EpochInterval 0
-  returnAddr <- registerRewardAccount
+  returnAddr <- registerRewardAccountWithDeposit
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  keyDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   govPolicy <- getGovPolicy
   gaid <-
     mkProposalWithRewardAccount
@@ -472,7 +474,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton
-          (UnRegTxCert $ raCredential returnAddr)
+          (UnRegDepositTxCert (raCredential returnAddr) keyDeposit)
   expectNotRegisteredRewardAddress returnAddr
   replicateM_ 5 passEpoch
   expectMissingGovActionId gaid
@@ -499,6 +501,7 @@ eventsSpec = describe "Events" $ do
           & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
       propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+      keyDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       let
         proposeParameterChange = do
           newVal <- CoinPerByte . Coin <$> choose (3000, 6500)
@@ -507,7 +510,7 @@ eventsSpec = describe "Events" $ do
             (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
       (proposalA, checkProposedParameterA) <- proposeParameterChange
       (proposalB, _) <- proposeParameterChange
-      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
+      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccountWithDeposit
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- CoinPerByte . Coin <$> choose (3000, 6500)
@@ -536,7 +539,7 @@ eventsSpec = describe "Events" $ do
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (UnRegTxCert rewardCred)
+            .~ SSeq.singleton (UnRegDepositTxCert rewardCred keyDeposit)
       passEpochWithNoDroppedActions
       (_, evs) <- listen passEpoch
       checkProposedParameterA

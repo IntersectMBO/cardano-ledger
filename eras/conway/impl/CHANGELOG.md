@@ -2,6 +2,12 @@
 
 ## 1.20.0.0
 
+* Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
+  * `DecCBOR ConwayTxCert`
+  * `transTxCert`
+  * `transTxCertV1V2`
+* Added `conwayGovCertVKeyWitness`
+* Added `conwayTxCertDelegDecoder`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Rename `transScriptPurpose` to `transPlutusPurposeV3`
 * Make `transValidityInterval` implicit to eras instead of protocol versions.
@@ -92,6 +98,25 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec ConwayEra` instance
+* Added `registerRewardAccountWithDeposit`
+* Added `regDelegToDRep`
+* Generalised the following helpers and thus changed their constraints to `ConwayEraImp`:
+  * `setupPoolWithStake`
+  * `setupPoolWithoutStake`
+  * `trySubmitGovAction`
+  * `trySubmitGovActions`
+  * `mkProposal`
+  * `submitGovAction`
+  * `submitGovAction_`
+  * `submitGovActions`
+  * `submitTreasuryWithdrawals`
+  * `submitFailingGovAction`
+* Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
+  * `genUnRegTxCert`
+  * `genRegTxCert`
+* Added `registerPoolWithDeposit`
+* Added `registerStakeCredentialWithDeposit`
 * Added `Examples` module with: `ledgerExamples`, `exampleConwayCerts`
 * Fix CDDL for `MultiAsset` in `TxOut` as well as the `Tx` mint field.
 * Add `mkConwayTestAccountState` and `conwayAccountsToUMap`

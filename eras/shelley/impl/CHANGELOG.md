@@ -91,6 +91,13 @@
 
 ### `testlib`
 
+* Added `EraSpecificSpec ShelleyEra` instance
+* Added `EraSpecificSpec` class
+* Removed `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:
+  * `registerStakeCredential`
+  * `delegateStake`
+  * `registerRewardAccount`
+  * `registerPool`
 * Added `withEachEraVersion`
 * Added `Examples` module with: `LedgerExamples`, `ledgerExamples`, `mkLedgerExamples`, `exampleCerts`,`exampleWithdrawals`, `exampleAuxDataMap`, `exampleNonMyopicRewards`, `exampleCoin`, `examplePayKey`, `exampleStakeKey`, `exampleNewEpochState`, `examplePoolDistr`, `examplePoolParams`, `exampleTxIns`, `exampleProposedPPUpdates`, `exampleByronAddress`, `testShelleyGenesis`, `keyToCredential`, `mkDSIGNKeyPair`, `mkKeyHash`, `mkScriptHash`, `mkWitnessesPreAlonzo`, `seedFromByte`, `seedFromWords`
 * Add `nativeAlwaysFails`, `nativeAlwaysSucceeds`

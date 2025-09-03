@@ -16,6 +16,7 @@ module Cardano.Ledger.Dijkstra.TxInfo (
   transPlutusPurposeV3,
 ) where
 
+import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
@@ -31,12 +32,13 @@ import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (Inject (..), ProtVer (..), strictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..), ConwayEraPlutusTxInfo (..))
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..), PlutusScript (..))
-import Cardano.Ledger.Dijkstra.TxCert ()
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (
   Language (..),
@@ -45,10 +47,14 @@ import Cardano.Ledger.Plutus (
   TxOutSource (..),
   transCoinToLovelace,
   transCoinToValue,
+  transCred,
   transDatum,
+  transEpochNo,
+  transKeyHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.State (PoolParams (..))
 import Control.Monad (zipWithM)
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -135,7 +141,7 @@ transPlutusPurposeV3 pv = \case
     Left $ inject $ PlutusPurposeNotSupported @era . hoistPlutusPurpose @era toAsItem $ inject purpose
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
-  toPlutusTxCert _ _ = Conway.transTxCertV1V2
+  toPlutusTxCert _ _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy pv =
     transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
@@ -169,8 +175,30 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
+transTxCertV1V2 ::
+  ( ConwayEraTxCert era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  TxCert era ->
+  Either (ContextError era) PV1.DCert
+transTxCertV1V2 = \case
+  RegDepositTxCert stakeCred _deposit ->
+    Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegDepositTxCert stakeCred _refund ->
+    Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  DelegTxCert stakeCred (DelegStake keyHash) ->
+    Right $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+    Right $
+      PV1.DCertPoolRegister
+        (transKeyHash ppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+  RetirePoolTxCert poolId retireEpochNo ->
+    Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  txCert -> Left $ inject $ CertificateNotSupported txCert
+
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
-  toPlutusTxCert _ _ = Conway.transTxCertV1V2
+  toPlutusTxCert _ _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
 
@@ -208,7 +236,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusArgs = Babbage.toPlutusV2Args
 
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
-  toPlutusTxCert _ pv = pure . Conway.transTxCert pv
+  toPlutusTxCert _ _ = pure . transTxCert
 
   toPlutusScriptPurpose _ = transPlutusPurposeV3
 
@@ -261,6 +289,40 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusArgs = Conway.toPlutusV3Args
 
+transTxCert ::
+  (ConwayEraTxCert era, TxCert era ~ DijkstraTxCert era) => TxCert era -> PV3.TxCert
+transTxCert = \case
+  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+    PV3.TxCertPoolRegister
+      (transKeyHash ppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+  RetirePoolTxCert poolId retireEpochNo ->
+    PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  RegDepositTxCert stakeCred deposit ->
+    PV3.TxCertRegStaking (transCred stakeCred) (Just $ transCoinToLovelace deposit)
+  UnRegDepositTxCert stakeCred refund ->
+    PV3.TxCertUnRegStaking (transCred stakeCred) (Just $ transCoinToLovelace refund)
+  DelegTxCert stakeCred delegatee ->
+    PV3.TxCertDelegStaking (transCred stakeCred) (Conway.transDelegatee delegatee)
+  RegDepositDelegTxCert stakeCred delegatee deposit ->
+    PV3.TxCertRegDeleg
+      (transCred stakeCred)
+      (Conway.transDelegatee delegatee)
+      (transCoinToLovelace deposit)
+  AuthCommitteeHotKeyTxCert coldCred hotCred ->
+    PV3.TxCertAuthHotCommittee
+      (Conway.transColdCommitteeCred coldCred)
+      (Conway.transHotCommitteeCred hotCred)
+  ResignCommitteeColdTxCert coldCred _anchor ->
+    PV3.TxCertResignColdCommittee (Conway.transColdCommitteeCred coldCred)
+  RegDRepTxCert drepCred deposit _anchor ->
+    PV3.TxCertRegDRep (Conway.transDRepCred drepCred) (transCoinToLovelace deposit)
+  UnRegDRepTxCert drepCred refund ->
+    PV3.TxCertUnRegDRep (Conway.transDRepCred drepCred) (transCoinToLovelace refund)
+  UpdateDRepTxCert drepCred _anchor ->
+    PV3.TxCertUpdateDRep (Conway.transDRepCred drepCred)
+  _ -> error "Impossible: All TxCerts should have been accounted for"
+
 instance ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
@@ -268,7 +330,7 @@ instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
-  toPlutusTxCert _ pv = pure . Conway.transTxCert pv
+  toPlutusTxCert _ _ = pure . transTxCert
 
   toPlutusScriptPurpose _ = error "stub: PlutusV4 not yet implemented"
 
