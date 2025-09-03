@@ -102,7 +102,7 @@ class AllegraEraTxAuxData era => AlonzoEraTxAuxData era where
 
 data AlonzoTxAuxDataRaw era = AlonzoTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
-  , atadrNative :: !(StrictSeq (NativeScript era))
+  , atadrNativeScripts :: !(StrictSeq (NativeScript era))
   , atadrPlutus :: !(Map Language (NE.NonEmpty PlutusBinary))
   }
   deriving (Generic)
