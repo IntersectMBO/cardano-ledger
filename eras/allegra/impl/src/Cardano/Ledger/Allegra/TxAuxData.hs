@@ -87,6 +87,12 @@ deriving instance Eq (NativeScript era) => Eq (AllegraTxAuxDataRaw era)
 
 class EraTxAuxData era => AllegraEraTxAuxData era where
   nativeScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (NativeScript era))
+  
+  timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
+  default timelockScriptsTxAuxDataL :: NativeScript era ~ Timelock era => Lens' (TxAuxData era) (StrictSeq (Timelock era))
+  timelockScriptsTxAuxDataL = nativeScriptsTxAuxDataL
+
+{-# DEPRECATED timelockScriptsTxAuxDataL "In favor of `nativeScriptsTxAuxDataL`" #-}
 
 instance EraTxAuxData AllegraEra where
   type TxAuxData AllegraEra = AllegraTxAuxData AllegraEra
