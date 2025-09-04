@@ -98,6 +98,8 @@ instance MaybeBounded Coin where
 
 instance OrdLike Coin
 
+instance HasDivision Coin
+
 instance NumLike Coin
 
 instance Foldy Coin where
