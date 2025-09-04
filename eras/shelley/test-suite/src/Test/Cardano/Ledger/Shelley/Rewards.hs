@@ -279,7 +279,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
-genRewardPPs :: (EraPParams era, ProtVerAtMost era 6) => Gen (PParams era)
+genRewardPPs :: (EraPParams era, AtMostEra "Alonzo" era) => Gen (PParams era)
 genRewardPPs = do
   d <- g decentralizationRange
   tau <- g tauRange
@@ -305,7 +305,7 @@ toCompactCoinError c =
 
 rewardsBoundedByPot ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Alonzo" era) =>
   Proxy era ->
   Property
 rewardsBoundedByPot _ = property $ do

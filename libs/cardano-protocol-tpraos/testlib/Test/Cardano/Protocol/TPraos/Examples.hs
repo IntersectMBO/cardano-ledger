@@ -111,15 +111,13 @@ ledgerExamplesTPraos ::
 ledgerExamplesTPraos =
   mkProtocolLedgerExamples
     exampleHashHeader
-    (exampleBlockHeader @era)
+    exampleBlockHeader
     (exampleChainDepState 1)
 
 exampleHashHeader :: HashHeader
 exampleHashHeader = coerce $ mkDummyHash @HASH (0 :: Int)
 
 exampleBlockHeader ::
-  forall era.
-  EraBlockBody era =>
   Hash HASH EraIndependentBlockBody ->
   BHeader StandardCrypto
 exampleBlockHeader blockBodyHash = BHeader blockHeaderBody (unsoundPureSignedKES () 0 blockHeaderBody hotKey)

@@ -138,11 +138,11 @@ unitI :: UnitInterval
 unitI = makeUnitInterval 0 1
 
 dropAtMost6 ::
-  (EraPParams era, ProtVerAtMost era 6) => PParams era -> SimplePParams era -> SimplePParams era
+  (EraPParams era, AtMostEra "Alonzo" era) => PParams era -> SimplePParams era -> SimplePParams era
 dropAtMost6 pp x = x {decentral = pp ^. ppDL}
 
 dropAtMost4 ::
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
   PParams era ->
   SimplePParams era ->
   SimplePParams era
@@ -318,7 +318,7 @@ uDropShelley pp =
     }
 
 uDropProtVer ::
-  (EraPParams era, ProtVerAtMost era 8) => PParamsUpdate era -> SimplePPUpdate -> SimplePPUpdate
+  (EraPParams era, AtMostEra "Babbage" era) => PParamsUpdate era -> SimplePPUpdate -> SimplePPUpdate
 uDropProtVer pp psub = psub {uprotocolVersion = pp ^. ppuProtocolVersionL}
 
 uDropAlonzo :: AlonzoEraPParams era => PParamsUpdate era -> SimplePPUpdate -> SimplePPUpdate
@@ -371,7 +371,8 @@ uLiftShelley pps =
     & ppuMinPoolCostL .~ (uminPoolCost pps)
 
 uLiftProtVer ::
-  (EraPParams era, ProtVerAtMost era 8) => SimplePPUpdate -> PParamsUpdate era -> PParamsUpdate era
+  (EraPParams era, AtMostEra "Babbage" era) =>
+  SimplePPUpdate -> PParamsUpdate era -> PParamsUpdate era
 uLiftProtVer pps pp = pp & ppuProtocolVersionL .~ (uprotocolVersion pps)
 
 uLiftAlonzo :: AlonzoEraPParams era => SimplePPUpdate -> PParamsUpdate era -> PParamsUpdate era

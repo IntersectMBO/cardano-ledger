@@ -108,7 +108,7 @@ initUTxO n =
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
 -- ease of creating transactions.
-ppsBench :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
+ppsBench :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => PParams era
 ppsBench =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
@@ -124,7 +124,7 @@ ppsBench =
     & ppRhoL .~ unsafeBoundRational 0.0021
     & ppTauL .~ unsafeBoundRational 0.2
 
-ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
+ledgerEnv :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound ppsBench (ChainAccountState (Coin 0) (Coin 0))
 
 testLEDGER ::

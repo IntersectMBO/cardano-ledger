@@ -265,7 +265,7 @@ instance
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
   , EncCBORGroup (BlockBody era)
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
   ) =>
@@ -299,7 +299,7 @@ chainTransition ::
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
   , EraCertState era

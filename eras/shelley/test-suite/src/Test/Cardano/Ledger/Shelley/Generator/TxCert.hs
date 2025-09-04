@@ -87,7 +87,7 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 -- and we generate more delegations than registrations of keys/pools.
 genTxCert ::
   forall era c.
-  (EraGen era, ProtVerAtMost era 8, EraCertState era, Crypto c) =>
+  (EraGen era, AtMostEra "Babbage" era, EraCertState era, Crypto c) =>
   Constants ->
   KeySpace c era ->
   PParams era ->
@@ -304,7 +304,7 @@ genDelegation
 
 genGenesisDelegation ::
   forall era c.
-  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8, EraCertState era, Crypto c) =>
+  (Era era, ShelleyEraTxCert era, AtMostEra "Babbage" era, EraCertState era, Crypto c) =>
   -- | Core nodes
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -447,7 +447,7 @@ genRetirePool _pp poolKeys pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
@@ -497,7 +497,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
@@ -534,7 +534,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
           )
 
 genInstantaneousRewards ::
-  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->

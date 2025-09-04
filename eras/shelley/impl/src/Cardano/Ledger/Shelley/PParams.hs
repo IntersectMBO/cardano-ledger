@@ -304,7 +304,7 @@ pvCanFollow (ProtVer curMajor curMinor) (ProtVer newMajor newMinor) =
 -- | Check whether `PParamsUpdate` contains a valid `ProtVer` update. When a protocol version
 -- update is not included in `PParamsUpdate` it is considered a legal update.
 hasLegalProtVerUpdate ::
-  (ProtVerAtMost era 8, EraPParams era) => PParams era -> PParamsUpdate era -> Bool
+  (AtMostEra "Babbage" era, EraPParams era) => PParams era -> PParamsUpdate era -> Bool
 hasLegalProtVerUpdate pp ppu =
   case ppu ^. ppuProtocolVersionL of
     SNothing -> True
@@ -426,7 +426,7 @@ ppTau =
     , ppUpdate = Just $ PParamUpdate 11 ppuTauL
     }
 
-ppD :: (EraPParams era, ProtVerAtMost era 6) => PParam era
+ppD :: (EraPParams era, AtMostEra "Alonzo" era) => PParam era
 ppD =
   PParam
     { ppName = "decentralization"
@@ -434,7 +434,7 @@ ppD =
     , ppUpdate = Just $ PParamUpdate 12 ppuDL
     }
 
-ppExtraEntropy :: (EraPParams era, ProtVerAtMost era 6) => PParam era
+ppExtraEntropy :: (EraPParams era, AtMostEra "Alonzo" era) => PParam era
 ppExtraEntropy =
   PParam
     { ppName = "extraPraosEntropy"
@@ -442,7 +442,7 @@ ppExtraEntropy =
     , ppUpdate = Just $ PParamUpdate 13 ppuExtraEntropyL
     }
 
-ppProtocolVersion :: (EraPParams era, ProtVerAtMost era 8) => PParam era
+ppProtocolVersion :: (EraPParams era, AtMostEra "Babbage" era) => PParam era
 ppProtocolVersion =
   PParam
     { ppName = "protocolVersion"
@@ -450,7 +450,7 @@ ppProtocolVersion =
     , ppUpdate = Just $ PParamUpdate 14 ppuProtocolVersionL
     }
 
-ppMinUTxOValue :: (EraPParams era, ProtVerAtMost era 4) => PParam era
+ppMinUTxOValue :: (EraPParams era, AtMostEra "Mary" era) => PParam era
 ppMinUTxOValue =
   PParam
     { ppName = "minUTxOValue"
@@ -468,9 +468,9 @@ ppMinPoolCost =
 
 shelleyPParams ::
   ( EraPParams era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
-  , ProtVerAtMost era 8
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
+  , AtMostEra "Babbage" era
   ) =>
   [PParam era]
 shelleyPParams =

@@ -140,7 +140,7 @@ class
     NewEpochState era ->
     LedgerView
   default currentLedgerView ::
-    ProtVerAtMost era 6 =>
+    AtMostEra "Alonzo" era =>
     NewEpochState era ->
     LedgerView
   currentLedgerView = view
@@ -154,7 +154,7 @@ class
     m LedgerView
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m
-    , ProtVerAtMost era 6
+    , AtMostEra "Alonzo" era
     ) =>
     Globals ->
     NewEpochState era ->
@@ -279,7 +279,7 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  (ProtVerAtMost era 6, EraGov era, EraCertState era) =>
+  (AtMostEra "Alonzo" era, EraGov era, EraCertState era) =>
   NewEpochState era ->
   LedgerView
 view
@@ -348,7 +348,7 @@ futureView ::
   , Environment (EraRule "TICKF" era) ~ ()
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , EraGov era
   , EraCertState era
   ) =>

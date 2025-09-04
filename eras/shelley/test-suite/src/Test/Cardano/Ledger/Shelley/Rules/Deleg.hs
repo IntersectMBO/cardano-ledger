@@ -171,7 +171,7 @@ balancesSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property

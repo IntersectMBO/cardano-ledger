@@ -302,7 +302,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ AllegraUTXO era

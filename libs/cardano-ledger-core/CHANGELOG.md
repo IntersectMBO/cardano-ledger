@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Changed the type of `AtMostEra` and `AtLeastEra` to accept a type level string instead of an actual era type.
+* Add `EraName` type family to the `Era` type class and use it for default implementation of
+  `eraName` type class function.
 * Changed `sizeTxF` and `sizeTxForFeeCalculation` to use `Word32`
 * Move pool deposits from `PState` into `StakePoolState`. #5234
   * Add `spsDeposit` field to `StakePoolState`

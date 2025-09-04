@@ -114,6 +114,7 @@ library
     cardano-data ^>=1.2,
     cardano-ledger-binary ^>=1.7,
     cardano-ledger-byron,
+    cardano-ledger-core:internal,
     cardano-slotting,
     cardano-strict-containers,
     containers,
@@ -148,6 +149,10 @@ library
     ghc-options: -fno-ignore-asserts
 
 library internal
+  build-depends:
+    base,
+    cardano-ledger-binary,
+
   exposed-modules:
     Cardano.Ledger.Internal.Era
 

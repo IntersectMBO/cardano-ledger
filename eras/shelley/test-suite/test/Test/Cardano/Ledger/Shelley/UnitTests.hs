@@ -119,7 +119,7 @@ bobAddr =
 mkGenesisTxIn :: HasCallStack => Integer -> TxIn
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: forall era. (EraPParams era, ProtVerAtMost era 4) => PParams era
+pp :: forall era. (EraPParams era, AtMostEra "Mary" era) => PParams era
 pp =
   emptyPParams
     & ppMinFeeAL .~ Coin 1
