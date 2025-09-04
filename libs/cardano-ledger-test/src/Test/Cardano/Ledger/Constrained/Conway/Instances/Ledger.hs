@@ -221,6 +221,8 @@ instance HasSpec DeltaCoin
 
 instance OrdLike DeltaCoin
 
+instance HasDivision DeltaCoin
+
 instance NumLike DeltaCoin
 
 instance Foldy DeltaCoin
@@ -242,6 +244,8 @@ instance HasSimpleRep EpochNo
 instance OrdLike EpochNo
 
 instance HasSpec EpochNo
+
+instance HasDivision EpochNo
 
 instance NumLike EpochNo
 
@@ -411,6 +415,8 @@ instance MaybeBounded (CompactForm Coin) where
 instance OrdLike (CompactForm Coin)
 
 deriving instance Num (CompactForm Coin)
+
+instance HasDivision (CompactForm Coin)
 
 instance NumLike (CompactForm Coin)
 
