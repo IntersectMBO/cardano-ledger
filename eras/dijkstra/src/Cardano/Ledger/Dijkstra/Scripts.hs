@@ -19,6 +19,7 @@
 module Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
   DijkstraPlutusPurpose (..),
+  DijkstraEraScript (..),
   pattern GuardingPurpose,
 ) where
 
