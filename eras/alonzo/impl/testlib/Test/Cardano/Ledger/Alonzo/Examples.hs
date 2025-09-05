@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Alonzo.Examples (
   exampleAlonzoGenesis,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
@@ -129,7 +128,11 @@ exampleAlonzoNewEpochState =
     (emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1))
 
 exampleTxAlonzo :: Tx AlonzoEra
-exampleTxAlonzo = exampleTx exampleTxBodyAlonzo (AlonzoSpending $ AsIx 0)
+exampleTxAlonzo =
+  exampleTx
+    exampleTxBodyAlonzo
+    (AlonzoSpending $ AsIx 0)
+    (RequireAllOf @AlonzoEra mempty)
 
 exampleTx ::
   forall era.
@@ -137,10 +140,9 @@ exampleTx ::
   , EraPlutusTxInfo 'PlutusV1 era
   , TxAuxData era ~ AlonzoTxAuxData era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
-  TxBody era -> PlutusPurpose AsIx era -> Tx era
-exampleTx txBody scriptPurpose =
+  TxBody era -> PlutusPurpose AsIx era -> NativeScript era -> Tx era
+exampleTx txBody scriptPurpose nativeScript =
   mkBasicTx @era txBody
     & witsTxL
       .~ ( mkBasicTxWits
@@ -159,7 +161,7 @@ exampleTx txBody scriptPurpose =
       .~ SJust
         ( mkAlonzoTxAuxData
             exampleAuxDataMap
-            [alwaysFails @'PlutusV1 2, NativeScript $ RequireAllOf @era mempty]
+            [alwaysFails @'PlutusV1 2, NativeScript nativeScript]
         )
 
 exampleTxBodyAlonzo :: TxBody AlonzoEra

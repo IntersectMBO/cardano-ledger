@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.API (
   RewardAccount (..),
   TxId (..),
  )
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
@@ -73,7 +74,11 @@ ledgerExamples =
     exampleDijkstraGenesis
 
 exampleTxDijkstra :: Tx DijkstraEra
-exampleTxDijkstra = exampleTx exampleTxBodyDijkstra (DijkstraSpending $ AsIx 0)
+exampleTxDijkstra =
+  exampleTx
+    exampleTxBodyDijkstra
+    (DijkstraSpending $ AsIx 0)
+    (RequireAllOf @DijkstraEra mempty)
 
 exampleTxBodyDijkstra :: TxBody DijkstraEra
 exampleTxBodyDijkstra =

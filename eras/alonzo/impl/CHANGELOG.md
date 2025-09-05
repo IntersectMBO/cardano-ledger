@@ -5,6 +5,10 @@
 * Add `PlutusTxInInfo` type family
 * Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
 
+### `testlib`
+
+* Add `NativeScript` parameter to `exampleTx`
+
 ## 1.14.0.0
 
 * Replace `timelockScriptsAlonzoTxAuxDataL` with `nativeScriptsAlonzoTxAuxDataL`
