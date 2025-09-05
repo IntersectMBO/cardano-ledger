@@ -123,8 +123,6 @@ instance AllegraEraScript BabbageEra where
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-  upgradeNativeScript = translateTimelock
-
 instance NFData (PlutusScript BabbageEra) where
   rnf = rwhnf
 

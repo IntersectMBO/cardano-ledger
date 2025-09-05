@@ -337,8 +337,6 @@ instance AllegraEraScript DijkstraEra where
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-  upgradeNativeScript = translateTimelock
-
 instance ConwayEraScript DijkstraEra where
   mkVotingPurpose = DijkstraVoting
 

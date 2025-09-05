@@ -52,6 +52,7 @@ module Cardano.Ledger.Allegra.Scripts (
   encodeVI,
   decodeVI,
   translateTimelock,
+  upgradeMultiSig,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -156,8 +157,6 @@ class ShelleyEraScript era => AllegraEraScript era where
 
   mkTimeExpire :: SlotNo -> NativeScript era
   getTimeExpire :: NativeScript era -> Maybe SlotNo
-
-  upgradeNativeScript :: NativeScript (PreviousEra era) -> NativeScript era
 
 deriving instance Era era => NoThunks (TimelockRaw era)
 
@@ -289,8 +288,6 @@ instance AllegraEraScript AllegraEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
-
-  upgradeNativeScript = upgradeMultiSig
 
 pattern RequireTimeExpire :: AllegraEraScript era => SlotNo -> NativeScript era
 pattern RequireTimeExpire mslot <- (getTimeExpire -> Just mslot)

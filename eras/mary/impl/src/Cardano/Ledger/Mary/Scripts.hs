@@ -48,5 +48,3 @@ instance AllegraEraScript MaryEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
-
-  upgradeNativeScript = translateTimelock

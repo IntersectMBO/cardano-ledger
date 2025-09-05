@@ -174,8 +174,6 @@ instance AllegraEraScript ConwayEra where
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-  upgradeNativeScript = translateTimelock
-
 instance NFData (PlutusScript ConwayEra) where
   rnf = rwhnf
 

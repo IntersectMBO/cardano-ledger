@@ -519,8 +519,6 @@ instance AllegraEraScript AlonzoEra where
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-  upgradeNativeScript = translateTimelock
-
 instance AlonzoEraScript AlonzoEra where
   newtype PlutusScript AlonzoEra = AlonzoPlutusV1 (Plutus 'PlutusV1)
     deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
