@@ -76,7 +76,7 @@ The directory structure of this repository is as follows:
   - [formal-spec](./eras/babbage/formal-spec)
   - [implementation](./eras/babbage/impl)
   - [cddl](./eras/babbage/impl/cddl-files)
-  - [tests](./eras/babbage/test-suite)
+  - [tests](./eras/babbage/impl/test)
 - [Conway - Governance](./eras/conway)
   - [formal-spec](./eras/conway/formal-spec)
   - [implementation](./eras/conway/impl)
