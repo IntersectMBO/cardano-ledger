@@ -29,7 +29,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadNativeScripts,
     atadPlutus,
     atadMetadata',
-    atadNative',
+    atadNativeScript',
     atadPlutus'
   ),
   AlonzoEraTxAuxData (..),
