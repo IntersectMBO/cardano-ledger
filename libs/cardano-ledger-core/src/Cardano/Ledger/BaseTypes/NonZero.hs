@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# LANGUAGE RoleAnnotations #-}
 
 module Cardano.Ledger.BaseTypes.NonZero (
   KnownBounds (..),
@@ -74,6 +75,8 @@ type WithinBounds n a = (MinBound a <= n, n <= MaxBound a)
 newtype NonZero a = NonZero {unNonZero :: a}
   deriving (Eq, Ord, Show, NoThunks, NFData)
   deriving newtype (EncCBOR, ToCBOR, ToJSON)
+
+type role NonZero nominal
 
 class HasZero a where
   isZero :: a -> Bool
