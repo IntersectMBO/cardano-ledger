@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Add `upgradeNativeScript` method to `EraApi`
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Changed the type of `translateAlonzoTxAuxData` to only work with consecutive eras
 * Add `EraHasName` type class and add `EraName` type family to the `Era` type class.
 * Add `queryPoolState` and bring back `queryPoolParameters` state query.
 * Add `queryDRepDelegations` state query

@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Replace `timelockScriptsAllegraTxAuxDataL` with `nativeScriptsAllegraTxAuxDataL`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Remove `TriesToForgeADA`
 * Change the type of `actualSize` and `PParameterMaxValue` fields in `OutputTooBigUTxO` to `Int`

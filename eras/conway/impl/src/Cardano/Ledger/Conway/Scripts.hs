@@ -75,17 +75,17 @@ instance EraScript ConwayEra where
   type NativeScript ConwayEra = Timelock ConwayEra
 
   upgradeScript = \case
-    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (BabbagePlutusV1 ps) -> PlutusScript $ ConwayPlutusV1 ps
     PlutusScript (BabbagePlutusV2 ps) -> PlutusScript $ ConwayPlutusV2 ps
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 instance AlonzoEraScript ConwayEra where
   data PlutusScript ConwayEra

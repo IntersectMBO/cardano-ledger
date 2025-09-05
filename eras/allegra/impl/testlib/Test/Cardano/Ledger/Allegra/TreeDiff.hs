@@ -30,9 +30,9 @@ instance ToExpr (TimelockRaw era)
 instance ToExpr (Timelock era)
 
 -- TxAuxData
-instance ToExpr (AllegraTxAuxDataRaw era)
+instance ToExpr (NativeScript era) => ToExpr (AllegraTxAuxDataRaw era)
 
-instance ToExpr (AllegraTxAuxData era)
+instance ToExpr (NativeScript era) => ToExpr (AllegraTxAuxData era)
 
 -- TxBody
 instance

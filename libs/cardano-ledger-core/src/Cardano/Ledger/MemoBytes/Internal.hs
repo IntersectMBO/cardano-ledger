@@ -12,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -115,6 +116,9 @@ data MemoBytes t = MemoBytes
   }
   deriving (Generic)
   deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t)
+
+-- | Prevent coercion on MemoBytes because it does not preserve the invariants
+type role MemoBytes nominal
 
 pattern Memo :: t -> ShortByteString -> MemoBytes t
 pattern Memo memoType memoBytes <-

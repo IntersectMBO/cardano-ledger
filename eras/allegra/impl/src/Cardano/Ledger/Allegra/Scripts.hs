@@ -1,5 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -49,8 +51,8 @@ module Cardano.Ledger.Allegra.Scripts (
   ValidityInterval (..),
   encodeVI,
   decodeVI,
-  -- translate,
   translateTimelock,
+  upgradeMultiSig,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -73,7 +75,7 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra)
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra, ShelleyEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   MemoBytes (Memo),
@@ -244,6 +246,14 @@ deriving instance Show (Timelock era)
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
+upgradeMultiSig :: NativeScript ShelleyEra -> NativeScript AllegraEra
+upgradeMultiSig = \case
+  RequireSignature keyHash -> RequireSignature keyHash
+  RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
+  RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
+  RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
+  _ -> error "Impossible: All NativeScripts should have been accounted for"
+
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
@@ -251,12 +261,7 @@ instance EraScript AllegraEra where
   type Script AllegraEra = Timelock AllegraEra
   type NativeScript AllegraEra = Timelock AllegraEra
 
-  upgradeScript = \case
-    RequireSignature keyHash -> RequireSignature keyHash
-    RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
-    RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
-    RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
-    _ -> error "Impossible: All NativeScripts should have been accounted for"
+  upgradeScript = upgradeMultiSig
 
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 

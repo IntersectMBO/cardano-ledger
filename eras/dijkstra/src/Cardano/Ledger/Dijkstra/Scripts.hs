@@ -41,10 +41,8 @@ import Cardano.Ledger.Allegra.Scripts (
   mkTimeStartTimelock,
   translateTimelock,
  )
-import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  AlonzoScript (..),
   AsItem,
   AsIx (..),
   AsIxItem,
@@ -61,11 +59,7 @@ import Cardano.Ledger.Binary (
   encodeWord8,
  )
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
-import Cardano.Ledger.Conway.Scripts (
-  ConwayEraScript (..),
-  ConwayPlutusPurpose (..),
-  PlutusScript (..),
- )
+import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Core (
   EraPParams,
   EraScript (..),
@@ -221,17 +215,17 @@ instance EraScript DijkstraEra where
   type NativeScript DijkstraEra = Timelock DijkstraEra
 
   upgradeScript = \case
-    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
-  getNativeScript (TimelockScript ts) = Just ts
+  getNativeScript (NativeScript ts) = Just ts
   getNativeScript _ = Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 instance MemPack (PlutusScript DijkstraEra) where
   packedByteCount = \case

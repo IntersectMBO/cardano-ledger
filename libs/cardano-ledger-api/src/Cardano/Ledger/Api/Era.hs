@@ -69,7 +69,7 @@ module Cardano.Ledger.Api.Era (
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (translateTimelock)
+import Cardano.Ledger.Allegra.Scripts (translateTimelock, upgradeMultiSig)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), ValidityInterval (..))
 import qualified Cardano.Ledger.Allegra.TxBody as Allegra (TxBody (..))
@@ -215,6 +215,9 @@ class
   -- Use `binaryUpgradeTxWits` instead, if you need to preserve the serialised form.
   upgradeTxWits :: EraTxWits (PreviousEra era) => TxWits (PreviousEra era) -> TxWits era
 
+  -- | Upgrade a native script from the previous era.
+  upgradeNativeScript :: NativeScript (PreviousEra era) -> NativeScript era
+
 instance EraApi ShelleyEra where
   upgradeTx =
     error
@@ -232,6 +235,10 @@ instance EraApi ShelleyEra where
   upgradeTxWits =
     error
       "Calling this function will cause a compilation error, since there is no TxWits instance for ByronEra"
+
+  upgradeNativeScript =
+    error
+      "Calling this function will cause a compilation error, since there is no `NativeScript` in the ByronEra"
 
 instance EraApi AllegraEra where
   upgradeTx (MkShelleyTx (ShelleyTx txb txwits txAux)) =
@@ -266,6 +273,8 @@ instance EraApi AllegraEra where
       (upgradeScript <$> scriptWits stw)
       (bootWits stw)
 
+  upgradeNativeScript = upgradeMultiSig
+
 instance EraApi MaryEra where
   upgradeTx (MkAllegraTx (ShelleyTx txb txwits txAux)) =
     fmap MkMaryTx $
@@ -296,6 +305,8 @@ instance EraApi MaryEra where
       (addrWits stw)
       (upgradeScript <$> scriptWits stw)
       (bootWits stw)
+
+  upgradeNativeScript = translateTimelock
 
 newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
   deriving (Show)
@@ -374,15 +385,17 @@ instance EraApi AlonzoEra where
               m
 
   upgradeTxAuxData (AllegraTxAuxData md scripts) =
-    mkMemoizedEra @AlonzoEra $
+    mkMemoizedEra @AllegraEra $
       AlonzoTxAuxDataRaw
         { atadrMetadata = md
-        , atadrTimelock = translateTimelock <$> scripts
+        , atadrNativeScripts = upgradeNativeScript <$> scripts
         , atadrPlutus = mempty
         }
 
   upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
     AlonzoTxWits addrWits bootWits (upgradeScript <$> scriptWits) mempty (Redeemers mempty)
+
+  upgradeNativeScript = translateTimelock
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect
@@ -408,13 +421,13 @@ upgradeTxDats ::
 upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
 
 translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2) =>
-  AlonzoTxAuxData era1 ->
-  AlonzoTxAuxData era2
-translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
+  (AlonzoEraScript (PreviousEra era), AlonzoEraScript era, EraApi era) =>
+  AlonzoTxAuxData (PreviousEra era) ->
+  AlonzoTxAuxData era
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadNativeScripts, atadPlutus} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata
-    , atadTimelock = translateTimelock <$> atadTimelock
+    , atadNativeScripts = upgradeNativeScript <$> atadNativeScripts
     , atadPlutus = atadPlutus
     }
 
@@ -506,6 +519,8 @@ instance EraApi BabbageEra where
       , txrdmrs = upgradeRedeemers (txrdmrs atw)
       }
 
+  upgradeNativeScript = translateTimelock
+
 data ConwayTxBodyUpgradeError
   = CTBUETxCert ConwayTxCertUpgradeError
   | -- | The TxBody contains an update proposal from a pre-Conway era. Since
@@ -566,6 +581,8 @@ instance EraApi ConwayEra where
       , txrdmrs = upgradeRedeemers (txrdmrs atw)
       }
 
+  upgradeNativeScript = translateTimelock
+
 newtype DijkstraTxBodyUpgradeError = DTBUETxCert DijkstraTxCertUpgradeError
   deriving (Eq, Show)
 
@@ -615,3 +632,5 @@ instance EraApi DijkstraEra where
       }
 
   upgradeTxAuxData = translateAlonzoTxAuxData
+
+  upgradeNativeScript = translateTimelock

@@ -186,7 +186,7 @@ instance
   toSpecRep tl =
     Agda.HSTimelock
       <$> timelockToSpecRep tl
-      <*> toSpecRep (hashScript @era $ TimelockScript tl)
+      <*> toSpecRep (hashScript @era $ NativeScript tl)
       <*> pure (fromIntegral $ originalBytesSize tl)
     where
       timelockToSpecRep x =
@@ -229,7 +229,7 @@ instance
   where
   type SpecRep (AlonzoScript era) = Agda.Script
 
-  toSpecRep (TimelockScript s) = Left <$> toSpecRep s
+  toSpecRep (NativeScript s) = Left <$> toSpecRep s
   toSpecRep (PlutusScript s) = Right <$> toSpecRep s
 
 instance
