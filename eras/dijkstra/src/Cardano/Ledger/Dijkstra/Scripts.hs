@@ -1,14 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,7 +23,10 @@ module Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
   DijkstraPlutusPurpose (..),
   DijkstraEraScript (..),
+  DijkstraNativeScript (MkDijkstraNativeScript),
+  DijkstraNativeScriptRaw (..),
   pattern GuardingPurpose,
+  timelockToDijkstraNativeScript,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
@@ -41,42 +47,54 @@ import Cardano.Ledger.Allegra.Scripts (
   mkTimeStartTimelock,
   translateTimelock,
  )
+import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
+  AlonzoScript (..),
   AsItem,
   AsIx (..),
   AsIxItem,
   alonzoScriptPrefixTag,
  )
-import Cardano.Ledger.BaseTypes (Inject (..), kindObject)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
+  Annotator,
   CBORGroup (..),
-  DecCBOR (..),
+  DecCBOR (decCBOR),
   DecCBORGroup (..),
-  EncCBOR (..),
+  EncCBOR (encCBOR),
   EncCBORGroup (..),
+  ToCBOR (..),
   decodeWord8,
   encodeWord8,
+  encodedSizeExpr,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Density (..),
+  Encode (..),
+  Wrapped (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+  (<*!),
  )
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts
-import Cardano.Ledger.Core (
-  EraPParams,
-  EraScript (..),
-  EraTxCert (..),
-  SafeToHash (..),
-  ScriptHash,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
 import Cardano.Ledger.Mary.Value (PolicyID)
+import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLanguage)
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
+import Data.Sequence.Strict (StrictSeq)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
@@ -210,12 +228,82 @@ deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose
 
 deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIxItem era)
 
+data DijkstraNativeScriptRaw era
+  = DijkstraRequireSignature !(KeyHash 'Witness)
+  | DijkstraAllOf !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraAnyOf !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraMOf !Int !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraTimeStart !SlotNo
+  | DijkstraTimeExpire !SlotNo
+  deriving (Eq, Generic, NFData)
+
+deriving instance Show (DijkstraNativeScriptRaw era)
+
+deriving instance Era era => NoThunks (DijkstraNativeScriptRaw era)
+
+instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
+  encCBOR =
+    encode . \case
+      DijkstraRequireSignature hash -> Sum DijkstraRequireSignature 0 !> To hash
+      DijkstraAllOf xs -> Sum DijkstraAllOf 1 !> To xs
+      DijkstraAnyOf xs -> Sum DijkstraAnyOf 2 !> To xs
+      DijkstraMOf m xs -> Sum DijkstraMOf 3 !> To m !> To xs
+      DijkstraTimeStart m -> Sum DijkstraTimeStart 4 !> To m
+      DijkstraTimeExpire m -> Sum DijkstraTimeExpire 5 !> To m
+
+instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
+  decCBOR = undefined
+
+-- decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
+--   where
+--     decRaw :: Word -> Decode 'Open (Annotator (DijkstraNativeScriptRaw era))
+--     decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
+--     decRaw 1 = Ann (SumD DijkstraAllOf) <*! D (sequence <$> decCBOR)
+--     decRaw 2 = Ann (SumD DijkstraAnyOf) <*! D (sequence <$> decCBOR)
+--     decRaw 3 = Ann (SumD DijkstraMOf) <*! Ann From <*! D (sequence <$> decCBOR)
+--     decRaw 4 = Ann (SumD DijkstraTimeStart <! From)
+--     decRaw 5 = Ann (SumD DijkstraTimeExpire <! From)
+--     decRaw n = Invalid n
+
+newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
+  deriving (Eq, Generic)
+  deriving newtype (ToCBOR, NFData, SafeToHash)
+
+deriving instance Show (DijkstraNativeScript era)
+
+instance Era era => NoThunks (DijkstraNativeScript era)
+
+instance Era era => EncCBOR (DijkstraNativeScript era)
+
+instance Era era => DecCBOR (Annotator (DijkstraNativeScript era)) where
+  decCBOR = fmap MkDijkstraNativeScript <$> decCBOR
+
+instance Memoized (DijkstraNativeScript era) where
+  type RawType (DijkstraNativeScript era) = DijkstraNativeScriptRaw era
+
+instance EqRaw (DijkstraNativeScript era) where
+  eqRaw = undefined
+
+instance Era era => MemPack (DijkstraNativeScript era) where
+  packedByteCount (MkDijkstraNativeScript mb) = byteCountMemoBytes mb
+  packM (MkDijkstraNativeScript mb) = packMemoBytesM mb
+  unpackM = MkDijkstraNativeScript <$> unpackMemoBytesM (eraProtVerLow @era)
+
+timelockToDijkstraNativeScript ::
+  forall era1 era2.
+  ( Era era1
+  , Era era2
+  ) =>
+  Timelock era1 ->
+  DijkstraNativeScript era2
+timelockToDijkstraNativeScript = undefined
+
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
-  type NativeScript DijkstraEra = Timelock DijkstraEra
+  type NativeScript DijkstraEra = DijkstraNativeScript DijkstraEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ timelockToDijkstraNativeScript ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s
@@ -318,24 +406,24 @@ instance AlonzoEraScript DijkstraEra where
     ConwayProposing (AsIx ix) -> DijkstraProposing (AsIx ix)
 
 instance ShelleyEraScript DijkstraEra where
-  mkRequireSignature = mkRequireSignatureTimelock
-  getRequireSignature = getRequireSignatureTimelock
+  mkRequireSignature = undefined -- mkRequireSignatureTimelock
+  getRequireSignature = undefined -- getRequireSignatureTimelock
 
-  mkRequireAllOf = mkRequireAllOfTimelock
-  getRequireAllOf = getRequireAllOfTimelock
+  mkRequireAllOf = undefined -- mkRequireAllOfTimelock
+  getRequireAllOf = undefined -- getRequireAllOfTimelock
 
-  mkRequireAnyOf = mkRequireAnyOfTimelock
-  getRequireAnyOf = getRequireAnyOfTimelock
+  mkRequireAnyOf = undefined -- mkRequireAnyOfTimelock
+  getRequireAnyOf = undefined -- getRequireAnyOfTimelock
 
-  mkRequireMOf = mkRequireMOfTimelock
-  getRequireMOf = getRequireMOfTimelock
+  mkRequireMOf = undefined -- mkRequireMOfTimelock
+  getRequireMOf = undefined -- getRequireMOfTimelock
 
 instance AllegraEraScript DijkstraEra where
-  mkTimeStart = mkTimeStartTimelock
-  getTimeStart = getTimeStartTimelock
+  mkTimeStart = undefined -- mkTimeStartTimelock
+  getTimeStart = undefined -- getTimeStartTimelock
 
-  mkTimeExpire = mkTimeExpireTimelock
-  getTimeExpire = getTimeExpireTimelock
+  mkTimeExpire = undefined -- mkTimeExpireTimelock
+  getTimeExpire = undefined -- getTimeExpireTimelock
 
 instance ConwayEraScript DijkstraEra where
   mkVotingPurpose = DijkstraVoting

@@ -29,6 +29,7 @@ instance EraTxAuxData DijkstraEra where
 
 instance AllegraEraTxAuxData DijkstraEra where
   nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
+  timelockScriptsTxAuxDataL = undefined
 
 instance AlonzoEraTxAuxData DijkstraEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL
