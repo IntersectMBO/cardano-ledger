@@ -27,6 +27,8 @@ instance EraScript MaryEra where
 
   fromNativeScript = id
 
+  upgradeScript = translateTimelock
+
 instance ShelleyEraScript MaryEra where
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
@@ -46,3 +48,5 @@ instance AllegraEraScript MaryEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+  upgradeNativeScript = translateTimelock

@@ -29,7 +29,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadNativeScripts,
     atadPlutus,
     atadMetadata',
-    atadNativeScript',
+    atadNativeScripts',
     atadPlutus'
   ),
   AlonzoEraTxAuxData (..),
@@ -374,5 +374,5 @@ pattern AlonzoTxAuxData' ::
   StrictSeq (NativeScript era) ->
   Map Language (NE.NonEmpty PlutusBinary) ->
   AlonzoTxAuxData era
-pattern AlonzoTxAuxData' {atadMetadata', atadNative', atadPlutus'} <-
-  (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadNative' atadPlutus')
+pattern AlonzoTxAuxData' {atadMetadata', atadNativeScripts', atadPlutus'} <-
+  (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadNativeScripts' atadPlutus')

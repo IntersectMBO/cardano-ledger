@@ -51,6 +51,7 @@ module Cardano.Ledger.Allegra.Scripts (
   ValidityInterval (..),
   encodeVI,
   decodeVI,
+  translateTimelock,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -84,6 +85,7 @@ import Cardano.Ledger.MemoBytes (
   packMemoBytesM,
   unpackMemoBytesM,
  )
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
@@ -96,7 +98,8 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Coerce (Coercible, coerce)
+import Data.ByteString.Lazy (fromStrict)
+import Data.ByteString.Short (fromShort)
 import Data.Foldable as F (foldl')
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
@@ -155,14 +158,30 @@ class ShelleyEraScript era => AllegraEraScript era where
   getTimeExpire :: NativeScript era -> Maybe SlotNo
 
   upgradeNativeScript :: NativeScript (PreviousEra era) -> NativeScript era
-  default upgradeNativeScript ::
-    Coercible (NativeScript (PreviousEra era)) (NativeScript era) =>
-    NativeScript (PreviousEra era) -> NativeScript era
-  upgradeNativeScript = coerce
 
 deriving instance Era era => NoThunks (TimelockRaw era)
 
 deriving instance Show (TimelockRaw era)
+
+-- | This function deconstructs and then reconstructs the timelock script
+-- to prove the compiler that we can arbirarily switch out the eras as long
+-- as the cryptos for both eras are the same.
+translateTimelock ::
+  forall era1 era2.
+  ( Era era1
+  , Era era2
+  ) =>
+  Timelock era1 ->
+  Timelock era2
+translateTimelock (MkTimelock (Memo tl bs)) =
+  let rewrap rtl = MkTimelock $ mkMemoBytes rtl (fromStrict $ fromShort bs)
+   in case tl of
+        TimelockSignature s -> rewrap $ TimelockSignature s
+        TimelockAllOf l -> rewrap . TimelockAllOf $ translateTimelock <$> l
+        TimelockAnyOf l -> rewrap . TimelockAnyOf $ translateTimelock <$> l
+        TimelockMOf n l -> rewrap $ TimelockMOf n (translateTimelock <$> l)
+        TimelockTimeStart x -> rewrap $ TimelockTimeStart x
+        TimelockTimeExpire x -> rewrap $ TimelockTimeExpire x
 
 -- These coding choices are chosen so that a MultiSig script
 -- can be deserialised as a Timelock script

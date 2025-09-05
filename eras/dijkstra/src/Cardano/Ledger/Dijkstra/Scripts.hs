@@ -39,11 +39,10 @@ import Cardano.Ledger.Allegra.Scripts (
   mkRequireSignatureTimelock,
   mkTimeExpireTimelock,
   mkTimeStartTimelock,
+  translateTimelock,
  )
-import Cardano.Ledger.Alonzo (AlonzoScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  AlonzoScript (..),
   AsItem,
   AsIx (..),
   AsIxItem,
@@ -60,11 +59,7 @@ import Cardano.Ledger.Binary (
   encodeWord8,
  )
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
-import Cardano.Ledger.Conway.Scripts (
-  ConwayEraScript (..),
-  ConwayPlutusPurpose (..),
-  PlutusScript (..),
- )
+import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Core (
   EraPParams,
   EraScript (..),
@@ -81,7 +76,6 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
-import Data.Coerce (coerce)
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word16, Word32, Word8)
@@ -221,7 +215,7 @@ instance EraScript DijkstraEra where
   type NativeScript DijkstraEra = Timelock DijkstraEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ coerce ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s
@@ -342,6 +336,8 @@ instance AllegraEraScript DijkstraEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+  upgradeNativeScript = translateTimelock
 
 instance ConwayEraScript DijkstraEra where
   mkVotingPurpose = DijkstraVoting

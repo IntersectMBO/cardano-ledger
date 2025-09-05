@@ -115,7 +115,6 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -538,9 +537,6 @@ class
   -- /Warning/ - Important to note that any memoized binary representation will not be
   -- preserved, you need to retain underlying bytes you can use `translateEraThroughCBOR`
   upgradeScript :: EraScript (PreviousEra era) => Script (PreviousEra era) -> Script era
-  default upgradeScript ::
-    Coercible (Script (PreviousEra era)) (Script era) => Script (PreviousEra era) -> Script era
-  upgradeScript = coerce
 
   scriptPrefixTag :: Script era -> BS.ByteString
 

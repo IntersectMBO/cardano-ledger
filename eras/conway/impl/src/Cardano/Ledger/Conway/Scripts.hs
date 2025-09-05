@@ -55,7 +55,6 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Coerce (coerce)
 import Data.MemPack
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
@@ -76,7 +75,7 @@ instance EraScript ConwayEra where
   type NativeScript ConwayEra = Timelock ConwayEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ coerce ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (BabbagePlutusV1 ps) -> PlutusScript $ ConwayPlutusV1 ps
     PlutusScript (BabbagePlutusV2 ps) -> PlutusScript $ ConwayPlutusV2 ps
 
@@ -174,6 +173,8 @@ instance AllegraEraScript ConwayEra where
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
+
+  upgradeNativeScript = translateTimelock
 
 instance NFData (PlutusScript ConwayEra) where
   rnf = rwhnf
