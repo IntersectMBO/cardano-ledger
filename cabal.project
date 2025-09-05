@@ -42,7 +42,7 @@ packages:
   eras/alonzo/test-suite
   eras/babbage/impl
   eras/conway/impl
-  eras/dijkstra
+  eras/dijkstra/impl
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
