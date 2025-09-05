@@ -6,9 +6,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Tx (Tx (..)) where
+module Cardano.Ledger.Dijkstra.Tx (
+  Tx (..),
+  validateDijkstraNativeScript,
+) where
 
-import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (..),
@@ -22,8 +24,9 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
-import Cardano.Ledger.Core (EraTx (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraNativeScript)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxWits ()
@@ -52,7 +55,7 @@ instance EraTx DijkstraEra where
   sizeTxF = dijkstraTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateNativeScript = validateTimelock
+  validateNativeScript = validateDijkstraNativeScript
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
@@ -69,3 +72,8 @@ instance AlonzoEraTx DijkstraEra where
 
 instance DecCBOR (Annotator (Tx DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR
+
+validateDijkstraNativeScript ::
+  Tx era -> DijkstraNativeScript era -> Bool
+validateDijkstraNativeScript = undefined
+{-# INLINEABLE validateDijkstraNativeScript #-}

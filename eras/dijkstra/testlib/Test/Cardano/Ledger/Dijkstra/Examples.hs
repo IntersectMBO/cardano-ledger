@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEG, ConwayDelegPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
@@ -32,7 +33,6 @@ import Cardano.Ledger.Shelley.API (
   RewardAccount (..),
   TxId (..),
  )
-import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
@@ -78,7 +78,7 @@ exampleTxDijkstra =
   exampleTx
     exampleTxBodyDijkstra
     (DijkstraSpending $ AsIx 0)
-    (RequireAllOf @DijkstraEra mempty)
+    undefined
 
 exampleTxBodyDijkstra :: TxBody DijkstraEra
 exampleTxBodyDijkstra =

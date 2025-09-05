@@ -3,6 +3,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,6 +11,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   exampleDijkstraGenesis,
   DijkstraEraImp,
+  impDijkstraSatisfyNativeScript,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -29,13 +31,17 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraNativeScript)
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
 import Lens.Micro ((%~), (&))
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Dijkstra.Era
 
 instance ShelleyEraImp DijkstraEra where
@@ -49,7 +55,7 @@ instance ShelleyEraImp DijkstraEra where
         committeeMembersL
           %~ fmap (const $ addEpochInterval (impEraStartEpochNo @DijkstraEra) (EpochInterval 15))
 
-  impSatisfyNativeScript = impAllegraSatisfyNativeScript
+  impSatisfyNativeScript = impDijkstraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
 
@@ -102,3 +108,11 @@ exampleDijkstraGenesis =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           }
     }
+
+impDijkstraSatisfyNativeScript ::
+  NativeScript era ~ DijkstraNativeScript era =>
+  Set.Set (KeyHash 'Witness) ->
+  TxBody era ->
+  NativeScript era ->
+  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
+impDijkstraSatisfyNativeScript = undefined

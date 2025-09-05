@@ -14,7 +14,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core (Era, EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
-import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraNativeScript, DijkstraPlutusPurpose)
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
@@ -67,6 +67,15 @@ instance
   Arbitrary (DijkstraPlutusPurpose f DijkstraEra)
   where
   arbitrary = genericArbitraryU
+
+-- instance Arbitrary (AllegraTxAuxData DijkstraEra)
+--   where arbitrary = undefined
+
+-- instance Arbitrary (AlonzoScript DijkstraEra)
+--   where arbitrary = undefined
+
+instance Arbitrary (DijkstraNativeScript DijkstraEra) where
+  arbitrary = undefined
 
 deriving newtype instance Arbitrary (Tx DijkstraEra)
 
