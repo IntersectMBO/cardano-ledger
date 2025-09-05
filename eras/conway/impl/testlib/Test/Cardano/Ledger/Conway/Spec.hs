@@ -66,6 +66,7 @@ spec ::
   , ConwayEraImp era
   , EraSpecificSpec era
   , ApplyTx era
+  , DecCBOR (NativeScript era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)

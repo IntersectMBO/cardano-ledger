@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -9,9 +10,11 @@ module Test.Cardano.Ledger.Allegra.Era (
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.MemoBytes (EqRaw)
 import Cardano.Ledger.Plutus (emptyCostModels)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Era
 
 class
@@ -19,6 +22,10 @@ class
   , AllegraEraTxBody era
   , AllegraEraTxAuxData era
   , AllegraEraScript era
+  , Arbitrary (NativeScript era)
+  , EqRaw (NativeScript era)
+  , SafeToHash (NativeScript era)
+  , ToExpr (NativeScript era)
   ) =>
   AllegraEraTest era
 
