@@ -3,7 +3,7 @@
 ## 1.14.0.0
 
 * Replace `timelockScriptsAlonzoTxAuxDataL` with `nativeScriptsAlonzoTxAuxDataL`
-* Replace `atadTimelock` with `atadNative`
+* Replace `atadTimelock` with `atadNativeScript` and `atadTimelock'` with `atadNativeScript'`
 * Replace `TimelockScript` constructor of `AlonzoScript` with a new constructor `NativeScript`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Make `transValidityInterval` based on eras instead of protocol versions.
