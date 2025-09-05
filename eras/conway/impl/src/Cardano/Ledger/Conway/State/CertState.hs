@@ -51,7 +51,7 @@ import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (.~), (^.), _2)
+import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ConwayCertState era = ConwayCertState
@@ -167,7 +167,9 @@ instance EraAccounts era => DecShareCBOR (ConwayCertState era) where
     conwayCertVState <-
       decSharePlusLensCBOR $
         lens (\(cs, _, cd, ch) -> (cs, cd, ch)) (\(_, ks, _, _) (cs, cd, ch) -> (cs, ks, cd, ch))
-    conwayCertPState <- decSharePlusLensCBOR _2
+    conwayCertPState <-
+      decSharePlusLensCBOR $
+        lens (\(_, ks, _, _) -> (mempty, ks)) (\(cs, _, cd, ch) (_, ks) -> (cs, ks, cd, ch))
     conwayCertDState <-
       decSharePlusLensCBOR $
         lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))

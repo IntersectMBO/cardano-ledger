@@ -247,12 +247,13 @@ instance Era era => EncCBOR (PState era) where
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
 instance DecShareCBOR (PState era) where
-  type Share (PState era) = Interns (KeyHash 'StakePool)
+  type Share (PState era) = (Interns (VRFVerKeyHash 'StakePoolVRF), Interns (KeyHash 'StakePool))
+
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
-    psVRFKeyHashes <- lift decCBOR
-    psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    psFutureStakePools <- decSharePlusLensCBOR (toMemptyLens _1 id)
-    psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
+    psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
+    psFutureStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
+    psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure PState {psVRFKeyHashes, psStakePools, psFutureStakePools, psRetiring}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
