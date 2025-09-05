@@ -36,6 +36,7 @@ import Cardano.Ledger.Shelley.API (
   Update (..),
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..), ShelleyLedgerPredFailure (..))
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import qualified Data.Map.Strict as Map
@@ -82,7 +83,11 @@ exampleBabbageNewEpochState =
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
 exampleTxBabbage :: Tx BabbageEra
-exampleTxBabbage = exampleTx exampleTxBodyBabbage (AlonzoSpending $ AsIx 0)
+exampleTxBabbage =
+  exampleTx
+    exampleTxBodyBabbage
+    (AlonzoSpending $ AsIx 0)
+    (RequireAllOf @BabbageEra mempty)
 
 exampleTxBodyBabbage :: TxBody BabbageEra
 exampleTxBodyBabbage =
