@@ -32,13 +32,11 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <C
   eras/alonzo/impl \
   eras/alonzo/test-suite \
   eras/babbage/impl \
-  eras/babbage/test-suite \
   eras/byron/chain/executable-spec \
   eras/byron/crypto \
   eras/byron/ledger/executable-spec \
   eras/byron/ledger/impl \
   eras/conway/impl \
-  eras/conway/test-suite \
   eras/mary/impl \
   eras/shelley-ma/test-suite \
   eras/shelley/impl \
