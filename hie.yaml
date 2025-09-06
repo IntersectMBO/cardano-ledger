@@ -117,19 +117,19 @@ cradle:
     - path: "eras/conway/impl/test"
       component: "cardano-ledger-conway:test:tests"
 
-    - path: "eras/dijkstra/src"
+    - path: "eras/dijkstra/impl/src"
       component: "lib:cardano-ledger-dijkstra"
 
-    - path: "eras/dijkstra/testlib"
+    - path: "eras/dijkstra/impl/testlib"
       component: "cardano-ledger-dijkstra:lib:testlib"
 
-    - path: "eras/dijkstra/huddle-cddl/Main.hs"
+    - path: "eras/dijkstra/impl/huddle-cddl/Main.hs"
       component: "cardano-ledger-dijkstra:exe:huddle-cddl"
 
-    - path: "eras/dijkstra/huddle-cddl/Paths_cardano_ledger_dijkstra.hs"
+    - path: "eras/dijkstra/impl/huddle-cddl/Paths_cardano_ledger_dijkstra.hs"
       component: "cardano-ledger-dijkstra:exe:huddle-cddl"
 
-    - path: "eras/dijkstra/test"
+    - path: "eras/dijkstra/impl/test"
       component: "cardano-ledger-dijkstra:test:tests"
 
     - path: "eras/mary/impl/src"

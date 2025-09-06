@@ -190,7 +190,7 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <C
   eras/byron/ledger/executable-spec \
   eras/byron/ledger/impl \
   eras/conway/impl \
-  eras/dijkstra \
+  eras/dijkstra/impl \
   eras/mary/impl \
   eras/shelley-ma/test-suite \
   eras/shelley/impl \
