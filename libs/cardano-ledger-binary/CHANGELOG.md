@@ -17,9 +17,9 @@
 * Add `mapCoder` as a replacement for `fmap`
 * Remove `Functor` and `Applicative` instance for `Decode`
 * Add to `Plain`:
-  * `assertTag`
-  * `decodeTagMaybe`
-  * `encodeRatioWithTag`,
+  - `assertTag`
+  - `decodeTagMaybe`
+  - `encodeRatioWithTag`,
 * Add `DecCBOR` instance for `Data.IntMap`
 * Add `decodeIntMap`
 * Add `ToCBOR` instance for `PV1.Data`
@@ -40,8 +40,8 @@
 * Add `getOriginalBytes`
 * `toPlainDecoder` now optionally expects one extra argument for the original `ByteString`
 * Extend `Coders` to accommodate `{Enc|Dec}CBORGroup`. #4666
-  * Add `ToGroup` to `Encode`
-  * Add `FromGroup` to `Decode`
+  - Add `ToGroup` to `Encode`
+  - Add `FromGroup` to `Decode`
 * Add `{Enc|Dec}CBORGroup` instance for `(a, a)`. #4666
 
 ### `testlib`
@@ -53,11 +53,11 @@
 ### `testlib`
 
 * Add:
-  * `decoderEquivalenceSpec`
-  * `decoderEquivalenceExpectation`
-  * `decoderEquivalenceProp`
-  * `cddlDecoderEquivalenceSpec`
-  * `huddleDecoderEquivalenceSpec`
+  - `decoderEquivalenceSpec`
+  - `decoderEquivalenceExpectation`
+  - `decoderEquivalenceProp`
+  - `cddlDecoderEquivalenceSpec`
+  - `huddleDecoderEquivalenceSpec`
 * Re-export types `Doc` and `AnsiStyle` in `Test.Cardano.Ledger.Binary.TreeDiff`
 * `diffExpr` and `diffExprCompact` changed type signature
 * Add `diffExprString` and `diffExprCompactString`, which replace the old implementations
@@ -84,10 +84,10 @@
 ### `testlib`
 
 * Re-export:
-  * `Pretty`
-  * `ansiWlPretty`
-  * `ppEditExpr`
-  * `ediff`
+  - `Pretty`
+  - `ansiWlPretty`
+  - `ppEditExpr`
+  - `ediff`
 
 ## 1.3.2.0
 
@@ -136,8 +136,8 @@
 ## 1.1.3.0
 
 * Add `ToExpr` instance for:
-  * `Sized`
-  * `SignedDSIGN`
+  - `Sized`
+  - `SignedDSIGN`
 * Add `Generic` instance for `CompactValue`
 * Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
 * Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
@@ -187,13 +187,13 @@
 
 * Add `Arbitrary` instance for `Term`
 * Renamed:
-  * `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
-  * `roundTripFailureCborRangeExpectation` -> `roundTripCborRangeFailureExpectation`
-  * `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
+  - `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
+  - `roundTripFailureCborRangeExpectation` -> `roundTripCborRangeFailureExpectation`
+  - `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
 * Added:
-  * `embedTripFailureExpectation`
-  * `embedTripRangeFailureExpectation`
-  * `roundTripRangeFailureExpectation`
+  - `embedTripFailureExpectation`
+  - `embedTripRangeFailureExpectation`
+  - `roundTripRangeFailureExpectation`
 
 ## 1.0.0.0
 

@@ -31,10 +31,10 @@
 * Expose new `TxAuxDataHash` and deprecate old `AuxiliaryDataHash`
 * Stop re-exporting `Crypto` and `StandardCrypto`, since they have been moved to `cardano-protocol-tpraos`
 * Removal of crypto parametrization:
-  * `LatestKnownEra`
-  * `HotCredAuthStatus` and `CommitteeMemberState`
-  * `DecAddr`
-  * Many other re-exported types. See individual packages for changelog
+  - `LatestKnownEra`
+  - `HotCredAuthStatus` and `CommitteeMemberState`
+  - `DecAddr`
+  - Many other re-exported types. See individual packages for changelog
 * Add `unRedeemersL`, `unTxDatsL`
 
 ## 1.10.0.0
@@ -131,17 +131,17 @@
 * Add `LatestKnownEra`
 * Add `Cardano.Ledger.Api.Transition` module
 * Add the dormant-epochs counter to `DRep` expiry in `queryDRepState` #3729
-  * If it is not zero.
+  - If it is not zero.
 * Rename:
-  * `GovActionsState` to `GovSnapshots`
-  * `cgGovActionsStateL` to `cgGovSnapshotsL`
+  - `GovActionsState` to `GovSnapshots`
+  - `cgGovActionsStateL` to `cgGovSnapshotsL`
 * Add `lookupRegStakeTxCert` and `lookupUnRegStakeTxCert`
 * Add `isRegStakeTxCert` and `isUnRegStakeTxCert`
 
 ## 1.5.0.0
 
 * Add one more parameter to `evalBalanceTxBody` #3688
-  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
+  - `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `cgEnactStateL`
 
 ## 1.4.0.0
@@ -156,9 +156,9 @@
 * Add `upgradeTxAuxData` function to `EraTxAuxData`
 * Add `upgradeTxCert` function and `TxCertUpgradeError` family to `EraTxCert`
 * Export:
-  * Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
-  * Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`
-  * GovActions: `GovActionPurpose`, `PrevGovActionId`, `govActionIdToText`,
+  - Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
+  - Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`
+  - GovActions: `GovActionPurpose`, `PrevGovActionId`, `govActionIdToText`,
     `PrevGovActionId` and `GovActionPurpose`
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
   `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
@@ -187,7 +187,7 @@
 
 * Add support for Plutus V3
 * Start on `Cardano.Ledger.Api.State.Query` interface:
-  * Add `filterStakePoolDelegsAndRewards` and `queryStakePoolDelegsAndRewards`
+  - Add `filterStakePoolDelegsAndRewards` and `queryStakePoolDelegsAndRewards`
 
 ### `testlib`
 
@@ -219,9 +219,9 @@
   `Tag`.
 * Export from `Cardano.Ledger.Api.Scripts`: `CostModels` and `ValidityInterval`.
 * Export from `Cardano.Ledger.Api.Era`:
-  * `Era`
-  * `ByronEra`
-  * Protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
+  - `Era`
+  - `ByronEra`
+  - Protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
     `AtLeastEra`, `AtMostEra`, `ExactEra`, `ProtVerAtLeast`, `ProtVerAtMost`,
     `ProtVerInBounds`, `atLeastEra` and `atMostEra`
 * Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into

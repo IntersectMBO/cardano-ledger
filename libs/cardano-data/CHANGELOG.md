@@ -57,7 +57,6 @@
   The bug manifested by creating an unbalanced tree in the `Data.Map` internals of the
   'CanonicalMap', which can result in a crash.
   This was the root cause of https://github.com/input-output-hk/cardano-node/issues/4826.
-
 * Added New module Data.Universe, reusable code for defining closed singleton types.
 
 ## 1.0.0.0

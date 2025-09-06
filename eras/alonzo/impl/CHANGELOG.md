@@ -7,8 +7,8 @@
 * Replace `TimelockScript` constructor of `AlonzoScript` with a new constructor `NativeScript`
 * Changed `MaxTxSizeUTxO` to use `Word32`
 * Make `transValidityInterval` based on eras instead of protocol versions.
-  * Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
-  * Remove protocol version from arguments to `transValidityInterval`.
+  - Remove `hardforkConwayTranslateUpperBoundForPlutusScripts` from `Cardano.Ledger.Alonzo.Era`.
+  - Remove protocol version from arguments to `transValidityInterval`.
 * Add `NFData` instance for `AlonzoGenesis`
 * Add `reqSignerHashesTxBodyG`
 * Add `mkScriptIntegrity`
@@ -20,12 +20,12 @@
 * Added `eraUnsupportedLanguage`
 * Changed return type of `mkPlutusScript` and `mkBinaryPlutusScript` from `Maybe` to `MonadFail`
 * Deprecate `Alonzo.TxSeq` in favour of `Alonzo.BlockBody`. #5156
-  * Rename `AlonzoTxSeq` to `AlonzoBlockBody`
+  - Rename `AlonzoTxSeq` to `AlonzoBlockBody`
 * Rename `alonzoEqTxRaw` to `alonzoTxEqRaw`
 * Add `Generic` instance to `TransactionScriptFailure`
 * Add `Generic` instance for `AlonzoBbodyEvent`
 * Fix `AlonzoPlutusPurpose` CBOR(Group) instances. #5135
-  * Reset shuffled serialization indexes for `AlonzoPlutusPurpose AsItem`.
+  - Reset shuffled serialization indexes for `AlonzoPlutusPurpose AsItem`.
 * Deprecated `toAlonzoTransitionConfigPairs`
 * Fixed `FromJSON` instance for `TransitionConfig AlonzoEra`
 * Added `COMPLETE` pragma for `TxCert AlonzoEra`
@@ -33,10 +33,10 @@
 * Deprecated `toAlonzoGenesisPairs`
 * Removed `MissingRequiredSigners` from `AlonzoUtxowPredFailure`
 * Renamed fields of `AlonzoTx`
-  * `body` to `atBody`
-  * `wits` to `atWits`
-  * `auxiliaryData` to `atAuxData`
-  * `isValid` to `atIsValid`
+  - `body` to `atBody`
+  - `wits` to `atWits`
+  - `auxiliaryData` to `atAuxData`
+  - `isValid` to `atIsValid`
 * Added `Generic` instance for `AlonzoScriptsNeeded`
 * Move to `testlib` `DecCBOR` instances for: `AlonzoTxSeq`, `AlonzoTx`, `TxBody AlonzoEra`, `AlonzoTxAuxDataRaw`, `AlonzoTxAuxData`, `AlonzoScript`, `AlonzoTxWitsRaw`, `AlonzoTxWits`, `RedeemersRaw`, `Redeemers`, `TxDatsRaw`, `TxDats`
 * Added to `PParams`: `ppCollateralPercentage`,`ppCostModels`,`ppMaxBlockExUnits`,`ppMaxCollateralInputs`,`ppMaxTxExUnits`,`ppMaxValSize`,`ppPrices`
@@ -66,10 +66,10 @@
 * Added `TxInfoPV4` to `VersionedTxInfo`
 * Added `Arbitrary` instance for `TransitionConfig BabbageEra`
 * Added `ToExpr` instances for:
-  * `AsIxItem`
-  * `AlonzoScriptsNeeded`
-  * `AlonzoPlutusPurpose AsIxItem`
-  * `AlonzoBbodyPredFailure`
+  - `AsIxItem`
+  - `AlonzoScriptsNeeded`
+  - `AlonzoPlutusPurpose AsIxItem`
+  - `AlonzoBbodyPredFailure`
 * Deprecated `mkPlutusScript'`
 * Change type signature of `genPlutusScript`, `genNativeScript`, `genAlonzoScript`, `alwaysSucceedsLang` and `alwaysFailsLang`.
 * Remove `TxInfoLanguage` and `mkTxInfoLanguage`
@@ -78,15 +78,15 @@
 ## 1.13.0.0
 
 * Add `DecCBOR` instances for:
-  * `MaryTxBody`
-  * `TxDats`
-  * `AlonzoTxAuxData`
-  * `AlonzoScript`
-  * `Redeemers`
-  * `AlonzoTxWits`
-  * `AlonozTxBody`
-  * `AlonzoTx`
-  * `AlonzoTxSeq`
+  - `MaryTxBody`
+  - `TxDats`
+  - `AlonzoTxAuxData`
+  - `AlonzoScript`
+  - `Redeemers`
+  - `AlonzoTxWits`
+  - `AlonozTxBody`
+  - `AlonzoTx`
+  - `AlonzoTxSeq`
 * Remove redundant `EncCBOR (Data era)` constraint from `DecCBOR` instance for `Annotator (AlonzoTxWits era)`
 * Converted `CertState` to a type family
 * Remove `reapplyAlonzoTx` as no longer needed.
@@ -106,8 +106,8 @@
 
 * Add `genNonEmptyTxDats` and `genNonEmptyRedeemers` to `Arbitrary`
 * Renamed:
-  * `impLookupPlutusScriptMaybe` -> `impLookupPlutusScript`
-  * `impGetScriptContextMaybe` -> `impLookupScriptContext`
+  - `impLookupPlutusScriptMaybe` -> `impLookupPlutusScript`
+  - `impGetScriptContextMaybe` -> `impLookupScriptContext`
 * Add `DecCBOR` instances for `TranslationInstance`
 * Converted `CertState` to a type family
 * Expose `alonzoFixupFees`
@@ -136,19 +136,19 @@
 ## 1.11.0.0
 
 * Add `ProtVer` argument to functions in `EraPlutusTxInfo` class:
-  * `toPlutusTxCert` of
-  * `toPlutusScriptPurpose`
-  * `toPlutusArgs`
+  - `toPlutusTxCert` of
+  - `toPlutusScriptPurpose`
+  - `toPlutusArgs`
 * Add `ProtVer` argument to `TxInfo` functions:
-  * `transTxBodyCerts`
-  * `transPlutusPurpose`
-  * `toPlutusV1Args`
-  * `toLegacyPlutusArgs`
+  - `transTxBodyCerts`
+  - `transPlutusPurpose`
+  - `toPlutusV1Args`
+  - `toLegacyPlutusArgs`
 
 ### `testlib`
 
 * Move `TxInfo` golden tests over from the older `-test` package. #4599
-  * Also move the `gen-golden` executable over.
+  - Also move the `gen-golden` executable over.
 
 ## 1.10.2.0
 
@@ -167,11 +167,11 @@
 
 * Add `LedgerTxInfo` to `Cardano.Ledger.Alonzo.Plutus.Context`
 * `EraPlutusTxInfo` class:
-  * replace params in `toPlutusTxInfo` signature with `LedgerTxInfo`
-  * replace `toPlutusScriptContext` with `toPlutusArgs`
+  - replace params in `toPlutusTxInfo` signature with `LedgerTxInfo`
+  - replace `toPlutusScriptContext` with `toPlutusArgs`
 * `EraPlutusContext` class:
-  * remove `mkPlutusScriptContext`, `mkPlutusLanguageContext`
-  * add `mkPlutusWithContext`
+  - remove `mkPlutusScriptContext`, `mkPlutusLanguageContext`
+  - add `mkPlutusWithContext`
 * add `toPlutusWithContext` to `Cardano.Ledger.Alonzo.Plutus.Context`
 * Move `PlutusScriptContext` type family to core
 * Add `ContextError` inhabitant to `TransactionScriptFailure`
@@ -182,17 +182,17 @@
 * Add `Inject` instance for `AlonzoTx`
 * Move these functions and types from `cardano-ledger-api`, so they can be used in the
   test suite:
-  * `TransactionScriptFailure`
-  * `evalTxExUnits`
-  * `RedeemerReport`
-  * `evalTxExUnitsWithLogs`
-  * `RedeemerReportWithLogs`
+  - `TransactionScriptFailure`
+  - `evalTxExUnits`
+  - `RedeemerReport`
+  - `evalTxExUnitsWithLogs`
+  - `RedeemerReportWithLogs`
 
 ### `testlib`
 
 * Change signatures of `Arbitrary` instances for `AlonzoScript`:
-  * replace `Era` constraint with `AllegraEraScript`
-  * replace `Timelock` with `NativeScript`
+  - replace `Era` constraint with `AllegraEraScript`
+  - replace `Timelock` with `NativeScript`
 
 ## 1.8.0.0
 
@@ -209,12 +209,12 @@
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `allegraToAlonzoUtxoPredFailure`
 * Add `NFData` instances for:
-  * `CollectError`
-  * `AlonzoUtxoPredFailure`
-  * `FailureDescription`
-  * `TagMismatchDescription`
-  * `AlonzoUtxosPredFailure`
-  * `AlonzoUtxowPredFailure`
+  - `CollectError`
+  - `AlonzoUtxoPredFailure`
+  - `FailureDescription`
+  - `TagMismatchDescription`
+  - `AlonzoUtxosPredFailure`
+  - `AlonzoUtxowPredFailure`
 * Add `Semigroup` and `Monoid` instances for `Redeemers`
 * Add `alonzoScriptPrefixTag`
 * Add implementation for `getMinFeeTxUtxo`
@@ -236,16 +236,16 @@
 * Add `ToExpr` instances for `AlonzoUtxoEvent`, `AlonzoUtxowEvent` and `AlonzoUtxosEvent`
 * Add `RuleListEra` instance for Alonzo
 * Add:
-  * `impLookupPlutusScriptMaybe`
-  * `fixupOutputDatums`
+  - `impLookupPlutusScriptMaybe`
+  - `fixupOutputDatums`
 * Remove root coin argument from `initAlonzoImpNES`
 * Rename `fixupPlutusScripts` to `fixupRedeemers`
 * Add:
-  * `fixupPPHash`
-  * `fixupPlutusScripts`
-  * `addCollateralInput`
-  * `impGetPlutusContexts`
-  * `fixupDatums`
+  - `fixupPPHash`
+  - `fixupPlutusScripts`
+  - `addCollateralInput`
+  - `impGetPlutusContexts`
+  - `fixupDatums`
 * Add `Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec`
 * Add `alonzoFixupTx`
 
@@ -358,43 +358,43 @@
 * Add `Test.Cardano.Ledger.Alonzo.ImpTest`
 * Add `EraImpTest` instance for `AlonzoEra`
 * Add `ToExpr` instances for:
-  * `CollectError`
-  * `AlonzoUtxoPredFailure`
-  * `FailureDescription`
-  * `TagMismatchDescription`
-  * `AlonzoUtxosPredFailure`
-  * `AlonzoUtxowPredFailure`
-  * `BinaryData`
-  * `Datum`
-  * `IsValid`
-  * `ScriptPurpose`
-  * `TxOutSource`
-  * `TranslationError`
-  * `Addr28Extra`
-  * `DataHash32`
-  * `RdmrPtr`
+  - `CollectError`
+  - `AlonzoUtxoPredFailure`
+  - `FailureDescription`
+  - `TagMismatchDescription`
+  - `AlonzoUtxosPredFailure`
+  - `AlonzoUtxowPredFailure`
+  - `BinaryData`
+  - `Datum`
+  - `IsValid`
+  - `ScriptPurpose`
+  - `TxOutSource`
+  - `TranslationError`
+  - `Addr28Extra`
+  - `DataHash32`
+  - `RdmrPtr`
 * Expose `genValidCostModel` in `Arbitrary`
 
 ## 1.4.2.0
 
 * Add `ToExpr` instance for:
-  * `PlutusData`
-  * `Data`
-  * `BinaryData`
-  * `Datum`
-  * `AlonzoTx`
-  * `AlonzoTxBody`
-  * `AlonzoTxOut`
-  * `AlozoTxWits`
-  * `IsValid`
-  * `Addr28Extra`
-  * `DataHash32`
-  * `RdmrPtr`
-  * `Redeemers`
+  - `PlutusData`
+  - `Data`
+  - `BinaryData`
+  - `Datum`
+  - `AlonzoTx`
+  - `AlonzoTxBody`
+  - `AlonzoTxOut`
+  - `AlozoTxWits`
+  - `IsValid`
+  - `Addr28Extra`
+  - `DataHash32`
+  - `RdmrPtr`
+  - `Redeemers`
 * Add `Generic` instance for :
-  * `AlonzoTxBody`
-  * `Redeemers`
-  * `TxDats`
+  - `AlonzoTxBody`
+  - `Redeemers`
+  - `TxDats`
 * Add `upgradeData`, `upgradeRedeemers` and `upgradeTxDats`
 * Add `TxUpgradeError` type to `EraTx`
 * Add `AlonzoTxBodyUpgradeError`, `AlonzoTxUpgradeError`
@@ -404,8 +404,8 @@
 ### `testlib`
 
 * Add `Test.Cardano.Ledger.Alonzo.Binary.RoundTrip` module with:
-  * `roundTripAlonzoCommonSpec`
-  * `roundTripAlonzoEraTypesSpec`
+  - `roundTripAlonzoCommonSpec`
+  - `roundTripAlonzoEraTypesSpec`
 
 ## 1.4.1.0
 
@@ -468,9 +468,9 @@
 
 * Replace `DPState c` with `CertState era`
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo ledger era rules do not allow V3 scripts, however.).
 * Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/intersectmbo/cardano-ledger/pull/3398)

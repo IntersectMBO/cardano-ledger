@@ -7,13 +7,13 @@
   `eraName` type class function.
 * Changed `sizeTxF` and `sizeTxForFeeCalculation` to use `Word32`
 * Move pool deposits from `PState` into `StakePoolState`. #5234
-  * Add `spsDeposit` field to `StakePoolState`
-  * Remove `psDeposits` field from `PState` data constructor
-  * Update `mkStakePoolState` to take deposit parameter as first argument
-  * Remove `psDepositsL` as no longer necessary.
-  * Remove `payPoolDeposit` and `refundPoolDeposit` functions as they are no longer necessary
-  * Update `EncCBOR`/`DecCBOR` instances for `PState` to handle new structure
-  * Add lenses for `StakePoolState` fields
+  - Add `spsDeposit` field to `StakePoolState`
+  - Remove `psDeposits` field from `PState` data constructor
+  - Update `mkStakePoolState` to take deposit parameter as first argument
+  - Remove `psDepositsL` as no longer necessary.
+  - Remove `payPoolDeposit` and `refundPoolDeposit` functions as they are no longer necessary
+  - Update `EncCBOR`/`DecCBOR` instances for `PState` to handle new structure
+  - Add lenses for `StakePoolState` fields
 * Add `psVRFKeyHashes` to `PState`
 * Add `psVRFKeyHashesL`
 * Deprecate `costModelParamsCount` in favor of `costModelInitParamCount`
@@ -21,12 +21,12 @@
 * Export `credToDRep` and `dRepToCred`
 * Add `ppVrfL`, `ppCostL`, `ppMetadataL`, `spsVrfL` to `StakePool` module
 * Deprecate `PoolParams` in favor of `StakePoolState`. #5196
-  * Move the `PoolParams` module to `Cardano.Ledger.State.StakePool` and export from there.
-  * Add the `StakePoolState` data type to the new module.
-  * Reexport `PoolParams` from its original module and deprecate it.
-  * Replace `PoolParams` with `StatekPoolState` in `PState` and rename the fields and lenses.
-    * `psStakePoolParams(L)` to `psStakePools(L)`, and
-    * `psFutureStakePoolParams(L)` to `psFutureStakePools(L)`.
+  - Move the `PoolParams` module to `Cardano.Ledger.State.StakePool` and export from there.
+  - Add the `StakePoolState` data type to the new module.
+  - Reexport `PoolParams` from its original module and deprecate it.
+  - Replace `PoolParams` with `StatekPoolState` in `PState` and rename the fields and lenses.
+    + `psStakePoolParams(L)` to `psStakePools(L)`, and
+    + `psFutureStakePoolParams(L)` to `psFutureStakePools(L)`.
 * Add `mkGenesisWith`
 * Add `NFData` instance for `NoGenesis`
 * Require `Eq`, `Show`, `Typeable`, `ToCBOR`, `FromCBOR`, `ToJSON`, `FromJSON`, `NFData` for every `Genesis` type.
@@ -42,10 +42,10 @@
 * Add `CanGetAccounts`, `CanSetAccounts`, `EraAccounts`, `lookupAccountState`, `updateLookupAccountState`, `isAccountRegistered`, `adjustAccountState`, `lookupStakePoolDelegation`, `sumBalancesAccounts`, `sumDepositsAccounts`, `addToBalanceAccounts`, `withdrawalsThatDoNotDrainAccounts`, `drainAccounts`, `removeStakePoolDelegations`
 * Add `mkInlineDatum`, `mkHashedDatum`
 * Rename `EraSegWits` to `EraBlockBody`. #5156
-  * Rename `TxSeq` to `BlockBody`
-  * Add `mkBasicBlockBody`
-  * Deprecate `fromTxSeq` and `toTxSeq` in favour of the `txSeqBlockBodyL` lens
-  * Deprecate `hashTxSeq` in favour of `hashBlockBody`
+  - Rename `TxSeq` to `BlockBody`
+  - Add `mkBasicBlockBody`
+  - Deprecate `fromTxSeq` and `toTxSeq` in favour of the `txSeqBlockBodyL` lens
+  - Deprecate `hashTxSeq` in favour of `hashBlockBody`
 * Replaced `hkdPoolDepositL` method with `hkdPoolDepositCompactL`
 * Add `ppPoolDepositCompactL` and `ppuPoolDepositCompactL`
 * Add `standardHashSize` and `standardAddrHashSize`
@@ -100,8 +100,8 @@
 * Removed `upgradeCertState`
 * Removed `VState` (moved to `cardano-ledger-conway`) and related functions
 * Removed from `EraCertState` type family:
-  * `mkCertState`
-  * `certVStateL`
+  - `mkCertState`
+  - `certVStateL`
 * Moved `CertState` to `State` module
 * Rename `wvkSig` to `wvkSignature`
 * Remove `eqBootstrapWitnessRaw` and `BootstrapWitnessRaw`
@@ -135,18 +135,18 @@
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding
 * Add `ToCBOR` and `FromCBOR` instances for:
-  * `BoundedRatio`
-  * `PositiveUnitInterval`
-  * `ActiveSlotCoeff`
-  * `Network`
-  * `NoGenesis`
+  - `BoundedRatio`
+  - `PositiveUnitInterval`
+  - `ActiveSlotCoeff`
+  - `Network`
+  - `NoGenesis`
 * Move `EraGov` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Add DecCBOR instances for:
-  * `PlutusData`
-  * `Data`
-  * `BootstrapWitness`
-  * `WitVKey`
-  * `Block`
+  - `PlutusData`
+  - `Data`
+  - `BootstrapWitness`
+  - `WitVKey`
+  - `Block`
 * Converted `CertState` to a type family
 * Remove `applySTSValidateSuchThat` and `applySTSNonStatic` as redundant.
 * Move `AccountState` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
@@ -159,28 +159,28 @@
 * Added `ToPlutusData` instance for `NonZero`
 * `maxpool'` now expects `nOpt` to be a `NonZero Word16`
 * Add `HasZero` instance for `Coin` together with lifted conversion functions:
-  * `toCompactCoinNonZero`
-  * `fromCompactCoinNonZero`
-  * `unCoinNonZero`
-  * `toCoinNonZero`
-  * `compactCoinNonZero`
+  - `toCompactCoinNonZero`
+  - `fromCompactCoinNonZero`
+  - `unCoinNonZero`
+  - `toCoinNonZero`
+  - `compactCoinNonZero`
 * Add `Cardano.Ledger.BaseTypes.NonZero`
 * Remove `era` type parameter from `MemoBytes` type
 * Remove `Era era` constraint from:
-  * `Memo` pattern
-  * `decodeMemoBytes`
-  * `DecCBOR (Annotator (MemoBytes t))` instance
-  * `DecCBOR (MemoBytes t)` instance
-  * `memoBytes`
-  * `mkMemoized`
-  * `lensMemoRawType`
-  * `Data` pattern
-  * `dataToBinaryData`
+  - `Memo` pattern
+  - `decodeMemoBytes`
+  - `DecCBOR (Annotator (MemoBytes t))` instance
+  - `DecCBOR (MemoBytes t)` instance
+  - `memoBytes`
+  - `mkMemoized`
+  - `lensMemoRawType`
+  - `Data` pattern
+  - `dataToBinaryData`
 * Introduce `mkMemoizedEra` and `memoBytesEra`
 * Add `Version` parameter to:
-  * `memoBytes`
-  * `mkMemoized`
-  * `lensMemoRawType`
+  - `memoBytes`
+  - `mkMemoized`
+  - `lensMemoRawType`
 * Remove `era` type parameter from `Mem` type
 * Reduce the kind of `MemoHashIndex` type family parameter to a concrete type
 * Reduce the kind of `RawType` type to a concrete type
@@ -205,11 +205,11 @@
 * Deprecate `Hash`, `SignedDSIGN` and `SignKeyDSIGN` type synonyms.
 * Deprecate `hashSignature` in favor of new `hashTxBodySignature`
 * Move into `Cardano.Ledger.Hashes`:
-  * `HASH` and `ADDRHASH`
-  * `KeyHash` and `HashKey`
-  * `SafeHash`, `SafeToHash`, `HashAnnotated`, `castSafeHash` and `extractHash`.
-  * `KeyRoleVRF`, `VRFVerKeyHash`, `toVRFVerKeyHash`, `fromVRFVerKeyHash`
-  * `GenDelegPair` and `GenDelegs`
+  - `HASH` and `ADDRHASH`
+  - `KeyHash` and `HashKey`
+  - `SafeHash`, `SafeToHash`, `HashAnnotated`, `castSafeHash` and `extractHash`.
+  - `KeyRoleVRF`, `VRFVerKeyHash`, `toVRFVerKeyHash`, `fromVRFVerKeyHash`
+  - `GenDelegPair` and `GenDelegs`
 * Re-export `KeyRole` from `Cardano.Ledger.Hashes`.
 * Re-export some of the new additions to `Cardano.Ledger.Hashes` from `Cardano.Ledger.Core`.
 * Remove `GenesisCredential` as unused.
@@ -217,26 +217,26 @@
   them into type synonyms for the exact algorithms previously being used in
   `StandardCrypto`
 * Remove crypto parametrization from types:
-  * `Addr`, `BootstrapAddress`, `RewardAccount`, `CompactAddr` and `Withdrawals`
-  * `AuxiliaryDataHash`
-  * `BlocksMade`, `Anchor`
-  * `FutureGenDeleg`, `InstantaneousRewards`, `CommitteeAuthorization`
-  * `ByronEra` and `VoidEra`
-  * `PoolCert`
-  * `Credential`, `StakeReference` and `GenesisCredential`
-  * `DRep` and `DRepState`
-  * `Stake`, `SnapShot` and `SnapShots`
-  * `DataHash`, `ScriptHash`
-  * `BootstrapWitness`
-  * `VKey`, `KeyHash`, `GenDelegPair`, `GenDelegs`, `VRFVerKeyHash`
-  * `PlutusWithConext`, `ScriptFailure`, `ScriptResult`, `PlutusDebugInfo`
-  * `TxOutSource`
-  * `IndividualPoolStake`, `PoolDistr`
-  * `PoolParams`
-  * `Reward`
-  * `SafeHash` and `SafeToHash`
-  * `TxId`, `TxIn`
-  * `UMElem`, `RewardDelegation`, `StakeCredentials`, `UView` and `UMap`
+  - `Addr`, `BootstrapAddress`, `RewardAccount`, `CompactAddr` and `Withdrawals`
+  - `AuxiliaryDataHash`
+  - `BlocksMade`, `Anchor`
+  - `FutureGenDeleg`, `InstantaneousRewards`, `CommitteeAuthorization`
+  - `ByronEra` and `VoidEra`
+  - `PoolCert`
+  - `Credential`, `StakeReference` and `GenesisCredential`
+  - `DRep` and `DRepState`
+  - `Stake`, `SnapShot` and `SnapShots`
+  - `DataHash`, `ScriptHash`
+  - `BootstrapWitness`
+  - `VKey`, `KeyHash`, `GenDelegPair`, `GenDelegs`, `VRFVerKeyHash`
+  - `PlutusWithConext`, `ScriptFailure`, `ScriptResult`, `PlutusDebugInfo`
+  - `TxOutSource`
+  - `IndividualPoolStake`, `PoolDistr`
+  - `PoolParams`
+  - `Reward`
+  - `SafeHash` and `SafeToHash`
+  - `TxId`, `TxIn`
+  - `UMElem`, `RewardDelegation`, `StakeCredentials`, `UView` and `UMap`
 * Remove `HashWithCrypto` as no longer needed.
 * Deprecate `hashAnchorData`
 * Change superclass of `Crypto` from `KESAlgorithm` to `UnsoundPureKESAlgorithm`
@@ -291,7 +291,7 @@
 * Add `VRFVerKeyHash` and `KeyRoleVRF`.
 * Switch `genDelegVrfHash`, `individualPoolStakeVrf` and `ppVrf` to using `VRFVerKeyHash`.
 * Add `{Enc|Dec}CBORGroup` instances for `Mismatch`. #4666
-  * Add `(un)swapMismatch` to swap `Mismatch` values to preserve serialisation when necessary.
+  - Add `(un)swapMismatch` to swap `Mismatch` values to preserve serialisation when necessary.
 * Add `drepDelegsL`
 
 ### `testlib`
@@ -376,29 +376,29 @@
 ### `testlib`
 
 * Rename test scripts:
-  * `alwaysSucceeds2` -> `alwaysSucceedsNoDatum`
-  * `alwaysSucceeds3` -> `alwaysSucceedsWithDatum`
-  * `alwaysFails2` -> `alwaysFailsNoDatum`
-  * `alwaysFails3` -> `alwaysFailsWithDatum`
-  * `guessTheNumber3` -> `redeemerSameAsDatum`
-  * `evendata3` -> `evenDatum`
-  * `evenRedeemer2` -> `evenRedeemerNoDatum`
-  * `evenRedeemer3` -> `evenRedeemerWithDatum`
+  - `alwaysSucceeds2` -> `alwaysSucceedsNoDatum`
+  - `alwaysSucceeds3` -> `alwaysSucceedsWithDatum`
+  - `alwaysFails2` -> `alwaysFailsNoDatum`
+  - `alwaysFails3` -> `alwaysFailsWithDatum`
+  - `guessTheNumber3` -> `redeemerSameAsDatum`
+  - `evendata3` -> `evenDatum`
+  - `evenRedeemer2` -> `evenRedeemerNoDatum`
+  - `evenRedeemer3` -> `evenRedeemerWithDatum`
 * Remove test scripts: `odddata`, `oddRedeemer`, `oddRedeemer2`, `sumsTo10`, `guessTheNumber2`, `redeemerIs102`
 
 ## 1.12.0.0
 
 * Change `computeDRepPulser` to also process proposal-deposits for SPOs. #4324
-  * Add `sumAllStakeCompact`.
-  * Add `UMap.umElemDelegations` to extract SPO, DRep and rewards for a given stake credential.
-  * Add `pdTotalActiveStake` field to `PoolDistr`, to hold the total active stake delegated to pools, including proposal deposits.
-  * Add `individualTotalPoolStake` to `IndividualPoolStake` to hold the delegated stake as an absolute number, including proposal deposits.
-  * Add lenses:
-    * `individualTotalPoolStakeL`
-    * `poolDistrTotalL`
+  - Add `sumAllStakeCompact`.
+  - Add `UMap.umElemDelegations` to extract SPO, DRep and rewards for a given stake credential.
+  - Add `pdTotalActiveStake` field to `PoolDistr`, to hold the total active stake delegated to pools, including proposal deposits.
+  - Add `individualTotalPoolStake` to `IndividualPoolStake` to hold the delegated stake as an absolute number, including proposal deposits.
+  - Add lenses:
+    + `individualTotalPoolStakeL`
+    + `poolDistrTotalL`
 * Add lenses to `RewardAccount`. #4309
-  * `rewardAccountCredentialL`
-  * `rewardAccountNetworkL`
+  - `rewardAccountCredentialL`
+  - `rewardAccountNetworkL`
 * Add `umElemDRepDelegatedReward` to `UMap`. #4273
 * Add `fromDeltaCoin`
 * Add trivial `Inject` instances for `()` and `Void`
@@ -406,9 +406,9 @@
 * Add functions `rdRewardCoin`, `rdDepositCoin` in UMap.hs
 * Add function `mkCoinTxOut` in Core.hs
 * Add typeclass `HKDApplicative` and make instances for the following: #4252
-  * `HKD Identity`
-  * `HKD Maybe`
-  * `HKD StrictMaybe`
+  - `HKD Identity`
+  - `HKD Maybe`
+  - `HKD StrictMaybe`
 * Move `Metadatum` from `cardano-ledger-shelley` into a new module `Cardano.Ledger.Metadata`
 * Add `mkBasicTxAuxData` and `metadataTxAuxDataL` to `EraTxAuxData` type class.
 * Add `Random`, `Uniform` and `UniformRange` instances for `Language`
@@ -452,9 +452,9 @@
 * Add `setMinFeeTxUtxo`
 * Add `getMinFeeTxUtxo` to `EraUTxO`
 * Change signature by adding `refScriptsSize` parameter for:
-  * `getMinFeeTx` in `EraTx`
-  * `setMinFeeTx`
-  * `estimateMinFeeTx`
+  - `getMinFeeTx` in `EraTx`
+  - `setMinFeeTx`
+  - `estimateMinFeeTx`
 * Add `originalBytesSize` and default implementation to `SafeToHash` typeclass
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `ppRewardAcnt` in favor of `ppRewardAccount`
@@ -514,33 +514,33 @@
   `Cardano.Ledger.Keys`
 * Add `unData`, `getCostModelEvaluationContext`
 * Changes to `Cardano.Ledger.Plutus.Evaluate`:
-  * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
+  - Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
     in decoded or binary format. `pwcProtocolVersion` was added too.
-  * `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
-      `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
-      protocol version has been added to `PlutusWithContext`
-  * Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
+  - `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
+    `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
+    protocol version has been added to `PlutusWithContext`
+  - Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
     record names: `scriptFailureMessage` and `scriptFailurePlutus`
-  * Remove `PlutusDebugLang`, `PlutusDebug`, `PlutusData` and `PlutusError`
-  * Stop re-exporting   removed:   `EraPlutusContext`,  `PlutusTxCert`,   `unTxCertV1`,
+  - Remove `PlutusDebugLang`, `PlutusDebug`, `PlutusData` and `PlutusError`
+  - Stop re-exporting   removed:   `EraPlutusContext`,  `PlutusTxCert`,   `unTxCertV1`,
     `unTxCertV2` and `unTxCertV3`
-  * Add `evaluatePlutusWithContext`
-  * Remove `deserialiseAndEvaluateScript` in favor of `evaluatePlutusWithContext`
+  - Add `evaluatePlutusWithContext`
+  - Remove `deserialiseAndEvaluateScript` in favor of `evaluatePlutusWithContext`
 * Changes to `Cardano.Ledger.Plutus.Language`:
-  * Rename `BinaryPlutus` to `PlutusBinary` for consistency with names of other Plutus types.
-  * Add `Plutus` with helpers: `decodeWithPlutus`, `isValidPlutus`
-  * Add `PlutusRunnable` with helpers: `plutusFromRunnable`
-  * Add `asSLanguage`
-  * Add `plutusSLanguage` and `plutusLanguage`
-  * Deprecated `fromSLanguage` in favor of more general `plutusLanguage`
-  * Rename `IsLanguage` class to `PlutusLanguage` and add these functions to the class:
+  - Rename `BinaryPlutus` to `PlutusBinary` for consistency with names of other Plutus types.
+  - Add `Plutus` with helpers: `decodeWithPlutus`, `isValidPlutus`
+  - Add `PlutusRunnable` with helpers: `plutusFromRunnable`
+  - Add `asSLanguage`
+  - Add `plutusSLanguage` and `plutusLanguage`
+  - Deprecated `fromSLanguage` in favor of more general `plutusLanguage`
+  - Rename `IsLanguage` class to `PlutusLanguage` and add these functions to the class:
     `decodePlutusRunnable`, `evaluatePlutusRunnable` and `evaluatePlutusRunnableBudget`
 * Changes to `Cardano.Ledger.Plutus.TxInfo`:
-  * `NFData` instance for `TxOutSource`
-  * Remove: `transDataHash'`, `transHash` (use `hashToBytes` instead), `transTxOutAddr`,
+  - `NFData` instance for `TxOutSource`
+  - Remove: `transDataHash'`, `transHash` (use `hashToBytes` instead), `transTxOutAddr`,
     `txInfoIn'`, `getWitVKeyHash`, `VersionedTxInfo`, `EraPlutusContext`, `PlutusTxCert`,
     `unTxCertV1`, `unTxCertV2`, `unTxCertV3` and `txInfoId` (use `transTxId` instead)
-  * Add `transCoinToValue`, `transTxId`
+  - Add `transCoinToValue`, `transTxId`
 * Add `fromNativeScript`
 * Remove unused `mapMaybeValidation` and `runTestMaybe`
 * Remove `InjectMaybe` type class in favor of more general `Inject`
@@ -598,14 +598,14 @@
 * Add `toNoUpdate` and `fromNoUpdate` methods to `HKDFunctor`
 * Add `Updatable` instance for `NoUpdate`
 * Change functions to methods of `EraPParams`:
-  * `ppProtocolVersionL`
-  * `ppuProtocolVersionL`
+  - `ppProtocolVersionL`
+  - `ppuProtocolVersionL`
 * Add `Generic` instance for `AuxiliaryDataHash`
 * Add `ToExpr` instances for:
-  * `CompactAddr`
-  * `AuxiliaryDataHash`
-  * `CompactDeltaCoin`
-  * `VKey`
+  - `CompactAddr`
+  - `AuxiliaryDataHash`
+  - `CompactDeltaCoin`
+  - `VKey`
 * Add `setMinFeeTx`
 * Add `ScriptsProvided`
 * Require new `EraUTxO` class method `getScriptsProvided`
@@ -625,13 +625,13 @@
 * Require `ToExpr` for `EraTxWits` class
 * Add `upgradeTxWits` function to `EraTxWits` class
 * Add `ToExpr` instance to:
-  * `CompactAddr`
-  * `Withdrawals`
-  * `AuxiliaryDataHash`
-  * `VKey`
-  * `ChainCode`
-  * `BootstrapWitness`
-  * `WitVKey`
+  - `CompactAddr`
+  - `Withdrawals`
+  - `AuxiliaryDataHash`
+  - `VKey`
+  - `ChainCode`
+  - `BootstrapWitness`
+  - `WitVKey`
 * Add `Generic` instance to `AuxiliaryDataHash`
 * Add `vsNumDormantEpochs` to `VState` to track the number of contiguous epochs in which there were no governance proposals to vote on. #3729
 * Add `fromEraShareCBOR`
@@ -648,26 +648,26 @@
 * Add `Arbitrary` instance for `DRepDistr`
 * Move `Arbitrary` instance for `SnapShot` and `SnapShots` from `cardano-ledger-shelley:testlib`
 * Add `Test.Cardano.Ledger.Core.Binary.RoundTrip` with:
-  * `roundTripEraSpec`
-  * `roundTripAnnEraSpec`
-  * `roundTripEraTypeSpec`
-  * `roundTripAnnEraTypeSpec`
-  * `roundTripShareEraSpec`
-  * `roundTripShareEraTypeSpec`
-  * `roundTripEraExpectation`
-  * `roundTripEraTypeExpectation`
-  * `roundTripAnnEraExpectation`
-  * `roundTripAnnEraTypeExpectation`
-  * `roundTripShareEraExpectation`
-  * `roundTripShareEraTypeExpectation`
-  * `roundTripCoreEraTypesSpec`
+  - `roundTripEraSpec`
+  - `roundTripAnnEraSpec`
+  - `roundTripEraTypeSpec`
+  - `roundTripAnnEraTypeSpec`
+  - `roundTripShareEraSpec`
+  - `roundTripShareEraTypeSpec`
+  - `roundTripEraExpectation`
+  - `roundTripEraTypeExpectation`
+  - `roundTripAnnEraExpectation`
+  - `roundTripAnnEraTypeExpectation`
+  - `roundTripShareEraExpectation`
+  - `roundTripShareEraTypeExpectation`
+  - `roundTripCoreEraTypesSpec`
 
 ## 1.6.0.0
 
 * Add `lookupRegStakeTxCert` and `lookupUnRegStakeTxCert` to `EraTxCert` typeclass #3700
 * Change `ToJSONKey`/`FromJSONKey` implementation of `Credential` to flat text
 * Add one more parameter to `getConsumedValue` to lookup DRep deposits #3688
-  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
+  - `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `Ap`, `hoistAp`, `runAp`, `runAp_`
 * Add `eqBootstrapWitnessRaw` and `eqWitVKeyRaw`
 * Add `eqRawType`
@@ -696,15 +696,15 @@
 * Add `DRepState`
 * Change `vsDReps` to a map
 * Rename key roles #3588
-  * `Voting` to `DRepRole`
-  * `CommitteeHotKey` to `HotCommitteeRole`
-  * `CommitteeColdKey` to `ColdCommitteeRole`
+  - `Voting` to `DRepRole`
+  - `CommitteeHotKey` to `HotCommitteeRole`
+  - `CommitteeColdKey` to `ColdCommitteeRole`
 * Change `VState` to allow committee cold keys to be script-hashes #3581
-  * `vsCommitteeHotKeys :: Map (Credential 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
+  - `vsCommitteeHotKeys :: Map (Credential 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
 * Adopt `Default` instances #3556
-  * Moved instances for `SafeHash`, `RewardAcnt` and `Credential` from Shelley.RewardProvenance
+  - Moved instances for `SafeHash`, `RewardAcnt` and `Credential` from Shelley.RewardProvenance
 * Change `VState` to allow committee hot keys to be script-hashes #3552
-  * `vsCommitteeHotKeys :: Map (KeyHash 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
+  - `vsCommitteeHotKeys :: Map (KeyHash 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
 * Added `withSLanguage`
 * Move `BinaryPlutus` from `cardano-ledger-alonzo` and changed its `Show` instance to
   display as base64 encoding.
@@ -713,13 +713,13 @@
   `Plutus` type instead of `Language` and `ShortByteString`
 * Remove default implementation for `spendableInputsTxBodyL`
 * Add lenses:
-  * `dsUnifiedL`
-  * `dsGenDelegsL`
-  * `dsIRewardsL`
-  * `dsFutureGenDelegsL`
-  * `certDStateL`
-  * `certPStateL`
-  * `certVStateL`
+  - `dsUnifiedL`
+  - `dsGenDelegsL`
+  - `dsIRewardsL`
+  - `dsFutureGenDelegsL`
+  - `certDStateL`
+  - `certPStateL`
+  - `certVStateL`
 * Add `getProducedValue` to `EraUTxO`
 
 ## 1.4.1.0
@@ -730,14 +730,14 @@
 
 * Added `DRep`, `DRepCredential`
 * Changed type `Credential 'Voting c` -> `DRep c` in:
-  * `UMElem`
-  * `umElemAsTuple`
-  * `umElemDRep`
-  * `UMap`
-  * `DRepUView`
-  * `dRepUView`
-  * `dRepMap`
-  * `unify`
+  - `UMElem`
+  - `umElemAsTuple`
+  - `umElemDRep`
+  - `UMap`
+  - `DRepUView`
+  - `dRepUView`
+  - `dRepMap`
+  - `unify`
 
 ## 1.3.1.0
 
@@ -746,24 +746,24 @@
 ## 1.3.0.0
 
 * Add delegated representatives to the `UMap` and make its interface more coherent #3426
-  * Additions
-    * Add `Credential 'Voting (EraCrypto era)` as the fourth element to the `UMap` n-tuple.
-    * `umElemPtrs :: UMElem c -> Maybe (Set Ptr)`
-    * `umElemDRep :: UMElem c -> Maybe (Credential 'Voting (EraCrypto era))`
-    * `UView (DRepUView)` constructor and `dRepUView`
-    * `invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)`
-    * `dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)`
-    * synonym `unionL = (∪)`
-    * synonym `unionR = (⨃)`
-    * synonym `domDelete = (⋪)`
-    * synonym `rngDelete = (⋫)`
-  * Renames
-    * `Trip` to `UMElem`, pattern `Triple` to `UMElem`
-    * `viewTrip` to `umElemAsTuple`
-    * `tripRewardActiveDelegation` to `umElemRDActive`
-    * `tripReward` to `umElemRDPair`
-    * `tripDelegation` to `umElemSPool`
-    * `View (RewardDeposits, Delegations, Ptrs)` to `UView (RewDepUView, SPoolUView, PtrUView)`
+  - Additions
+    + Add `Credential 'Voting (EraCrypto era)` as the fourth element to the `UMap` n-tuple.
+    + `umElemPtrs :: UMElem c -> Maybe (Set Ptr)`
+    + `umElemDRep :: UMElem c -> Maybe (Credential 'Voting (EraCrypto era))`
+    + `UView (DRepUView)` constructor and `dRepUView`
+    + `invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)`
+    + `dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)`
+    + synonym `unionL = (∪)`
+    + synonym `unionR = (⨃)`
+    + synonym `domDelete = (⋪)`
+    + synonym `rngDelete = (⋫)`
+  - Renames
+    + `Trip` to `UMElem`, pattern `Triple` to `UMElem`
+    + `viewTrip` to `umElemAsTuple`
+    + `tripRewardActiveDelegation` to `umElemRDActive`
+    + `tripReward` to `umElemRDPair`
+    + `tripDelegation` to `umElemSPool`
+    + `View (RewardDeposits, Delegations, Ptrs)` to `UView (RewDepUView, SPoolUView, PtrUView)`
       * `rdPairs` to `rewDepUView`
       * `delegations` to `sPoolUView`
       * `ptrs` to `ptrUView`
@@ -776,12 +776,12 @@
       * `delView` to `sPoolMap`
       * `ptrView` to `ptrMap`
       * `domRestrictedView` to `domRestrictedMap`
-    * `zero` to `nullUMElem`
-    * `zeroMaybe` to `nullUMElemMaybe`
-    * `sumRewardsView` to `sumRewardsUView`
-    * `sumDepositView` to `sumDepositUView`
-  * Reimplementations
-    * `unionRewAgg` NOTE: It does not require `assert (Map.valid result) result` any more
+    + `zero` to `nullUMElem`
+    + `zeroMaybe` to `nullUMElemMaybe`
+    + `sumRewardsView` to `sumRewardsUView`
+    + `sumDepositView` to `sumDepositUView`
+  - Reimplementations
+    + `unionRewAgg` NOTE: It does not require `assert (Map.valid result) result` any more
       and has been tested for equivalence with the older version with
       `--qc-max-success=10000 --qc-max-size=1000`. The test is added to `UMapSpec`.
 * Add `certsTxBodyL` to `EraTxBody`
@@ -802,17 +802,17 @@
 ## 1.2.0.0
 
 * Deprecate `Cardano.Ledger.UMapCompact` in favor of `Cardano.Ledger.UMap` and add tests for it. #3371
-  * Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
+  - Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
 * Replace `DPState c` with `CertState era`
 * Add `VState`
 * Add `certVState`
 * Parametrize `DState` and `PState` by era
 * Rename `Cardano.Ledger.DPState` module to `Cardano.Ledger.CertState`
 * Rename:
-  * `lsDPState` -> `lsCertState`
-  * `dpsPState` -> `certPState`
-  * `dpsDState` -> `certDState`
-  * `obligationDPState` -> `obligationCertState`
+  - `lsDPState` -> `lsCertState`
+  - `dpsPState` -> `certPState`
+  - `dpsDState` -> `certDState`
+  - `obligationDPState` -> `obligationCertState`
 * Add support for `PlutusV3`
 
 ## 1.1.0.0
@@ -820,20 +820,20 @@
 * Add `ToJSON (PParamsHKD f era)` superclass constraints for `EraPParams`.
 * Add `ToJSON (TxOut era)` superclass constraints for `EraTxOut`.
 * Add superclass constraints for `Val`:
-  * `NoThunks`, `EncCBOR`, `DecCBOR`, `ToJSON`, `NFData`, `Show`
-  * `EncCBOR (CompactForm t)`, `DecCBOR (CompactForm t)`
+  - `NoThunks`, `EncCBOR`, `DecCBOR`, `ToJSON`, `NFData`, `Show`
+  - `EncCBOR (CompactForm t)`, `DecCBOR (CompactForm t)`
 * Add `ToJSONKey`/`FromJSONKey` instances for `ScriptHash`
 * Add `ToJSON`/`FromJSON` instances for `CompactForm Coin`, `SafeHash` and `TxId`
 * Add `ToJSON` instances for:
-  * `Ptr`, `CertIx`, `TxIx`
-  * `Trip` and `UMap`
-  * `DeltaCoin` and `CompactForm DeltaCoin`
-  * `InstantaneousRewards`, `FutureGenDeleg`, `PState`, `DState` and `DPState`.
-  * `UTxO` and `TxIn`
-  * `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
-  * `Reward` and `RewardType`
-  * `AuxiliaryDataHash`
-  * `Credential`
+  - `Ptr`, `CertIx`, `TxIx`
+  - `Trip` and `UMap`
+  - `DeltaCoin` and `CompactForm DeltaCoin`
+  - `InstantaneousRewards`, `FutureGenDeleg`, `PState`, `DState` and `DPState`.
+  - `UTxO` and `TxIn`
+  - `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
+  - `Reward` and `RewardType`
+  - `AuxiliaryDataHash`
+  - `Credential`
 * Make `getConsumedValue` accept a deposit lookup function instead of a `DPState`
 * Add `lookupDepositDState` and `lookupRewardDState`. Former can be used with
   `getConsumedValue` to regain previous behavior.
