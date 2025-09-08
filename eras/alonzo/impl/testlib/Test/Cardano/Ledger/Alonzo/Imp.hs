@@ -60,7 +60,7 @@ alonzoEraSpecificSpec ::
   SpecWith (ImpInit (LedgerSpec era))
 alonzoEraSpecificSpec = do
   describe "Alonzo era specific Imp spec" $
-    describe "Certificates without deposits" $
+    describe "Certificates without deposits" $ do
       Utxow.alonzoEraSpecificSpec
 
 instance EraSpecificSpec AlonzoEra where
