@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -24,6 +25,7 @@ module Cardano.Ledger.State.Account (
   withdrawalsThatDoNotDrainAccounts,
   drainAccounts,
   removeStakePoolDelegations,
+  invalidAndIncompleteWithdrawals,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
@@ -36,6 +38,7 @@ import Cardano.Ledger.Credential
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Data.Aeson (ToJSON)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
 import Data.Foldable (foldMap')
 import Data.Kind (Type)
@@ -174,6 +177,42 @@ lookupStakePoolDelegation ::
 lookupStakePoolDelegation cred accounts =
   lookupAccountState cred accounts
     >>= (^. stakePoolDelegationAccountStateL)
+
+-- | This function returns a 2-tuple where the `fst` is withdrawals with missing
+-- reward accounts or wrong network, and `snd` is incomplete withdrawals.
+invalidAndIncompleteWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  (Map RewardAccount Coin, Map RewardAccount Coin)
+invalidAndIncompleteWithdrawals (Withdrawals givenWithdrawals) networkId accounts = do
+  -- @givenWithdrawals@ is small and @accounts@ is big, better to traverse the
+  -- former than the latter.
+  Map.foldrWithKey collectBadWithdrawals (mempty, mempty) givenWithdrawals
+  where
+    -- invalid withdrawal = that which does not have a reward account or is in
+    -- the wrong network.
+    -- incomplete withdrawal = that which does not withdraw the exact account
+    -- balance.
+    collectBadWithdrawals ::
+      RewardAccount ->
+      Coin ->
+      (Map RewardAccount Coin, Map RewardAccount Coin) ->
+      (Map RewardAccount Coin, Map RewardAccount Coin)
+    collectBadWithdrawals
+      ra@RewardAccount {raCredential, raNetwork}
+      withdrawalAmount
+      accum@(!_, !_) =
+        case Map.lookup raCredential (accounts ^. accountsMapL) of
+          Nothing ->
+            first (Map.insert ra withdrawalAmount) accum
+          Just accountState
+            | raNetwork /= networkId ->
+                first (Map.insert ra withdrawalAmount) accum
+            | fromCompact (accountState ^. balanceAccountStateL) /= withdrawalAmount ->
+                second (Map.insert ra withdrawalAmount) accum
+            | otherwise -> accum
 
 -- | This function returns `Nothing` iff all of the accounts that withdrawals are trying to drain are
 -- indeed registered and all of the amounts in the withdrawals match the respective balances exactly.
