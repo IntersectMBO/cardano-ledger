@@ -96,7 +96,7 @@ library
     base >=4.18 && <5,
     cardano-crypto-class,
     cardano-data >=1.2.3,
-    cardano-ledger-allegra ^>=1.8,
+    cardano-ledger-allegra ^>=1.9,
     cardano-ledger-alonzo ^>=1.15,
     cardano-ledger-babbage ^>=1.12,
     cardano-ledger-binary ^>=1.7,
