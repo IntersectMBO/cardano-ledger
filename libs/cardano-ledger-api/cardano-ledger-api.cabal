@@ -60,7 +60,7 @@ library
     base >=4.18 && <5,
     bytestring,
     cardano-data,
-    cardano-ledger-allegra ^>=1.8,
+    cardano-ledger-allegra ^>=1.9,
     cardano-ledger-alonzo >=1.12,
     cardano-ledger-babbage >=1.11,
     cardano-ledger-binary >=1.4,

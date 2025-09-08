@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.8.0.1
+## 1.9.0.0
 
-*
+* Remove deprecated `timelockScriptsTxAuxDataL`
 
 ## 1.8.0.0
 
