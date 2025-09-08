@@ -31,8 +31,10 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxCert,
   PlutusScriptPurpose,
   PlutusScriptContext,
+  PlutusTxInInfo,
 ) where
 
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsIxItem (..),
@@ -63,6 +65,7 @@ import Cardano.Ledger.Plutus (
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -112,6 +115,12 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
     Maybe (Data era) ->
     Data era ->
     Either (ContextError era) (PlutusArgs l)
+
+  toPlutusTxInInfo ::
+    proxy l ->
+    UTxO era ->
+    TxIn ->
+    Either (ContextError era) (PlutusTxInInfo era l)
 
 class
   ( AlonzoEraScript era
@@ -212,6 +221,15 @@ type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
   PlutusTxInfo 'PlutusV4 = PV3.TxInfo
+
+type family PlutusTxInInfo era (l :: Language) where
+  -- \| This special case is here because Alonzo does not have a ContextError
+  -- for the case where it encounters a Byron address in a TxIn
+  PlutusTxInInfo AlonzoEra PlutusV1 = Maybe PV1.TxInInfo
+  PlutusTxInInfo _ 'PlutusV1 = PV1.TxInInfo
+  PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
+  PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
+  PlutusTxInInfo _ 'PlutusV4 = PV3.TxInInfo
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

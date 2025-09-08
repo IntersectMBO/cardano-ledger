@@ -431,6 +431,8 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
+  toPlutusTxInInfo _ = transTxInInfoV1
+
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
@@ -468,6 +470,8 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = Babbage.toPlutusV2Args
+
+  toPlutusTxInInfo _ = Babbage.transTxInInfoV2
 
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
@@ -522,6 +526,8 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV3Args
+
+  toPlutusTxInInfo _ = transTxInInfoV3
 
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))

@@ -121,6 +121,4 @@ spec =
     describe "TxInfo" $ do
       TxInfo.spec @era
       BabbageTxInfo.spec @era
-      xdescribe "PlutusV3" $ do
-        -- TODO: https://github.com/IntersectMBO/cardano-ledger/issues/5209
-        BabbageTxInfo.txInfoSpecV2 @era SPlutusV3
+      describe "PlutusV3" $ BabbageTxInfo.txInfoSpecV2 @era SPlutusV3

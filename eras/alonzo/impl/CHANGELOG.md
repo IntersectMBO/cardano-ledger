@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Add `PlutusTxInInfo` type family
+* Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
 * Replace `timelockScriptsAlonzoTxAuxDataL` with `nativeScriptsAlonzoTxAuxDataL`
 * Replace `atadTimelock` with `atadNativeScript` and `atadTimelock'` with `atadNativeScript'`
 * Replace `TimelockScript` constructor of `AlonzoScript` with a new constructor `NativeScript`

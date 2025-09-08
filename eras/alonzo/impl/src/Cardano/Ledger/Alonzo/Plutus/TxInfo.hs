@@ -104,9 +104,7 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
       transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
-      txOut <- transLookupTxOut ltiUTxO txIn
-      pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
+    txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
     txCerts <- transTxBodyCerts proxy ltiProtVer txBody
     Right $
       PV1.TxInfo
@@ -127,6 +125,10 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV1Args
+
+  toPlutusTxInInfo _ utxo txIn = do
+    txOut <- transLookupTxOut utxo txIn
+    pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
 
 toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
