@@ -83,7 +83,7 @@ library
     cardano-ledger-allegra ^>=1.8,
     cardano-ledger-alonzo ^>=1.15,
     cardano-ledger-binary >=1.6,
-    cardano-ledger-core:{cardano-ledger-core, internal} >=1.18,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
     cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,
     cardano-strict-containers,

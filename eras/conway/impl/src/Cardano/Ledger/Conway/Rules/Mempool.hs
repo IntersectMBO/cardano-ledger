@@ -156,7 +156,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where

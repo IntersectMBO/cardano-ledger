@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.20.0.1
+## 1.21.0.0
 
-*
+* Move withdrawal-validation and DRep expiry updates from `CERTS` to `LEDGER` starting protocol version 11.
+  - Add `ConwayWithdrawalsMissingAccounts` and `ConwayIncompleteWithdrawals` to `ConwayLedgerPredFailure`.
+  - Add `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule` to `Conway.Era`.
+  - Add `updateDormantDRepExpiries`  and `updateVotingDRepExpiries`
 
 ## 1.20.0.0
 

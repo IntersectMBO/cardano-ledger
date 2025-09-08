@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.18.1.0
+## 1.19.0.0
 
+* Modify `withdrawalsThatDoNotDrainAccounts` to return `Maybe (Withdrawals, Withdrawals)` where the `fst` are either missing accounts or in the wrong network and `snd` are incomplete withdrawals.
 * Add `FromJSON` instance for `PParamUpdate`
 
 ## 1.18.0.0

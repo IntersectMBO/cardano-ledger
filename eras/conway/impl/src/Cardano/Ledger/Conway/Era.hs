@@ -29,6 +29,7 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
+  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -179,3 +180,20 @@ hardforkConwayDisallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion 
 -- | Starting with protocol version 11, we report incorrect deposit and refunds better
 hardforkConwayDELEGIncorrectDepositsAndRefunds :: ProtVer -> Bool
 hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
+
+-- | Starting with protocol version 11, we move a predicate check and updates
+-- related to DRep dormancy and expiry from CERTS to LEDGER since that is a
+-- more suitable place for them.
+--
+-- 1. updates to drep expiry for all voting dreps
+-- 2. drep dormancy tracking updates
+-- 3. withdrawals draining - (split into two)
+--
+-- NOTE: In addition, we split the predicate check for withdrawals into two to
+-- make it better: both invalid withdrawals (submitted in the wrong network or
+-- with missing reward accounts) and incomplete withdrawals were being reported
+-- with WithdrawalsNotInRewardsCERTS but now ConwayWithdrawalsMissingAccounts and
+-- ConwayIncompleteWithdrawals are the new predicate failures we use to report
+-- the two separate cases in LEDGER
+hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule :: ProtVer -> Bool
+hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv = pvMajor pv > natVersion @10

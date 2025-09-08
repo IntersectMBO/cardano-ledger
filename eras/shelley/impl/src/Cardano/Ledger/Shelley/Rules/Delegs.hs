@@ -229,7 +229,9 @@ delegsTransition = do
           accounts = dState ^. accountsL
       failOnJust
         (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
-        WithdrawalsNotInRewardsDELEGS
+        ( \(invalid, incomplete) ->
+            WithdrawalsNotInRewardsDELEGS $ Withdrawals $ unWithdrawals invalid <> unWithdrawals incomplete
+        )
       pure $ certState & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do
       certState' <-

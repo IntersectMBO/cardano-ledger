@@ -40,6 +40,7 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
+  networkId,
   swapMismatch,
   unswapMismatch,
  )
@@ -55,6 +56,7 @@ import Cardano.Ledger.Conway.Era (
   ConwayLEDGER,
   ConwayUTXOW,
   hardforkConwayBootstrapPhase,
+  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -71,6 +73,8 @@ import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
   ConwayCertsEvent (..),
   ConwayCertsPredFailure (..),
+  updateDormantDRepExpiries,
+  updateVotingDRepExpiries,
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
@@ -106,11 +110,13 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   failOnNonEmpty,
   judgmentContext,
   liftSTS,
@@ -137,6 +143,8 @@ data ConwayLedgerPredFailure era
   | ConwayTreasuryValueMismatch (Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
   | ConwayTxRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
+  | ConwayWithdrawalsMissingAccounts Withdrawals
+  | ConwayIncompleteWithdrawals Withdrawals
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
@@ -246,6 +254,8 @@ instance
         Sum (ConwayTreasuryValueMismatch @era . unswapMismatch) 5 !> ToGroup (swapMismatch mm)
       ConwayTxRefScriptsSizeTooBig mm -> Sum ConwayTxRefScriptsSizeTooBig 6 !> ToGroup mm
       ConwayMempoolFailure t -> Sum ConwayMempoolFailure 7 !> To t
+      ConwayWithdrawalsMissingAccounts w -> Sum ConwayWithdrawalsMissingAccounts 8 !> To w
+      ConwayIncompleteWithdrawals w -> Sum ConwayIncompleteWithdrawals 9 !> To w
 
 instance
   ( Era era
@@ -263,6 +273,8 @@ instance
     5 -> SumD ConwayTreasuryValueMismatch <! mapCoder unswapMismatch FromGroup
     6 -> SumD ConwayTxRefScriptsSizeTooBig <! FromGroup
     7 -> SumD ConwayMempoolFailure <! From
+    8 -> SumD ConwayWithdrawalsMissingAccounts <! From
+    9 -> SumD ConwayIncompleteWithdrawals <! From
     n -> Invalid n
 
 data ConwayLedgerEvent era
@@ -302,6 +314,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , ConwayEraCertState era
   , EraCertState era
   ) =>
   STS (ConwayLEDGER era)
@@ -346,7 +359,7 @@ ledgerTransition ::
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -411,11 +424,33 @@ ledgerTransition = do
                 filter isNotDRepDelegated wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
+        certState' <-
+          if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
+            then do
+              network <- liftSTS $ asks networkId
+              let accounts = certState ^. certDStateL . accountsL
+                  withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+                  (invalidWithdrawals, incompleteWithdrawals) =
+                    case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+                      Nothing -> (Nothing, Nothing)
+                      Just (invalid, incomplete) ->
+                        ( if null (unWithdrawals invalid) then Nothing else Just invalid
+                        , if null (unWithdrawals incomplete) then Nothing else Just incomplete
+                        )
+              failOnJust invalidWithdrawals ConwayWithdrawalsMissingAccounts
+              failOnJust incompleteWithdrawals ConwayIncompleteWithdrawals
+              pure $
+                certState
+                  & updateDormantDRepExpiries tx curEpochNo
+                  & updateVotingDRepExpiries tx curEpochNo (pp ^. ppDRepActivityL)
+                  & certDStateL . accountsL %~ drainAccounts withdrawals
+            else pure certState
+
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
               ( CertsEnv tx pp curEpochNo committee committeeProposals
-              , certState
+              , certState'
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
 
@@ -492,6 +527,8 @@ instance
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
+  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  , EraRuleFailure "CERT" era ~ ConwayCertPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
   , EraCertState era
@@ -506,6 +543,8 @@ instance
   ( Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , ConwayEraGov era
   , AlonzoEraTx era
   , ConwayEraTxBody era
@@ -524,7 +563,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where
