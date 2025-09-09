@@ -28,6 +28,7 @@ module Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript (MkDijkstraNativeScript),
   DijkstraNativeScriptRaw (..),
   pattern GuardingPurpose,
+  pattern RequireGuard,
   evalDijkstraNativeScript,
   upgradeTimelock,
 ) where
@@ -68,6 +69,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
@@ -79,6 +81,8 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
+import Data.OSet.Strict (OSet)
+import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
@@ -223,6 +227,7 @@ data DijkstraNativeScriptRaw era
   | DijkstraRequireMOf !Int !(StrictSeq (DijkstraNativeScript era))
   | DijkstraTimeStart !SlotNo
   | DijkstraTimeExpire !SlotNo
+  | DijkstraRequireGuard (Credential 'Guard)
   deriving (Eq, Generic, NFData)
 
 deriving instance Show (DijkstraNativeScriptRaw era)
@@ -238,6 +243,7 @@ instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
       DijkstraRequireMOf m xs -> Sum DijkstraRequireMOf 3 !> To m !> To xs
       DijkstraTimeStart m -> Sum DijkstraTimeStart 4 !> To m
       DijkstraTimeExpire m -> Sum DijkstraTimeExpire 5 !> To m
+      DijkstraRequireGuard cred -> Sum DijkstraRequireGuard 6 !> To cred
 
 instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
   decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
@@ -249,6 +255,7 @@ instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
       decRaw 3 = Ann (SumD DijkstraRequireMOf) <*! Ann From <*! D (sequence <$> decCBOR)
       decRaw 4 = Ann (SumD DijkstraTimeStart <! From)
       decRaw 5 = Ann (SumD DijkstraTimeExpire <! From)
+      decRaw 6 = Ann (SumD DijkstraRequireGuard <! From)
       decRaw n = Invalid n
 
 newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
@@ -280,6 +287,7 @@ instance EqRaw (DijkstraNativeScript era) where
       go (DijkstraRequireMOf n1 ts1) (DijkstraRequireMOf n2 ts2) = n1 == n2 && seqEq ts1 ts2
       go (DijkstraTimeStart sn1) (DijkstraTimeStart sn2) = sn1 == sn2
       go (DijkstraTimeExpire sn1) (DijkstraTimeExpire sn2) = sn1 == sn2
+      go (DijkstraRequireGuard cred1) (DijkstraRequireGuard cred2) = cred1 == cred2
       go _ _ = False
 
 instance Era era => MemPack (DijkstraNativeScript era) where
@@ -439,11 +447,17 @@ class ConwayEraScript era => DijkstraEraScript era where
   mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
   toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
 
+  mkRequireGuard :: Credential 'Guard -> NativeScript era
+  getRequireGuard :: NativeScript era -> Maybe (Credential 'Guard)
+
 instance DijkstraEraScript DijkstraEra where
   mkGuardingPurpose = DijkstraGuarding
 
   toGuardingPurpose (DijkstraGuarding i) = Just i
   toGuardingPurpose _ = Nothing
+
+  mkRequireGuard = mkDijkstraRequireGuard
+  getRequireGuard = getDijkstraRequireGuard
 
 pattern GuardingPurpose ::
   DijkstraEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
@@ -451,13 +465,19 @@ pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
   where
     GuardingPurpose c = mkGuardingPurpose c
 
+pattern RequireGuard :: DijkstraEraScript era => Credential 'Guard -> NativeScript era
+pattern RequireGuard cred <- (getRequireGuard -> Just cred)
+  where
+    RequireGuard cred = mkRequireGuard cred
+
 evalDijkstraNativeScript ::
-  (AllegraEraScript era, NativeScript era ~ DijkstraNativeScript era) =>
+  (DijkstraEraScript era, NativeScript era ~ DijkstraNativeScript era) =>
   Set.Set (KeyHash 'Witness) ->
   ValidityInterval ->
+  OSet (Credential 'Guard) ->
   NativeScript era ->
   Bool
-evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) = go
+evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) guards = go
   where
     -- the evaluation will stop as soon as it reaches the required number of valid scripts
     isValidMOf n SSeq.Empty = n <= 0
@@ -470,6 +490,7 @@ evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) = go
       RequireAllOf xs -> all go xs
       RequireAnyOf xs -> any go xs
       RequireMOf m xs -> isValidMOf m xs
+      RequireGuard cred -> cred `OSet.member` guards
       _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 mkDijkstraRequireSignature :: forall era. Era era => KeyHash 'Witness -> DijkstraNativeScript era
@@ -517,3 +538,10 @@ mkDijkstraTimeExpire = mkMemoizedEra @era . DijkstraTimeExpire
 getDijkstraTimeExpire :: DijkstraNativeScript era -> Maybe SlotNo
 getDijkstraTimeExpire (MkDijkstraNativeScript (Memo (DijkstraTimeExpire mslot) _)) = Just mslot
 getDijkstraTimeExpire _ = Nothing
+
+mkDijkstraRequireGuard :: forall era. Era era => Credential 'Guard -> DijkstraNativeScript era
+mkDijkstraRequireGuard = mkMemoizedEra @era . DijkstraRequireGuard
+
+getDijkstraRequireGuard :: DijkstraNativeScript era -> Maybe (Credential 'Guard)
+getDijkstraRequireGuard (MkDijkstraNativeScript (Memo (DijkstraRequireGuard cred) _)) = Just cred
+getDijkstraRequireGuard _ = Nothing
