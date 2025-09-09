@@ -645,3 +645,25 @@ jobs:
           echo 'The diff must not contain any `undefined` values'
           false
         fi
+
+  changelog-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install changelog linter
+      run: |
+        REPO=cardano-ledger-release-tool
+        RELEASE=changelogs-0.1.0.0
+        curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64.zip" -o $REPO.zip
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        unzip $REPO.zip -d "$BINDIR"
+        rm $REPO.zip
+        echo "$BINDIR" >> $GITHUB_PATH
+
+    - name: Run linter
+      run: |
+        git ls-files '*CHANGELOG.md' | xargs -r changelogs --inplace
+        git diff --exit-code

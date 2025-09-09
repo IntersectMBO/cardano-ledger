@@ -2,7 +2,7 @@
 
 ## 1.1.0.4
 
-* Bumped base to >=4.18
+*
 
 ## 1.1.0.3
 
@@ -14,11 +14,11 @@
 
 ## 1.1.0.1
 
-- Set upper bound ansi-wl-pprint < 1.0
+*
 
 ## 1.1.0.0
 
-- Remove unused instances for `Data.UMap` #3371
+* Remove unused instances for `Data.UMap` #3371
 
 ## 1.0.0.0
 

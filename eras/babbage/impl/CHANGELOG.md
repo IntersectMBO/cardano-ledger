@@ -49,13 +49,13 @@
 ## 1.10.0.0
 
 * Add `ProtVer` argument to `TxInfo` functions:
-  * `transTxRedeemers`
-  * `toPlutusV2Args`
+  - `transTxRedeemers`
+  - `toPlutusV2Args`
 
 ### `testlib`
 
 * Move `TxInfo` golden tests over from the older `-test` package. #4599
-  * Also move the `gen-golden` executable over.
+  - Also move the `gen-golden` executable over.
 
 ## 1.9.0.0
 
@@ -81,16 +81,16 @@
 ## 1.7.0.0
 
 * Add type `EraRuleEvent` instances for the event type of:
-  * `UTXOS`
-  * `PPUP`
-  * `LEDGER`
-  * `TICK`
+  - `UTXOS`
+  - `PPUP`
+  - `LEDGER`
+  - `TICK`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `NFData` instance for `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `getReferenceScriptsNonDistinct`
 * Add the constructor `BabbageNonDisjointRefInputs` to `BabbageUtxoPredFailure`
-  * Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
+  - Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
 * Modify `PParams` JSON instances to match `cardano-api`
 
 ### `testlib`
@@ -134,12 +134,12 @@
 ## 1.5.0.0
 
 * Add `Generic` instance for:
-  * `BabbageUtxoPredFailure`
-  * `BabbageUtxowPredFailure`
+  - `BabbageUtxoPredFailure`
+  - `BabbageUtxowPredFailure`
 * Add `ToExpr` instance for:
-  * `BabbageUtxoPredFailure`
-  * `BabbageUtxowPredFailure`
-  * `BabbageTxOut`
+  - `BabbageUtxoPredFailure`
+  - `BabbageUtxowPredFailure`
+  - `BabbageTxOut`
 * Switch to using `AlonzoEraUTxO` in rules
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 * Add `getBabbageSupplementalDataHashes`
@@ -154,8 +154,8 @@
 ## 1.4.5.0
 
 * Add `ToExpr` instance for:
-  * `BabbageTxBody`
-  * `BabbageTxOut`
+  - `BabbageTxBody`
+  - `BabbageTxOut`
 * Add `Generic` instance for `BabbageTxBody`
 * Add `BabbageTxUpgradeError` and `BabbageTxBodyUpgradeError`
 * Add `EraTransition` instance.
@@ -180,10 +180,10 @@
 ## 1.4.0.0
 
 * Added a protocol version constraint to:
-  * `STS (BabbageUTXOS era)` instance
-  * `STS (BabbageUTXOW era)` instance
-  * `utxosTransition`
-  * `babbageUtxowTransition`
+  - `STS (BabbageUTXOS era)` instance
+  - `STS (BabbageUTXOW era)` instance
+  - `utxosTransition`
+  - `babbageUtxowTransition`
 
 ## 1.3.0.0
 
@@ -201,9 +201,9 @@
 
 * Replace `DPState c` with `CertState era`
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo and Babbage ledger era rules do not allow V3 scripts, however.).
   Addition of `babbageTxInfoV1` and `babbageTxInfoV2`
@@ -215,7 +215,7 @@
 * Removed validation function `validateOutputTooBigUTxO`, in favor of the same function
   from `cardano-ledger-alonzo`.
 
-###`testlib`
+### `testlib`
 
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 
