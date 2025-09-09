@@ -28,6 +28,7 @@ module Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScriptRaw (..),
   pattern GuardingPurpose,
   evalDijkstraNativeScript,
+  upgradeTimelock,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
@@ -62,6 +63,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
   (<*!),
  )
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Core
@@ -286,10 +288,10 @@ instance Era era => MemPack (DijkstraNativeScript era) where
 
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
-  type NativeScript DijkstraEra = Timelock DijkstraEra
+  type NativeScript DijkstraEra = DijkstraNativeScript DijkstraEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ upgradeTimelock ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s
@@ -300,6 +302,16 @@ instance EraScript DijkstraEra where
   getNativeScript _ = Nothing
 
   fromNativeScript = NativeScript
+
+upgradeTimelock :: NativeScript ConwayEra -> NativeScript DijkstraEra
+upgradeTimelock = \case
+  RequireSignature keyHash -> RequireSignature keyHash
+  RequireAllOf sigs -> RequireAllOf $ upgradeTimelock <$> sigs
+  RequireAnyOf sigs -> RequireAnyOf $ upgradeTimelock <$> sigs
+  RequireMOf n sigs -> RequireMOf n $ upgradeTimelock <$> sigs
+  RequireTimeStart mslot -> RequireTimeStart mslot
+  RequireTimeExpire mslot -> RequireTimeExpire mslot
+  _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 instance MemPack (PlutusScript DijkstraEra) where
   packedByteCount = \case
@@ -392,24 +404,24 @@ instance AlonzoEraScript DijkstraEra where
     ConwayProposing (AsIx ix) -> DijkstraProposing (AsIx ix)
 
 instance ShelleyEraScript DijkstraEra where
-  mkRequireSignature = mkRequireSignatureTimelock
-  getRequireSignature = getRequireSignatureTimelock
+  mkRequireSignature = mkDijkstraRequireSignature
+  getRequireSignature = getDijkstraRequireSignature
 
-  mkRequireAllOf = mkRequireAllOfTimelock
-  getRequireAllOf = getRequireAllOfTimelock
+  mkRequireAllOf = mkDijkstraRequireAllOf
+  getRequireAllOf = getDijkstraRequireAllOf
 
-  mkRequireAnyOf = mkRequireAnyOfTimelock
-  getRequireAnyOf = getRequireAnyOfTimelock
+  mkRequireAnyOf = mkDijkstraRequireAnyOf
+  getRequireAnyOf = getDijkstraRequireAnyOf
 
-  mkRequireMOf = mkRequireMOfTimelock
-  getRequireMOf = getRequireMOfTimelock
+  mkRequireMOf = mkDijkstraRequireMOf
+  getRequireMOf = getDijkstraRequireMOf
 
 instance AllegraEraScript DijkstraEra where
-  mkTimeStart = mkTimeStartTimelock
-  getTimeStart = getTimeStartTimelock
+  mkTimeStart = mkDijkstraTimeStart
+  getTimeStart = getDijkstraTimeStart
 
-  mkTimeExpire = mkTimeExpireTimelock
-  getTimeExpire = getTimeExpireTimelock
+  mkTimeExpire = mkDijkstraTimeExpire
+  getTimeExpire = getDijkstraTimeExpire
 
 instance ConwayEraScript DijkstraEra where
   mkVotingPurpose = DijkstraVoting
@@ -458,3 +470,49 @@ evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) = go
       RequireAnyOf xs -> any go xs
       RequireMOf m xs -> isValidMOf m xs
       _ -> error "Impossible: All NativeScripts should have been accounted for"
+
+mkDijkstraRequireSignature :: forall era. Era era => KeyHash 'Witness -> DijkstraNativeScript era
+mkDijkstraRequireSignature = mkMemoizedEra @era . DijkstraRequireSignature
+
+getDijkstraRequireSignature :: DijkstraNativeScript era -> Maybe (KeyHash 'Witness)
+getDijkstraRequireSignature (MkDijkstraNativeScript (Memo (DijkstraRequireSignature kh) _)) = Just kh
+getDijkstraRequireSignature _ = Nothing
+
+mkDijkstraRequireAllOf ::
+  forall era. Era era => StrictSeq (DijkstraNativeScript era) -> DijkstraNativeScript era
+mkDijkstraRequireAllOf = mkMemoizedEra @era . DijkstraRequireAllOf
+
+getDijkstraRequireAllOf :: DijkstraNativeScript era -> Maybe (StrictSeq (DijkstraNativeScript era))
+getDijkstraRequireAllOf (MkDijkstraNativeScript (Memo (DijkstraRequireAllOf ms) _)) = Just ms
+getDijkstraRequireAllOf _ = Nothing
+
+mkDijkstraRequireAnyOf ::
+  forall era. Era era => StrictSeq (DijkstraNativeScript era) -> DijkstraNativeScript era
+mkDijkstraRequireAnyOf = mkMemoizedEra @era . DijkstraRequireAnyOf
+
+getDijkstraRequireAnyOf :: DijkstraNativeScript era -> Maybe (StrictSeq (DijkstraNativeScript era))
+getDijkstraRequireAnyOf (MkDijkstraNativeScript (Memo (DijkstraRequireAnyOf ms) _)) = Just ms
+getDijkstraRequireAnyOf _ = Nothing
+
+mkDijkstraRequireMOf ::
+  forall era. Era era => Int -> StrictSeq (DijkstraNativeScript era) -> DijkstraNativeScript era
+mkDijkstraRequireMOf n = mkMemoizedEra @era . DijkstraRequireMOf n
+
+getDijkstraRequireMOf ::
+  DijkstraNativeScript era -> Maybe (Int, StrictSeq (DijkstraNativeScript era))
+getDijkstraRequireMOf (MkDijkstraNativeScript (Memo (DijkstraRequireMOf n ms) _)) = Just (n, ms)
+getDijkstraRequireMOf _ = Nothing
+
+mkDijkstraTimeStart :: forall era. Era era => SlotNo -> DijkstraNativeScript era
+mkDijkstraTimeStart = mkMemoizedEra @era . DijkstraTimeStart
+
+getDijkstraTimeStart :: DijkstraNativeScript era -> Maybe SlotNo
+getDijkstraTimeStart (MkDijkstraNativeScript (Memo (DijkstraTimeStart mslot) _)) = Just mslot
+getDijkstraTimeStart _ = Nothing
+
+mkDijkstraTimeExpire :: forall era. Era era => SlotNo -> DijkstraNativeScript era
+mkDijkstraTimeExpire = mkMemoizedEra @era . DijkstraTimeExpire
+
+getDijkstraTimeExpire :: DijkstraNativeScript era -> Maybe SlotNo
+getDijkstraTimeExpire (MkDijkstraNativeScript (Memo (DijkstraTimeExpire mslot) _)) = Just mslot
+getDijkstraTimeExpire _ = Nothing

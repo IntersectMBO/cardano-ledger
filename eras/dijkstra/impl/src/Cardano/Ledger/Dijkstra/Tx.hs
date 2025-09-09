@@ -1,14 +1,22 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Tx (Tx (..)) where
+module Cardano.Ledger.Dijkstra.Tx (
+  Tx (..),
+  validateDijkstraNativeScript,
+) where
 
-import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (..),
@@ -22,15 +30,18 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
-import Cardano.Ledger.Core (EraTx (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraNativeScript, evalDijkstraNativeScript)
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
 instance EraTx DijkstraEra where
@@ -52,7 +63,7 @@ instance EraTx DijkstraEra where
   sizeTxF = dijkstraTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateNativeScript = validateTimelock
+  validateNativeScript = validateDijkstraNativeScript
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
@@ -69,3 +80,15 @@ instance AlonzoEraTx DijkstraEra where
 
 instance DecCBOR (Annotator (Tx DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR
+
+validateDijkstraNativeScript ::
+  ( EraTx era
+  , AllegraEraTxBody era
+  , AllegraEraScript era
+  , NativeScript era ~ DijkstraNativeScript era
+  ) =>
+  Tx era -> NativeScript era -> Bool
+validateDijkstraNativeScript tx = evalDijkstraNativeScript vhks (tx ^. bodyTxL . vldtTxBodyL)
+  where
+    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
+{-# INLINEABLE validateDijkstraNativeScript #-}
