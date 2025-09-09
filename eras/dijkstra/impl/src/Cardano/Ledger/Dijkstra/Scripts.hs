@@ -17,6 +17,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -434,7 +435,7 @@ instance ConwayEraScript DijkstraEra where
   toProposingPurpose (DijkstraProposing i) = Just i
   toProposingPurpose _ = Nothing
 
-class DijkstraEraScript era where
+class ConwayEraScript era => DijkstraEraScript era where
   mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
   toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
 
