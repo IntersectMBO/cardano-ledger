@@ -1,17 +1,21 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,27 +24,14 @@ module Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
   DijkstraPlutusPurpose (..),
   DijkstraEraScript (..),
+  DijkstraNativeScript (MkDijkstraNativeScript),
+  DijkstraNativeScriptRaw (..),
   pattern GuardingPurpose,
+  evalDijkstraNativeScript,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.Allegra.Scripts (
-  AllegraEraScript (..),
-  Timelock,
-  getRequireAllOfTimelock,
-  getRequireAnyOfTimelock,
-  getRequireMOfTimelock,
-  getRequireSignatureTimelock,
-  getTimeExpireTimelock,
-  getTimeStartTimelock,
-  mkRequireAllOfTimelock,
-  mkRequireAnyOfTimelock,
-  mkRequireMOfTimelock,
-  mkRequireSignatureTimelock,
-  mkTimeExpireTimelock,
-  mkTimeStartTimelock,
-  translateTimelock,
- )
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AsItem,
@@ -48,35 +39,47 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIxItem,
   alonzoScriptPrefixTag,
  )
-import Cardano.Ledger.BaseTypes (Inject (..), kindObject)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
+  Annotator,
   CBORGroup (..),
-  DecCBOR (..),
+  DecCBOR (decCBOR),
   DecCBORGroup (..),
-  EncCBOR (..),
+  EncCBOR (encCBOR),
   EncCBORGroup (..),
+  ToCBOR (..),
   decodeWord8,
   encodeWord8,
+  encodedSizeExpr,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  Wrapped (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+  (<*!),
  )
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, Voter)
 import Cardano.Ledger.Conway.Scripts
-import Cardano.Ledger.Core (
-  EraPParams,
-  EraScript (..),
-  EraTxCert (..),
-  SafeToHash (..),
-  ScriptHash,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
 import Cardano.Ledger.Mary.Value (PolicyID)
+import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLanguage)
-import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
+import qualified Data.Sequence.Strict as SSeq
+import Data.Set as Set (Set, member)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
@@ -209,6 +212,77 @@ deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose
 deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIx era)
 
 deriving instance (EraPParams era, EraTxCert era) => Show (DijkstraPlutusPurpose AsIxItem era)
+
+data DijkstraNativeScriptRaw era
+  = DijkstraRequireSignature !(KeyHash 'Witness)
+  | DijkstraRequireAllOf !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraRequireAnyOf !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraRequireMOf !Int !(StrictSeq (DijkstraNativeScript era))
+  | DijkstraTimeStart !SlotNo
+  | DijkstraTimeExpire !SlotNo
+  deriving (Eq, Generic, NFData)
+
+deriving instance Show (DijkstraNativeScriptRaw era)
+
+deriving instance Era era => NoThunks (DijkstraNativeScriptRaw era)
+
+instance Era era => EncCBOR (DijkstraNativeScriptRaw era) where
+  encCBOR =
+    encode . \case
+      DijkstraRequireSignature hash -> Sum DijkstraRequireSignature 0 !> To hash
+      DijkstraRequireAllOf xs -> Sum DijkstraRequireAllOf 1 !> To xs
+      DijkstraRequireAnyOf xs -> Sum DijkstraRequireAnyOf 2 !> To xs
+      DijkstraRequireMOf m xs -> Sum DijkstraRequireMOf 3 !> To m !> To xs
+      DijkstraTimeStart m -> Sum DijkstraTimeStart 4 !> To m
+      DijkstraTimeExpire m -> Sum DijkstraTimeExpire 5 !> To m
+
+instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
+  decCBOR = decode (Summands "DijkstraNativeScriptRaw" decRaw)
+    where
+      decRaw :: Word -> Decode 'Open (Annotator (DijkstraNativeScriptRaw era))
+      decRaw 0 = Ann (SumD DijkstraRequireSignature <! From)
+      decRaw 1 = Ann (SumD DijkstraRequireAllOf) <*! D (sequence <$> decCBOR)
+      decRaw 2 = Ann (SumD DijkstraRequireAnyOf) <*! D (sequence <$> decCBOR)
+      decRaw 3 = Ann (SumD DijkstraRequireMOf) <*! Ann From <*! D (sequence <$> decCBOR)
+      decRaw 4 = Ann (SumD DijkstraTimeStart <! From)
+      decRaw 5 = Ann (SumD DijkstraTimeExpire <! From)
+      decRaw n = Invalid n
+
+newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
+  deriving (Eq, Generic)
+  deriving newtype (ToCBOR, NFData, SafeToHash)
+
+deriving instance Show (DijkstraNativeScript era)
+
+instance Era era => NoThunks (DijkstraNativeScript era)
+
+instance Era era => EncCBOR (DijkstraNativeScript era)
+
+instance Era era => DecCBOR (Annotator (DijkstraNativeScript era)) where
+  decCBOR = fmap MkDijkstraNativeScript <$> decCBOR
+
+instance Memoized (DijkstraNativeScript era) where
+  type RawType (DijkstraNativeScript era) = DijkstraNativeScriptRaw era
+
+instance EqRaw (DijkstraNativeScript era) where
+  eqRaw = eqRawDijkstraNativeScript
+    where
+      eqRawDijkstraNativeScript dns1 dns2 = go (getMemoRawType dns1) (getMemoRawType dns2)
+      seqEq Empty Empty = True
+      seqEq (x :<| xs) (y :<| ys) = eqRawDijkstraNativeScript x y && seqEq xs ys
+      seqEq _ _ = False
+      go (DijkstraRequireSignature kh1) (DijkstraRequireSignature kh2) = kh1 == kh2
+      go (DijkstraRequireAllOf ts1) (DijkstraRequireAllOf ts2) = seqEq ts1 ts2
+      go (DijkstraRequireAnyOf ts1) (DijkstraRequireAnyOf ts2) = seqEq ts1 ts2
+      go (DijkstraRequireMOf n1 ts1) (DijkstraRequireMOf n2 ts2) = n1 == n2 && seqEq ts1 ts2
+      go (DijkstraTimeStart sn1) (DijkstraTimeStart sn2) = sn1 == sn2
+      go (DijkstraTimeExpire sn1) (DijkstraTimeExpire sn2) = sn1 == sn2
+      go _ _ = False
+
+instance Era era => MemPack (DijkstraNativeScript era) where
+  packedByteCount (MkDijkstraNativeScript mb) = byteCountMemoBytes mb
+  packM (MkDijkstraNativeScript mb) = packMemoBytesM mb
+  unpackM = MkDijkstraNativeScript <$> unpackMemoBytesM (eraProtVerLow @era)
 
 instance EraScript DijkstraEra where
   type Script DijkstraEra = AlonzoScript DijkstraEra
@@ -363,3 +437,24 @@ pattern GuardingPurpose ::
 pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
   where
     GuardingPurpose c = mkGuardingPurpose c
+
+evalDijkstraNativeScript ::
+  (AllegraEraScript era, NativeScript era ~ DijkstraNativeScript era) =>
+  Set.Set (KeyHash 'Witness) ->
+  ValidityInterval ->
+  NativeScript era ->
+  Bool
+evalDijkstraNativeScript keyHashes (ValidityInterval txStart txExp) = go
+  where
+    -- the evaluation will stop as soon as it reaches the required number of valid scripts
+    isValidMOf n SSeq.Empty = n <= 0
+    isValidMOf n (ts SSeq.:<| tss) =
+      n <= 0 || if go ts then isValidMOf (n - 1) tss else isValidMOf n tss
+    go = \case
+      RequireTimeStart lockStart -> lockStart `lteNegInfty` txStart
+      RequireTimeExpire lockExp -> txExp `ltePosInfty` lockExp
+      RequireSignature hash -> hash `Set.member` keyHashes
+      RequireAllOf xs -> all go xs
+      RequireAnyOf xs -> any go xs
+      RequireMOf m xs -> isValidMOf m xs
+      _ -> error "Impossible: All NativeScripts should have been accounted for"
