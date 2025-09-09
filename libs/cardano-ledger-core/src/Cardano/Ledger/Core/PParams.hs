@@ -108,7 +108,7 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:!), (.=))
 import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
 import qualified Data.Foldable as F (foldMap', foldl', foldlM)
@@ -248,6 +248,18 @@ deriving via
   KeyValuePairs (PParamsUpdate era)
   instance
     EraPParams era => ToJSON (PParamsUpdate era)
+
+instance EraPParams era => FromJSON (PParamsUpdate era) where
+  parseJSON =
+    withObject (show . typeRep $ Proxy @(PParamsUpdate era)) $ \obj ->
+      let go acc PParam {ppName, ppUpdate} =
+            maybe id setPpu <$> obj .:! Aeson.fromText ppName <*> pure acc
+            where
+              setPpu = maybe (const id) (\PParamUpdate {ppuLens} -> set ppuLens . SJust) ppUpdate
+       in F.foldlM
+            go
+            (emptyPParamsUpdate @era)
+            (eraPParams @era)
 
 deriving instance Generic (PParamsUpdate era)
 
