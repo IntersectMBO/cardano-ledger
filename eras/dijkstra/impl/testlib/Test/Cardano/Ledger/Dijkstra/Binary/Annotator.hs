@@ -30,6 +30,7 @@ instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
     3 -> SumD DijkstraRequireMOf <! From <! From
     4 -> SumD DijkstraTimeStart <! From
     5 -> SumD DijkstraTimeExpire <! From
+    6 -> SumD DijkstraRequireGuard <! From
     n -> Invalid n
 
 instance Era era => DecCBOR (DijkstraNativeScript era) where
