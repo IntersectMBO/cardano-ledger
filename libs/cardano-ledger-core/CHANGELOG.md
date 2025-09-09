@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `FromJSON` instance for `PParamUpdate`
 * Changed the type of `AtMostEra` and `AtLeastEra` to accept a type level string instead of an actual era type.
 * Add `EraName` type family to the `Era` type class and use it for default implementation of
   `eraName` type class function.
