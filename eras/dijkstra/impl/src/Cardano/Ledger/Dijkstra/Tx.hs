@@ -15,7 +15,6 @@ module Cardano.Ledger.Dijkstra.Tx (
   validateDijkstraNativeScript,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
@@ -32,9 +31,13 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Scripts (DijkstraNativeScript, evalDijkstraNativeScript)
+import Cardano.Ledger.Dijkstra.Scripts (
+  DijkstraEraScript,
+  DijkstraNativeScript,
+  evalDijkstraNativeScript,
+ )
 import Cardano.Ledger.Dijkstra.TxAuxData ()
-import Cardano.Ledger.Dijkstra.TxBody ()
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -83,12 +86,13 @@ instance DecCBOR (Annotator (Tx DijkstraEra)) where
 
 validateDijkstraNativeScript ::
   ( EraTx era
-  , AllegraEraTxBody era
-  , AllegraEraScript era
+  , DijkstraEraTxBody era
+  , DijkstraEraScript era
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
   Tx era -> NativeScript era -> Bool
-validateDijkstraNativeScript tx = evalDijkstraNativeScript vhks (tx ^. bodyTxL . vldtTxBodyL)
+validateDijkstraNativeScript tx =
+  evalDijkstraNativeScript vhks (tx ^. bodyTxL . vldtTxBodyL) (tx ^. bodyTxL . guardsTxBodyL)
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateDijkstraNativeScript #-}

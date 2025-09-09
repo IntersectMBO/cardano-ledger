@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
-  AllegraEraScript,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
@@ -40,7 +39,9 @@ import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
   evalDijkstraNativeScript,
+  pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
@@ -125,9 +126,7 @@ exampleDijkstraGenesis =
     }
 
 impDijkstraSatisfyNativeScript ::
-  ( ShelleyEraImp era
-  , AllegraEraScript era
-  , AllegraEraTxBody era
+  ( DijkstraEraImp era
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
   Set.Set (KeyHash 'Witness) ->
@@ -136,6 +135,7 @@ impDijkstraSatisfyNativeScript ::
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
 impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do
   let vi = txBody ^. vldtTxBodyL
+  let guards = txBody ^. guardsTxBodyL
   case script of
     RequireSignature keyHash -> impSatisfySignature keyHash providedVKeyHashes
     RequireAllOf ss -> impSatisfyMNativeScripts providedVKeyHashes txBody (length ss) ss
@@ -144,9 +144,13 @@ impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do
       impSatisfyMNativeScripts providedVKeyHashes txBody m ss
     RequireMOf m ss -> impSatisfyMNativeScripts providedVKeyHashes txBody m ss
     lock@(RequireTimeStart _)
-      | evalDijkstraNativeScript mempty vi lock -> pure $ Just mempty
+      | evalDijkstraNativeScript mempty vi guards lock -> pure $ Just mempty
       | otherwise -> pure Nothing
     lock@(RequireTimeExpire _)
-      | evalDijkstraNativeScript mempty vi lock -> pure $ Just mempty
+      | evalDijkstraNativeScript mempty vi guards lock -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    -- TODO: actual satisfy the native scripts by updating the transaction's guards
+    ns@(RequireGuard _)
+      | evalDijkstraNativeScript mempty vi guards ns -> pure $ Just mempty
       | otherwise -> pure Nothing
     _ -> error "Impossible: All NativeScripts should have been accounted for"
