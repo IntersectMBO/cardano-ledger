@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.20.0.1
+
+*
+
 ## 1.20.0.0
 
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:

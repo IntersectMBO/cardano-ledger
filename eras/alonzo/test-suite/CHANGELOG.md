@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo-test`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Removed `Test.Cardano.Ledger.Alonzo.Serialisation.Generators`

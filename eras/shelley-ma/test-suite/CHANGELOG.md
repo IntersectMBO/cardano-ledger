@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley-ma-test`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Removed `Test.Cardano.Ledger.Allegra.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
