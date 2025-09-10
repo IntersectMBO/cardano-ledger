@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-binary
-version: 1.7.0.0
+version: 1.7.0.1
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -73,7 +73,7 @@ library
     nothunks,
     plutus-ledger-api >=1.27.0,
     primitive,
-    random,
+    random >=1.2,
     recursion-schemes,
     serialise,
     tagged,
