@@ -121,4 +121,5 @@ spec =
     describe "TxInfo" $ do
       TxInfo.spec @era
       BabbageTxInfo.spec @era
-      describe "PlutusV3" $ BabbageTxInfo.txInfoSpecV2 @era SPlutusV3
+      describe "PlutusV3" $
+        BabbageTxInfo.txInfoSpec @era SPlutusV3

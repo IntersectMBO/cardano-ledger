@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpecV2, spec) where
+module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -35,7 +35,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), plutusLanguage)
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
@@ -314,7 +314,7 @@ txInfoSpecV1 =
         (txBare shelleyInput inlineDatumOutput)
         (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
 
-txInfoSpecV2 ::
+txInfoSpec ::
   forall era l.
   ( EraTx era
   , EraPlutusTxInfo l era
@@ -327,7 +327,7 @@ txInfoSpecV2 ::
   ) =>
   SLanguage l ->
   Spec
-txInfoSpecV2 lang =
+txInfoSpec lang =
   describe (show lang) $ do
     it "translation error on byron txout" $
       expectTranslationError @era
@@ -344,11 +344,13 @@ txInfoSpecV2 lang =
         lang
         (txBare unknownInput shelleyOutput)
         (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
-    it "use reference input starting in Babbage" $
-      successfulTranslation @era
-        lang
-        (txRefInput shelleyInput)
-        hasReferenceInput
+    -- This test will fail in PlutusV3 because of ReferenceInputsNotDisjointFromInputs
+    when (plutusLanguage lang == PlutusV2) $
+      it "use reference input starting in Babbage" $
+        successfulTranslation @era
+          lang
+          (txRefInput shelleyInput)
+          hasReferenceInput
     it "use inline datum in input" $
       successfulTranslation @era
         lang
@@ -389,7 +391,7 @@ spec ::
 spec =
   describe "txInfo translation" $ do
     txInfoSpecV1 @era
-    txInfoSpecV2 @era SPlutusV2
+    txInfoSpec @era SPlutusV2
 
 genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))
