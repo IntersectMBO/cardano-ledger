@@ -224,7 +224,11 @@ genLazyByteString :: Int -> Gen BSL.ByteString
 genLazyByteString n = BSL.fromStrict <$> genByteString n
 
 genShortByteString :: Int -> Gen SBS.ShortByteString
+#if MIN_VERSION_random(1,3,0)
+genShortByteString n = uniformShortByteStringM (fromIntegral n) QC
+#else
 genShortByteString n = uniformShortByteString (fromIntegral n) QC
+#endif
 
 genByteArray :: Int -> Gen Prim.ByteArray
 genByteArray n = do

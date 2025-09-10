@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.18.0.0
+version: 1.18.0.1
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -237,7 +237,7 @@ library testlib
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
     primitive,
     quickcheck-transformer,
-    random ^>=1.2,
+    random >=1.2,
     small-steps >=1.1,
     text,
     time,

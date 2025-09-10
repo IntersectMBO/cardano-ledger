@@ -257,11 +257,11 @@ mkBootKeyPairWithSeed = uncurry ByronKeyPair . Byron.deterministicKeyGen . ensur
 
 ensure32ByteSeed :: BS.ByteString -> BS.ByteString
 ensure32ByteSeed inputSeed
-  | BS.length inputSeed /= seedSize =
+  | BS.length inputSeed /= expectedSeedSize =
       hashToBytes $ Hash.hashWith @Hash.Blake2b_256 id inputSeed
   | otherwise = inputSeed
   where
-    seedSize = 32
+    expectedSeedSize = 32
 
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
 genByronVKeyAddr = do
