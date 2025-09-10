@@ -535,7 +535,7 @@ class
   -- | Every era, except Shelley, must be able to upgrade a `Script` from a previous era.
   --
   -- /Warning/ - Important to note that any memoized binary representation will not be
-  -- preserved, you need to retain underlying bytes you can use `translateEraThroughCBOR`
+  -- preserved. If you need to retain underlying bytes then you can use `translateEraThroughCBOR`
   upgradeScript :: EraScript (PreviousEra era) => Script (PreviousEra era) -> Script era
 
   scriptPrefixTag :: Script era -> BS.ByteString
