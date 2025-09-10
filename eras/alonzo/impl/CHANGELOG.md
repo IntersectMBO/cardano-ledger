@@ -1,13 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.14.0.1
-
-*
-
-## 1.14.0.0
+## 1.15.0.0
 
 * Add `PlutusTxInInfo` type family
 * Add `toPlutusTxInInfo` method to `EraPlutusTxInfo`
+
+## 1.14.0.0
+
 * Replace `timelockScriptsAlonzoTxAuxDataL` with `nativeScriptsAlonzoTxAuxDataL`
 * Replace `atadTimelock` with `atadNativeScript` and `atadTimelock'` with `atadNativeScript'`
 * Replace `TimelockScript` constructor of `AlonzoScript` with a new constructor `NativeScript`
