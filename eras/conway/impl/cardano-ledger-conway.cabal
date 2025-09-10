@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-conway
-version: 1.20.0.0
+version: 1.20.0.1
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -97,7 +97,7 @@ library
     cardano-crypto-class,
     cardano-data >=1.2.3,
     cardano-ledger-allegra ^>=1.8,
-    cardano-ledger-alonzo ^>=1.14,
+    cardano-ledger-alonzo ^>=1.15,
     cardano-ledger-babbage ^>=1.12,
     cardano-ledger-binary ^>=1.7,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.18,
