@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Ledger.Plutus.Preprocessor.Source.V3 where
@@ -221,5 +222,27 @@ inputsOverlapsWithRefInputsQ =
           PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
             PLD.any (\x -> P.isJust . PLD.find (P.== x) $ PV3D.txInfoReferenceInputs txInfo) $
               PV3D.txInfoInputs txInfo
+          _ -> False
+    |]
+
+-- | This ensures that a single TreasuryWithdrawal can't withdraw enough to
+-- make the treasury have less ADA than the specified reserve amount.
+ensureTreasuryReserveQ :: Q [Dec]
+ensureTreasuryReserveQ =
+  [d|
+    ensureTreasuryReserve :: P.BuiltinData -> P.BuiltinUnit
+    ensureTreasuryReserve context =
+      P.check $
+        case unsafeFromBuiltinData context of
+          PV3D.ScriptContext
+            txInfo
+            _
+            (PV3D.ProposingScript _ (PV3D.ProposalProcedure _ _ (PV3D.TreasuryWithdrawals withdrawals _))) ->
+              let
+                totalWithdrawal = PAMD.foldr (P.+) 0 withdrawals
+               in
+                case PV3D.txInfoCurrentTreasuryAmount txInfo of
+                  Just treasury -> treasury P.- totalWithdrawal P.>= 100_000_000
+                  _ -> False
           _ -> False
     |]
