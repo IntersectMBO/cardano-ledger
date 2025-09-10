@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.9.0.1
+
+*
+
 ## 1.9.0.0
 
 * Hide `Cardano.Ledger.Mary.Translation` module

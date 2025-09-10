@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.18.0.1
+
+*
+
 ## 1.18.0.0
 
 * Changed the type of `AtMostEra` and `AtLeastEra` to accept a type level string instead of an actual era type.

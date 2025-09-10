@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.2.5.1
+
+*
+
 ## 1.2.5.0
 
 * Add `mapMaybeR`, `mapMaybeL`

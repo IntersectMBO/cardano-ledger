@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.12.0.1
+
+*
+
 ## 1.12.0.0
 
 * Add `upgradeNativeScript` method to `EraApi`

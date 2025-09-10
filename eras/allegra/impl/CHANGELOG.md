@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`

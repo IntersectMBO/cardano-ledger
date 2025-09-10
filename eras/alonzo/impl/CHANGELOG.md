@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.14.0.1
+
+*
+
 ## 1.14.0.0
 
 * Add `PlutusTxInInfo` type family
