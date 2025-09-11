@@ -74,7 +74,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   askCtx,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
-import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance
@@ -339,9 +338,9 @@ instance SpecTranslate ctx PoolParams where
 instance SpecTranslate ctx DRep where
   type SpecRep DRep = Agda.VDeleg
 
-  toSpecRep (DRepCredential c) = Agda.CredVoter Agda.DRep <$> toSpecRep c
-  toSpecRep DRepAlwaysAbstain = pure Agda.AbstainRep
-  toSpecRep DRepAlwaysNoConfidence = pure Agda.NoConfidenceRep
+  toSpecRep (DRepCredential c) = Agda.VDelegCredential <$> toSpecRep c
+  toSpecRep DRepAlwaysAbstain = pure Agda.VDelegAbstain
+  toSpecRep DRepAlwaysNoConfidence = pure Agda.VDelegNoConfidence
 
 instance SpecTranslate ctx Url where
   type SpecRep Url = T.Text
@@ -352,7 +351,7 @@ instance SpecTranslate ctx Anchor where
   toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep url <*> toSpecRep h
 
 instance SpecTranslate ctx Withdrawals where
-  type SpecRep Withdrawals = Agda.Wdrl
+  type SpecRep Withdrawals = Agda.Withdrawals
 
   toSpecRep (Withdrawals w) = toSpecRep w
 
@@ -407,7 +406,7 @@ instance
         pure (committee, agdaLastId)
 
 instance SpecTranslate ctx Voter where
-  type SpecRep Voter = Agda.Voter
+  type SpecRep Voter = Agda.GovVoter
 
   toSpecRep (CommitteeVoter c) = (Agda.CC,) <$> toSpecRep c
   toSpecRep (DRepVoter c) = (Agda.DRep,) <$> toSpecRep c
@@ -433,7 +432,7 @@ instance SpecTranslate ctx (VotingProcedures era) where
         SpecTransM ctx [Agda.GovVote]
       go voter gaId votingProcedure m =
         (:)
-          <$> ( Agda.GovVote
+          <$> ( Agda.MkGovVote
                   <$> toSpecRep gaId
                   <*> toSpecRep voter
                   <*> toSpecRep (vProcVote votingProcedure)
@@ -499,9 +498,9 @@ instance
   type SpecRep (GovAction era) = Agda.GovAction
 
   toSpecRep (ParameterChange _ ppu _) = Agda.ChangePParams <$> toSpecRep ppu
-  toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHF <$> toSpecRep pv
+  toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHardFork <$> toSpecRep pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
-    Agda.TreasuryWdrl
+    Agda.TreasuryWithdrawal
       <$> toSpecRep withdrawals
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
@@ -571,24 +570,17 @@ instance
 
   toSpecRep gas@GovActionState {..} = do
     Agda.MkGovActionState
-      <$> agdaVoteMap
+      <$> ( Agda.GovVotes
+              <$> toSpecRep gasCommitteeVotes
+              <*> toSpecRep gasDRepVotes
+              <*> toSpecRep gasStakePoolVotes
+          )
       <*> toSpecRep (gasReturnAddr gas)
       <*> toSpecRep gasExpiresAfter
       <*> toSpecRep action
       <*> toSpecRep (nullifyIfNotNeeded (prevGovActionId action) action)
     where
       action = gasAction gas
-      agdaVoteMap :: SpecTransM ctx (Agda.HSMap (Agda.GovRole, Agda.Credential) Agda.Vote)
-      agdaVoteMap = do
-        drepVotes <- toSpecRep gasDRepVotes
-        ccVotes <- toSpecRep gasCommitteeVotes
-        spoVotes <- toSpecRep gasStakePoolVotes
-        pure $
-          unionsHSMap
-            [ mapHSMapKey (Agda.DRep,) drepVotes
-            , mapHSMapKey (Agda.CC,) ccVotes
-            , mapHSMapKey (\h -> (Agda.SPO, Agda.KeyHashObj h)) spoVotes
-            ]
 
 instance SpecTranslate ctx GovActionIx where
   type SpecRep GovActionIx = Integer
@@ -631,10 +623,10 @@ instance
 
   toSpecRep RatifyEnv {..} = do
     let
-      stakeDistrs = do
-        stakeDistrsMap <- toSpecRep reStakePoolDistr
-        drepDistrsMap <- toSpecRep reDRepDistr
-        pure . Agda.StakeDistrs $ unionHSMap stakeDistrsMap drepDistrsMap
+      stakeDistrs =
+        Agda.StakeDistrs
+          <$> toSpecRep reDRepDistr
+          <*> toSpecRep reStakePoolDistr
       dreps = toSpecRep $ Map.map drepExpiry reDRepState
     treasury <- askCtx @Coin
     Agda.MkRatifyEnv

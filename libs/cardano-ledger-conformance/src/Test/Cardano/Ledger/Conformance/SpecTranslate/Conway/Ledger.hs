@@ -73,21 +73,20 @@ instance
     Agda.MkTxBody
       <$> toSpecRep (txb ^. inputsTxBodyL)
       <*> toSpecRep (txb ^. referenceInputsTxBodyL)
+      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
       <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
-      <*> toSpecRep (txb ^. feeTxBodyL)
-      <*> pure 0
-      <*> toSpecRep (txb ^. vldtTxBodyL)
+      <*> toSpecRep txId
       <*> toSpecRep (txb ^. certsTxBodyL)
+      <*> toSpecRep (txb ^. feeTxBodyL)
       <*> toSpecRep (txb ^. withdrawalsTxBodyL)
+      <*> toSpecRep (txb ^. vldtTxBodyL)
+      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
+      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
       <*> toSpecRep (txb ^. votingProceduresTxBodyL)
       <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
-      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
-      <*> pure Nothing -- TODO implement this properly
-      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
       <*> toSpecRep (txb ^. networkIdTxBodyL)
       <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
-      <*> toSpecRep txId
-      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
+      <*> pure 0
       <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
       <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
 

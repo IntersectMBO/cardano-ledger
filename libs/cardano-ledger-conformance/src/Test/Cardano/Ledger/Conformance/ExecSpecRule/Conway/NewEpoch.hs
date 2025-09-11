@@ -12,4 +12,4 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Conway.ImpTest ()
 
 instance ExecSpecRule "NEWEPOCH" ConwayEra where
-  runAgdaRule (SpecTRC env st sig) = unComputationResult_ $ Agda.newEpochStep env st sig
+  runAgdaRule (SpecTRC env st sig) = fmap fst . unComputationResult_ $ Agda.newEpochStep env st sig
