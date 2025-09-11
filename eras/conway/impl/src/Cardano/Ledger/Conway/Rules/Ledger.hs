@@ -492,6 +492,8 @@ instance
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
+  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  , EraRuleFailure "CERT" era ~ ConwayCertPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
   , EraCertState era
