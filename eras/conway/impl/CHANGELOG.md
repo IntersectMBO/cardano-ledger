@@ -109,6 +109,7 @@
 
 ### `testlib`
 
+* Removed `regDelegToDRep`
 * Removed `registerRewardAccountWithDeposit`
 * Removed `registerPoolWithDeposit`
 * Removed `registerStakeCredentialWithDeposit`
