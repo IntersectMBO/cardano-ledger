@@ -29,7 +29,7 @@ import Cardano.Ledger.Conway.Governance (
   Proposals,
   committeeGovStateL,
  )
-import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
+import Cardano.Ledger.Conway.Rules.Certs (CertsEnv, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVoters)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Conway.State
@@ -156,7 +156,10 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , EraCertState era
+  , ConwayEraCertState era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where

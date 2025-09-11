@@ -23,6 +23,7 @@ module Cardano.Ledger.Conway.Rules.Certs (
   ConwayCertsEvent (..),
   CertsEnv (..),
   updateDormantDRepExpiry,
+  checkAndDrainWithdrawals,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -47,6 +48,7 @@ import Cardano.Ledger.Conway.Era (
   ConwayCERTS,
   ConwayEra,
   hardforkConwayCERTSIncompleteWithdrawals,
+  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -229,7 +231,10 @@ conwayCertsTransition = do
       ) <-
     judgmentContext
   case certificates of
-    Empty -> checkAndDrainWithdrawals tx pp currentEpoch certState
+    Empty ->
+      if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
+        then pure certState
+        else checkAndDrainWithdrawals tx pp currentEpoch certState WithdrawalsNotInRewardsCERTS
     gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
@@ -243,14 +248,14 @@ checkAndDrainWithdrawals ::
   , BaseM sts ~ ReaderT Globals m
   , Monad m
   , STS sts
-  , PredicateFailure sts ~ ConwayCertsPredFailure era
   ) =>
   Tx era ->
   PParams era ->
   EpochNo ->
   CertState era ->
+  (Withdrawals -> PredicateFailure sts) ->
   Rule sts ctx (CertState era)
-checkAndDrainWithdrawals tx pp currentEpoch certState = do
+checkAndDrainWithdrawals tx pp currentEpoch certState predFailure = do
   network <- liftSTS $ asks networkId
   let drepActivity = pp ^. ppDRepActivityL
   -- If there is a new governance proposal to vote on in this transaction,
@@ -299,7 +304,7 @@ checkAndDrainWithdrawals tx pp currentEpoch certState = do
     else do
       failOnJust
         (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
-        WithdrawalsNotInRewardsCERTS
+        predFailure
 
   pure $ certStateWithDRepExpiryUpdated & certDStateL . accountsL %~ drainAccounts withdrawals
 

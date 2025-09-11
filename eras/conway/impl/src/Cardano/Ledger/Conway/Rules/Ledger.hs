@@ -71,6 +71,7 @@ import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
   ConwayCertsEvent (..),
   ConwayCertsPredFailure (..),
+  checkAndDrainWithdrawals,
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
@@ -302,7 +303,12 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
+  , ConwayEraCertState era
   , EraCertState era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -346,7 +352,9 @@ ledgerTransition ::
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
-  , EraCertState era
+  , ConwayEraCertState era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -411,11 +419,19 @@ ledgerTransition = do
                 filter isNotDRepDelegated wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
+        certState' <-
+          checkAndDrainWithdrawals
+            tx
+            pp
+            curEpochNo
+            certState
+            (injectFailure @"LEDGER" @_ @era . WithdrawalsNotInRewardsCERTS)
+
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
               ( CertsEnv tx pp curEpochNo committee committeeProposals
-              , certState
+              , certState'
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
 
@@ -508,6 +524,8 @@ instance
   ( Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , ConwayEraGov era
   , AlonzoEraTx era
   , ConwayEraTxBody era
@@ -526,7 +544,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where

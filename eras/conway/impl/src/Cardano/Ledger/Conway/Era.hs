@@ -30,6 +30,7 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
   hardforkConwayCERTSIncompleteWithdrawals,
+  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -184,3 +185,11 @@ hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
 -- | Starting with protocol version 11, we report incomplete withdrawals better
 hardforkConwayCERTSIncompleteWithdrawals :: ProtVer -> Bool
 hardforkConwayCERTSIncompleteWithdrawals pv = pvMajor pv > natVersion @10
+
+-- | Starting with protocol version 11, we move three checks from CERTS to LEDGER
+-- since it seems to be a better place for them
+-- 1. withdrawals draining
+-- 2. drep dormancy tracking updates
+-- 3. updates to drep expiry for all voting dreps
+hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule :: ProtVer -> Bool
+hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv = pvMajor pv > natVersion @10
