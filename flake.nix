@@ -188,6 +188,7 @@
                 packages.cardano-ledger-alonzo.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
                 packages.cardano-ledger-babbage.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
                 packages.cardano-ledger-conway.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-dijkstra.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
                 packages.cardano-protocol-tpraos.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
               })
             ({pkgs, ...}:
@@ -201,6 +202,7 @@
                 packages.cardano-ledger-alonzo.buildable = lib.mkForce false;
                 packages.cardano-ledger-babbage.buildable = lib.mkForce false;
                 packages.cardano-ledger-conway.buildable = lib.mkForce false;
+                packages.cardano-ledger-dijkstra.buildable = lib.mkForce false;
                 packages.cardano-protocol-tpraos.buildable = lib.mkForce false;
               })
           ];
