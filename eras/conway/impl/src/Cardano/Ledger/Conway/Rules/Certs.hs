@@ -23,7 +23,9 @@ module Cardano.Ledger.Conway.Rules.Certs (
   ConwayCertsEvent (..),
   CertsEnv (..),
   updateDormantDRepExpiry,
-  checkAndDrainWithdrawals,
+  updateDormantDRepExpiries,
+  updateVotingDRepExpiries,
+  -- checkAndDrainWithdrawals,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -31,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   ShelleyBase,
   StrictMaybe,
-  binOpEpochNo,
+  binOpEpochNo, EpochInterval,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -47,7 +49,6 @@ import Cardano.Ledger.Conway.Era (
   ConwayCERT,
   ConwayCERTS,
   ConwayEra,
-  hardforkConwayCERTSIncompleteWithdrawals,
   hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
 import Cardano.Ledger.Conway.Governance (
@@ -65,10 +66,9 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (ReaderT, asks)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
-  Rule,
   STS (..),
   TRC (..),
   TransitionRule,
@@ -76,7 +76,6 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
-  (?!),
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -234,48 +233,55 @@ conwayCertsTransition = do
     Empty ->
       if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
         then pure certState
-        else checkAndDrainWithdrawals tx pp currentEpoch certState WithdrawalsNotInRewardsCERTS
+        else do
+          let accounts = certState ^. certDStateL . accountsL
+              withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+          network <- liftSTS $ asks networkId
+          failOnJust
+            (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
+            WithdrawalsNotInRewardsCERTS
+          pure $
+            certState
+              & updateDormantDRepExpiries tx currentEpoch
+              & updateVotingDRepExpiries tx currentEpoch (pp ^. ppDRepActivityL)
+              & certDStateL . accountsL %~ drainAccounts withdrawals
+
     gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "CERT" era) $
         TRC (CertEnv pp currentEpoch committee committeeProposals, certState', txCert)
 
-checkAndDrainWithdrawals ::
-  ( ConwayEraCertState era
-  , EraTx era
+-- | If there is a new governance proposal to vote on in this transaction,
+-- AND the number of dormant-epochs recorded is greater than zero, we bump
+-- the expiry for all DReps by the number of dormant epochs, and reset the
+-- counter to zero.
+--
+-- It does not matter that this is called _before_ the GOV rule in LEDGER, even
+-- though we cannot validate any governance proposal here, since the entire
+-- transaction will fail if the proposal is not accepted in GOV, and so will
+-- this expiry bump done here. It will be discarded.
+updateDormantDRepExpiries ::
+  ( EraTx era
   , ConwayEraTxBody era
-  , BaseM sts ~ ReaderT Globals m
-  , Monad m
-  , STS sts
-  ) =>
-  Tx era ->
-  PParams era ->
-  EpochNo ->
-  CertState era ->
-  (Withdrawals -> PredicateFailure sts) ->
-  Rule sts ctx (CertState era)
-checkAndDrainWithdrawals tx pp currentEpoch certState predFailure = do
-  network <- liftSTS $ asks networkId
-  let drepActivity = pp ^. ppDRepActivityL
-  -- If there is a new governance proposal to vote on in this transaction,
-  -- AND the number of dormant-epochs recorded is greater than zero, we bump
-  -- the expiry for all DReps by the number of dormant epochs, and reset the
-  -- counter to zero.
-  -- It does not matter that this rule (CERTS) is called _before_ the GOV rule
-  -- in LEDGER, even though we cannot validate any governance proposal here,
-  -- since the entire transaction will fail if the proposal is not accepted in
-  -- GOV, and so will this expiry bump done here. It will be discarded.
-  let certState' =
-        let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
-         in if hasProposals
-              then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch
-              else certState
+  , ConwayEraCertState era
+  ) => Tx era -> EpochNo -> CertState era -> CertState era
+updateDormantDRepExpiries tx currentEpoch certState =
+  let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
+   in if hasProposals
+        then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch
+        else certState
 
-  -- Update DRep expiry for all DReps that are voting in this transaction.
-  -- This will execute in mutual-exclusion to the previous updates to DRep expiry,
-  -- because if there are no proposals to vote on , there will be no votes either.
-  let numDormantEpochs = certState' ^. certVStateL . vsNumDormantEpochsL
+-- | Update DRep expiry for all DReps that are voting in this transaction. This
+-- will execute in mutual-exclusion to the updates to the dormant DRep expiry,
+-- because if there are no proposals to vote on, there will be no votes either.
+updateVotingDRepExpiries ::
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraCertState era
+  ) => Tx era -> EpochNo -> EpochInterval -> CertState era -> CertState era
+updateVotingDRepExpiries tx currentEpoch drepActivity certState =
+  let numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
       updateVSDReps vsDReps =
         Map.foldlWithKey'
           ( \dreps voter _ -> case voter of
@@ -288,25 +294,7 @@ checkAndDrainWithdrawals tx pp currentEpoch certState predFailure = do
           )
           vsDReps
           (unVotingProcedures $ tx ^. bodyTxL . votingProceduresTxBodyL)
-
-  -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
-  let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL %~ updateVSDReps
-      dState = certStateWithDRepExpiryUpdated ^. certDStateL
-      accounts = dState ^. accountsL
-      withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-
-  if hardforkConwayCERTSIncompleteWithdrawals (pp ^. ppProtocolVersionL)
-    then do
-      let (invalidWithdrawals, incompleteWithdrawals) =
-            invalidAndIncompleteWithdrawals withdrawals network accounts
-      null invalidWithdrawals ?! WithdrawalsNotInRewardsCERTS (Withdrawals invalidWithdrawals)
-      null incompleteWithdrawals ?! IncompleteWithdrawalsCERTS (Withdrawals incompleteWithdrawals)
-    else do
-      failOnJust
-        (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
-        predFailure
-
-  pure $ certStateWithDRepExpiryUpdated & certDStateL . accountsL %~ drainAccounts withdrawals
+   in certState & certVStateL . vsDRepsL %~ updateVSDReps
 
 instance
   ( Era era

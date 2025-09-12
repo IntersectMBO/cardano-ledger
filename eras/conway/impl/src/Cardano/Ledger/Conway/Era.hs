@@ -29,7 +29,6 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
-  hardforkConwayCERTSIncompleteWithdrawals,
   hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
 ) where
 
@@ -182,14 +181,18 @@ hardforkConwayDisallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion 
 hardforkConwayDELEGIncorrectDepositsAndRefunds :: ProtVer -> Bool
 hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
 
--- | Starting with protocol version 11, we report incomplete withdrawals better
-hardforkConwayCERTSIncompleteWithdrawals :: ProtVer -> Bool
-hardforkConwayCERTSIncompleteWithdrawals pv = pvMajor pv > natVersion @10
-
--- | Starting with protocol version 11, we move three checks from CERTS to LEDGER
--- since it seems to be a better place for them
--- 1. withdrawals draining
+-- | Starting with protocol version 11, we move a predicate check and updates
+-- related to DRep dormancy and expiry from CERTS to LEDGER since that is a
+-- more suitable place for them.
+--
+-- 1. updates to drep expiry for all voting dreps
 -- 2. drep dormancy tracking updates
--- 3. updates to drep expiry for all voting dreps
+-- 3. withdrawals draining - (split into two)
+--
+-- NOTE: In addition, we split the predicate check for withdrawals into two to make
+-- it better: both invalid withdrawals (submitted in the wrong network or with
+-- missing reward accounts) and incomplete withdrawals were being reported with
+-- WithdrawalsNotInRewardsCERTS but now ConwayIncompleteWithdrawals is the new
+-- predicate failure we use to report the latter case in LEDGER
 hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule :: ProtVer -> Bool
 hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv = pvMajor pv > natVersion @10

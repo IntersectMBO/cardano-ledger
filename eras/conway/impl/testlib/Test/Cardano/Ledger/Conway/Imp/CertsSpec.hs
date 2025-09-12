@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (hardforkConwayCERTSIncompleteWithdrawals)
+import Cardano.Ledger.Conway (hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -98,7 +98,7 @@ spec = do
                   ]
         )
         [ injectFailure
-            $ ( if hardforkConwayCERTSIncompleteWithdrawals pv
+            $ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
                   then IncompleteWithdrawalsCERTS @era
                   else WithdrawalsNotInRewardsCERTS @era
               )
@@ -113,7 +113,7 @@ spec = do
                   [(rwdAccount1, zero)]
         )
         [ injectFailure
-            $ ( if hardforkConwayCERTSIncompleteWithdrawals pv
+            $ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
                   then IncompleteWithdrawalsCERTS @era
                   else WithdrawalsNotInRewardsCERTS @era
               )

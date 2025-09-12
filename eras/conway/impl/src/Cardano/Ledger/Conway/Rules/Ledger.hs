@@ -138,6 +138,7 @@ data ConwayLedgerPredFailure era
   | ConwayTreasuryValueMismatch (Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
   | ConwayTxRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
+  | ConwayIncompleteWithdrawals Withdrawals
   deriving (Generic)
 
 type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
@@ -247,6 +248,7 @@ instance
         Sum (ConwayTreasuryValueMismatch @era . unswapMismatch) 5 !> ToGroup (swapMismatch mm)
       ConwayTxRefScriptsSizeTooBig mm -> Sum ConwayTxRefScriptsSizeTooBig 6 !> ToGroup mm
       ConwayMempoolFailure t -> Sum ConwayMempoolFailure 7 !> To t
+      ConwayIncompleteWithdrawals w -> Sum ConwayIncompleteWithdrawals 8 !> To w
 
 instance
   ( Era era
@@ -264,6 +266,7 @@ instance
     5 -> SumD ConwayTreasuryValueMismatch <! mapCoder unswapMismatch FromGroup
     6 -> SumD ConwayTxRefScriptsSizeTooBig <! FromGroup
     7 -> SumD ConwayMempoolFailure <! From
+    8 -> SumD ConwayIncompleteWithdrawals <! From
     n -> Invalid n
 
 data ConwayLedgerEvent era
@@ -419,13 +422,20 @@ ledgerTransition = do
                 filter isNotDRepDelegated wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
-        certState' <-
-          checkAndDrainWithdrawals
-            tx
-            pp
-            curEpochNo
-            certState
-            (injectFailure @"LEDGER" @_ @era . WithdrawalsNotInRewardsCERTS)
+        certState' <- if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
+          then do
+            let accounts = certState ^. certDStateL . accountsL
+                withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+            network <- liftSTS $ asks networkId
+            failOnJust
+              (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
+              WithdrawalsNotInRewardsCERTS
+            pure $
+              certState
+                & updateDormantDRepExpiries tx currentEpoch
+                & updateVotingDRepExpiries tx currentEpoch (pp ^. ppDRepActivityL)
+                & certDStateL . accountsL %~ drainAccounts withdrawals
+          else pure certState
 
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $

@@ -182,11 +182,11 @@ lookupStakePoolDelegation cred accounts =
 -- reward accounts or wrong network, and `snd` is incomplete withdrawals.
 invalidAndIncompleteWithdrawals ::
   EraAccounts era =>
-  Withdrawals ->
   Network ->
   Accounts era ->
+  Withdrawals ->
   (Map RewardAccount Coin, Map RewardAccount Coin)
-invalidAndIncompleteWithdrawals (Withdrawals givenWithdrawals) networkId accounts = do
+invalidAndIncompleteWithdrawals networkId accounts (Withdrawals givenWithdrawals) = do
   -- @givenWithdrawals@ is small and @accounts@ is big, better to traverse the
   -- former than the latter.
   Map.foldrWithKey collectBadWithdrawals (mempty, mempty) givenWithdrawals
