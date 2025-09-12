@@ -32,6 +32,8 @@ deriving instance Ord Credential
 
 deriving instance Ord GovRole
 
+deriving instance Ord GovVotes
+
 deriving instance Ord VDeleg
 
 deriving instance Ord Vote
@@ -75,6 +77,8 @@ instance NFData Vote
 instance NFData Credential
 
 instance NFData GovRole
+
+instance NFData GovVotes
 
 instance NFData GovActionState
 
@@ -175,6 +179,8 @@ instance ToExpr RwdAddr
 instance ToExpr GovAction
 
 instance ToExpr GovRole
+
+instance ToExpr GovVotes
 
 instance ToExpr Vote
 
@@ -321,6 +327,8 @@ instance SpecNormalize UTxOState
 instance SpecNormalize Credential
 
 instance SpecNormalize GovRole
+
+instance SpecNormalize GovVotes
 
 instance SpecNormalize VDeleg
 

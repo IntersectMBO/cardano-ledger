@@ -58,7 +58,6 @@ import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Monad.Except (throwError)
-import Data.Bifunctor (first)
 import Data.Functor.Identity (Identity (..))
 import Data.Map (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -269,8 +268,6 @@ instance SpecTranslate ctx IndividualPoolStake where
   toSpecRep (IndividualPoolStake _ c _) = toSpecRep c
 
 instance SpecTranslate ctx PoolDistr where
-  type SpecRep PoolDistr = Agda.HSMap Agda.VDeleg Agda.Coin
+  type SpecRep PoolDistr = Agda.HSMap (SpecRep (KeyHash 'StakePool)) Agda.Coin
 
-  toSpecRep (PoolDistr ps _) = do
-    Agda.MkHSMap l <- toSpecRep ps
-    pure . Agda.MkHSMap $ first (Agda.CredVoter Agda.SPO . Agda.KeyHashObj) <$> l
+  toSpecRep (PoolDistr ps _) = toSpecRep ps
