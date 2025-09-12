@@ -1,5 +1,9 @@
 # Revision history for `cardano-ledger-byron`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
 * Remove `osHelper` and `archHelper` functions.

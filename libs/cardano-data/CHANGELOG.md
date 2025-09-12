@@ -1,6 +1,10 @@
 # Version history for `cardano-data`
 
-## 1.2.5.0
+## 1.2.4.2
+
+*
+
+## 1.2.4.1
 
 * Add `mapMaybeR`, `mapMaybeL`
 * Add `decodeOSet`

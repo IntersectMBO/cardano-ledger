@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.4.1.1
+
+*
+
 ## 1.4.1.0
 
 * Remove `HashHeader` definition (move to `cardano-ledger-core`)
