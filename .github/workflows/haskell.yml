@@ -234,7 +234,7 @@ jobs:
 
       SECP_CACHE_VERSION: "2022-12-30"
 
-      packages-with-ruby-cddl-tests: '["cardano-protocol-tpraos", "cardano-ledger-shelley", "cardano-ledger-allegra", "cardano-ledger-mary", "cardano-ledger-alonzo", "cardano-ledger-babbage", "cardano-ledger-conway"]'
+      packages-with-ruby-cddl-tests: '["cardano-protocol-tpraos", "cardano-ledger-shelley", "cardano-ledger-allegra", "cardano-ledger-mary", "cardano-ledger-alonzo", "cardano-ledger-babbage", "cardano-ledger-conway", "cardano-ledger-dijkstra"]'
 
     defaults:
       run:
