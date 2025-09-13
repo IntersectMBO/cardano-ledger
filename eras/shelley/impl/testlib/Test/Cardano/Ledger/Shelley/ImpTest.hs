@@ -119,6 +119,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   unlessMajorVersion,
   getsPParams,
   withEachEraVersion,
+  impSatisfyMNativeScripts,
+  impSatisfySignature,
 
   -- * Logging
   Doc,
@@ -503,6 +505,43 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
+impSatisfySignature ::
+  KeyHash 'Witness ->
+  Set.Set (KeyHash 'Witness) ->
+  ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+impSatisfySignature keyHash providedVKeyHashes = do
+  keyPairs <- gets impKeyPairs
+  if keyHash `Set.member` providedVKeyHashes
+    then
+      pure $ Just mempty
+    else
+      pure $ Map.singleton keyHash <$> Map.lookup keyHash keyPairs
+
+impSatisfyMNativeScripts ::
+  ShelleyEraImp era =>
+  Int ->
+  -- | Nr of scripts to satisfy
+  StrictSeq (NativeScript era) ->
+  -- | List of scripts to satisfy a subset of
+  Set.Set (KeyHash 'Witness) ->
+  -- | Set of Witnesses that have already been satisfied
+  TxBody era ->
+  -- | The transaction body that the scripts wil lbe applied to
+  ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
+impSatisfyMNativeScripts nrOfScriptsToSatisfy scripts providedVKeyHashes txBody =
+  go nrOfScriptsToSatisfy scripts
+  where
+    go m Empty
+      | m <= 0 = pure $ Just mempty
+      | otherwise = pure Nothing
+    go m (x :<| xs) = do
+      satisifed <- impSatisfyNativeScript providedVKeyHashes txBody x
+      case satisifed of
+        Nothing -> go m xs
+        Just kps -> do
+          kps' <- go (m - 1) xs
+          pure $ (kps <>) <$> kps'
+
 defaultInitNewEpochState ::
   forall era g s m.
   ( MonadState s m
@@ -739,29 +778,12 @@ instance
     pure $ translateToShelleyLedgerStateFromUtxo transContext startEpochNo Byron.empty
 
   impSatisfyNativeScript providedVKeyHashes _txBody script = do
-    keyPairs <- gets impKeyPairs
-    let
-      satisfyMOf m Empty
-        | m <= 0 = Just mempty
-        | otherwise = Nothing
-      satisfyMOf m (x :<| xs) =
-        case satisfyScript x of
-          Nothing -> satisfyMOf m xs
-          Just kps -> do
-            kps' <- satisfyMOf (m - 1) xs
-            Just $ kps <> kps'
-      satisfyScript = \case
-        RequireSignature keyHash
-          | keyHash `Set.member` providedVKeyHashes -> Just mempty
-          | otherwise -> do
-              keyPair <- Map.lookup keyHash keyPairs
-              Just $ Map.singleton keyHash keyPair
-        RequireAllOf ss -> satisfyMOf (length ss) ss
-        RequireAnyOf ss -> satisfyMOf 1 ss
-        RequireMOf m ss -> satisfyMOf m ss
-        _ -> error "Impossible: All NativeScripts should have been accounted for"
-
-    pure $ satisfyScript script
+    case script of
+      RequireSignature keyHash -> impSatisfySignature keyHash providedVKeyHashes
+      RequireAllOf ss -> impSatisfyMNativeScripts (length ss) ss providedVKeyHashes _txBody
+      RequireAnyOf ss -> impSatisfyMNativeScripts 1 ss providedVKeyHashes _txBody
+      RequireMOf m ss -> impSatisfyMNativeScripts m ss providedVKeyHashes _txBody
+      _ -> error "Impossible: All NativeScripts should have been accounted for"
 
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
