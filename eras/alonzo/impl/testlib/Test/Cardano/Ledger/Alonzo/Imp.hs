@@ -27,7 +27,6 @@ import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
-import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as ShelleyImp
 
 spec ::
   forall era.
@@ -64,4 +63,4 @@ alonzoEraSpecificSpec = do
       Utxow.alonzoEraSpecificSpec
 
 instance EraSpecificSpec AlonzoEra where
-  eraSpecificSpec = ShelleyImp.shelleyEraSpecificSpec >> alonzoEraSpecificSpec
+  eraSpecificSpec = alonzoEraSpecificSpec
