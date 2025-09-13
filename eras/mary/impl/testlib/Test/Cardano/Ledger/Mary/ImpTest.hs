@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Mary.ImpTest (
   mkTokenMintingTx,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
@@ -32,7 +31,6 @@ instance ShelleyEraImp MaryEra where
 class
   ( ShelleyEraImp era
   , MaryEraTest era
-  , NativeScript era ~ Timelock era
   , Value era ~ MaryValue
   ) =>
   MaryEraImp era

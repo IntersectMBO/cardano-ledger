@@ -68,7 +68,7 @@ sizedTimelock n =
 instance
   forall era.
   ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   , Arbitrary (Script era)
   , Era era
   ) =>
