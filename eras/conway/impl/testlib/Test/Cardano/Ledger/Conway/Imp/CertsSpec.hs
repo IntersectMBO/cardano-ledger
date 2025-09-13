@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (hardforkConwayCERTSIncompleteWithdrawals)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -83,6 +84,7 @@ spec = do
 
     it "Withdrawing the wrong amount" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+      pv <- getsPParams @era ppProtocolVersionL
 
       (rwdAccount1, reward1, _stakeKey1) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
       (rwdAccount2, reward2, _stakeKey2) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
@@ -95,9 +97,12 @@ spec = do
                   , (rwdAccount2, reward2)
                   ]
         )
-        [ injectFailure $
-            WithdrawalsNotInRewardsCERTS $
-              Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
+        [ injectFailure
+            $ ( if hardforkConwayCERTSIncompleteWithdrawals pv
+                  then IncompleteWithdrawalsCERTS @era
+                  else WithdrawalsNotInRewardsCERTS @era
+              )
+            $ Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
         ]
 
       submitFailingTx
@@ -107,7 +112,13 @@ spec = do
                 .~ Withdrawals
                   [(rwdAccount1, zero)]
         )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount1, zero)]]
+        [ injectFailure
+            $ ( if hardforkConwayCERTSIncompleteWithdrawals pv
+                  then IncompleteWithdrawalsCERTS @era
+                  else WithdrawalsNotInRewardsCERTS @era
+              )
+            $ Withdrawals [(rwdAccount1, zero)]
+        ]
   where
     setupRewardAccount stake dRep = do
       kh <- freshKeyHash

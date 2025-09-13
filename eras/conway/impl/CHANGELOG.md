@@ -6,6 +6,7 @@
 
 ## 1.20.0.0
 
+* Add `IncompleteWithdrawalsCERTS` to `ConwayPredFailure`.
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
   - `DecCBOR ConwayTxCert`
   - `transTxCert`

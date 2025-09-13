@@ -42,7 +42,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
+import Cardano.Ledger.Conway.Era (
+  ConwayCERT,
+  ConwayCERTS,
+  ConwayEra,
+  hardforkConwayCERTSIncompleteWithdrawals,
+ )
 import Cardano.Ledger.Conway.Governance (
   Committee,
   GovActionPurpose (..),
@@ -68,6 +73,7 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
+  (?!),
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -104,10 +110,14 @@ deriving instance (EraPParams era, Show (Tx era)) => Show (CertsEnv era)
 instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 
 data ConwayCertsPredFailure era
-  = -- | Withdrawals that are missing or do not withdraw the entire amount
+  = -- | Withdrawals that are missing reward accounts. Before PV 11, this was
+    -- also wrongly used in place of IncompleteWithdrawalsCERTS for withdrawals
+    -- that didn't match the account balance exactly.
     WithdrawalsNotInRewardsCERTS Withdrawals
   | -- | CERT rule subtransition Failures
     CertFailure (PredicateFailure (EraRule "CERT" era))
+  | -- | Withdrawals that do not withdraw the entire amount
+    IncompleteWithdrawalsCERTS Withdrawals
   deriving (Generic)
 
 type instance EraRuleFailure "CERTS" ConwayEra = ConwayCertsPredFailure ConwayEra
@@ -161,6 +171,7 @@ instance
     encode . \case
       WithdrawalsNotInRewardsCERTS rs -> Sum (WithdrawalsNotInRewardsCERTS @era) 0 !> To rs
       CertFailure x -> Sum (CertFailure @era) 1 !> To x
+      IncompleteWithdrawalsCERTS ws -> Sum (IncompleteWithdrawalsCERTS @era) 2 !> To ws
 
 instance
   ( Era era
@@ -171,6 +182,7 @@ instance
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
     0 -> SumD WithdrawalsNotInRewardsCERTS <! From
     1 -> SumD CertFailure <! From
+    2 -> SumD IncompleteWithdrawalsCERTS <! From
     k -> Invalid k
 
 instance
@@ -252,12 +264,19 @@ conwayCertsTransition = do
       -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
       let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL %~ updateVSDReps
           dState = certStateWithDRepExpiryUpdated ^. certDStateL
+          accounts = dState ^. accountsL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
-      -- Validate withdrawals and rewards and drain withdrawals
-      failOnJust
-        (withdrawalsThatDoNotDrainAccounts withdrawals network (dState ^. accountsL))
-        WithdrawalsNotInRewardsCERTS
+      if hardforkConwayCERTSIncompleteWithdrawals (pp ^. ppProtocolVersionL)
+        then do
+          let (invalidWithdrawals, incompleteWithdrawals) =
+                invalidAndIncompleteWithdrawals withdrawals network accounts
+          null invalidWithdrawals ?! WithdrawalsNotInRewardsCERTS (Withdrawals invalidWithdrawals)
+          null incompleteWithdrawals ?! IncompleteWithdrawalsCERTS (Withdrawals incompleteWithdrawals)
+        else do
+          failOnJust
+            (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
+            WithdrawalsNotInRewardsCERTS
 
       pure $ certStateWithDRepExpiryUpdated & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do

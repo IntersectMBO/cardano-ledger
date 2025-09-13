@@ -29,6 +29,7 @@ module Cardano.Ledger.Conway.Era (
   hardforkConwayBootstrapPhase,
   hardforkConwayDisallowUnelectedCommitteeFromVoting,
   hardforkConwayDELEGIncorrectDepositsAndRefunds,
+  hardforkConwayCERTSIncompleteWithdrawals,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
@@ -179,3 +180,7 @@ hardforkConwayDisallowUnelectedCommitteeFromVoting pv = pvMajor pv > natVersion 
 -- | Starting with protocol version 11, we report incorrect deposit and refunds better
 hardforkConwayDELEGIncorrectDepositsAndRefunds :: ProtVer -> Bool
 hardforkConwayDELEGIncorrectDepositsAndRefunds pv = pvMajor pv > natVersion @10
+
+-- | Starting with protocol version 11, we report incomplete withdrawals better
+hardforkConwayCERTSIncompleteWithdrawals :: ProtVer -> Bool
+hardforkConwayCERTSIncompleteWithdrawals pv = pvMajor pv > natVersion @10
