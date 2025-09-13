@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1757724798289,
+  "lastUpdate": 1757782446993,
   "repoUrl": "https://github.com/IntersectMBO/cardano-ledger",
   "entries": {
     "Haskell Benchmark": [
@@ -44639,6 +44639,102 @@ window.BENCHMARK_DATA = {
             "name": "applyTxBenchmarks/Deserialise Ann Tx/AlonzoEra",
             "value": 0.000009775436142818732,
             "range": "9.796987391465251e-8",
+            "unit": "Nanoseconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alexey.kuleshevich@iohk.io",
+            "name": "Alexey Kuleshevich",
+            "username": "lehins"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "de77e8c30e775504d8d26dd6a8cdefc81b40c984",
+          "message": "Merge pull request #5285 from IntersectMBO/jj/testing-plutus-scripts\n\nAdded a new test Plutus script",
+          "timestamp": "2025-09-13T10:50:50-06:00",
+          "tree_id": "194169ece85ab2d131f2ccc9ac3e2b5e79678a5a",
+          "url": "https://github.com/IntersectMBO/cardano-ledger/commit/de77e8c30e775504d8d26dd6a8cdefc81b40c984"
+        },
+        "date": 1757782428644,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/ShelleyEra",
+            "value": 0.0001515895868699891,
+            "range": "0.00000130613391735531",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AllegraEra",
+            "value": 0.00015602097684811562,
+            "range": "9.809399279090869e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/MaryEra",
+            "value": 0.0001554205314900248,
+            "range": "9.303553558977609e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AlonzoEra",
+            "value": 0.0002466843324402221,
+            "range": "0.0000012683556450865277",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Tx/ShelleyEra",
+            "value": 0.000008504567130283611,
+            "range": "2.2102610900899388e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Tx/AllegraEra",
+            "value": 0.000015197475779265226,
+            "range": "2.96908669551501e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Tx/MaryEra",
+            "value": 0.000014259603515721392,
+            "range": "3.705723609415995e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Tx/AlonzoEra",
+            "value": 0.000009680293017656722,
+            "range": "9.729431578003607e-8",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Ann Tx/ShelleyEra",
+            "value": 0.000008522908355957146,
+            "range": "6.097242709118275e-8",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Ann Tx/AllegraEra",
+            "value": 0.00001711727216750011,
+            "range": "4.088097374895289e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Ann Tx/MaryEra",
+            "value": 0.0000170089470830472,
+            "range": "3.0776200026351915e-7",
+            "unit": "Nanoseconds"
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Ann Tx/AlonzoEra",
+            "value": 0.00000992590959604062,
+            "range": "8.202121625184318e-8",
             "unit": "Nanoseconds"
           }
         ]
