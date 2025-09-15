@@ -91,6 +91,7 @@
 
 ### `testlib`
 
+* Added `impSatisfySignature` and `impSatisfyMNativeScripts`
 * Added `EraSpecificSpec ShelleyEra` instance
 * Added `EraSpecificSpec` class
 * Removed `ShelleyEraTxCert` from `ShelleyEraImp`, so added `ShelleyEraTxCert` constraint to:

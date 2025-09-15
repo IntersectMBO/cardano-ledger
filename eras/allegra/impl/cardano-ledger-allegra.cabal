@@ -125,7 +125,6 @@ library testlib
     generic-random,
     heredoc,
     microlens,
-    mtl,
     small-steps,
     text,
 

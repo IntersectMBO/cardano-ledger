@@ -27,14 +27,12 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Control.Monad.State.Strict (get)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.Era ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
+import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 instance ShelleyEraImp AllegraEra where
@@ -45,7 +43,8 @@ instance ShelleyEraImp AllegraEra where
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
 
 impAllegraSatisfyNativeScript ::
-  ( AllegraEraScript era
+  ( ShelleyEraImp era
+  , AllegraEraScript era
   , AllegraEraTxBody era
   , NativeScript era ~ Timelock era
   ) =>
@@ -54,33 +53,18 @@ impAllegraSatisfyNativeScript ::
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
-  impState <- get
-  let
-    keyPairs = impState ^. impKeyPairsG
-    vi = txBody ^. vldtTxBodyL
-    satisfyMOf m Empty
-      | m <= 0 = Just mempty
-      | otherwise = Nothing
-    satisfyMOf m (x :<| xs) =
-      case satisfyScript x of
-        Nothing -> satisfyMOf m xs
-        Just kps -> do
-          kps' <- satisfyMOf (m - 1) xs
-          Just $ kps <> kps'
-    satisfyScript = \case
-      RequireSignature keyHash
-        | keyHash `Set.member` providedVKeyHashes -> Just mempty
-        | otherwise -> do
-            keyPair <- Map.lookup keyHash keyPairs
-            Just $ Map.singleton keyHash keyPair
-      RequireAllOf ss -> satisfyMOf (length ss) ss
-      RequireAnyOf ss -> satisfyMOf 1 ss
-      RequireMOf m ss -> satisfyMOf m ss
-      lock@(RequireTimeStart _)
-        | evalTimelock mempty vi lock -> Just mempty
-        | otherwise -> Nothing
-      lock@(RequireTimeExpire _)
-        | evalTimelock mempty vi lock -> Just mempty
-        | otherwise -> Nothing
-      _ -> error "Impossible: All NativeScripts should have been accounted for"
-  pure $ satisfyScript script
+  let vi = txBody ^. vldtTxBodyL
+  case script of
+    RequireSignature keyHash -> impSatisfySignature keyHash providedVKeyHashes
+    RequireAllOf ss -> impSatisfyMNativeScripts providedVKeyHashes txBody (length ss) ss
+    RequireAnyOf ss -> do
+      m <- frequency [(9, pure 1), (1, choose (1, length ss))]
+      impSatisfyMNativeScripts providedVKeyHashes txBody m ss
+    RequireMOf m ss -> impSatisfyMNativeScripts providedVKeyHashes txBody m ss
+    lock@(RequireTimeStart _)
+      | evalTimelock mempty vi lock -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    lock@(RequireTimeExpire _)
+      | evalTimelock mempty vi lock -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    _ -> error "Impossible: All NativeScripts should have been accounted for"
