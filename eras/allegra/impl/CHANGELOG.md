@@ -4,6 +4,11 @@
 
 * Remove deprecated `timelockScriptsTxAuxDataL`
 
+### `testlib`
+
+* Add `impSatisfyMNativeScripts`
+* Add `impSatisfySignature`
+
 ## 1.8.0.0
 
 * Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
