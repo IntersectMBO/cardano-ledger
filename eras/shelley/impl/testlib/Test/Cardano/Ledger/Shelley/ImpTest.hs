@@ -693,7 +693,7 @@ disableImpInitPostEpochBoundaryHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
 disableImpInitPostEpochBoundaryHook =
-  modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
+  modifyImpInitPostEpochBoundaryHook $ \_ _ _ -> pure ()
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
