@@ -90,6 +90,21 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
+        it "Validating CERT script" $ do
+          txIn <- produceScript alwaysSucceedsWithDatumHash
+          txCert <- genRegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
+          submitTx_ $
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & certsTxBodyL .~ [txCert]
+
+        it "Validating WITHDRAWAL script" $ do
+          account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
+          submitTx_ $
+            mkBasicTx $
+              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
+
         it "Validating MINT script" $ do
           submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
 
@@ -135,15 +150,6 @@ alonzoEraSpecificSpec = do
           alwaysFailsWithDatumHash = hashPlutusScript $ alwaysFailsWithDatum slang :: ScriptHash
           alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash
 
-        it "Validating CERT script" $ do
-          txIn <- produceScript alwaysSucceedsWithDatumHash
-          let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitTx_ $
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & certsTxBodyL .~ [txCert]
-
         it "Not validating CERT script" $ do
           txIn <- produceScript alwaysFailsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
@@ -152,12 +158,6 @@ alonzoEraSpecificSpec = do
               mkBasicTxBody
                 & inputsTxBodyL .~ [txIn]
                 & certsTxBodyL .~ [txCert]
-
-        it "Validating WITHDRAWAL script" $ do
-          account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitTx_ $
-            mkBasicTx $
-              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
         it "Not validating WITHDRAWAL script" $ do
           account <- registerStakeCredentialNoDeposit $ ScriptHashObj alwaysFailsNoDatumHash
