@@ -604,7 +604,9 @@ proposalsSpec = do
           `shouldReturn` Node (SJust p212) []
         props <- getProposals
         proposalsSize props `shouldBe` 0
-      it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ whenPostBootstrap $ do
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+      -- TODO: Re-enable after issues are resolved, by removing this override
+      disableInConformanceIt "Subtrees are pruned for both enactment and expiry over multiple rounds" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -790,7 +792,10 @@ votingSpec =
       submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
       gasAfterRemoval <- getGovActionState gaId
       gasDRepVotes gasAfterRemoval `shouldBe` []
-    it "expired gov-actions" $ do
+
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt "expired gov-actions" $ do
       -- Voting for expired actions should fail
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
@@ -833,7 +838,9 @@ votingSpec =
           ]
     it "committee member mixed with other voters can not vote on UpdateCommittee action" $
       whenPostBootstrap ccVoteOnConstitutionFailsWithMultipleVotes
-    it "CC cannot ratify if below threshold" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt "CC cannot ratify if below threshold" $ whenPostBootstrap $ do
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval 3
