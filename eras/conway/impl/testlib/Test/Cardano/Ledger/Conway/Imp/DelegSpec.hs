@@ -57,6 +57,14 @@ spec = do
     it "With correct deposit or without any deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
+      cred <- KeyHashObj <$> freshKeyHash
+      -- NOTE: This will always generate certs with deposits post-Conway
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [regTxCert]
+      expectRegistered cred
+
       freshKeyHash >>= \kh -> do
         submitTx_ $
           mkBasicTx mkBasicTxBody
@@ -727,15 +735,6 @@ conwayEraSpecificSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayEraSpecificSpec = do
-  describe "Register stake credential" $ do
-    it "Without any deposit" $ do
-      cred <- KeyHashObj <$> freshKeyHash
-      regTxCert <- genRegTxCert cred
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [regTxCert]
-      expectRegistered cred
-
   describe "Delegate stake" $ do
     it "Register and delegate in the same transaction" $ do
       cred1 <- KeyHashObj <$> freshKeyHash
