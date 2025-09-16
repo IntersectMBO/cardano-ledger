@@ -4,11 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec (spec, babbageEraSpecificSpec) where
+module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure, ShelleyEraTxCert)
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
@@ -33,14 +33,3 @@ spec = do
   describe "UTXOW" $ do
     Valid.spec
     Invalid.spec
-
-babbageEraSpecificSpec ::
-  forall era.
-  ( AlonzoEraImp era
-  , BabbageEraTxBody era
-  , ShelleyEraTxCert era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
-babbageEraSpecificSpec = do
-  describe "UTXOW - certificates without deposits" $ do
-    Valid.babbageEraSpecificSpec
