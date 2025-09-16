@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -117,7 +118,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Doc, Pretty (..), align, indent, line, vsep, (<+>))
-import System.Random.Stateful (Random, Uniform (..), UniformRange (..), uniformEnumM, uniformEnumRM)
+import System.Random.Stateful
 import qualified UntypedPlutusCore as UPLC
 
 -- | This is a deserialized version of the `Plutus` type that can be used directly with
@@ -239,6 +240,9 @@ instance Uniform Language where
 
 instance UniformRange Language where
   uniformRM = uniformEnumRM
+#if MIN_VERSION_random(1,3,0)
+  isInRange = isInRangeEnum
+#endif
 
 -- | Make a language from its `Enum` index.
 mkLanguageEnum :: Int -> Maybe Language

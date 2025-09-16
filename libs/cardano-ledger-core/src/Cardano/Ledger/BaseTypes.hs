@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -188,6 +189,9 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
+#if MIN_VERSION_random(1,3,0)
+import System.Random.Stateful (isInRangeOrd)
+#endif
 
 maxDecimalsWord64 :: Int
 maxDecimalsWord64 = 19
@@ -874,6 +878,9 @@ instance Uniform CertIx where
 
 instance UniformRange CertIx where
   uniformRM r g = CertIx <$> uniformRM (coerce r) g
+#if MIN_VERSION_random(1,3,0)
+  isInRange = isInRangeOrd
+#endif
 
 -- | Construct a `CertIx` from a 16 bit unsigned integer
 mkCertIx :: Word16 -> CertIx
