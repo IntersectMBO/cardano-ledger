@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.Instances () where
@@ -32,7 +34,11 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus (ExUnits (..), Language (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Scripts (data RequireAllOf, data RequireAnyOf)
+#else
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
+#endif
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad.RWS.Strict (gets)

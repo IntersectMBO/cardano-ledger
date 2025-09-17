@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -18,8 +19,13 @@ import Cardano.Ledger.Shelley.TxCert (
   shelleyTotalDepositsTxCerts,
   shelleyTotalRefundsTxCerts,
   upgradeShelleyTxCert,
+#if __GLASGOW_HASKELL__ >= 914
+  data RegTxCert,
+  data UnRegTxCert,
+#else
   pattern RegTxCert,
   pattern UnRegTxCert,
+#endif
  )
 
 instance EraTxCert MaryEra where

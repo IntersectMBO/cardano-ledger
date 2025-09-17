@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -27,7 +28,11 @@ import Cardano.Ledger.Conway.UTxO (
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Dijkstra.Core (AsIxItem (..), EraTxBody (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), data GuardingPurpose)
+#else
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), pattern GuardingPurpose)
+#endif
 import Cardano.Ledger.Dijkstra.State (EraUTxO (..), UTxO)
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.Tx ()

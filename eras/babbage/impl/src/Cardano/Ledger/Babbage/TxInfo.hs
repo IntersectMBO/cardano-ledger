@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,6 +15,12 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 module Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (..),
@@ -83,7 +90,11 @@ import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
+#if __GLASGOW_HASKELL__ >= 914
+import Data.Aeson (ToJSON (..), (.=), data String)
+#else
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+#endif
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
