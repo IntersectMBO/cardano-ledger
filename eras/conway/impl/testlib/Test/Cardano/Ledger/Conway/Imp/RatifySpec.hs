@@ -667,7 +667,9 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
           let govActionLifetime = 5
               govActionDeposit = Coin 1_000_000
               poolDeposit = Coin 858_000
@@ -829,7 +831,9 @@ votingSpec =
           -- AlwaysNoConfidence vote acts like 'Yes' for NoConfidence actions
           calculateDRepAcceptedRatio noConfidenceGovId `shouldReturn` 2 % 2
 
-        it "AlwaysNoConfidence" $ whenPostBootstrap $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "AlwaysNoConfidence" $ whenPostBootstrap $ do
           (drep1, _, committeeGovId) <- electBasicCommittee
           initialMembers <- getCommitteeMembers
 
@@ -973,7 +977,9 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "Rewards contribute to active voting stake even in the absence of StakeDistr" $
           whenPostBootstrap $ do
             let govActionLifetime = 5
                 govActionDeposit = Coin 1_000_000
@@ -1029,7 +1035,9 @@ votingSpec =
             passNEpochs 2
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         describe "Proposal deposits contribute to active voting stake" $ do
-          it "Directly" $ whenPostBootstrap $ do
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+          -- TODO: Re-enable after issue is resolved, by removing this override
+          disableInConformanceIt "Directly" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
             modifyPParams $ \pp ->
               pp
@@ -1079,7 +1087,9 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-          it "After switching delegations" $ whenPostBootstrap $ do
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+          -- TODO: Re-enable after issue is resolved, by removing this override
+          disableInConformanceIt "After switching delegations" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
             modifyPParams $ \pp ->
               pp
@@ -1533,7 +1543,9 @@ delayingActionsSpec =
         getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId pGai2)
         getParameterChangeProposals `shouldReturn` Map.empty
     describe "An action expires when delayed enough even after being ratified" $ do
-      it "Same lineage" $ whenPostBootstrap $ do
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+      -- TODO: Re-enable after issue is resolved, by removing this override
+      disableInConformanceIt "Same lineage" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -1558,7 +1570,9 @@ delayingActionsSpec =
         getConstitutionProposals `shouldReturn` Map.empty
         passEpoch
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai2)
-      it "Other lineage" $ whenPostBootstrap $ do
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+      -- TODO: Re-enable after issue is resolved, by removing this override
+      disableInConformanceIt "Other lineage" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
