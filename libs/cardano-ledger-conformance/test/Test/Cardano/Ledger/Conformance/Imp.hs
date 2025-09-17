@@ -181,6 +181,6 @@ spec =
             -- LEDGER tests pending on the dRep delegations cleanup in the spec:
             -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
             xdescribe "LEDGER" Ledger.spec
-            xdescribe "RATIFY" Ratify.spec
+            describe "RATIFY" Ratify.spec
             xdescribe "UTXO" Utxo.spec
             xdescribe "UTXOS" Utxos.spec
