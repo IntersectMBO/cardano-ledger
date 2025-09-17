@@ -146,7 +146,9 @@ dRepSpec ::
 dRepSpec =
   describe "DRep" $ do
     let submitParamChangeProposal = mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
-    it "expiry is updated based on the number of dormant epochs" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "expiry is updated based on the number of dormant epochs" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -183,7 +185,9 @@ dRepSpec =
       passEpoch -- entering epoch 6
       expectNumDormantEpochs 0
       expectDRepExpiry drep $ offDRepActivity 103
-    it "expiry is not updated for inactive DReps" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "expiry is not updated for inactive DReps" $ do
       let
         drepActivity = 2
       modifyPParams $ \pp ->
@@ -232,7 +236,9 @@ dRepSpec =
       passEpoch -- entering epoch 6
       expectNumDormantEpochs 0
       expectDRepExpiry drep $ offDRepActivity 3
-    it "expiry updates are correct for a mixture of cases" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "expiry updates are correct for a mixture of cases" $ do
       let
         drepActivity = 4
       modifyPParams $ \pp ->

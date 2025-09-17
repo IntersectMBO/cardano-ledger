@@ -175,7 +175,7 @@ spec =
             describe "CERTS" Certs.spec
             describe "DELEG" Deleg.spec
             describe "ENACT" Enact.spec
-            xdescribe "EPOCH" Epoch.spec
+            describe "EPOCH" Epoch.spec
             describe "GOV" Gov.spec
             describe "GOVCERT" GovCert.spec
             -- LEDGER tests pending on the dRep delegations cleanup in the spec:
