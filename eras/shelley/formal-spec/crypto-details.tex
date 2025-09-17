@@ -40,7 +40,7 @@ use Ed25519. See \cite{rfcEdDSA}.
 The \fun{sign_{ev}} and \fun{verify_{ev}} functions from Figure~\ref{fig:kes-defs-shelley}
 use the iterated sum construction from Section 3.1 of \cite{cryptoeprint:2001:034}.
 We allow up to $2^7$ key evolutions, which is larger than the maximum number
-of evolutions allow by the spec, \MaxKESEvo, which will be set to $90$.
+of evolutions allow by the spec, \MaxKESEvo, which will be set to $62$.
 See Figure~\ref{fig:rules:ocert}.
 The sum construction uses the combination of the signature scheme Ed25519 and
 hash function BLAKE2b-256.
