@@ -40,9 +40,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Certificates" $ do
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-    -- TODO: Re-enable after issues are resolved, by removing this override
-    disableInConformanceIt "Reg/UnReg collect and refund correct amounts" $ do
+    it "Reg/UnReg collect and refund correct amounts" $ do
       utxoStart <- getUTxO
       accountDeposit <- getsPParams ppKeyDepositL
       stakePoolDeposit <- getsPParams ppPoolDepositL

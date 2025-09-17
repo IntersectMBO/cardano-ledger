@@ -189,10 +189,7 @@ spec = do
           )
           [injectFailure $ StakeKeyNotRegisteredDELEG (KeyHashObj kh)]
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/917
-    -- impacts `registerAndRetirePoolToMakeReward`
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "With non-zero reward balance" $ do
+    it "With non-zero reward balance" $ do
       cred <- KeyHashObj <$> freshKeyHash
       regTxCert <- genRegTxCert cred
 

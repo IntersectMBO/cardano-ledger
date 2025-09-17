@@ -104,9 +104,7 @@ treasuryWithdrawalsSpec =
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/911
-    -- TODO: Re-enable after issues are resolved, by removing this override
-    disableInConformanceIt "Withdrawals exceeding treasury submitted in a single proposal" $ whenPostBootstrap $ do
+    it "Withdrawals exceeding treasury submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
@@ -138,10 +136,7 @@ treasuryWithdrawalsSpec =
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
       checkNoWithdrawal initialTreasury withdrawals
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/912
-    -- TODO: Re-enable after issues are resolved, by removing this override
-    disableInConformanceIt
-      "Withdrawals exceeding treasury submitted in several proposals within the same epoch"
+    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch"
       $ whenPostBootstrap
       $ do
         disableTreasuryExpansion
