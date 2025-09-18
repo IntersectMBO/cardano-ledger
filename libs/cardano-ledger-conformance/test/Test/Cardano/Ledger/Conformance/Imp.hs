@@ -180,5 +180,5 @@ spec =
             describe "GOVCERT" GovCert.spec
             describe "LEDGER" Ledger.spec
             describe "RATIFY" Ratify.spec
-            xdescribe "UTXO" Utxo.spec
+            describe "UTXO" Utxo.spec
             xdescribe "UTXOS" Utxos.spec
