@@ -655,15 +655,15 @@ jobs:
     - name: Install changelog linter
       run: |
         REPO=cardano-ledger-release-tool
-        RELEASE=changelogs-0.1.0.0
+        RELEASE=cardano-ledger-release-tool-0.1.0.0
         curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64.zip" -o $REPO.zip
         BINDIR=$HOME/.local/bin
         mkdir -p "$BINDIR"
-        unzip $REPO.zip -d "$BINDIR"
+        unzip -qo $REPO.zip -d "$BINDIR"
         rm $REPO.zip
-        echo "$BINDIR" >> $GITHUB_PATH
+        echo "$BINDIR" >> ${GITHUB_PATH-/dev/null}
 
     - name: Run linter
       run: |
-        git ls-files '*CHANGELOG.md' | xargs -r changelogs --inplace
+        git ls-files '*CHANGELOG.md' | xargs -r -d\\n cardano-ledger-release-tool changelogs --inplace
         git diff --exit-code
