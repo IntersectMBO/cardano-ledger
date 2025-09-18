@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -33,6 +34,7 @@ spec = do
   describe "Withdrawals" $ do
     it "Withdrawing from an unregistered reward account" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+      pv <- getsPParams @era ppProtocolVersionL
 
       stakeKey <- freshKeyHash
       rwdAccount <- getRewardAccountFor $ KeyHashObj stakeKey
@@ -43,7 +45,11 @@ spec = do
               & withdrawalsTxBodyL
                 .~ Withdrawals [(rwdAccount, Coin 20)]
         notInRewardsFailure =
-          injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount, Coin 20)]
+          ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+              then injectFailure . ConwayWithdrawalsMissingAccounts @era
+              else injectFailure . WithdrawalsNotInRewardsCERTS @era
+          )
+            $ Withdrawals [(rwdAccount, Coin 20)]
        in
         submitBootstrapAware
           (submitTx_ tx)
@@ -66,7 +72,11 @@ spec = do
               & withdrawalsTxBodyL
                 .~ Withdrawals [(rwdAccount, zero), (registeredRwdAccount, reward)]
         notInRewardsFailure =
-          injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount, zero)]
+          ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+              then injectFailure . ConwayWithdrawalsMissingAccounts @era
+              else injectFailure . WithdrawalsNotInRewardsCERTS @era
+          )
+            $ Withdrawals [(rwdAccount, zero)]
        in
         submitBootstrapAware
           (submitTx_ tx)
@@ -83,6 +93,7 @@ spec = do
 
     it "Withdrawing the wrong amount" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+      pv <- getsPParams @era ppProtocolVersionL
 
       (rwdAccount1, reward1, _stakeKey1) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
       (rwdAccount2, reward2, _stakeKey2) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
@@ -95,9 +106,11 @@ spec = do
                   , (rwdAccount2, reward2)
                   ]
         )
-        [ injectFailure $
-            WithdrawalsNotInRewardsCERTS $
-              Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
+        [ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+              then injectFailure . ConwayIncompleteWithdrawals @era
+              else injectFailure . WithdrawalsNotInRewardsCERTS @era
+          )
+            $ Withdrawals [(rwdAccount1, reward1 <+> Coin 1)]
         ]
 
       submitFailingTx
@@ -107,7 +120,12 @@ spec = do
                 .~ Withdrawals
                   [(rwdAccount1, zero)]
         )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS $ Withdrawals [(rwdAccount1, zero)]]
+        [ ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+              then injectFailure . ConwayIncompleteWithdrawals @era
+              else injectFailure . WithdrawalsNotInRewardsCERTS @era
+          )
+            $ Withdrawals [(rwdAccount1, zero)]
+        ]
   where
     setupRewardAccount stake dRep = do
       kh <- freshKeyHash
