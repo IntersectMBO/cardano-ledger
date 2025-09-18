@@ -664,6 +664,4 @@ jobs:
         echo "$BINDIR" >> ${GITHUB_PATH-/dev/null}
 
     - name: Run linter
-      run: |
-        git ls-files '*CHANGELOG.md' | xargs -r -d\\n cardano-ledger-release-tool changelogs --inplace
-        git diff --exit-code
+      run: scripts/format-changelogs.sh || git diff --exit-code
