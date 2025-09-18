@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.TreeDiff (
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.HKD
@@ -30,7 +31,6 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UMap
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits
@@ -206,13 +206,6 @@ instance ToExpr StakePoolState
 instance ToExpr StakePoolRelay
 
 instance ToExpr PoolCert
-
--- UMap
-instance ToExpr RDPair
-
-instance ToExpr UMElem
-
-instance ToExpr UMap
 
 instance ToExpr (PlutusData era) where
   toExpr = trimExprViaShow 30
