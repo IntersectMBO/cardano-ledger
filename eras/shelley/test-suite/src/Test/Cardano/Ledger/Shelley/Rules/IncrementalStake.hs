@@ -81,7 +81,7 @@ incrStakeComputationTest ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , STS (EraRule "LEDGER" era)
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   TestTree
@@ -97,7 +97,7 @@ incrStakeComp ::
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ShelleyEraAccounts era
   ) =>

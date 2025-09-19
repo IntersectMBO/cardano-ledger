@@ -11,6 +11,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -103,7 +104,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 getShelleyScriptsNeeded ::
   EraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   ShelleyScriptsNeeded era
 getShelleyScriptsNeeded u txBody =
   ShelleyScriptsNeeded
@@ -124,7 +125,7 @@ shelleyConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Value era
 shelleyConsumed pp certState =
   getConsumedValue
@@ -138,7 +139,7 @@ produced ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
-  TxBody era ->
+  TxBody l era ->
   Value era
 produced pp certState =
   getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
@@ -148,7 +149,7 @@ shelleyProducedValue ::
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  TxBody TopTx era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
@@ -162,7 +163,7 @@ getConsumedCoin ::
   PParams era ->
   (Credential 'Staking -> Maybe Coin) ->
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Coin
 getConsumedCoin pp lookupRefund utxo txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
@@ -183,7 +184,8 @@ instance EraUTxO ShelleyEra where
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
@@ -196,7 +198,7 @@ instance EraUTxO ShelleyEra where
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
 -- We don't consider the reference scripts in the calculation before Conway
-getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx era -> Coin
+getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx l era -> Coin
 getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
 
 -- | Collect the set of hashes of keys that needs to sign a
@@ -205,7 +207,7 @@ getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
 witsVKeyNeededGenDelegs ::
   forall era.
   ShelleyEraTxBody era =>
-  TxBody era ->
+  TxBody TopTx era ->
   GenDelegs ->
   Set (KeyHash 'Witness)
 witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
@@ -224,10 +226,9 @@ witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
 -- | Extract witnesses from UTxO and TxBody. Does not enforce witnesses for governance
 -- related Keys, i.e. `GenDelegs`
 getShelleyWitsVKeyNeededNoGov ::
-  forall era.
   EraTx era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeededNoGov utxo' txBody =
   certAuthors
@@ -272,12 +273,13 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
             Just vkeyWit -> Set.insert vkeyWit ans
 
 getShelleyWitsVKeyNeeded ::
-  forall era.
-  (EraTx era, ShelleyEraTxBody era, EraCertState era) =>
+  (EraTx era, ShelleyEraTxBody era, EraCertState era, STxLevel l era ~ STxTopLevel l era) =>
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeeded certState utxo txBody =
-  getShelleyWitsVKeyNeededNoGov utxo txBody
-    `Set.union` witsVKeyNeededGenDelegs txBody (dsGenDelegs (certState ^. certDStateL))
+  case toSTxLevel txBody of
+    STopTxOnly ->
+      getShelleyWitsVKeyNeededNoGov utxo txBody
+        `Set.union` witsVKeyNeededGenDelegs txBody (dsGenDelegs (certState ^. certDStateL))

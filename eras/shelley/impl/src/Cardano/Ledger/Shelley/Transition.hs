@@ -84,7 +84,7 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Register the initial information in the 'NewEpochState'.
 --
--- HERE BE DRAGONS! This interfaced is intended to help in testing.
+-- HERE BE DRAGONS! This interface is intended to help in testing and benchmarking.
 --
 -- In production, the genesis should /not/ contain any initial information about accounts, stake
 -- pools or dreps.

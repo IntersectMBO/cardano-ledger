@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Core (
   EraTxOut (..),
   EraTxWits (..),
   ScriptHash,
+  TxLevel (..),
  )
 import Cardano.Ledger.Conway.Rules (EnactState)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
@@ -72,9 +73,9 @@ instance
 
 instance
   ( EraTx era
-  , ToExpr (Tx era)
+  , ToExpr (Tx TopTx era)
   , ToExpr (TxOut era)
-  , ToExpr (TxBody era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , ToExpr (PParamsHKD Identity era)
@@ -87,7 +88,7 @@ instance
   ( EraPParams era
   , EraCertState era
   , EncCBOR (TxOut era)
-  , EncCBOR (Tx era)
+  , EncCBOR (Tx TopTx era)
   ) =>
   EncCBOR (ConwayLedgerExecContext era)
   where

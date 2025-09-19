@@ -2,6 +2,11 @@
 
 ## 0.2.0.0
 
+* Add `DijkstraTx` type with `DijkstraTx` and `DijkstraSubTx` constructors
+* Add `DijkstraSubTxBody` constructor to `DijkstraTxBodyRaw`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Add `DijkstraNativeScript` and `DijkstraNativeScriptRaw` along with type instances
 * Change `NativeScript` type family to `DijkstraNativeScript`
 * Add `evalDijkstraNativeScript` to `Scripts` module

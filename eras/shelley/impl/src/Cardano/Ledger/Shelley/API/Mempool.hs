@@ -111,8 +111,8 @@ class
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Tx era ->
-    Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
+    Tx TopTx era ->
+    Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
 
 ruleApplyTxValidation ::
   forall rule era.
@@ -120,15 +120,15 @@ ruleApplyTxValidation ::
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ LedgerEnv era
   , State (EraRule rule era) ~ MempoolState era
-  , Signal (EraRule rule era) ~ Tx era
+  , Signal (EraRule rule era) ~ Tx TopTx era
   , PredicateFailure (EraRule rule era) ~ PredicateFailure (EraRule "LEDGER" era)
   ) =>
   ValidationPolicy ->
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  Tx era ->
-  Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
 ruleApplyTxValidation validationPolicy globals env state tx =
   let opts =
         ApplySTSOpts
@@ -254,8 +254,8 @@ applyTx ::
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  Tx era ->
-  Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
+  Tx TopTx era ->
+  Either (ApplyTxError era) (MempoolState era, Validated (Tx TopTx era))
 applyTx = applyTxValidation ValidateAll
 
 -- | Reapply a previously validated 'Tx'.
@@ -269,7 +269,7 @@ reapplyTx ::
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  Validated (Tx era) ->
+  Validated (Tx TopTx era) ->
   Either (ApplyTxError era) (MempoolState era)
 reapplyTx globals env state (Validated tx) =
   fst <$> applyTxValidation (ValidateSuchThat (notElem lblStatic)) globals env state tx

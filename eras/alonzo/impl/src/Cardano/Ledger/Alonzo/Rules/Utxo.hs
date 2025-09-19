@@ -193,7 +193,7 @@ deriving stock instance
   ( Era era
   , Show (Value era)
   , Show (TxOut era)
-  , Show (TxBody era)
+  , Show (TxBody TopTx era)
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Show (AlonzoUtxoPredFailure era)
@@ -267,7 +267,7 @@ feesOK ::
   , EraUTxO era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Test (AlonzoUtxoPredFailure era)
 feesOK pp tx u@(UTxO utxo) =
@@ -292,7 +292,7 @@ validateCollateral ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateral pp txb utxoCollateral =
@@ -324,7 +324,7 @@ validateInsufficientCollateral ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   DeltaCoin ->
   Test (AlonzoUtxoPredFailure era)
 validateInsufficientCollateral pp txBody bal =
@@ -359,7 +359,7 @@ validateOutsideForecast ::
   -- | Current slot number
   SlotNo ->
   SystemStart ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxoPredFailure era)
 validateOutsideForecast ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
@@ -423,7 +423,7 @@ validateOutputTooBigUTxO pp outputs =
 validateWrongNetworkInTxBody ::
   AlonzoEraTxBody era =>
   Network ->
-  TxBody era ->
+  TxBody l era ->
   Test (AlonzoUtxoPredFailure era)
 validateWrongNetworkInTxBody netId txBody =
   case txBody ^. networkIdTxBodyL of
@@ -441,7 +441,7 @@ validateExUnitsTooBigUTxO ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxoPredFailure era)
 validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
@@ -457,7 +457,7 @@ validateExUnitsTooBigUTxO pp tx =
 validateTooManyCollateralInputs ::
   AlonzoEraTxBody era =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Test (AlonzoUtxoPredFailure era)
 validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $
@@ -482,7 +482,7 @@ utxoTransition ::
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
   , SafeToHash (TxWits era)
   ) =>
@@ -566,7 +566,7 @@ instance
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
@@ -578,7 +578,7 @@ instance
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = UTxOState era
-  type Signal (AlonzoUTXO era) = Tx era
+  type Signal (AlonzoUTXO era) = Tx TopTx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era

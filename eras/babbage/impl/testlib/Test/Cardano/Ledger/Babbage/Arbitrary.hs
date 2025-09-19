@@ -127,7 +127,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (TxBody BabbageEra) where
+instance Arbitrary (TxBody TopTx BabbageEra) where
   arbitrary =
     BabbageTxBody
       <$> arbitrary
@@ -149,4 +149,4 @@ instance Arbitrary (TxBody BabbageEra) where
 
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
 
-deriving newtype instance Arbitrary (Tx BabbageEra)
+deriving newtype instance Arbitrary (Tx TopTx BabbageEra)

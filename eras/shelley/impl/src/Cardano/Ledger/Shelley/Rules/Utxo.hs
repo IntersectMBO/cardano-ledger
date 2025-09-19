@@ -290,7 +290,7 @@ instance
   STS (ShelleyUTXO era)
   where
   type State (ShelleyUTXO era) = UTxOState era
-  type Signal (ShelleyUTXO era) = Tx era
+  type Signal (ShelleyUTXO era) = Tx TopTx era
   type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
@@ -330,7 +330,7 @@ instance
         "Deposit pot must not be negative (post)"
         (\_ st' -> utxosDeposited st' >= mempty)
     , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> sumUTxO (utxosUtxo us)
-          withdrawals :: TxBody era -> Value era
+          withdrawals :: TxBody TopTx era -> Value era
           withdrawals txb = Val.inject $ F.foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
@@ -352,7 +352,7 @@ utxoInductive ::
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Event (EraRule "UTXO" era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -420,7 +420,7 @@ utxoInductive = do
 -- > txttl txb ≥ slot
 validateTimeToLive ::
   (ShelleyEraTxBody era, ExactEra ShelleyEra era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   SlotNo ->
   Test (ShelleyUtxoPredFailure era)
 validateTimeToLive txb slot =
@@ -434,7 +434,7 @@ validateTimeToLive txb slot =
 -- > txins txb ≠ ∅
 validateInputSetEmptyUTxO ::
   EraTxBody era =>
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
 validateInputSetEmptyUTxO txb =
   failureUnless (inputs /= Set.empty) InputSetEmptyUTxO
@@ -447,7 +447,7 @@ validateInputSetEmptyUTxO txb =
 validateFeeTooSmallUTxO ::
   EraUTxO era =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Test (ShelleyUtxoPredFailure era)
 validateFeeTooSmallUTxO pp tx utxo =
@@ -497,7 +497,7 @@ validateWrongNetwork netId outputs =
 validateWrongNetworkWithdrawal ::
   EraTxBody era =>
   Network ->
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetworkWithdrawal netId txb =
   failureUnless (null withdrawalsWrongNetwork) $
@@ -516,7 +516,7 @@ validateValueNotConservedUTxO ::
   PParams era ->
   UTxO era ->
   CertState era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo certState txBody =
   failureUnless (consumedValue == producedValue) $
@@ -570,7 +570,7 @@ validateOutputBootAddrAttrsTooBig outputs =
 validateMaxTxSizeUTxO ::
   EraTx era =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Test (ShelleyUtxoPredFailure era)
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $
@@ -592,7 +592,7 @@ updateUTxOState ::
   (EraTxBody era, EraStake era, EraCertState era, Monad m) =>
   PParams era ->
   UTxOState era ->
-  TxBody era ->
+  TxBody TopTx era ->
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
@@ -637,7 +637,7 @@ instance
 validSizeComputationCheck ::
   ( EraTx era
   , SafeToHash (TxWits era)
-  , Signal (rule era) ~ Tx era
+  , Signal (rule era) ~ Tx TopTx era
   ) =>
   Assertion (rule era)
 validSizeComputationCheck =

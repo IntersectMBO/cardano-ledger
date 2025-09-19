@@ -136,7 +136,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader MockCrypto) era -> [Tx era]
+  let blockTxs :: Block (BHeader MockCrypto) era -> [Tx TopTx era]
       blockTxs Block {blockBody} = toList $ blockBody ^. txSeqBlockBodyL
       bs = traceSignals OldestFirst tr
       txs = concatMap blockTxs bs
@@ -258,7 +258,7 @@ certsByTx ::
   ( ShelleyEraTxBody era
   , EraTx era
   ) =>
-  [Tx era] ->
+  [Tx TopTx era] ->
   [[TxCert era]]
 certsByTx txs = toList . view certsTxBodyL . view bodyTxL <$> txs
 
@@ -286,16 +286,16 @@ txScriptOutputsRatio txoutsList =
               _ -> Sum 0
           )
 
-hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
+hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx TopTx era -> Bool
 hasWithdrawal tx = not . null $ unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
 
-hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
+hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era) => Tx TopTx era -> Bool
 hasPParamUpdate tx = ppUpdates (tx ^. bodyTxL . updateTxBodyL)
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetadata :: EraTx era => Tx era -> Bool
+hasMetadata :: EraTx era => Tx TopTx era -> Bool
 hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
   where
     f SNothing = False
@@ -348,7 +348,7 @@ propAbstractSizeBoundsBytes = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx era]
+      let txs :: [Tx TopTx era]
           txs = traceSignals OldestFirst tr
       all (\tx -> txSizeBound tx >= numBytes tx) txs
   where
@@ -382,7 +382,7 @@ propAbstractSizeNotTooBig = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx era]
+      let txs :: [Tx TopTx era]
           txs = traceSignals OldestFirst tr
       all notTooBig txs
   where
@@ -433,7 +433,7 @@ epochsInTrace bs'
 txSizeBound ::
   forall era.
   EraTx era =>
-  Tx era ->
+  Tx TopTx era ->
   Integer
 txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + toInteger rest
   where

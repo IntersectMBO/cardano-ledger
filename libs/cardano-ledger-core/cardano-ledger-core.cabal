@@ -93,6 +93,7 @@ library
     Cardano.Ledger.Core.PParams
     Cardano.Ledger.Core.Translation
     Cardano.Ledger.Core.TxCert
+    Cardano.Ledger.Core.TxLevel
     Cardano.Ledger.Keys.Internal
     Cardano.Ledger.State.Account
     Cardano.Ledger.State.CertState

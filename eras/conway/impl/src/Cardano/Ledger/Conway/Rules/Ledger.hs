@@ -322,7 +322,7 @@ instance
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , ConwayEraCertState era
@@ -334,7 +334,7 @@ instance
   STS (ConwayLEDGER era)
   where
   type State (ConwayLEDGER era) = LedgerState era
-  type Signal (ConwayLEDGER era) = Tx era
+  type Signal (ConwayLEDGER era) = Tx TopTx era
   type Environment (ConwayLEDGER era) = LedgerEnv era
   type BaseM (ConwayLEDGER era) = ShelleyBase
   type PredicateFailure (ConwayLEDGER era) = ConwayLedgerPredFailure era
@@ -355,27 +355,27 @@ ledgerTransition ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
+  , Signal (someLEDGER era) ~ Tx TopTx era
+  , State (someLEDGER era) ~ LedgerState era
+  , Environment (someLEDGER era) ~ LedgerEnv era
+  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , State (someLEDGER era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Environment (someLEDGER era) ~ LedgerEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
-  , Signal (someLEDGER era) ~ Tx era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
-  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -511,7 +511,7 @@ instance
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXOW" era) ~ ConwayUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era
   , STS (ConwayUTXOW era)
@@ -559,7 +559,7 @@ instance
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , State (EraRule "UTXOW" era) ~ UTxOState era

@@ -105,7 +105,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Signal (BabbageUTXOS era) ~ Tx era
+  , Signal (BabbageUTXOS era) ~ Tx TopTx era
   , EncCBOR (EraRuleFailure "PPUP" era)
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
@@ -118,7 +118,7 @@ instance
   type BaseM (BabbageUTXOS era) = ShelleyBase
   type Environment (BabbageUTXOS era) = UtxoEnv era
   type State (BabbageUTXOS era) = UTxOState era
-  type Signal (BabbageUTXOS era) = Tx era
+  type Signal (BabbageUTXOS era) = Tx TopTx era
   type PredicateFailure (BabbageUTXOS era) = AlonzoUtxosPredFailure era
   type Event (BabbageUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -178,7 +178,7 @@ expectScriptsToPass ::
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Rule (EraRule "UTXOS" era) 'Transition ()
 expectScriptsToPass pp tx utxo = do
@@ -255,7 +255,7 @@ babbageEvalScriptsTxInvalid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era

@@ -64,7 +64,7 @@ benchWithGenState ::
   , EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era
@@ -83,7 +83,7 @@ benchApplyTx ::
   , ApplyTx era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era
@@ -116,16 +116,16 @@ deserialiseTxEra ::
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , EraStake era
   , EraGov era
-  , DecCBOR (Tx era)
+  , DecCBOR (Tx TopTx era)
   ) =>
   Proxy era ->
   Benchmark
 deserialiseTxEra px =
   benchWithGenState px (pure . Plain.serialize . ateTx) $
-    nf (either (error . show) (id @(Tx era)) . decodeFull v)
+    nf (either (error . show) (id @(Tx TopTx era)) . decodeFull v)
   where
     v = eraProtVerHigh @era
 
@@ -136,7 +136,7 @@ deserialiseAnnTxEra ::
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , EraStake era
   , EraGov era
   ) =>
@@ -144,7 +144,7 @@ deserialiseAnnTxEra ::
   Benchmark
 deserialiseAnnTxEra px =
   benchWithGenState px (pure . Plain.serialize . ateTx) $
-    nf (either (error . show) (id @(Tx era)) . decodeFullAnnotator v "tx" decCBOR)
+    nf (either (error . show) (id @(Tx TopTx era)) . decodeFullAnnotator v "tx" decCBOR)
   where
     v = eraProtVerHigh @era
 

@@ -108,7 +108,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update ShelleyEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (TxBody ShelleyEra, [MultiSig ShelleyEra])
+  Gen (TxBody TopTx ShelleyEra, [MultiSig ShelleyEra])
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot
   return

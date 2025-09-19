@@ -61,8 +61,8 @@ type ShelleyTxBodyTypes =
    , Maybe TxAuxDataHash
    ]
 
-instance HasSimpleRep (TxBody ShelleyEra) where
-  type SimpleRep (TxBody ShelleyEra) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx ShelleyEra) where
+  type SimpleRep (TxBody TopTx ShelleyEra) = SOP '["ShelleyTxBody" ::: ShelleyTxBodyTypes]
   toSimpleRep (ShelleyTxBody is os certs w c s up aux) =
     inject @"ShelleyTxBody" @'["ShelleyTxBody" ::: ShelleyTxBodyTypes]
       is
@@ -89,7 +89,7 @@ instance HasSimpleRep (TxBody ShelleyEra) where
             (maybeToStrictMaybe aux)
       )
 
-instance HasSpec (TxBody ShelleyEra)
+instance HasSpec (TxBody TopTx ShelleyEra)
 
 -- =======================================================
 -- AllegraTxBody
@@ -109,8 +109,8 @@ type AllegraTxBodyTypes =
    , Maybe TxAuxDataHash
    ]
 
-instance HasSimpleRep (TxBody AllegraEra) where
-  type SimpleRep (TxBody AllegraEra) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx AllegraEra) where
+  type SimpleRep (TxBody TopTx AllegraEra) = SOP '["AllegraTxBody" ::: AllegraTxBodyTypes]
   toSimpleRep (AllegraTxBody is os certs w c vi up aux) =
     inject @"AllegraTxBody" @'["AllegraTxBody" ::: AllegraTxBodyTypes]
       is
@@ -137,7 +137,7 @@ instance HasSimpleRep (TxBody AllegraEra) where
             (maybeToStrictMaybe aux)
       )
 
-instance HasSpec (TxBody AllegraEra)
+instance HasSpec (TxBody TopTx AllegraEra)
 
 -- =========================================================================
 -- MaryTxBody
@@ -158,8 +158,8 @@ type MaryTxBodyTypes =
    , MultiAsset
    ]
 
-instance HasSimpleRep (TxBody MaryEra) where
-  type SimpleRep (TxBody MaryEra) = SOP '["MaryTxBody" ::: MaryTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx MaryEra) where
+  type SimpleRep (TxBody TopTx MaryEra) = SOP '["MaryTxBody" ::: MaryTxBodyTypes]
   toSimpleRep (MaryTxBody is os certs w c vi up aux ma) =
     inject @"MaryTxBody" @'["MaryTxBody" ::: MaryTxBodyTypes]
       is
@@ -188,7 +188,7 @@ instance HasSimpleRep (TxBody MaryEra) where
             ma
       )
 
-instance HasSpec (TxBody MaryEra)
+instance HasSpec (TxBody TopTx MaryEra)
 
 -- =================================================================================
 -- AlonzoTxBody
@@ -213,8 +213,8 @@ type AlonzoTxBodyTypes =
    , Maybe Network
    ]
 
-instance HasSimpleRep (TxBody AlonzoEra) where
-  type SimpleRep (TxBody AlonzoEra) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx AlonzoEra) where
+  type SimpleRep (TxBody TopTx AlonzoEra) = SOP '["AlonzoTxBody" ::: AlonzoTxBodyTypes]
   toSimpleRep (AlonzoTxBody inputs colinputs os certs w c vi up kh ma ihash aux nw) =
     inject @"AlonzoTxBody" @'["AlonzoTxBody" ::: AlonzoTxBodyTypes]
       inputs
@@ -251,7 +251,7 @@ instance HasSimpleRep (TxBody AlonzoEra) where
             (maybeToStrictMaybe nw)
       )
 
-instance HasSpec (TxBody AlonzoEra)
+instance HasSpec (TxBody TopTx AlonzoEra)
 
 -- =================================================================================
 -- BabbageTxBody
@@ -279,8 +279,8 @@ type BabbageTxBodyTypes =
    , Maybe Network
    ]
 
-instance HasSimpleRep (TxBody BabbageEra) where
-  type SimpleRep (TxBody BabbageEra) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx BabbageEra) where
+  type SimpleRep (TxBody TopTx BabbageEra) = SOP '["BabbageTxBody" ::: BabbageTxBodyTypes]
   toSimpleRep (BabbageTxBody inputs colinputs refinputs os colOut coin certs w c vi up kh ma ihash aux nw) =
     inject @"BabbageTxBody" @'["BabbageTxBody" ::: BabbageTxBodyTypes]
       inputs
@@ -323,4 +323,4 @@ instance HasSimpleRep (TxBody BabbageEra) where
             (maybeToStrictMaybe nw)
       )
 
-instance HasSpec (TxBody BabbageEra)
+instance HasSpec (TxBody TopTx BabbageEra)

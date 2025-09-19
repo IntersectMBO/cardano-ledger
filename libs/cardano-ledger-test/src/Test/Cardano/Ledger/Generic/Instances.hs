@@ -142,10 +142,11 @@ timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
 timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 
-shelleySetValidity :: ValidityInterval -> TxBody ShelleyEra -> TxBody ShelleyEra
+shelleySetValidity :: ValidityInterval -> TxBody TopTx ShelleyEra -> TxBody TopTx ShelleyEra
 shelleySetValidity vi = ttlTxBodyL .~ timeToLive vi
 
-allegraSetValidity :: AllegraEraTxBody era => ValidityInterval -> TxBody era -> TxBody era
+allegraSetValidity ::
+  AllegraEraTxBody era => ValidityInterval -> TxBody TopTx era -> TxBody TopTx era
 allegraSetValidity vi = vldtTxBodyL .~ vi
 
 allegraValidTxOut :: EraTxOut era => Map ScriptHash (Script era) -> TxOut era -> Bool
@@ -349,7 +350,7 @@ instance EraGenericGen AlonzoEra where
   setCollateralReturn = const id
   genPParams = alonzoGenPParams
 
-shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx era -> Model era
+shelleyApplyTx :: EraModel era => Int -> SlotNo -> Model era -> Tx TopTx era -> Model era
 shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^. bodyTxL
   where
     modelEpoch = mEL model
@@ -359,7 +360,7 @@ shelleyApplyTx count slot model tx = applyTxBody count epochAccurateModel $ tx ^
 alonzoApplyTx ::
   forall era.
   (EraModel era, AlonzoEraTx era, Reflect era) =>
-  Int -> SlotNo -> Model era -> Tx era -> Model era
+  Int -> SlotNo -> Model era -> Tx TopTx era -> Model era
 alonzoApplyTx count slot model tx = case tx ^. isValidTxL of
   IsValid True -> applyTxSimple count epochAccurateModel tx
   IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx

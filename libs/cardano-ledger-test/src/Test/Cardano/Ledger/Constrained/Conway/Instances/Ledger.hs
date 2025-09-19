@@ -184,10 +184,10 @@ type ConwayTxBodyTypes =
    , Coin
    ]
 
-instance HasSpec (TxBody ConwayEra)
+instance HasSpec (TxBody TopTx ConwayEra)
 
-instance HasSimpleRep (TxBody ConwayEra) where
-  type TheSop (TxBody ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
+instance HasSimpleRep (TxBody TopTx ConwayEra) where
+  type TheSop (TxBody TopTx ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
   toSimpleRep ConwayTxBody {..} =
     inject @"ConwayTxBody" @'["ConwayTxBody" ::: ConwayTxBodyTypes]
       ctbSpendInputs
@@ -1496,29 +1496,52 @@ instance
 -- Unlike ShelleyTx, AlonzoTx is just a data type, and the generic instances work fine
 -- BUT, all the type families inside need constraints
 
+type AlonzoTxTypes era =
+  '[ TxBody TopTx era
+   , TxWits era
+   , IsValid
+   , Maybe (TxAuxData era)
+   ]
+
 instance
   ( Typeable (TxAuxData era)
-  , Typeable (TxBody era)
+  , Typeable (TxBody TopTx era)
   , Typeable (TxWits era)
   , Era era
   ) =>
-  HasSimpleRep (AlonzoTx era)
+  HasSimpleRep (AlonzoTx TopTx era)
+  where
+  type
+    TheSop (AlonzoTx TopTx era) =
+      '["AlonzoTx" ::: AlonzoTxTypes era]
+  toSimpleRep AlonzoTx {..} =
+    inject @"AlonzoTx" @'["AlonzoTx" ::: AlonzoTxTypes era]
+      atBody
+      atWits
+      atIsValid
+      (strictMaybeToMaybe atAuxData)
+  fromSimpleRep rep =
+    algebra @'["AlonzoTx" ::: AlonzoTxTypes era]
+      rep
+      ( \body wits isValid auxData ->
+          AlonzoTx body wits isValid (maybeToStrictMaybe auxData)
+      )
 
 instance
   ( EraSpecPParams era
-  , HasSpec (TxBody era)
+  , HasSpec (TxBody TopTx era)
   , HasSpec (TxWits era)
   , HasSpec (TxAuxData era)
   , IsNormalType (TxAuxData era)
   ) =>
-  HasSpec (AlonzoTx era)
+  HasSpec (AlonzoTx TopTx era)
 
 -- NOTE: this is a representation of the `ShelleyTx` type. You can't
 -- simply use the generics to derive the `SimpleRep` for `ShelleyTx`
 -- because the type is memoized. So instead we say that the representation
 -- is the same as what you would get from using the `ShelleyTx` pattern.
 type ShelleyTxTypes era =
-  '[ TxBody era
+  '[ TxBody TopTx era
    , TxWits era
    , Maybe (TxAuxData era)
    ]
@@ -1527,22 +1550,22 @@ instance
   ( EraTxOut era
   , EraTx era
   , EraSpecPParams era
-  , HasSpec (TxBody era)
+  , HasSpec (TxBody TopTx era)
   , HasSpec (TxWits era)
   , HasSpec (TxAuxData era)
   , IsNormalType (TxAuxData era)
   ) =>
-  HasSpec (ShelleyTx era)
+  HasSpec (ShelleyTx TopTx era)
 
-instance HasSimpleRep (Tx ConwayEra) where
-  type TheSop (Tx ConwayEra) = TheSop (AlonzoTx ConwayEra)
+instance HasSimpleRep (Tx TopTx ConwayEra) where
+  type TheSop (Tx TopTx ConwayEra) = TheSop (AlonzoTx TopTx ConwayEra)
   toSimpleRep = toSimpleRep . unConwayTx
   fromSimpleRep = MkConwayTx . fromSimpleRep
 
-instance HasSpec (Tx ConwayEra)
+instance HasSpec (Tx TopTx ConwayEra)
 
-instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyTx era) where
-  type TheSop (ShelleyTx era) = '["ShelleyTx" ::: ShelleyTxTypes era]
+instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyTx TopTx era) where
+  type TheSop (ShelleyTx TopTx era) = '["ShelleyTx" ::: ShelleyTxTypes era]
   toSimpleRep (ShelleyTx body wits auxdata) =
     inject @"ShelleyTx" @'["ShelleyTx" ::: ShelleyTxTypes era]
       body
@@ -1826,9 +1849,9 @@ instance HasSimpleRep Pulser where
 
 instance HasSpec Pulser
 
-instance (Typeable (Tx era), Typeable era) => HasSimpleRep (CertsEnv era)
+instance (Typeable (Tx TopTx era), Typeable era) => HasSimpleRep (CertsEnv era)
 
-instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx era)) => HasSpec (CertsEnv era)
+instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx TopTx era)) => HasSpec (CertsEnv era)
 
 -- CompactForm
 

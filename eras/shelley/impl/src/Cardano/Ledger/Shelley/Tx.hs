@@ -4,7 +4,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -54,89 +57,102 @@ import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 -- ========================================================
 
-data ShelleyTx era = ShelleyTx
-  { stBody :: !(TxBody era)
-  , stWits :: !(TxWits era)
-  , stAuxData :: !(StrictMaybe (TxAuxData era))
-  }
-  deriving (Generic)
+data ShelleyTx l era where
+  ShelleyTx ::
+    { stBody :: !(TxBody TopTx era)
+    , stWits :: !(TxWits era)
+    , stAuxData :: !(StrictMaybe (TxAuxData era))
+    } ->
+    ShelleyTx TopTx era
 
 instance
-  ( NFData (TxBody era)
+  ( NFData (TxBody l era)
   , NFData (TxWits era)
   , NFData (TxAuxData era)
   ) =>
-  NFData (ShelleyTx era)
+  NFData (ShelleyTx l era)
+  where
+  rnf ShelleyTx {stBody, stWits, stAuxData} =
+    stBody `deepseq` stWits `deepseq` rnf stAuxData
 
 deriving instance
   ( Era era
-  , Eq (TxBody era)
+  , Eq (TxBody l era)
   , Eq (TxWits era)
   , Eq (TxAuxData era)
   ) =>
-  Eq (ShelleyTx era)
+  Eq (ShelleyTx l era)
 
 deriving instance
   ( Era era
-  , Show (TxBody era)
+  , Show (TxBody l era)
   , Show (TxWits era)
   , Show (TxAuxData era)
   ) =>
-  Show (ShelleyTx era)
+  Show (ShelleyTx l era)
 
-instance
-  ( Era era
-  , NoThunks (TxAuxData era)
-  , NoThunks (TxBody era)
-  , NoThunks (TxWits era)
-  ) =>
-  NoThunks (ShelleyTx era)
+deriving via
+  InspectHeap (ShelleyTx l era)
+  instance
+    (Typeable era, Typeable l) => NoThunks (ShelleyTx l era)
 
 -- | `TxBody` setter and getter for `ShelleyTx`.
-bodyShelleyTxL :: Lens' (ShelleyTx era) (TxBody era)
+bodyShelleyTxL :: Lens' (ShelleyTx l era) (TxBody l era)
 bodyShelleyTxL =
-  lens stBody $ \tx txBody -> tx {stBody = txBody}
+  lens (\ShelleyTx {stBody} -> stBody) $ \tx txBody ->
+    case tx of
+      ShelleyTx {} -> tx {stBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`.
-witsShelleyTxL :: Lens' (ShelleyTx era) (TxWits era)
+witsShelleyTxL :: Lens' (ShelleyTx l era) (TxWits era)
 witsShelleyTxL =
-  lens stWits $ \tx txWits -> tx {stWits = txWits}
+  lens (\ShelleyTx {stWits} -> stWits) $ \tx txWits ->
+    case tx of
+      ShelleyTx {} -> tx {stWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`.
-auxDataShelleyTxL :: Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
+auxDataShelleyTxL :: Lens' (ShelleyTx l era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
-  lens stAuxData $ \tx txAuxData -> tx {stAuxData = txAuxData}
+  lens (\ShelleyTx {stAuxData} -> stAuxData) $ \tx txAuxData ->
+    case tx of
+      ShelleyTx {} -> tx {stAuxData = txAuxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
-mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
+mkBasicShelleyTx ::
+  (EraTx era, STxLevel l era ~ STxTopLevel l era) =>
+  TxBody l era ->
+  ShelleyTx l era
 mkBasicShelleyTx txBody =
-  ShelleyTx
-    { stBody = txBody
-    , stWits = mkBasicTxWits
-    , stAuxData = SNothing
-    }
+  case toSTxLevel txBody of
+    STopTxOnly ->
+      ShelleyTx
+        { stBody = txBody
+        , stWits = mkBasicTxWits
+        , stAuxData = SNothing
+        }
 
 toCBORForSizeComputation ::
-  ( EncCBOR (TxBody era)
+  ( EncCBOR (TxBody l era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
-  ShelleyTx era ->
+  ShelleyTx l era ->
   Encoding
 toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
   encodeListLen 3
@@ -145,7 +161,7 @@ toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
     <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeShelleyTxF :: forall era. (HasCallStack, EraTx era) => SimpleGetter (ShelleyTx era) Word32
+sizeShelleyTxF :: forall era l. (HasCallStack, EraTx era) => SimpleGetter (ShelleyTx l era) Word32
 sizeShelleyTxF =
   to $
     errorFail
@@ -156,24 +172,31 @@ sizeShelleyTxF =
 {-# INLINEABLE sizeShelleyTxF #-}
 
 instance
-  ( EraTxBody era
+  ( Typeable l
+  , EraTxBody era
   , EraTxWits era
   , EraTxAuxData era
+  , STxLevel l era ~ STxTopLevel l era
   ) =>
-  DecCBOR (Annotator (ShelleyTx era))
+  DecCBOR (Annotator (ShelleyTx l era))
   where
   decCBOR =
-    decode $
-      Ann (RecD ShelleyTx)
-        <*! From
-        <*! From
-        <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+    withSTxTopLevelM @l @era $ \case
+      STopTxOnly ->
+        decode $
+          Ann (RecD ShelleyTx)
+            <*! From
+            <*! From
+            <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
-instance DecCBOR (Annotator (Tx ShelleyEra)) where
+instance Typeable l => DecCBOR (Annotator (Tx l ShelleyEra)) where
   decCBOR = fmap MkShelleyTx <$> decCBOR
 
+instance HasEraTxLevel Tx ShelleyEra where
+  toSTxLevel (MkShelleyTx ShelleyTx {}) = STopTxOnly @ShelleyEra
+
 instance EraTx ShelleyEra where
-  newtype Tx ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx ShelleyEra}
+  newtype Tx l ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx l ShelleyEra}
     deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
     deriving (Generic)
 
@@ -196,16 +219,16 @@ instance EraTx ShelleyEra where
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
-shelleyTxEqRaw :: EraTx era => Tx era -> Tx era -> Bool
+shelleyTxEqRaw :: EraTx era => Tx l era -> Tx l era -> Bool
 shelleyTxEqRaw tx1 tx2 =
   eqRaw (tx1 ^. bodyTxL) (tx2 ^. bodyTxL)
     && eqRaw (tx1 ^. witsTxL) (tx2 ^. witsTxL)
     && liftEq eqRaw (tx1 ^. auxDataTxL) (tx2 ^. auxDataTxL)
 
-instance EqRaw (Tx ShelleyEra) where
+instance EqRaw (Tx l ShelleyEra) where
   eqRaw = shelleyTxEqRaw
 
-shelleyTxL :: Lens' (Tx ShelleyEra) (ShelleyTx ShelleyEra)
+shelleyTxL :: Lens' (Tx l ShelleyEra) (ShelleyTx l ShelleyEra)
 shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})
 
 --------------------------------------------------------------------------------
@@ -213,8 +236,8 @@ shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})
 --------------------------------------------------------------------------------
 
 instance
-  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
-  EncCBOR (ShelleyTx era)
+  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody l era), EncCBOR (TxAuxData era)) =>
+  EncCBOR (ShelleyTx l era)
   where
   encCBOR ShelleyTx {..} =
     encode $
@@ -224,27 +247,12 @@ instance
         !> E (encodeNullStrictMaybe encCBOR) stAuxData
 
 instance
-  ( Era era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTx era)
-  where
-  decCBOR =
-    decode $
-      RecD ShelleyTx
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
-
-instance
-  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
-  ToCBOR (ShelleyTx era)
+  (Era era, EncCBOR (TxWits era), EncCBOR (TxBody l era), EncCBOR (TxAuxData era), Typeable l) =>
+  ToCBOR (ShelleyTx l era)
   where
   toCBOR = toEraCBOR @era
 
 -- | Minimum fee calculation
-shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin
+shelleyMinFeeTx :: EraTx era => PParams era -> Tx l era -> Coin
 shelleyMinFeeTx pp tx =
   (tx ^. sizeTxF <×> pp ^. ppMinFeeAL) <+> pp ^. ppMinFeeBL

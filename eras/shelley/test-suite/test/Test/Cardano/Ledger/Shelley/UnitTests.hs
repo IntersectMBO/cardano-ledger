@@ -230,7 +230,7 @@ testCheckLeaderVal =
 testLEDGER ::
   HasCallStack =>
   LedgerState ShelleyEra ->
-  Tx ShelleyEra ->
+  Tx TopTx ShelleyEra ->
   LedgerEnv ShelleyEra ->
   Either (NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra))) (LedgerState ShelleyEra) ->
   Assertion
@@ -254,7 +254,7 @@ data AliceToBob = AliceToBob
   , signers :: [KeyPair 'Witness]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx ShelleyEra
+aliceGivesBobLovelace :: AliceToBob -> Tx TopTx ShelleyEra
 aliceGivesBobLovelace
   AliceToBob
     { input
@@ -320,7 +320,7 @@ ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (ChainAccountState (Coin 0)
 
 testInvalidTx ::
   NonEmpty (PredicateFailure (ShelleyLEDGER ShelleyEra)) ->
-  Tx ShelleyEra ->
+  Tx TopTx ShelleyEra ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER ledgerState tx ledgerEnv (Left errs)

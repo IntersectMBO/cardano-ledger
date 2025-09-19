@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
 mintBasicToken ::
-  (HasCallStack, MaryEraImp era) => ImpTestM era (Tx era)
+  (HasCallStack, MaryEraImp era) => ImpTestM era (Tx TopTx era)
 mintBasicToken = do
   addr <- freshKeyAddr_
   keyHash <- freshKeyHash

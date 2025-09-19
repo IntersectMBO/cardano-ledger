@@ -291,7 +291,7 @@ goldenMinFee =
               Right (Block _bHeader bBody :: Block (BHeader StandardCrypto) AlonzoEra) -> bBody
           firstTx =
             case blockBody ^. txSeqBlockBodyL of
-              tx :<| _ -> (tx :: Tx AlonzoEra)
+              tx :<| _ -> (tx :: Tx TopTx AlonzoEra)
               Empty -> error "Block doesn't have any transactions"
 
           -- Below are the relevant protocol parameters that were active

@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Mary.ImpTest (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
+import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -40,7 +41,7 @@ class
 
 instance MaryEraImp MaryEra
 
-mkTokenMintingTx :: MaryEraImp era => ScriptHash -> ImpTestM era (Tx era)
+mkTokenMintingTx :: (MaryEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)

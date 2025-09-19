@@ -107,7 +107,7 @@ ir = StakeAddressesMIR $ Map.fromList [(Cast.aliceSHK, toDeltaCoin aliceMIRCoin)
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: MIRPot -> TxBody ShelleyEra
+txbodyEx1 :: MIRPot -> TxBody TopTx ShelleyEra
 txbodyEx1 pot =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -135,7 +135,7 @@ sufficientMIRWits = mirWits [0 .. 4]
 insufficientMIRWits :: [KeyPair 'Witness]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: [KeyPair 'Witness] -> MIRPot -> ShelleyTx ShelleyEra
+txEx1 :: [KeyPair 'Witness] -> MIRPot -> ShelleyTx TopTx ShelleyEra
 txEx1 txwits pot =
   ShelleyTx
     (txbodyEx1 pot)

@@ -85,7 +85,7 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data CertsEnv era = CertsEnv
-  { certsTx :: Tx era
+  { certsTx :: Tx TopTx era
   , certsPParams :: PParams era
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
@@ -105,11 +105,11 @@ instance EraTx era => EncCBOR (CertsEnv era) where
             !> To certsCurrentCommittee
             !> To certsCommitteeProposals
 
-deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsEnv era)
+deriving instance (EraPParams era, Eq (Tx TopTx era)) => Eq (CertsEnv era)
 
-deriving instance (EraPParams era, Show (Tx era)) => Show (CertsEnv era)
+deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (CertsEnv era)
 
-instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
+instance (EraPParams era, NFData (Tx TopTx era)) => NFData (CertsEnv era)
 
 data ConwayCertsPredFailure era
   = -- | Withdrawals that are missing or do not withdraw the entire amount (pv < 11)
@@ -261,7 +261,7 @@ updateDormantDRepExpiries ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   ) =>
-  Tx era -> EpochNo -> CertState era -> CertState era
+  Tx TopTx era -> EpochNo -> CertState era -> CertState era
 updateDormantDRepExpiries tx currentEpoch =
   let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
    in if hasProposals
@@ -276,7 +276,7 @@ updateVotingDRepExpiries ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   ) =>
-  Tx era -> EpochNo -> EpochInterval -> CertState era -> CertState era
+  Tx TopTx era -> EpochNo -> EpochInterval -> CertState era -> CertState era
 updateVotingDRepExpiries tx currentEpoch drepActivity certState =
   let numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
       updateVSDReps vsDReps =

@@ -2,6 +2,26 @@
 
 ## 1.12.1.0
 
+* Removed deprecated accessor functions:
+  - `spendInputs'`
+  - `collateralInputs'`
+  - `referenceInputs'`
+  - `outputs'`
+  - `collateralReturn'`
+  - `totalCollateral'`
+  - `certs'`
+  - `withdrawals'`
+  - `txfee'`
+  - `vldt'`
+  - `update'`
+  - `reqSignerHashes'`
+  - `mint'`
+  - `scriptIntegrityHash'`
+  - `adHash'`
+  - `txnetworkid'`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
 * Add `mkCollateralTxIn`
 
 ### `testlib`

@@ -55,6 +55,8 @@ module Cardano.Ledger.Allegra.Scripts (
   upgradeMultiSig,
   lteNegInfty,
   ltePosInfty,
+  invalidBeforeL,
+  invalidHereAfterL,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
@@ -109,6 +111,7 @@ import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set (Set, member)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 
 -- | ValidityInterval is a half open interval. Closed on the bottom, open on the top.
@@ -118,6 +121,14 @@ data ValidityInterval = ValidityInterval
   , invalidHereafter :: !(StrictMaybe SlotNo)
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
+
+-- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
+invalidBeforeL :: Lens' ValidityInterval (StrictMaybe SlotNo)
+invalidBeforeL = lens invalidBefore (\vi before -> vi {invalidBefore = before})
+
+-- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
+invalidHereAfterL :: Lens' ValidityInterval (StrictMaybe SlotNo)
+invalidHereAfterL = lens invalidHereafter (\vi hereAfter -> vi {invalidHereafter = hereAfter})
 
 encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t

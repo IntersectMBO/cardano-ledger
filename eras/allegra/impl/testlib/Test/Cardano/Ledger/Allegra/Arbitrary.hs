@@ -105,7 +105,7 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (TxBody AllegraEra) where
+instance Arbitrary (TxBody TopTx AllegraEra) where
   arbitrary =
     AllegraTxBody
       <$> arbitrary
@@ -131,4 +131,4 @@ instance Arbitrary ValidityInterval where
 
 deriving newtype instance Arbitrary (TransitionConfig AllegraEra)
 
-deriving newtype instance Arbitrary (Tx AllegraEra)
+deriving newtype instance Arbitrary (Tx TopTx AllegraEra)

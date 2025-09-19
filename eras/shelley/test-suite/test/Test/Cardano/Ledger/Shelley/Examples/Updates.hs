@@ -118,7 +118,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: TxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -130,7 +130,7 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -193,7 +193,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: TxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -205,7 +205,7 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -269,7 +269,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: TxBody ShelleyEra
+txbodyEx3 :: TxBody TopTx ShelleyEra
 txbodyEx3 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])
@@ -281,7 +281,7 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: ShelleyTx ShelleyEra
+txEx3 :: ShelleyTx TopTx ShelleyEra
 txEx3 =
   ShelleyTx
     txbodyEx3

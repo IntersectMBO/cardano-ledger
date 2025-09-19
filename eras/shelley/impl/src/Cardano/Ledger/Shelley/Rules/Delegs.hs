@@ -77,12 +77,12 @@ data DelegsEnv era = DelegsEnv
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , delegsIx :: TxIx
   , delegspp :: PParams era
-  , delegsTx :: Tx era
+  , delegsTx :: Tx TopTx era
   , delegsAccount :: ChainAccountState
   }
 
 deriving stock instance
-  ( Show (Tx era)
+  ( Show (Tx TopTx era)
   , Show (PParams era)
   ) =>
   Show (DelegsEnv era)

@@ -160,21 +160,21 @@ import Test.QuickCheck (
  )
 
 class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
-  setValidity :: ValidityInterval -> TxBody era -> TxBody era
+  setValidity :: ValidityInterval -> TxBody TopTx era -> TxBody TopTx era
 
-  setReferenceInputs :: Set TxIn -> TxBody era -> TxBody era
+  setReferenceInputs :: Set TxIn -> TxBody TopTx era -> TxBody TopTx era
 
-  setCollateralInputs :: Set TxIn -> TxBody era -> TxBody era
+  setCollateralInputs :: Set TxIn -> TxBody TopTx era -> TxBody TopTx era
 
-  setTotalCollateral :: StrictMaybe Coin -> TxBody era -> TxBody era
+  setTotalCollateral :: StrictMaybe Coin -> TxBody TopTx era -> TxBody TopTx era
 
-  setCollateralReturn :: StrictMaybe (TxOut era) -> TxBody era -> TxBody era
+  setCollateralReturn :: StrictMaybe (TxOut era) -> TxBody TopTx era -> TxBody TopTx era
 
   addRedeemers :: Redeemers era -> TxWits era -> TxWits era
 
-  setScriptIntegrityHash :: StrictMaybe ScriptIntegrityHash -> TxBody era -> TxBody era
+  setScriptIntegrityHash :: StrictMaybe ScriptIntegrityHash -> TxBody TopTx era -> TxBody TopTx era
 
-  setNetworkIdTxBody :: StrictMaybe Network -> TxBody era -> TxBody era
+  setNetworkIdTxBody :: StrictMaybe Network -> TxBody TopTx era -> TxBody TopTx era
 
   genExUnits :: Int -> GenRS era [ExUnits]
 

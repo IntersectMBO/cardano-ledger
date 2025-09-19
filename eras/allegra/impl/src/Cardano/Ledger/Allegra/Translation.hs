@@ -71,8 +71,8 @@ instance TranslateEra AllegraEra NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance TranslateEra AllegraEra Tx where
-  type TranslationError AllegraEra Tx = DecoderError
+instance TranslateEra AllegraEra (Tx TopTx) where
+  type TranslationError AllegraEra (Tx TopTx) = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------

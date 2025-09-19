@@ -135,7 +135,7 @@ instance Show Produced where
 -- | Compute the Coin part of what is consumed by a TxBody, itemized as a 'Consume'
 consumedTxBody ::
   (EraTxBody era, EraCertState era) =>
-  TxBody era ->
+  TxBody l era ->
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -151,7 +151,7 @@ consumedTxBody txBody pp dpstate utxo =
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
   (EraTxBody era, EraCertState era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   PParams era ->
   CertState era ->
   Produced

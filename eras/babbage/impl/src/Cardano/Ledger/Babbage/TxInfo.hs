@@ -186,14 +186,14 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  forall proxy l era.
+  forall proxy l era t.
   ( EraPlutusTxInfo l era
   , AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   ProtVer ->
-  TxBody era ->
+  TxBody t era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPtr proxy pv txBody (ptr, (d, _)) =
@@ -214,7 +214,7 @@ transTxRedeemers ::
   ) =>
   proxy l ->
   ProtVer ->
-  Tx era ->
+  Tx t era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
 transTxRedeemers proxy pv tx =
   PV2.unsafeFromList
