@@ -91,6 +91,10 @@
 
 ### `testlib`
 
+* Added `shelleyGenUnRegTxCert`
+* Added `genUnRegTxCert` to `ShelleyEraImp`
+* Added `shelleyGenRegTxCert`
+* Added `genRegTxCert` to `ShelleyEraImp`
 * Added `impSatisfySignature` and `impSatisfyMNativeScripts`
 * Added `EraSpecificSpec ShelleyEra` instance
 * Added `EraSpecificSpec` class

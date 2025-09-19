@@ -432,6 +432,8 @@ instance ShelleyEraImp AlonzoEra where
   fixupTx = alonzoFixupTx
   expectTxSuccess = impAlonzoExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 instance MaryEraImp AlonzoEra
 
