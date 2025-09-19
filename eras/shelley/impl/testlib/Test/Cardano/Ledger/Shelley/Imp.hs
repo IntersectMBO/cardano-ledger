@@ -5,16 +5,19 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Imp (spec) where
+module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyEraSpecificSpec) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as Pool
@@ -43,4 +46,18 @@ spec = do
   describe "ShelleyPureTests" $ do
     Instant.spec @era
 
-instance EraSpecificSpec ShelleyEra
+shelleyEraSpecificSpec ::
+  forall era.
+  ( ShelleyEraImp era
+  , ShelleyEraTxCert era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyEraSpecificSpec = do
+  describe "Shelley era specific Imp spec" $
+    describe "Certificates without deposits" $
+      Deleg.shelleyEraSpecificSpec
+
+instance EraSpecificSpec ShelleyEra where
+  eraSpecificSpec = shelleyEraSpecificSpec
