@@ -38,8 +38,12 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfoSpec" $ do
         byronTxOut = mkBasicTxOut byronAddr . inject $ Coin 1
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ Set.singleton shelleyTxIn
-            & bodyTxL . outputsTxBodyL .~ SSeq.singleton byronTxOut
+            & bodyTxL
+            . inputsTxBodyL
+            .~ Set.singleton shelleyTxIn
+            & bodyTxL
+            . outputsTxBodyL
+            .~ SSeq.singleton byronTxOut
         lti =
           LedgerTxInfo
             { ltiProtVer = pv
@@ -58,8 +62,12 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfoSpec" $ do
         shelleyTxOut = mkBasicTxOut shelleyAddr . inject $ Coin 1
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ Set.singleton byronTxIn
-            & bodyTxL . outputsTxBodyL .~ SSeq.singleton shelleyTxOut
+            & bodyTxL
+            . inputsTxBodyL
+            .~ Set.singleton byronTxIn
+            & bodyTxL
+            . outputsTxBodyL
+            .~ SSeq.singleton shelleyTxOut
         lti =
           LedgerTxInfo
             { ltiProtVer = pv
