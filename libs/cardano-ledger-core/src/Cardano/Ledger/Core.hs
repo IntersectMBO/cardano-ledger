@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -132,38 +133,40 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
+data TxType = FullTx | SubTx
+
 -- | A transaction.
 class
   ( EraTxBody era
   , EraTxWits era
   , EraTxAuxData era
   , EraPParams era
-  , NFData (Tx era)
-  , NoThunks (Tx era)
-  , DecCBOR (Annotator (Tx era))
-  , EncCBOR (Tx era)
-  , ToCBOR (Tx era)
-  , Show (Tx era)
-  , Eq (Tx era)
+  , forall t. NFData (Tx t era)
+  , forall t. NoThunks (Tx t era)
+  , forall t. DecCBOR (Annotator (Tx t era))
+  , forall t. EncCBOR (Tx t era)
+  , forall t. ToCBOR (Tx t era)
+  , forall t. Show (Tx t era)
+  , forall t. Eq (Tx t era)
   ) =>
   EraTx era
   where
-  data Tx era
+  data Tx (t :: TxType) era
 
-  mkBasicTx :: TxBody era -> Tx era
+  mkBasicTx :: TxBody t era -> Tx t era
 
-  bodyTxL :: Lens' (Tx era) (TxBody era)
+  bodyTxL :: Lens' (Tx t era) (TxBody t era)
 
-  witsTxL :: Lens' (Tx era) (TxWits era)
+  witsTxL :: Lens' (Tx t era) (TxWits era)
 
-  auxDataTxL :: Lens' (Tx era) (StrictMaybe (TxAuxData era))
+  auxDataTxL :: Lens' (Tx t era) (StrictMaybe (TxAuxData era))
 
   -- | For fee calculation and estimations of impact on block space
-  sizeTxF :: HasCallStack => SimpleGetter (Tx era) Word32
+  sizeTxF :: HasCallStack => SimpleGetter (Tx t era) Word32
 
   -- | For fee calculation and estimations of impact on block space
   -- To replace `sizeTxF` after it has been proved equivalent to it .
-  sizeTxForFeeCalculation :: (HasCallStack, SafeToHash (TxWits era)) => Tx era -> Word32
+  sizeTxForFeeCalculation :: (HasCallStack, SafeToHash (TxWits era)) => Tx t era -> Word32
   sizeTxForFeeCalculation tx =
     errorFail $
       integralToBounded @Int @Word32 $
@@ -173,12 +176,12 @@ class
           + 1 -- account for the top-level CBOR encoding tag
 
   -- | Using information from the transaction validate the supplied native script.
-  validateNativeScript :: Tx era -> NativeScript era -> Bool
+  validateNativeScript :: Tx t era -> NativeScript era -> Bool
 
   -- | Minimum fee calculation excluding witnesses
   getMinFeeTx ::
     PParams era ->
-    Tx era ->
+    Tx t era ->
     -- | Size in bytes of reference scripts present in this transaction
     Int ->
     Coin
@@ -187,44 +190,44 @@ class
   ( EraTxOut era
   , EraTxCert era
   , EraPParams era
-  , HashAnnotated (TxBody era) EraIndependentTxBody
-  , DecCBOR (Annotator (TxBody era))
-  , EncCBOR (TxBody era)
-  , ToCBOR (TxBody era)
-  , NoThunks (TxBody era)
-  , NFData (TxBody era)
-  , Show (TxBody era)
-  , Eq (TxBody era)
-  , EqRaw (TxBody era)
+  , forall t. HashAnnotated (TxBody t era) EraIndependentTxBody
+  , forall t. DecCBOR (Annotator (TxBody t era))
+  , forall t. EncCBOR (TxBody t era)
+  , forall t. ToCBOR (TxBody t era)
+  , forall t. NoThunks (TxBody t era)
+  , forall t. NFData (TxBody t era)
+  , forall t. Show (TxBody t era)
+  , forall t. Eq (TxBody t era)
+  , forall t. EqRaw (TxBody t era)
   ) =>
   EraTxBody era
   where
   -- | The body of a transaction.
-  data TxBody era
+  data TxBody (t :: TxType) era
 
-  mkBasicTxBody :: TxBody era
+  mkBasicTxBody :: TxBody t era
 
-  inputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
+  inputsTxBodyL :: Lens' (TxBody t era) (Set TxIn)
 
-  outputsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
+  outputsTxBodyL :: Lens' (TxBody t era) (StrictSeq (TxOut era))
 
-  feeTxBodyL :: Lens' (TxBody era) Coin
+  feeTxBodyL :: Lens' (TxBody 'FullTx era) Coin
 
-  withdrawalsTxBodyL :: Lens' (TxBody era) Withdrawals
+  withdrawalsTxBodyL :: Lens' (TxBody t era) Withdrawals
 
-  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe TxAuxDataHash)
+  auxDataHashTxBodyL :: Lens' (TxBody t era) (StrictMaybe TxAuxDataHash)
 
   -- | This getter will produce all inputs from the UTxO map that this transaction might
   -- spend, which ones will depend on the validity of the transaction itself. Starting in
   -- Alonzo this will include collateral inputs.
-  spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
+  spendableInputsTxBodyF :: SimpleGetter (TxBody t era) (Set TxIn)
 
   -- | This getter will produce all inputs from the UTxO map that this transaction is
   -- referencing, even if some of them cannot be spent by the transaction. For example
   -- starting with Babbage era it will also include reference inputs.
-  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
+  allInputsTxBodyF :: SimpleGetter (TxBody t era) (Set TxIn)
 
-  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
+  certsTxBodyL :: Lens' (TxBody t era) (StrictSeq (TxCert era))
 
   -- | Compute the total deposits from the certificates in a TxBody.
   --
@@ -233,7 +236,7 @@ class
     PParams era ->
     -- | Check whether stake pool is registered or not
     (KeyHash 'StakePool -> Bool) ->
-    TxBody era ->
+    TxBody t era ->
     Coin
   getTotalDepositsTxBody pp isPoolRegisted txBody =
     getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
@@ -247,14 +250,14 @@ class
     (Credential 'Staking -> Maybe Coin) ->
     -- | Lookup current deposit for DRep credential if one is registered
     (Credential 'DRepRole -> Maybe Coin) ->
-    TxBody era ->
+    TxBody t era ->
     Coin
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
   -- | This function is not used in the ledger rules. It is only used by the downstream
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.
-  getGenesisKeyHashCountTxBody :: TxBody era -> Int
+  getGenesisKeyHashCountTxBody :: TxBody t era -> Int
   getGenesisKeyHashCountTxBody _ = 0
 
 -- | Abstract interface into specific fields of a `TxOut`
@@ -579,7 +582,7 @@ hashScript =
 -- | Indicates that an era supports segregated witnessing.
 --
 --   This class embodies an isomorphism between 'BlockBody era' and 'StrictSeq
---   (Tx era)', witnessed by the `txSeqBlockBodyL` lens.
+--   (Tx t era)', witnessed by the `txSeqBlockBodyL` lens.
 class
   ( EraTx era
   , Eq (BlockBody era)
@@ -594,12 +597,12 @@ class
 
   mkBasicBlockBody :: BlockBody era
 
-  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx era))
+  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx 'FullTx era))
 
-  fromTxSeq :: BlockBody era -> StrictSeq (Tx era)
+  fromTxSeq :: BlockBody era -> StrictSeq (Tx 'FullTx era)
   fromTxSeq = (^. txSeqBlockBodyL)
 
-  toTxSeq :: StrictSeq (Tx era) -> BlockBody era
+  toTxSeq :: StrictSeq (Tx 'FullTx era) -> BlockBody era
   toTxSeq s = mkBasicBlockBody & txSeqBlockBodyL .~ s
 
   -- | Get the block body hash from the BlockBody. Note that this is not a regular
@@ -622,14 +625,14 @@ class
 bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
-txIdTx :: EraTx era => Tx era -> TxId
+txIdTx :: EraTx era => Tx t era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
-txIdTxBody :: EraTxBody era => TxBody era -> TxId
+txIdTxBody :: EraTxBody era => TxBody t era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
 -- | txsize computes the length of the serialised bytes (actual size)
-wireSizeTxF :: forall era. EraTx era => SimpleGetter (Tx era) Word32
+wireSizeTxF :: forall era t. EraTx era => SimpleGetter (Tx t era) Word32
 wireSizeTxF =
   to $
     checkedFromIntegral
@@ -645,18 +648,18 @@ wireSizeTxF =
 
 -- | Translate a transaction through its binary representation from previous to current era.
 binaryUpgradeTx ::
-  forall era.
-  (Era era, ToCBOR (Tx (PreviousEra era)), DecCBOR (Annotator (Tx era))) =>
-  Tx (PreviousEra era) ->
-  Except DecoderError (Tx era)
+  forall era t.
+  (Era era, ToCBOR (Tx t (PreviousEra era)), DecCBOR (Annotator (Tx t era))) =>
+  Tx t (PreviousEra era) ->
+  Except DecoderError (Tx t era)
 binaryUpgradeTx = translateViaCBORAnnotator (eraProtVerLow @era) (withEraName @era "Tx")
 
 -- | Translate a tx body through its binary representation from previous to current era.
 binaryUpgradeTxBody ::
-  forall era.
-  (Era era, ToCBOR (TxBody (PreviousEra era)), DecCBOR (Annotator (TxBody era))) =>
-  TxBody (PreviousEra era) ->
-  Except DecoderError (TxBody era)
+  forall era t.
+  (Era era, ToCBOR (TxBody t (PreviousEra era)), DecCBOR (Annotator (TxBody t era))) =>
+  TxBody t (PreviousEra era) ->
+  Except DecoderError (TxBody t era)
 binaryUpgradeTxBody = translateViaCBORAnnotator (eraProtVerLow @era) (withEraName @era "TxBody")
 
 -- | Translate tx witnesses through its binary representation from previous to current era.
