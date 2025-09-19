@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec (spec) where
@@ -10,72 +11,68 @@ import Cardano.Ledger.Alonzo.Core (
   EraTxOut (..),
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo (..), LedgerTxInfo (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.BaseTypes (EpochSize (..), Inject (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
-import Cardano.Ledger.State (UTxO (..))
-import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.Either (isRight)
-import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro ((&), (.~))
+import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
-spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfoSpec" $ do
+spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
   describe "PlutusV1" $ do
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxOuts" $ do
       pv <- getProtVer
+      Globals {epochInfo, systemStart} <- use impGlobalsL
       (_, shelleyAddr) <- freshKeyAddr
       byronAddr <- AddrBootstrap <$> freshBootstapAddress
-      shelleyTxIn <- arbitrary
+      shelleyTxIn <- sendCoinTo shelleyAddr mempty
+      utxo <- getUTxO
       let
         byronTxOut = mkBasicTxOut byronAddr . inject $ Coin 1
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
             & bodyTxL
-            . inputsTxBodyL
-            .~ Set.singleton shelleyTxIn
+              . inputsTxBodyL
+              .~ Set.singleton shelleyTxIn
             & bodyTxL
-            . outputsTxBodyL
-            .~ SSeq.singleton byronTxOut
+              . outputsTxBodyL
+              .~ SSeq.singleton byronTxOut
         lti =
           LedgerTxInfo
             { ltiProtVer = pv
-            , ltiEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
-            , ltiSystemStart = SystemStart $ posixSecondsToUTCTime 0
-            , ltiUTxO = UTxO . Map.singleton shelleyTxIn $ AlonzoTxOut shelleyAddr (inject $ Coin 2) SNothing
+            , ltiEpochInfo = epochInfo
+            , ltiSystemStart = systemStart
+            , ltiUTxO = utxo
             , ltiTx = tx
             }
-      toPlutusTxInfo SPlutusV1 lti `shouldSatisfy` isRight
+      void $ expectRight $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
       pv <- getProtVer
+      Globals {epochInfo, systemStart} <- use impGlobalsL
       (_, shelleyAddr) <- freshKeyAddr
       byronAddr <- AddrBootstrap <$> freshBootstapAddress
-      byronTxIn <- arbitrary
+      byronTxIn <- sendCoinTo byronAddr mempty
+      utxo <- getUTxO
       let
         shelleyTxOut = mkBasicTxOut shelleyAddr . inject $ Coin 1
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
             & bodyTxL
-            . inputsTxBodyL
-            .~ Set.singleton byronTxIn
+              . inputsTxBodyL
+              .~ Set.singleton byronTxIn
             & bodyTxL
-            . outputsTxBodyL
-            .~ SSeq.singleton shelleyTxOut
+              . outputsTxBodyL
+              .~ SSeq.singleton shelleyTxOut
         lti =
           LedgerTxInfo
             { ltiProtVer = pv
-            , ltiEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
-            , ltiSystemStart = SystemStart $ posixSecondsToUTCTime 0
-            , ltiUTxO =
-                UTxO . Map.singleton byronTxIn $
-                  AlonzoTxOut byronAddr (inject $ Coin 2) SNothing
+            , ltiEpochInfo = epochInfo
+            , ltiSystemStart = systemStart
+            , ltiUTxO = utxo
             , ltiTx = tx
             }
-      toPlutusTxInfo SPlutusV1 lti `shouldSatisfy` isRight
+      void $ expectRight $ toPlutusTxInfo SPlutusV1 lti
