@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -40,8 +41,10 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data Block h era
-  = Block !h !(BlockBody era)
+data Block h era = Block
+  { blockHeader :: !h
+  , blockBody :: !(BlockBody era)
+  }
   deriving (Generic)
 
 deriving stock instance
@@ -116,7 +119,7 @@ neededTxInsForBlock ::
   EraBlockBody era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block _ blockBody) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ blockBody ^. txSeqBlockBodyL
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
