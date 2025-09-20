@@ -1,11 +1,17 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Alonzo.TxSeq
   {-# DEPRECATED "Use `Cardano.Ledger.Alonzo.BlockBody` instead" #-} (
   AlonzoTxSeq,
+#if __GLASGOW_HASKELL__ >= 914
+  data AlonzoTxSeq,
+#else
   pattern AlonzoTxSeq,
+#endif
   hashAlonzoTxSeq,
   txSeqTxns,
 ) where

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,6 +15,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
+
 module Test.Cardano.Ledger.Allegra.Arbitrary (
   sizedTimelock,
   maxTimelockDepth,
@@ -25,16 +32,29 @@ import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
   Timelock (..),
   ValidityInterval (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireTimeExpire,
+  data RequireTimeStart,
+#else
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
+#endif
  )
 import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Allegra.TxBody (data AllegraTxBody)
+#else
 import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
+#endif
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
 import Cardano.Ledger.Shelley.Scripts (
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireSignature,
+#else
   pattern RequireSignature,
+#endif
  )
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)

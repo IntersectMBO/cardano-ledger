@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -14,6 +15,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalPlutusScripts,
@@ -54,7 +61,11 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+#if __GLASGOW_HASKELL__ >= 914
+import Data.Aeson (ToJSON (..), (.=), data String)
+#else
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+#endif
 import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.Map.Strict (Map)

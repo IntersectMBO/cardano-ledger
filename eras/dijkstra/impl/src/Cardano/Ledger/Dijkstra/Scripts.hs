@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -20,7 +21,11 @@ module Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
   DijkstraPlutusPurpose (..),
   DijkstraEraScript (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data GuardingPurpose,
+#else
   pattern GuardingPurpose,
+#endif
 ) where
 
 import Cardano.Ledger.Address (RewardAccount)

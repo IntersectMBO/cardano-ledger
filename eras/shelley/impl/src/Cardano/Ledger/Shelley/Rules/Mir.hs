@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -33,7 +34,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   esSnapshots,
   lsCertStateL,
   prevPParamsEpochStateL,
+#if __GLASGOW_HASKELL__ >= 914
+  data EpochState,
+#else
   pattern EpochState,
+#endif
  )
 import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))

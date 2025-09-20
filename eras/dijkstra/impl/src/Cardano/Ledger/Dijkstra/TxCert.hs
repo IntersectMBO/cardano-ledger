@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,6 +12,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.TxCert (
   DijkstraTxCertUpgradeError,
@@ -34,6 +41,21 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxCert,
   poolCertKeyHashWitness,
+#if __GLASGOW_HASKELL__ >= 914
+  data AuthCommitteeHotKeyTxCert,
+  data DelegTxCert,
+  data RegDRepTxCert,
+  data RegDepositDelegTxCert,
+  data RegDepositTxCert,
+  data RegPoolTxCert,
+  data RegTxCert,
+  data ResignCommitteeColdTxCert,
+  data RetirePoolTxCert,
+  data UnRegDRepTxCert,
+  data UnRegDepositTxCert,
+  data UnRegTxCert,
+  data UpdateDRepTxCert,
+#else
   pattern AuthCommitteeHotKeyTxCert,
   pattern DelegTxCert,
   pattern RegDRepTxCert,
@@ -47,6 +69,7 @@ import Cardano.Ledger.Conway.Core (
   pattern UnRegDepositTxCert,
   pattern UnRegTxCert,
   pattern UpdateDRepTxCert,
+#endif
  )
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
