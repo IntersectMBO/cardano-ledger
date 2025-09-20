@@ -96,3 +96,16 @@ if impl(ghc >=9.12)
   allow-newer:
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+
+source-repository-package
+  type: git
+  location: https://github.com/lehins/mempack
+  tag: 2f2528780c715afd2f270447359c7cde632f2c49
+  --sha256: sha256-OtcXXetYvECE6iofJxVu/Tz+Vk0OGmbS8lTyOJXWmQ0=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: 4b2337529c6ae12677461f6fa373e47020455850
+  --sha256: sha256-RDOM3SGVCfi4eeblh9a+7mtA6Rk7262HiDKsYmaXeBU=
+  subdir: cardano-crypto-class
