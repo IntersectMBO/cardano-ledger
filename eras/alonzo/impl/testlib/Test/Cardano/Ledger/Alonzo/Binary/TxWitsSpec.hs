@@ -116,7 +116,7 @@ nativeScriptsProp = do
 
     genEncoding :: Bool -> Gen Encoding
     genEncoding duplicate = do
-      nativeScript <- genNativeScript @era
+      nativeScript <- arbitrary @(NativeScript era)
       let nativeScripts
             | duplicate = [nativeScript, nativeScript]
             | otherwise = [nativeScript]

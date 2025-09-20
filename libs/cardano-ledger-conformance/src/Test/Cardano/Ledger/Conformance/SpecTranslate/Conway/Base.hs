@@ -78,7 +78,6 @@ import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance
   ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
   SpecTranslate ctx (Timelock era)
@@ -110,7 +109,6 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
   ) =>
   SpecTranslate ctx (PlutusScript era)
@@ -125,7 +123,6 @@ instance
 instance
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
   SpecTranslate ctx (AlonzoScript era)
   where
@@ -304,7 +301,6 @@ instance
   , SpecTranslate ctx (PlutusPurpose AsIx era)
   , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
   ) =>
   SpecTranslate ctx (AlonzoTxWits era)
   where
