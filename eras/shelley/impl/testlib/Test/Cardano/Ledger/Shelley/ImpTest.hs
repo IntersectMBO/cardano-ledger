@@ -111,6 +111,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   disableImpInitPostSubmitTxHook,
   modifyImpInitPostEpochBoundaryHook,
   disableImpInitPostEpochBoundaryHook,
+  disableInConformanceIt,
   minorFollow,
   majorFollow,
   cantFollow,
@@ -693,7 +694,17 @@ disableImpInitPostEpochBoundaryHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
 disableImpInitPostEpochBoundaryHook =
-  modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
+  modifyImpInitPostEpochBoundaryHook $ \_ _ _ -> pure ()
+
+disableInConformanceIt ::
+  ShelleyEraImp era =>
+  String ->
+  ImpTestM era () ->
+  SpecWith (ImpInit (LedgerSpec era))
+disableInConformanceIt s =
+  disableImpInitPostSubmitTxHook
+    . disableImpInitPostEpochBoundaryHook
+    . it (s ++ " [disabled in conformance]")
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do

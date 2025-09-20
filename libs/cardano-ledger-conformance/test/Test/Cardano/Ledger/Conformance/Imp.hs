@@ -144,7 +144,7 @@ submitTxConformanceHook globals trc@(TRC (env, state, signal)) =
               }
         }
 
-_epochBoundaryConformanceHook ::
+epochBoundaryConformanceHook ::
   forall era t.
   ( ShelleyEraImp era
   , ExecSpecRule "NEWEPOCH" era
@@ -155,7 +155,7 @@ _epochBoundaryConformanceHook ::
   TRC (EraRule "NEWEPOCH" era) ->
   State (EraRule "NEWEPOCH" era) ->
   ImpM t ()
-_epochBoundaryConformanceHook globals trc res =
+epochBoundaryConformanceHook globals trc res =
   conformanceHook @"NEWEPOCH" @era globals () trc $ Right (res, [])
 
 spec :: Spec
@@ -163,25 +163,24 @@ spec =
   withImpInit @(LedgerSpec ConwayEra) $
     modifyImpInitProtVer @ConwayEra (natVersion @10) $
       modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-        -- TODO enable epoch boundary conformance tests once the specs have been fixed
-        -- modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-        describe "Basic imp conformance" $ do
-          it "Submit constitution" $ do
-            _ <- submitConstitution @ConwayEra SNothing
-            passNEpochs 2
-          it "Can elect a basic committee" $ do
-            void $ evaluateDeep =<< electBasicCommittee
-        describe "Conway Imp conformance" $ do
-          describe "BBODY" Bbody.spec
-          describe "CERTS" Certs.spec
-          describe "DELEG" Deleg.spec
-          describe "ENACT" Enact.spec
-          xdescribe "EPOCH" Epoch.spec
-          describe "GOV" Gov.spec
-          describe "GOVCERT" GovCert.spec
-          -- LEDGER tests pending on the dRep delegations cleanup in the spec:
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
-          xdescribe "LEDGER" Ledger.spec
-          xdescribe "RATIFY" Ratify.spec
-          xdescribe "UTXO" Utxo.spec
-          xdescribe "UTXOS" Utxos.spec
+        modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
+          describe "Basic imp conformance" $ do
+            it "Submit constitution" $ do
+              _ <- submitConstitution @ConwayEra SNothing
+              passNEpochs 2
+            it "Can elect a basic committee" $ do
+              void $ evaluateDeep =<< electBasicCommittee
+          describe "Conway Imp conformance" $ do
+            describe "BBODY" Bbody.spec
+            describe "CERTS" Certs.spec
+            describe "DELEG" Deleg.spec
+            describe "ENACT" Enact.spec
+            xdescribe "EPOCH" Epoch.spec
+            describe "GOV" Gov.spec
+            describe "GOVCERT" GovCert.spec
+            -- LEDGER tests pending on the dRep delegations cleanup in the spec:
+            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
+            xdescribe "LEDGER" Ledger.spec
+            xdescribe "RATIFY" Ratify.spec
+            xdescribe "UTXO" Utxo.spec
+            xdescribe "UTXOS" Utxos.spec

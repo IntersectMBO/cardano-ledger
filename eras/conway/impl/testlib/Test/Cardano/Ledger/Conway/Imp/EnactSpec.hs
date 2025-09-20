@@ -119,7 +119,9 @@ treasuryWithdrawalsSpec =
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
 
-    it "Withdrawals exceeding treasury submitted in a single proposal" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/911
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt "Withdrawals exceeding treasury submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
@@ -151,8 +153,12 @@ treasuryWithdrawalsSpec =
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
       checkNoWithdrawal initialTreasury withdrawals
 
-    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $
-      whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/912
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt
+      "Withdrawals exceeding treasury submitted in several proposals within the same epoch"
+      $ whenPostBootstrap
+      $ do
         disableTreasuryExpansion
         committeeCs <- registerInitialCommittee
         (drepC, _, _) <- setupSingleDRep 1_000_000
@@ -466,78 +472,72 @@ actionPrioritySpec =
             <*> uniformRM (330, 660)
             <*> uniformRM (660, 1000)
 
-    disableImpInitPostSubmitTxHook $
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
-      -- TODO: Remove this override once the issue is fixed
-      it "proposals of same priority are enacted in order of submission" $ do
-        modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
-        (val1, val2, val3) <- genMinFeeVals
+    it "proposals of same priority are enacted in order of submission" $ do
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
-        committeeCs <- registerInitialCommittee
-        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        pGai0 <-
-          submitParameterChange
-            SNothing
-            $ def & ppuMinFeeAL .~ SJust val1
-        pGai1 <-
-          submitParameterChange
-            (SJust pGai0)
-            $ def & ppuMinFeeAL .~ SJust val2
-        pGai2 <-
-          submitParameterChange
-            (SJust pGai1)
-            $ def & ppuMinFeeAL .~ SJust val3
-        traverse_ @[]
-          ( \gaid -> do
-              submitYesVote_ (StakePoolVoter spoC) gaid
-              submitYesVoteCCs_ committeeCs gaid
-          )
-          [pGai0, pGai1, pGai2]
-        passNEpochs 2
-        getLastEnactedParameterChange
-          `shouldReturn` SJust (GovPurposeId pGai2)
-        expectNoCurrentProposals
-        getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
-          `shouldReturn` val3
+      committeeCs <- registerInitialCommittee
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      pGai0 <-
+        submitParameterChange
+          SNothing
+          $ def & ppuMinFeeAL .~ SJust val1
+      pGai1 <-
+        submitParameterChange
+          (SJust pGai0)
+          $ def & ppuMinFeeAL .~ SJust val2
+      pGai2 <-
+        submitParameterChange
+          (SJust pGai1)
+          $ def & ppuMinFeeAL .~ SJust val3
+      traverse_ @[]
+        ( \gaid -> do
+            submitYesVote_ (StakePoolVoter spoC) gaid
+            submitYesVoteCCs_ committeeCs gaid
+        )
+        [pGai0, pGai1, pGai2]
+      passNEpochs 2
+      getLastEnactedParameterChange
+        `shouldReturn` SJust (GovPurposeId pGai2)
+      expectNoCurrentProposals
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+        `shouldReturn` val3
 
-    disableImpInitPostSubmitTxHook $
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
-      -- TODO: Remove this override once the issue is fixed
-      it "only the first action of a transaction gets enacted" $ do
-        modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
-        (val1, val2, val3) <- genMinFeeVals
+    it "only the first action of a transaction gets enacted" $ do
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
-        committeeCs <- registerInitialCommittee
-        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        policy <- getGovPolicy
-        gaids <-
-          submitGovActions $
-            NE.fromList
-              [ ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val1)
-                  policy
-              , ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val2)
-                  policy
-              , ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val3)
-                  policy
-              ]
-        traverse_
-          ( \gaid -> do
-              submitYesVote_ (StakePoolVoter spoC) gaid
-              submitYesVoteCCs_ committeeCs gaid
-          )
-          gaids
-        passNEpochs 2
-        getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
-          `shouldReturn` val1
-        expectNoCurrentProposals
+      committeeCs <- registerInitialCommittee
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      policy <- getGovPolicy
+      gaids <-
+        submitGovActions $
+          NE.fromList
+            [ ParameterChange
+                SNothing
+                (def & ppuMinFeeAL .~ SJust val1)
+                policy
+            , ParameterChange
+                SNothing
+                (def & ppuMinFeeAL .~ SJust val2)
+                policy
+            , ParameterChange
+                SNothing
+                (def & ppuMinFeeAL .~ SJust val3)
+                policy
+            ]
+      traverse_
+        ( \gaid -> do
+            submitYesVote_ (StakePoolVoter spoC) gaid
+            submitYesVoteCCs_ committeeCs gaid
+        )
+        gaids
+      passNEpochs 2
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+        `shouldReturn` val1
+      expectNoCurrentProposals
 
 expectHardForkEvents ::
   forall era.

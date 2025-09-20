@@ -229,47 +229,48 @@ spec = do
         `shouldReturn` (if isPostV10 protVer then expectedTotalSize else 0)
 
   -- disabled in conformance because submiting phase2-invalid transactions are not supported atm
-  disableImpInitPostSubmitTxHook $
-    it "Use a reference script in a collateral output" $ do
-      protVer <- getsPParams ppProtocolVersionL
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/910
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Use a reference script in a collateral output" $ do
+    protVer <- getsPParams ppProtocolVersionL
 
-      -- produce an utxo with a failing script
-      failingPlutusTxIn <- do
-        let plutus = alwaysFailsNoDatum SPlutusV3
-        produceScript $ hashPlutusScript plutus
+    -- produce an utxo with a failing script
+    failingPlutusTxIn <- do
+      let plutus = alwaysFailsNoDatum SPlutusV3
+      produceScript $ hashPlutusScript plutus
 
-      -- produce a utxo with a succeeding script
-      script <- RequireSignature @era <$> freshKeyHash
-      scriptTxIn <- impAddNativeScript script >>= produceScript
-      let scriptSize = originalBytesSize script
+    -- produce a utxo with a succeeding script
+    script <- RequireSignature @era <$> freshKeyHash
+    scriptTxIn <- impAddNativeScript script >>= produceScript
+    let scriptSize = originalBytesSize script
 
-      -- prepare a txout with the succeeding script as reference script
-      collRefScriptTxOut <- do
-        addr <- freshKeyAddr_
-        pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
+    -- prepare a txout with the succeeding script as reference script
+    collRefScriptTxOut <- do
+      addr <- freshKeyAddr_
+      pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
 
-      (txs :: [Tx era]) <- simulateThenRestore $ do
-        -- submit an invalid transaction which attempts to consume the failing script
-        -- and specifies as collateral return the txout with reference script
-        createCollateralTx <-
-          submitPhase2Invalid $
-            mkBasicTx
-              ( mkBasicTxBody
-                  & inputsTxBodyL .~ [failingPlutusTxIn]
-                  & collateralReturnTxBodyL .~ pure collRefScriptTxOut
-              )
-        totalRefScriptSizeInBlock protVer [createCollateralTx] <$> getUTxO `shouldReturn` 0
+    (txs :: [Tx era]) <- simulateThenRestore $ do
+      -- submit an invalid transaction which attempts to consume the failing script
+      -- and specifies as collateral return the txout with reference script
+      createCollateralTx <-
+        submitPhase2Invalid $
+          mkBasicTx
+            ( mkBasicTxBody
+                & inputsTxBodyL .~ [failingPlutusTxIn]
+                & collateralReturnTxBodyL .~ pure collRefScriptTxOut
+            )
+      totalRefScriptSizeInBlock protVer [createCollateralTx] <$> getUTxO `shouldReturn` 0
 
-        -- consume the script, passing the output from the previous collateral as reference input
-        let refScriptTxIn = txInAt 1 createCollateralTx
-        useCollateralTx <- submitTxWithRefInputs scriptTxIn [refScriptTxIn]
-        totalRefScriptSizeInBlock protVer [createCollateralTx, useCollateralTx]
-          <$> getUTxO `shouldReturn` scriptSize
-        pure [createCollateralTx, useCollateralTx]
+      -- consume the script, passing the output from the previous collateral as reference input
+      let refScriptTxIn = txInAt 1 createCollateralTx
+      useCollateralTx <- submitTxWithRefInputs scriptTxIn [refScriptTxIn]
+      totalRefScriptSizeInBlock protVer [createCollateralTx, useCollateralTx]
+        <$> getUTxO `shouldReturn` scriptSize
+      pure [createCollateralTx, useCollateralTx]
 
-      totalRefScriptSizeInBlock protVer (SSeq.fromList txs)
-        <$> getUTxO
-          `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
+    totalRefScriptSizeInBlock protVer (SSeq.fromList txs)
+      <$> getUTxO
+        `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
   where
     tryRunBBODY txs = do
       let blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ SSeq.fromList txs
