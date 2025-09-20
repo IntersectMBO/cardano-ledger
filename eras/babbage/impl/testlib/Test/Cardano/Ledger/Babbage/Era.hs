@@ -31,8 +31,6 @@ instance EraTest BabbageEra where
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
 
-  accountsToUMap = shelleyAccountsToUMap
-
 instance ShelleyEraTest BabbageEra
 
 instance AllegraEraTest BabbageEra

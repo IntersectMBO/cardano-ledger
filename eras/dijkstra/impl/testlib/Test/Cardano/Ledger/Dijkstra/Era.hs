@@ -22,8 +22,6 @@ instance EraTest DijkstraEra where
 
   accountsFromAccountsMap = coerce
 
-  accountsToUMap = conwayAccountsToUMap
-
 class
   ConwayEraTest era =>
   DijkstraEraTest era

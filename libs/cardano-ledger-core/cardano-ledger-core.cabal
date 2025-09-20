@@ -67,7 +67,6 @@ library
     Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn
-    Cardano.Ledger.UMap
     Cardano.Ledger.UTxO
     Cardano.Ledger.Val
 
@@ -111,7 +110,6 @@ library
     cardano-crypto-class ^>=2.2,
     cardano-crypto-praos ^>=2.2,
     cardano-crypto-wrapper,
-    cardano-data ^>=1.2,
     cardano-ledger-binary ^>=1.7,
     cardano-ledger-byron,
     cardano-ledger-core:internal,
@@ -224,7 +222,6 @@ library testlib
     cardano-slotting,
     containers,
     cuddle >=0.4,
-    data-default,
     deepseq,
     generic-random,
     genvalidity,
@@ -313,30 +310,6 @@ test-suite tests
     plutus-ledger-api,
     quickcheck-instances,
     scientific,
-    testlib,
-
-benchmark umap
-  type: exitcode-stdio-1.0
-  main-is: UMap.hs
-  hs-source-dirs: bench
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -O2
-
-  build-depends:
-    QuickCheck,
-    base,
-    cardano-ledger-core,
-    containers,
-    criterion,
     testlib,
 
 benchmark addr

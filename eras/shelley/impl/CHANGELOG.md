@@ -91,6 +91,7 @@
 
 ### `testlib`
 
+* Remove `shelleyAccountsToUMap` corresponding to the removal of `UMap` from core.
 * Added `impSatisfySignature` and `impSatisfyMNativeScripts`
 * Added `EraSpecificSpec ShelleyEra` instance
 * Added `EraSpecificSpec` class

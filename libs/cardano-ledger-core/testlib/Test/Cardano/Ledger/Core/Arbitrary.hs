@@ -20,17 +20,6 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genAddrBadPtr,
   genCompactAddrBadPtr,
   genBadPtr,
-  genValidUMap,
-  genValidUMapNonEmpty,
-  genValidUMapWithCreds,
-  genValidTuples,
-  genValidTuplesNonEmpty,
-  genInvariantNonEmpty,
-  genRightPreferenceUMap,
-  genInsertDeleteRoundtripRDPair,
-  genInsertDeleteRoundtripPtr,
-  genInsertDeleteRoundtripSPool,
-  genInsertDeleteRoundtripDRep,
   genericShrinkMemo,
 
   -- * Plutus
@@ -70,7 +59,6 @@ import Cardano.Ledger.BaseTypes (
   Url,
   mkActiveSlotCoeff,
   mkNonceFromNumber,
-  natVersion,
   promoteRatio,
   textToDns,
   textToUrl,
@@ -99,14 +87,6 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (
-  RDPair (..),
-  UMElem (UMElem),
-  UMap (UMap, umElems, umPtrs),
-  UView (RewDepUView),
-  unUnify,
-  unify,
- )
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -126,10 +106,9 @@ import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import System.Random.Stateful (StatefulGen, uniformM, uniformRM)
+import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
-import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
@@ -539,19 +518,8 @@ deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (P
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.UMap -------------------------------------------------------------------
+-- Cardano.Ledger.DRep -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
-
-instance Arbitrary RDPair where
-  arbitrary = RDPair <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary UMElem where
-  arbitrary = UMElem <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary UMap where
-  arbitrary = UMap <$> arbitrary <*> arbitrary
 
 instance Arbitrary DRep where
   arbitrary =
@@ -563,69 +531,6 @@ instance Arbitrary DRep where
 
 instance (Arbitrary a, HasZero a) => Arbitrary (BaseTypes.NonZero a) where
   arbitrary = arbitrary `suchThatMap` BaseTypes.nonZero
-
-genValidTuplesN ::
-  forall era.
-  Era era =>
-  -- | Minimum number of credentials to be generated
-  Int ->
-  Gen
-    ( Map (Credential 'Staking) RDPair
-    , Map Ptr (Credential 'Staking)
-    , Map (Credential 'Staking) (KeyHash 'StakePool)
-    , Map (Credential 'Staking) DRep
-    )
-genValidTuplesN atLeast = scale (* 2) $ sized $ \sz -> do
-  nCreds <- (atLeast +) <$> chooseInt (0, sz)
-  credsWithDeleg :: [(Credential 'Staking, RDPair, Maybe (KeyHash 'StakePool))] <-
-    vectorOf nCreds arbitrary
-  let creds = [cred | (cred, _, _) <- credsWithDeleg]
-  ptrs :: [Ptr] <- vectorOf nCreds (uniformM QC)
-  dReps :: [DRep] <-
-    if eraProtVerLow @era >= natVersion @9
-      then do
-        nDReps <- choose (0, nCreds)
-        vectorOf nDReps arbitrary
-      else pure []
-  pure
-    ( Map.fromList [(cred, rdPair) | (cred, rdPair, _) <- credsWithDeleg]
-    , Map.fromList $ zip ptrs creds
-    , Map.fromList [(cred, stakePool) | (cred, _, Just stakePool) <- credsWithDeleg]
-    , Map.fromList $ zip creds dReps
-    )
-
--- | Used for testing UMap operations
-genValidTuples ::
-  forall era.
-  Era era =>
-  Gen
-    ( Map (Credential 'Staking) RDPair
-    , Map Ptr (Credential 'Staking)
-    , Map (Credential 'Staking) (KeyHash 'StakePool)
-    , Map (Credential 'Staking) DRep
-    )
-genValidTuples = genValidTuplesN @era 0
-
-genValidTuplesNonEmpty ::
-  forall era.
-  Era era =>
-  Gen
-    ( Map (Credential 'Staking) RDPair
-    , Map Ptr (Credential 'Staking)
-    , Map (Credential 'Staking) (KeyHash 'StakePool)
-    , Map (Credential 'Staking) DRep
-    )
-genValidTuplesNonEmpty = genValidTuplesN @era . getPositive =<< arbitrary
-
-genValidUMap :: forall era. Era era => Gen UMap
-genValidUMap = do
-  (rdPairs, ptrs, sPools, dReps) <- genValidTuples @era
-  pure $ unify rdPairs ptrs sPools dReps
-
-genValidUMapNonEmpty :: forall era. Era era => Gen UMap
-genValidUMapNonEmpty = do
-  (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty @era
-  pure $ unify rdPairs ptrs sPools dReps
 
 -- | Either clamp requested size to the range of @[0, actualSize]@ or generate at random
 -- in the same range when requested size is not supplied.
@@ -714,71 +619,6 @@ uniformSubMapElems insert mSubMapSize inputMap gen = do
           ix <- uniformRM (0, Map.size s - 1) gen
           let (k, v) = Map.elemAt ix s
           go (Map.deleteAt ix s) (insert k v acc) (i - 1)
-
-genValidUMapWithCreds :: forall era. Era era => Gen (UMap, Set (Credential 'Staking))
-genValidUMapWithCreds = do
-  umap <- genValidUMap @era
-  creds <- uniformSubSet Nothing (Map.keysSet $ umElems umap) QC
-  pure (umap, creds)
-
-genExcludingKey :: (Ord k, Arbitrary k) => Map k a -> Gen k
-genExcludingKey ks = do
-  k <- arbitrary
-  if k `Map.member` ks
-    then genExcludingKey ks
-    else pure k
-
-genInsertDeleteRoundtripRDPair :: forall era. Era era => Gen (UMap, Credential 'Staking, RDPair)
-genInsertDeleteRoundtripRDPair = do
-  umap@UMap {umElems} <- genValidUMap @era
-  k <- genExcludingKey umElems
-  v <- arbitrary
-  pure (umap, k, v)
-
-genInsertDeleteRoundtripPtr :: forall era. Era era => Gen (UMap, Ptr, Credential 'Staking)
-genInsertDeleteRoundtripPtr = do
-  umap@UMap {umPtrs} <- genValidUMap @era
-  k <- genExcludingKey umPtrs
-  v <- arbitrary
-  pure (umap, k, v)
-
-genInsertDeleteRoundtripSPool ::
-  forall era. Era era => Gen (UMap, Credential 'Staking, KeyHash 'StakePool)
-genInsertDeleteRoundtripSPool = do
-  umap@UMap {umElems} <- genValidUMap @era
-  k <- genExcludingKey umElems
-  v <- arbitrary
-  pure (umap, k, v)
-
-genInsertDeleteRoundtripDRep :: forall era. Era era => Gen (UMap, Credential 'Staking, DRep)
-genInsertDeleteRoundtripDRep = do
-  umap@UMap {umElems} <- genValidUMap @era
-  k <- genExcludingKey umElems
-  v <- arbitrary
-  pure (umap, k, v)
-
-genInvariantNonEmpty :: forall era. Era era => Gen (Credential 'Staking, Ptr, UMap)
-genInvariantNonEmpty = do
-  umap@(UMap tripmap ptrmap) <- genValidUMapNonEmpty @era
-  cred <-
-    oneof
-      [ elements $ Map.keys tripmap
-      , genExcludingKey tripmap
-      ]
-  ptr <-
-    oneof
-      [ elements $ Map.keys ptrmap
-      , genExcludingKey ptrmap
-      ]
-  pure (cred, ptr, umap)
-
-genRightPreferenceUMap :: forall era. Era era => Gen (UMap, Map (Credential 'Staking) RDPair)
-genRightPreferenceUMap = do
-  umap <- genValidUMap @era
-  let rdMap = unUnify $ RewDepUView umap
-  subdomain <- sublistOf $ Map.keys rdMap
-  coins <- vectorOf (length subdomain) arbitrary
-  pure (umap, Map.fromList $ zip subdomain coins)
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.CertState -------------------------------------------------------------------

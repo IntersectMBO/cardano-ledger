@@ -2,8 +2,25 @@
 
 ## 1.19.0.0
 
+* Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Modify `withdrawalsThatDoNotDrainAccounts` to return `Maybe (Withdrawals, Withdrawals)` where the `fst` are either missing accounts or in the wrong network and `snd` are incomplete withdrawals.
 * Add `FromJSON` instance for `PParamUpdate`
+
+### `testlib`
+
+* Remove the `accountsToUMap` member function from the `EraTest` class.
+  - Also remove the related `accountsFromUMap` function.
+* Remove the following from `Core.Arbitrary`:
+  - `genValidUMap`
+  - `genValidUMapNonEmpty`
+  - `genValidUMapWithCreds`
+  - `genValidTuples`
+  - `genValidTuplesNonEmpty`
+  - `genRightPreferenceUMap`
+  - `genInsertDeleteRoundtripRDPair`
+  - `genInsertDeleteRoundtripPtr`
+  - `genInsertDeleteRoundtripSPool`
+  - `genInsertDeleteRoundtripDRep`
 
 ## 1.18.0.0
 

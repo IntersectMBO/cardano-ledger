@@ -7,6 +7,10 @@
   - Add `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule` to `Conway.Era`.
   - Add `updateDormantDRepExpiries`  and `updateVotingDRepExpiries`
 
+### `testlib`
+
+* Remove `conwayAccountsToUMap` corresponding to the removal of `UMap` from core.
+
 ## 1.20.0.0
 
 * Decoupled `ConwayEraTxCert` from `ShelleyEraTxCert`, so added `ShelleyEraTxCert` constraint to:
