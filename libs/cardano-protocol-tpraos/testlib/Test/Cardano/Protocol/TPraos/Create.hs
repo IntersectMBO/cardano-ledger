@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -278,8 +279,8 @@ mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
       bodySize = fromIntegral $ bBodySize protVer blockBody
       bodyHash = hashBlockBody @era blockBody
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
-      bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
-   in Block bHeader blockBody
+      blockHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
+   in Block {blockHeader, blockBody}
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::

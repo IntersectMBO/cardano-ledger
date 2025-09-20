@@ -15,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block (
-  Block (Block),
+  Block (..),
   bheader,
   bbody,
   neededTxInsForBlock,
@@ -101,9 +101,11 @@ bheader ::
   Block h era ->
   h
 bheader (Block bh _) = bh
+{-# DEPRECATED bheader "In favor of `blockHeader`" #-}
 
 bbody :: Block h era -> BlockBody era
 bbody (Block _ txs) = txs
+{-# DEPRECATED bbody "In favor of `blockBody`" #-}
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -124,4 +126,4 @@ neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
     txBodies = map (^. bodyTxL) $ toList $ blockBody ^. txSeqBlockBodyL
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
-    isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
+    isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds

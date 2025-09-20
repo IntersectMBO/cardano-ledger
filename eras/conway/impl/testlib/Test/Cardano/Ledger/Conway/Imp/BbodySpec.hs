@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -290,7 +291,7 @@ spec = do
       tryRunImpRule @"BBODY"
         (BbodyEnv pp (nes ^. chainAccountStateL))
         (BbodyState ls (BlocksMade Map.empty))
-        (Block bhView blockBody)
+        (Block {blockHeader = bhView, blockBody})
     isPostV10 protVer = pvMajor protVer >= natVersion @11
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
