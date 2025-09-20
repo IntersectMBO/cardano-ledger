@@ -65,7 +65,7 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromOutputVRF,
  )
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock)
@@ -266,4 +266,4 @@ mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
 getBlockNonce :: forall era. Block (BHeader MockCrypto) era -> Nonce
 getBlockNonce =
-  mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader
+  mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . blockHeader

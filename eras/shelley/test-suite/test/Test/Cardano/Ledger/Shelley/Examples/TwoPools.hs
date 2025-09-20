@@ -30,7 +30,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
@@ -262,7 +262,7 @@ twoPools1 = CHAINExample initStTwoPools blockEx1 (Right expectedStEx1)
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
     []
     (SlotNo 90)
@@ -297,7 +297,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx2
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
+    (bhHash $ blockHeader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
@@ -349,7 +349,7 @@ twoPools3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
+    (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
     []
     (SlotNo 190)
@@ -391,7 +391,7 @@ twoPools4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 epoch2Nonce :: Nonce
 epoch2Nonce =
   chainCandidateNonce expectedStEx4
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx2)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx2)
 
 --
 -- Block 5, Slot 221, Epoch 2
@@ -400,7 +400,7 @@ epoch2Nonce =
 blockEx5 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx4)
+    (bhHash $ blockHeader blockEx4)
     Cast.alicePoolKeys
     []
     (SlotNo 221) -- odd slots open for decentralization
@@ -467,7 +467,7 @@ twoPools5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 blockEx6 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx5)
+    (bhHash $ blockHeader blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -501,7 +501,7 @@ twoPools6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 blockEx7 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader MockCrypto) blockEx6)
+    (bhHash $ blockHeader @(BHeader MockCrypto) blockEx6)
     Cast.bobPoolKeys
     []
     (SlotNo 297) -- odd slots open for decentralization
@@ -534,12 +534,12 @@ twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 epoch3Nonce :: Nonce
 epoch3Nonce =
   chainCandidateNonce expectedStEx7
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx4)
 
 blockEx8 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx7)
+    (bhHash $ blockHeader blockEx7)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 310)
     []
     (SlotNo 310)
@@ -574,7 +574,7 @@ twoPools8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 blockEx9 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx8)
+    (bhHash $ blockHeader blockEx8)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 390)
     []
     (SlotNo 390)

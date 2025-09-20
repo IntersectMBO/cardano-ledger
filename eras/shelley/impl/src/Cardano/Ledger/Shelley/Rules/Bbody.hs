@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -180,7 +181,7 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account
                , BbodyState ls b
-               , Block bhview blockBody
+               , Block {blockHeader = blockHeaderView, blockBody}
                )
            ) -> do
         let txs = blockBody ^. txSeqBlockBodyL
@@ -188,27 +189,27 @@ bbodyTransition =
             actualBodyHash = hashBlockBody blockBody
 
         actualBodySize
-          == fromIntegral (bhviewBSize bhview)
+          == fromIntegral (bhviewBSize blockHeaderView)
             ?! WrongBlockBodySizeBBODY
               ( Mismatch
                   { mismatchSupplied = actualBodySize
-                  , mismatchExpected = fromIntegral $ bhviewBSize bhview
+                  , mismatchExpected = fromIntegral $ bhviewBSize blockHeaderView
                   }
               )
 
         actualBodyHash
-          == bhviewBHash bhview
+          == bhviewBHash blockHeaderView
             ?! InvalidBodyHashBBODY
               ( Mismatch
                   { mismatchSupplied = actualBodyHash
-                  , mismatchExpected = bhviewBHash bhview
+                  , mismatchExpected = bhviewBHash blockHeaderView
                   }
               )
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole $ bhviewID bhview
-            slot = bhviewSlot bhview
+        let hkAsStakePool = coerceKeyRole $ bhviewID blockHeaderView
+            slot = bhviewSlot blockHeaderView
         (firstSlotNo, curEpochNo) <- liftSTS $ do
           ei <- asks epochInfoPure
           let curEpochNo = epochInfoEpoch ei slot
@@ -216,7 +217,7 @@ bbodyTransition =
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv (bhviewSlot blockHeaderView) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
 
         let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
