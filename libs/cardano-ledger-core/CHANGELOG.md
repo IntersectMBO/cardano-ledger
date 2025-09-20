@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Export `dRepToText`
 * Modify `withdrawalsThatDoNotDrainAccounts` to return `Maybe (Withdrawals, Withdrawals)` where the `fst` are either missing accounts or in the wrong network and `snd` are incomplete withdrawals.
 * Add `FromJSON` instance for `PParamUpdate`
 

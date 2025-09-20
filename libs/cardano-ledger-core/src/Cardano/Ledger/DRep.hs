@@ -12,6 +12,7 @@ module Cardano.Ledger.DRep (
   DRep (DRepCredential, DRepKeyHash, DRepScriptHash, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
   DRepState (..),
   credToDRep,
+  dRepToText,
   dRepToCred,
   drepExpiryL,
   drepAnchorL,
