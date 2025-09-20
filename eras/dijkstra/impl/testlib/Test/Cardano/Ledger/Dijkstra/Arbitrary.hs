@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -9,20 +10,29 @@
 
 module Test.Cardano.Ledger.Dijkstra.Arbitrary () where
 
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Core (Era, EraTx (..), EraTxBody (..))
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
-import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose)
+import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireSignature,
+ )
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)
+import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
@@ -67,6 +77,22 @@ instance
   Arbitrary (DijkstraPlutusPurpose f DijkstraEra)
   where
   arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraNativeScript DijkstraEra) where
+  arbitrary = sizedDijkstraNativeScript maxTimelockDepth
+
+sizedDijkstraNativeScript ::
+  DijkstraEraScript era =>
+  Int ->
+  Gen (NativeScript era)
+sizedDijkstraNativeScript 0 = RequireSignature <$> arbitrary
+sizedDijkstraNativeScript n =
+  oneof $
+    sizedNativeScriptGens n
+      <> [ RequireTimeStart <$> arbitrary
+         , RequireTimeExpire <$> arbitrary
+         , RequireGuard <$> arbitrary
+         ]
 
 deriving newtype instance Arbitrary (Tx DijkstraEra)
 

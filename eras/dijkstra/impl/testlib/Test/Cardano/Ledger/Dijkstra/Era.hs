@@ -7,7 +7,9 @@ module Test.Cardano.Ledger.Dijkstra.Era (
 ) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Test.Cardano.Ledger.Conway.Era
@@ -25,7 +27,10 @@ instance EraTest DijkstraEra where
   accountsToUMap = conwayAccountsToUMap
 
 class
-  ConwayEraTest era =>
+  ( ConwayEraTest era
+  , DijkstraEraTxBody era
+  , DijkstraEraScript era
+  ) =>
   DijkstraEraTest era
 
 instance ShelleyEraTest DijkstraEra

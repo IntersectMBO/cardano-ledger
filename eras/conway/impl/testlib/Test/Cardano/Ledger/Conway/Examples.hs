@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.API (
   RewardAccount (..),
   TxId (..),
  )
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
 import qualified Data.Map.Strict as Map
@@ -72,7 +73,11 @@ ledgerExamples =
     exampleConwayGenesis
 
 exampleTxConway :: Tx ConwayEra
-exampleTxConway = exampleTx exampleTxBodyConway (ConwaySpending $ AsIx 0)
+exampleTxConway =
+  exampleTx
+    exampleTxBodyConway
+    (ConwaySpending $ AsIx 0)
+    (RequireAllOf @ConwayEra mempty)
 
 exampleTxBodyConway :: TxBody ConwayEra
 exampleTxBodyConway =
