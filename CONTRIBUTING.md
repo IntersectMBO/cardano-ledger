@@ -292,9 +292,11 @@ Below are instructions for some common use cases and workflow examples.
 
       - Extract the Haskell package using:
         ```shell
-        nix develop --command fls-shake hs
+        rm -rf dist/hs _build; nix develop --command fls-shake hs
         ```
         This generates the `cardano-ledger-executable-spec` Haskell package in `REPO/dist/hs`
+        Removing the `dist/hs` and `_build` folders ensures that no obsolete
+        modules are left together with the extracted code.
 
       In a local copy of `cardano-ledger` (with the `cabal.project` file _unmodified_):
 
