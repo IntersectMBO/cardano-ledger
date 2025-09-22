@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-api`
 
-## 1.12.0.1
+## 1.13.0.0
 
 *
+
+### `testlib`
+
+* Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
 
 ## 1.12.0.0
 

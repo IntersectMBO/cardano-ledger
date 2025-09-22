@@ -19,7 +19,6 @@ import Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult,
   getNextEpochCommitteeMembers,
   queryCommitteeMembersState,
-  queryStakePoolDelegsAndRewards,
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
@@ -41,7 +40,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (UMap)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
@@ -50,13 +48,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Api.Arbitrary ()
-import Test.Cardano.Ledger.Api.State.Query
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.Era (ShelleyEraTest)
-import Test.Cardano.Ledger.Core.Arbitrary (genValidUMapWithCreds)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
-import Test.Cardano.Ledger.Era (accountsFromUMap)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Slotting.Numeric ()
 
@@ -71,26 +65,9 @@ spec = do
       prop "Babbage" $ roundTripEraExpectation @BabbageEra @QueryPoolStateResult
       prop "Conway" $ roundTripEraExpectation @ConwayEra @QueryPoolStateResult
       prop "Dijkstra" $ roundTripEraExpectation @DijkstraEra @QueryPoolStateResult
-  queryStakePoolDelegsAndRewardsSpec @ShelleyEra
-  queryStakePoolDelegsAndRewardsSpec @AllegraEra
-  queryStakePoolDelegsAndRewardsSpec @MaryEra
-  queryStakePoolDelegsAndRewardsSpec @AlonzoEra
-  queryStakePoolDelegsAndRewardsSpec @BabbageEra
-  queryStakePoolDelegsAndRewardsSpec @ConwayEra
   describe "GetCommitteeMembersState" $ do
     committeeMembersStateSpec @ConwayEra
     committeeMembersStateSpec @DijkstraEra
-
-queryStakePoolDelegsAndRewardsSpec :: forall era. ShelleyEraTest era => Spec
-queryStakePoolDelegsAndRewardsSpec =
-  describe (eraName @era) $ do
-    describe "GetFilteredDelegationsAndRewardAccounts" $ do
-      prop "queryStakePoolDelegsAndRewards same as getFilteredDelegationsAndRewardAccounts" $
-        forAll (genValidUMapWithCreds @era) $ \(umap :: UMap, creds) ->
-          let nes :: NewEpochState era
-              nes = def & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accountsFromUMap umap
-           in queryStakePoolDelegsAndRewards nes creds
-                `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
 
 committeeMembersStateSpec ::
   forall era.

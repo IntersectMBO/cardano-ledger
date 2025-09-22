@@ -29,8 +29,6 @@ instance EraTest AllegraEra where
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
 
-  accountsToUMap = shelleyAccountsToUMap
-
 instance ShelleyEraTest AllegraEra
 
 instance AllegraEraTest AllegraEra

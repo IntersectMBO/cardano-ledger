@@ -9,7 +9,6 @@ module Main where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
-import Cardano.Ledger.Api.State.Query (queryStakePoolDelegsAndRewards)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway.Rules (
@@ -49,9 +48,6 @@ import Lens.Micro ((&), (.~), (^.))
 import System.Environment (getEnv)
 import System.Exit (die)
 import System.Random.Stateful
-import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
-import Test.Cardano.Ledger.Conway.Era (accountsToUMap)
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
 main = do
@@ -148,26 +144,6 @@ main = do
                   bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
-              ]
-    , env (pure es) $ \newEpochState ->
-        let accounts = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-            accountsMap =
-              newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
-            umap = accountsToUMap accounts
-            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet accountsMap))
-         in bgroup
-              ( "GetFilteredDelegationsAndRewardAccounts ("
-                  ++ show (Set.size creds)
-                  ++ "/"
-                  ++ show (Map.size accountsMap)
-                  ++ ")"
-              )
-              [ env (pure (umap, creds)) $
-                  bench "getFilteredDelegationsAndRewardAccounts"
-                    . nf (uncurry getFilteredDelegationsAndRewardAccounts)
-              , env (pure creds) $
-                  bench "queryStakePoolDelegsAndRewards"
-                    . nf (queryStakePoolDelegsAndRewards newEpochState)
               ]
     , bgroup
         "DeleteTxOuts"

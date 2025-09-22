@@ -13,10 +13,8 @@ module Test.Cardano.Ledger.Shelley.Era (
   nativeAlwaysFails,
   nativeAlwaysSucceeds,
   shelleyAccountsFromAccountsMap,
-  shelleyAccountsToUMap,
 ) where
 
-import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -26,10 +24,8 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
-import Cardano.Ledger.UMap
 import Data.Default
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
@@ -57,8 +53,6 @@ instance EraTest ShelleyEra where
   mkTestAccountState = mkShelleyTestAccountState
 
   accountsFromAccountsMap = shelleyAccountsFromAccountsMap
-
-  accountsToUMap = shelleyAccountsToUMap
 
 instance ShelleyEraTest ShelleyEra
 
@@ -90,20 +84,6 @@ shelleyAccountsFromAccountsMap accountsMap =
         Map.fromList
           [(accountState ^. ptrAccountStateG, cred) | (cred, accountState) <- Map.toList accountsMap]
     }
-
-shelleyAccountsToUMap :: ShelleyEraAccounts era => Accounts era -> UMap
-shelleyAccountsToUMap accounts =
-  UMap
-    { umElems = Map.map toUMElem (accounts ^. accountsMapL)
-    , umPtrs = accounts ^. accountsPtrsMapG
-    }
-  where
-    toUMElem accountState =
-      UMElem
-        (SJust (RDPair (accountState ^. balanceAccountStateL) (accountState ^. depositAccountStateL)))
-        (Set.singleton (accountState ^. ptrAccountStateG))
-        (maybeToStrictMaybe (accountState ^. stakePoolDelegationAccountStateL))
-        SNothing
 
 -- Minimal native scripts that can be used in all post-Shelley eras
 
