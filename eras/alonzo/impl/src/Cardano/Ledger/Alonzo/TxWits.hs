@@ -489,7 +489,7 @@ rdmrsAlonzoTxWitsL =
     \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
-instance EraScript AlonzoEra => EraTxWits AlonzoEra where
+instance EraTxWits AlonzoEra where
   type TxWits AlonzoEra = AlonzoTxWits AlonzoEra
 
   mkBasicTxWits = mempty
@@ -508,7 +508,7 @@ class (EraTxWits era, AlonzoEraScript era) => AlonzoEraTxWits era where
 
   rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
 
-instance EraScript AlonzoEra => AlonzoEraTxWits AlonzoEra where
+instance AlonzoEraTxWits AlonzoEra where
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
 
