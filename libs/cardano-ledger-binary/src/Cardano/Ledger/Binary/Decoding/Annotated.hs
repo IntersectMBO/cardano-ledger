@@ -164,8 +164,8 @@ newtype FullByteString = Full BSL.ByteString
 --      pure (Annotator (\(Full bytes) -> Inner int trueOrFalse bytes))
 -- @
 --
--- if an @Outer@ type has a field of type @Inner@, with a @(EncCBOR (Annotator Inner))@
--- instance, the @Outer@ type must also have a @(EncCBOR (Annotator Outer))@ instance.  The
+-- if an @Outer@ type has a field of type @Inner@, with a @(DecCBOR (Annotator Inner))@
+-- instance, the @Outer@ type must also have a @(DecCBOR (Annotator Outer))@ instance.  The
 -- key to writing that instance is to use the operation @withSlice@ which returns a pair.
 -- The first component is an @Annotator@ that can build @Inner@, the second is an
 -- @Annotator@ that given the full bytes, extracts just the bytes needed to decode

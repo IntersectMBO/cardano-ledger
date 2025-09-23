@@ -42,7 +42,6 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTripFailureExpectation,
   embedTripRangeFailureExpectation,
   roundTripTwiddledProperty,
-  roundTripAnnTwiddledProperty,
 
   -- * Tripping failure
   RoundTripFailure (..),
@@ -70,6 +69,7 @@ import qualified Codec.CBOR.FlatTerm as CBOR
 import Control.Monad (forM_, guard)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Function (on)
 import Data.Functor
 import Data.Proxy
 import qualified Data.Text as T
@@ -78,7 +78,7 @@ import Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   showFailedTermsWithReSerialization,
   showMaybeDecoderError,
  )
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ansiExprString)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ToExpr, ansiExprString, showExpr)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -297,28 +297,79 @@ roundTripAnnRangeFailureExpectation fromVersion toVersion t =
             , ansiExprString (CBORBytes (Plain.serialize' t))
             ]
 
+roundTripTwiddled ::
+  forall t. (ToExpr t, Eq t, Twiddle t, DecCBOR t, Arbitrary t) => Version -> Property
+roundTripTwiddled = roundTripTwiddledProperty @t (==)
+
+roundTripAnnTwiddled :: forall t. Version -> Property
+roundTripAnnTwiddled = roundTripAnnTwiddledProperty @(Annotator t) (==)
+
 roundTripTwiddledProperty ::
-  (Show t, Eq t, Twiddle t, DecCBOR t) => Version -> t -> Property
-roundTripTwiddledProperty version t = property $ do
-  roundTripTwiddled version t >>= \case
+  forall t.
+  ( ToExpr t
+  , Eq t
+  , Twiddle t
+  , DecCBOR t
+  , Arbitrary t
+  ) =>
+  (t -> t -> Bool) ->
+  Version ->
+  Property
+roundTripTwiddledProperty eqProp version = forAllShow (arbitrary @t) showExpr $ \t -> do
+  tryRoundTripTwiddled version t >>= \case
     Left err ->
       pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
-    Right tDecoded ->
-      pure (tDecoded === t)
+    Right tDecoded
+      | tDecoded `eqProp` t -> pure $ property True
+      | otherwise -> pure $ counterexample roundTripMismatchError False
+      where
+        roundTripMismatchError =
+          unlines
+            [ "Roundtripped value does not equal the original value:\n"
+            , "Original:"
+            , showExpr t
+            , "Final:"
+            , showExpr tDecoded
+            ]
 
 roundTripAnnTwiddledProperty ::
-  forall t q.
-  (Twiddle t, DecCBOR (Annotator t), Testable q) =>
-  (t -> t -> q) ->
+  forall t.
+  (Arbitrary (Annotator t)) =>
+  (Annotator t -> Annotator t -> Bool) ->
   Version ->
-  t ->
   Property
-roundTripAnnTwiddledProperty eqProp version t = property $ do
-  roundTripAnnTwiddled version t >>= \case
-    Left err ->
-      pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
-    Right tDecoded ->
-      pure $ property (tDecoded `eqProp` t)
+roundTripAnnTwiddledProperty eqProp version =
+  forAllShow (arbitrary @(Annotator t)) undefined $ \t -> do
+    tryRoundTripAnnTwiddled version t >>= \case
+      Left err ->
+        pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
+      Right tDecoded
+        | tDecoded `eqProp` t -> pure $ property True
+        | otherwise -> pure $ counterexample roundTripMismatchError False
+        where
+          roundTripMismatchError =
+            unlines
+              [ "Roundtripped value does not equal the original value:\n"
+              , "Original:"
+              , showExpr t
+              , "Final:"
+              , showExpr tDecoded
+              ]
+
+--
+-- roundTripAnnTwiddledProperty ::
+--   forall t q.
+--   (Twiddle t, DecCBOR (Annotator t), Testable q) =>
+--   (t -> t -> q) ->
+--   Version ->
+--   t ->
+--   Property
+-- roundTripAnnTwiddledProperty eqProp version t = property $ do
+--   roundTripAnnTwiddled version t >>= \case
+--     Left err ->
+--       pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
+--     Right tDecoded ->
+--       pure $ property (tDecoded `eqProp` t)
 
 embedTripExpectation ::
   forall a b.
@@ -396,7 +447,7 @@ instance Show RoundTripFailure where
         ++ [ "Original did not match the reserialization (see below)."
            | Just _ <- pure rtfReEncodedBytes
            ]
-        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes
+        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes rtfEncoding
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the
@@ -435,24 +486,18 @@ roundTrip version trip val = do
         RoundTripFailure version version encoding encodedBytes (Just reserialized) Nothing Nothing Nothing
     else Right val'
 
-roundTripTwiddled ::
+tryRoundTripTwiddled ::
   forall t.
   (Twiddle t, DecCBOR t, Eq t) =>
   Version ->
   t ->
   Gen (Either RoundTripFailure t)
-roundTripTwiddled version x = do
+tryRoundTripTwiddled version x = do
   tw <- twiddle version x
   pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
 
 roundTripAnn :: (ToCBOR t, DecCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
 roundTripAnn v = embedTripAnn v v
-
-roundTripAnnTwiddled ::
-  (Twiddle t, DecCBOR (Annotator t)) => Version -> t -> Gen (Either RoundTripFailure t)
-roundTripAnnTwiddled version x = do
-  tw <- twiddle version x
-  pure (decodeAnn version version (toPlainEncoding version (encodeTerm tw)))
 
 decodeAnn ::
   forall t.

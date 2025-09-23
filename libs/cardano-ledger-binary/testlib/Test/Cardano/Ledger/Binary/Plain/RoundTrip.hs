@@ -39,11 +39,11 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
   CBORBytes (..),
   ansiExprString,
   diffExprString,
-  showHexBytesGrouped,
  )
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
+import Codec.CBOR.Pretty (prettyHexEnc)
 
 -- =====================================================================
 
@@ -133,7 +133,7 @@ instance Show RoundTripFailure where
         ++ [ "Original did not match the reserialization (see below)."
            | Just _ <- pure rtfReEncodedBytes
            ]
-        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes
+        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes rtfEncoding
 
 showMaybeDecoderError :: B.Buildable b => String -> Maybe b -> String
 showMaybeDecoderError name = \case
@@ -143,13 +143,14 @@ showMaybeDecoderError name = \case
 showFailedTermsWithReSerialization ::
   BSL.ByteString ->
   Maybe BSL.ByteString ->
+  Encoding ->
   [String]
-showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
+showFailedTermsWithReSerialization encodedBytes mReEncodedBytes encoding =
   case mReEncodedBytes of
     Nothing ->
       -- This is the usual case where re-serialization is successful
-      let (_, origHex, origStr) = termWithHex "Original" encodedBytes
-       in origStr ++ ["OriginalHex:"] ++ origHex
+      let (_, origHex, _) = termWithHex "Original" encodedBytes
+       in ["OriginalHex:"] <> origHex
     Just reBytes ->
       -- On a rare occasion when re-serialization does not match we try to show the
       -- diff of Hex as well as Terms
@@ -164,7 +165,7 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
           decTerm = case decodeFullDecoder' "Term" decodeTerm bytes of
             Left err -> Left $ "Could not decode as Term: " <> show err
             Right term -> Right term
-          hexLines = showHexBytesGrouped 128 bytes
+          hexLines = lines $ prettyHexEnc encoding
        in (decTerm, hexLines, [name <> ":", either id ansiExprString decTerm])
 
 -- | A definition of a CBOR trip through binary representation of one type to

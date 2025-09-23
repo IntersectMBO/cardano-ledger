@@ -194,6 +194,7 @@ instance Arbitrary (TxBody AlonzoEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+  shrink = genericShrinkMemo
 
 deriving newtype instance Arbitrary IsValid
 
