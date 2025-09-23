@@ -17,10 +17,10 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as T
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
+import Test.Cardano.Ledger.Binary.RoundTrip (embedTripExpectation)
 
 -- | Generates arbitrary values, encodes them, and verifies that
 -- decoding with `DecCBOR (Annotator)` produces the same result as decoding with `DecCBOR`.
@@ -28,7 +28,6 @@ decoderEquivalenceSpec ::
   forall t.
   ( Eq t
   , ToCBOR t
-  , DecCBOR (Annotator t)
   , Arbitrary t
   , Show t
   ) =>
@@ -43,7 +42,6 @@ decoderEquivalenceProp ::
   forall t.
   ( Eq t
   , ToCBOR t
-  , DecCBOR (Annotator t)
   , Show t
   ) =>
   Version ->
@@ -53,7 +51,7 @@ decoderEquivalenceProp ::
 decoderEquivalenceProp fromVersion toVersion t =
   property $
     forM_ [fromVersion .. toVersion] $ \version ->
-      embedTripAnnExpectation version version shouldBe t
+      embedTripExpectation version version undefined shouldBe t
 
 decoderEquivalenceExpectation ::
   forall t.

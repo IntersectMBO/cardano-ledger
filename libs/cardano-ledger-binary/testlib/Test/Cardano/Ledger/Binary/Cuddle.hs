@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   specWithHuddle,
   huddleRoundTripCborSpec,
-  huddleRoundTripAnnCborSpec,
   writeSpec,
   huddleRoundTripArbitraryValidate,
 ) where
@@ -22,10 +21,8 @@ import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR,
   Version,
-  decodeFullAnnotator,
   decodeFullDecoder,
   serialize',
-  toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
@@ -55,7 +52,6 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),
   cborTrip,
-  decodeAnnExtra,
   embedTripLabelExtra,
  )
 import Test.Hspec (
@@ -123,22 +119,6 @@ huddleRoundTripCborSpec version ruleName =
             withGenTerm cddlData (Cuddle.Name ruleName mempty) $
               roundTripExample lbl version version trip
 
-huddleRoundTripAnnCborSpec ::
-  forall a.
-  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR (Annotator a)) =>
-  -- | Serialization version
-  Version ->
-  -- | Name of the CDDL rule to test
-  T.Text ->
-  SpecWith CuddleData
-huddleRoundTripAnnCborSpec version ruleName =
-  let lbl = label $ Proxy @(Annotator a)
-      trip = cborTrip @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-        \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
-            roundTripAnnExample lbl version version trip
-
 specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
 specWithHuddle h numExamples =
   beforeAll $
@@ -195,36 +175,6 @@ roundTripExample lbl encVersion decVersion trip@Trip {tripDecoder} term =
           Right (val', _encoding, _encodedBytes) ->
             val' `shouldBe` val
           Left embedErr -> cddlFailure encoding embedErr
-
--- | Same as `roundTripExample`, but works for decoders that are wrapped into
--- `Annotator`
-roundTripAnnExample ::
-  (HasCallStack, Show a, Eq a) =>
-  T.Text ->
-  -- | Version to use for decoding
-  Version ->
-  -- | Version to use for encoding
-  Version ->
-  -- | Decode/encoder that needs tsting
-  Trip a (Annotator a) ->
-  -- | Randomly generated data and the CDDL spec
-  CBOR.Term ->
-  Expectation
-roundTripAnnExample lbl encVersion decVersion Trip {tripEncoder, tripDecoder} term =
-  let
-    encoding = CBOR.encodeTerm term
-    initCborBytes = CBOR.toLazyByteString encoding
-    mkFailure =
-      RoundTripFailure encVersion decVersion encoding initCborBytes
-   in
-    case decodeFullAnnotator decVersion lbl tripDecoder initCborBytes of
-      Left decErr -> cddlFailure encoding $ mkFailure Nothing Nothing Nothing (Just decErr)
-      Right val ->
-        let enc = toPlainEncoding encVersion $ tripEncoder val
-         in case decodeAnnExtra lbl encVersion decVersion tripDecoder enc of
-              Right (val', _encodedBytes) ->
-                val' `shouldBe` val
-              Left embedErr -> cddlFailure encoding embedErr
 
 cddlFailure :: HasCallStack => CBOR.Encoding -> RoundTripFailure -> Expectation
 cddlFailure encoding err =

@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,13 +9,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Spec
   roundTripSpec,
   roundTripCborSpec,
-  roundTripAnnCborSpec,
   roundTripRangeSpec,
 
   -- * Expectations
@@ -30,19 +32,13 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborRangeExpectation,
   roundTripCborFailureExpectation,
   roundTripCborRangeFailureExpectation,
-  roundTripAnnExpectation,
-  roundTripAnnRangeExpectation,
-  roundTripAnnFailureExpectation,
-  roundTripAnnRangeFailureExpectation,
 
   -- ** Embed
   embedTripSpec,
   embedTripExpectation,
-  embedTripAnnExpectation,
   embedTripFailureExpectation,
   embedTripRangeFailureExpectation,
   roundTripTwiddledProperty,
-  roundTripAnnTwiddledProperty,
 
   -- * Tripping failure
   RoundTripFailure (..),
@@ -55,13 +51,12 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Tripping functions
   roundTrip,
   roundTripTwiddled,
-  roundTripAnn,
-  roundTripAnnTwiddled,
   embedTrip,
-  embedTripAnn,
   embedTripLabel,
   embedTripLabelExtra,
-  decodeAnnExtra,
+
+  -- * Annotator evidence
+  AnnotatorEvidence (..),
 ) where
 
 import Cardano.Ledger.Binary
@@ -78,7 +73,7 @@ import Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   showFailedTermsWithReSerialization,
   showMaybeDecoderError,
  )
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ansiExprString)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ToExpr, ansiExprString)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -86,11 +81,18 @@ import Test.QuickCheck hiding (label)
 
 -- =====================================================================
 
+-- | The `IsAnnotated a ~` constraint ensures that `EvidenceAnnotated` can only
+-- be constructed if `a` is an `Annotator` of some type and vice versa for
+-- `EvidencePlain`
+data AnnotatorEvidence a
+  = DecCBOR (Annotator a) => EvidenceAnnotated
+  | (Typeable a, Show a, Eq a, Ord a, ToExpr a, DecCBOR a, ToCBOR a) => EvidencePlain
+
 -- | Tests the roundtrip property using QuickCheck generators for all possible versions
 -- starting with `shelleyProtVer`.
 roundTripSpec ::
   forall t.
-  (Show t, Eq t, Typeable t, Arbitrary t) =>
+  (Show t, Eq t, Arbitrary t, Typeable t) =>
   Trip t t ->
   Spec
 roundTripSpec trip =
@@ -104,14 +106,6 @@ roundTripCborSpec ::
   Spec
 roundTripCborSpec = roundTripSpec (cborTrip @t)
 
--- | Tests the roundtrip property using QuickCheck generators for all possible versions
--- starting with `shelleyProtVer`.
-roundTripAnnCborSpec ::
-  forall t.
-  (Show t, Eq t, Arbitrary t, ToCBOR t, DecCBOR (Annotator t)) =>
-  Spec
-roundTripAnnCborSpec = prop (show (typeRep $ Proxy @t)) (roundTripAnnExpectation @t)
-
 -- | Tests the roundtrip property using QuickCheck generators for specific range of versions
 roundTripRangeSpec ::
   forall t.
@@ -121,7 +115,7 @@ roundTripRangeSpec ::
   Version ->
   Spec
 roundTripRangeSpec trip fromVersion toVersion =
-  prop (show (typeRep $ Proxy @t)) $ roundTripRangeExpectation trip fromVersion toVersion
+  prop (show (typeRep $ Proxy @t)) $ roundTripRangeExpectation undefined trip fromVersion toVersion
 
 -- | Tests the embedtrip property using QuickCheck generators
 embedTripSpec ::
@@ -141,11 +135,11 @@ embedTripSpec encVersion decVersion trip f =
 -- | Verify that round triping through the binary form holds for all versions starting
 -- with `shelleyProtVer`.
 roundTripExpectation ::
-  (Show t, Eq t, Typeable t, HasCallStack) =>
+  (Show t, Eq t, HasCallStack) =>
   Trip t t ->
   t ->
   Expectation
-roundTripExpectation trip = roundTripRangeExpectation trip minBound maxBound
+roundTripExpectation trip = roundTripRangeExpectation undefined trip minBound maxBound
 
 roundTripCborFailureExpectation ::
   forall t.
@@ -222,7 +216,8 @@ embedTripRangeFailureExpectation trip fromVersion toVersion t =
 -- > serialize version . deserialize version . serialize version === serialize version
 roundTripRangeExpectation ::
   forall t.
-  (Show t, Eq t, Typeable t, HasCallStack) =>
+  (Show t, Eq t, HasCallStack) =>
+  AnnotatorEvidence t ->
   Trip t t ->
   -- | From Version
   Version ->
@@ -230,11 +225,17 @@ roundTripRangeExpectation ::
   Version ->
   t ->
   Expectation
-roundTripRangeExpectation trip fromVersion toVersion t =
+roundTripRangeExpectation annEv trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
-    case roundTrip version trip t of
-      Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
-      Right tDecoded -> tDecoded `shouldBe` t
+    let
+      tripRes =
+        case annEv of
+          EvidencePlain -> roundTrip version trip t
+          EvidenceAnnotated -> undefined
+     in
+      case tripRes of
+        Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
+        Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripCborExpectation ::
   forall t.
@@ -245,80 +246,23 @@ roundTripCborExpectation = roundTripExpectation (cborTrip @t @t)
 
 roundTripCborRangeExpectation ::
   forall t.
-  (Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =>
+  (EncCBOR t, HasCallStack, Show t, DecCBOR t, Ord t) =>
   -- | From Version
   Version ->
   -- | To Version
   Version ->
   t ->
   Expectation
-roundTripCborRangeExpectation = roundTripRangeExpectation (cborTrip @t)
-
-roundTripAnnExpectation ::
-  (Show t, Eq t, ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
-  t ->
-  Expectation
-roundTripAnnExpectation = roundTripAnnRangeExpectation (natVersion @2) maxBound
-
-roundTripAnnRangeExpectation ::
-  (Show t, Eq t, ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
-  Version ->
-  Version ->
-  t ->
-  Expectation
-roundTripAnnRangeExpectation fromVersion toVersion t =
-  forM_ [fromVersion .. toVersion] $ \version ->
-    case roundTripAnn version t of
-      Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
-      Right tDecoded -> tDecoded `shouldBe` t
-
-roundTripAnnFailureExpectation ::
-  (ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
-  t ->
-  Expectation
-roundTripAnnFailureExpectation = roundTripAnnRangeFailureExpectation (natVersion @2) maxBound
-
-roundTripAnnRangeFailureExpectation ::
-  (ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
-  Version ->
-  Version ->
-  t ->
-  Expectation
-roundTripAnnRangeFailureExpectation fromVersion toVersion t =
-  forM_ [fromVersion .. toVersion] $ \version ->
-    case roundTripAnn version t of
-      Left _ -> pure ()
-      Right _ ->
-        expectationFailure $
-          mconcat
-            [ "Should not have deserialized: <version: "
-            , show version
-            , "> "
-            , ansiExprString (CBORBytes (Plain.serialize' t))
-            ]
+roundTripCborRangeExpectation = roundTripRangeExpectation undefined (cborTrip @t)
 
 roundTripTwiddledProperty ::
-  (Show t, Eq t, Twiddle t, DecCBOR t) => Version -> t -> Property
+  (Show t, Eq t, Twiddle t, ToCBOR t) => Version -> t -> Property
 roundTripTwiddledProperty version t = property $ do
-  roundTripTwiddled version t >>= \case
+  roundTripTwiddled undefined version t >>= \case
     Left err ->
       pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
     Right tDecoded ->
       pure (tDecoded === t)
-
-roundTripAnnTwiddledProperty ::
-  forall t q.
-  (Twiddle t, DecCBOR (Annotator t), Testable q) =>
-  (t -> t -> q) ->
-  Version ->
-  t ->
-  Property
-roundTripAnnTwiddledProperty eqProp version t = property $ do
-  roundTripAnnTwiddled version t >>= \case
-    Left err ->
-      pure $ counterexample ("Failed to deserialize twiddled encoding:\n" ++ show err) False
-    Right tDecoded ->
-      pure $ property (tDecoded `eqProp` t)
 
 embedTripExpectation ::
   forall a b.
@@ -421,7 +365,7 @@ mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
 -- representation has changed. Dropper is checked as well.
 roundTrip ::
   forall t.
-  (Eq t, Typeable t) =>
+  (ToCBOR t, Eq t) =>
   Version ->
   Trip t t ->
   t ->
@@ -437,22 +381,16 @@ roundTrip version trip val = do
 
 roundTripTwiddled ::
   forall t.
-  (Twiddle t, DecCBOR t, Eq t) =>
+  (Twiddle t, ToCBOR t) =>
+  AnnotatorEvidence t ->
   Version ->
   t ->
   Gen (Either RoundTripFailure t)
-roundTripTwiddled version x = do
+roundTripTwiddled annEv version x = do
   tw <- twiddle version x
-  pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
-
-roundTripAnn :: (ToCBOR t, DecCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
-roundTripAnn v = embedTripAnn v v
-
-roundTripAnnTwiddled ::
-  (Twiddle t, DecCBOR (Annotator t)) => Version -> t -> Gen (Either RoundTripFailure t)
-roundTripAnnTwiddled version x = do
-  tw <- twiddle version x
-  pure (decodeAnn version version (toPlainEncoding version (encodeTerm tw)))
+  pure $ case annEv of
+    EvidencePlain -> roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x
+    EvidenceAnnotated -> decodeAnn version version . toPlainEncoding version $ encodeTerm tw
 
 decodeAnn ::
   forall t.
@@ -521,9 +459,8 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
         Right val
           | Nothing <- mDropperError ->
               let flatTerm = CBOR.toFlatTerm encoding
-                  -- We must not pass original bytes, because FlatTerm can't handle offsets
-                  plainDecoder = toPlainDecoder Nothing decVersion decoder
-               in case CBOR.fromFlatTerm plainDecoder flatTerm of
+               in -- We must not pass original bytes, because FlatTerm can't handle offsets
+                  case CBOR.fromFlatTerm (toPlainDecoder Nothing decVersion decoder) flatTerm of
                     Left err
                       | err == originalBytesExpectedFailureMessage -> Right (val, encoding, encodedBytes)
                       | otherwise ->
@@ -567,17 +504,6 @@ embedTrip ::
   a ->
   Either RoundTripFailure b
 embedTrip = embedTripLabel (T.pack (show (typeRep $ Proxy @b)))
-
-embedTripAnn ::
-  forall a b.
-  (ToCBOR a, DecCBOR (Annotator b)) =>
-  -- | Encoder version for test failure reporting
-  Version ->
-  -- | Decoder version
-  Version ->
-  a ->
-  Either RoundTripFailure b
-embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . toCBOR
 
 typeLabel :: forall t. Typeable t => T.Text
 typeLabel = T.pack (show (typeRep $ Proxy @t))

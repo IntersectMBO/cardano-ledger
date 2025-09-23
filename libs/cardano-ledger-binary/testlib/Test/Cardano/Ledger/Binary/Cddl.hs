@@ -11,8 +11,6 @@ module Test.Cardano.Ledger.Binary.Cddl (
   cddlDecoderEquivalenceSpec,
   cddlRoundTripCborSpec,
   cddlRoundTripExpectation,
-  cddlRoundTripAnnCborSpec,
-  cddlRoundTripAnnExpectation,
 
   -- * Helper functions and types
   Cddl (..),
@@ -209,51 +207,6 @@ cddlFailure diagCbor err =
       , show err
       , "Generated diag: " <> BSL8.unpack (unDiagCbor diagCbor)
       ]
-
--- | Similar to `cddlRoundTripCborSpec`, but for Annotator.
-cddlRoundTripAnnCborSpec ::
-  forall a.
-  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR (Annotator a)) =>
-  -- | Serialization version
-  Version ->
-  -- | Cddl variable name
-  T.Text ->
-  SpecWith CddlData
-cddlRoundTripAnnCborSpec version varName =
-  let lbl = label (Proxy @(Annotator a))
-   in it (T.unpack $ varName <> ": " <> lbl) $ \cddlData ->
-        withCddlVarFile varName cddlData $
-          cddlRoundTripAnnExpectation lbl version version (cborTrip @a)
-
--- | Same as `cddlRoundTripExpectation`, but works for decoders that are wrapped into
--- `Annotator`
-cddlRoundTripAnnExpectation ::
-  forall a.
-  (HasCallStack, Show a, Eq a) =>
-  T.Text ->
-  Version ->
-  Version ->
-  Trip a (Annotator a) ->
-  CddlVarFile ->
-  Expectation
-cddlRoundTripAnnExpectation lbl encVersion decVersion Trip {..} CddlVarFile {..} = do
-  forM_ cddlVarDiagCbor $ \diagCbor -> do
-    Cbor cbor <- diagCborToCbor diagCbor
-    let mkFailure encoding =
-          RoundTripFailure encVersion decVersion encoding cbor
-    case decodeFullAnnotator decVersion lbl tripDecoder cbor of
-      Left decErr ->
-        cddlFailure diagCbor $ mkFailure mempty Nothing Nothing Nothing (Just decErr)
-      Right val ->
-        let encoding = toPlainEncoding encVersion $ tripEncoder val
-         in case decodeAnnExtra lbl encVersion decVersion tripDecoder encoding of
-              Right (val', encodedBytes) ->
-                validateCddlConformance cddlVarFilePath encodedBytes >>= \case
-                  Left confErr ->
-                    cddlFailure diagCbor $
-                      mkFailure encoding (Just encodedBytes) (Just confErr) Nothing Nothing
-                  Right _bsl -> val' `shouldBe` val
-              Left embedErr -> cddlFailure diagCbor embedErr
 
 genCddlDiagCbor :: HasCallStack => Int -> Cddl -> IO [DiagCbor]
 genCddlDiagCbor numCases =
