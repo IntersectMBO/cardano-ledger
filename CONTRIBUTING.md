@@ -225,13 +225,15 @@ NIGHTLY=true cabal test cardano-ledger-shelley-test
 
 ### Conformance Testing Against the Agda Formal Ledger Specification
 
-The Haskell package `cardano-ledger-conformance` contains the gluing code that
+The Haskell package `cardano-ledger-conformance` contains the glue code that
 enables running "imp tests" against the Haskell code extracted from the Agda
 specification (specified as an `SRP` in the top-level `cabal.project` of
 `cardano-ledger`).
 
 - To run the complete test suite, execute:
   ```shell
+  nix develop
+  cabal update
   cabal test cardano-ledger-conformance
   ```
 At the moment, the conformance part of some of the tests is disabled. That is,
@@ -246,17 +248,21 @@ Below are instructions for some common use cases.
 
 #### How To:
 
-- Run a specific test:
-  1. Execute,
+- Run a specific test:  
+  1. Enter the `nix develop` shell.
+  2. Execute `cabal update`.
+  3. Execute
      ```shell
      cabal test cardano-ledger-conformance --test-options='--match "PATTERN"'
      ```
-     where `PATTERN` is the name of the test (or some part of it)
+     where `PATTERN` is the name of the test (or some part of it).
 
 - Re-enable and run a disabled test:
   1. Replace `disableInConformance` by `fspecify` in the test.
   2. Run
      ```shell
+     nix develop
+     cabal update
      cabal test cardano-ledger-conformance
      ```
   Note that `fspecify` re-enables conformance and makes the test "focused".
@@ -288,11 +294,11 @@ Below are instructions for some common use cases.
 
   - As a relative path:
 
-      Cloning the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `*-artifacts` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
+      Clone the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `*-artifacts` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
       ```shell
       git clone -b master-artifacts git@github.com:IntersectMBO/formal-ledger-specifications.git spec
       ```
-      and using:
+      and use
       ```
       ../spec/hs
       ```
