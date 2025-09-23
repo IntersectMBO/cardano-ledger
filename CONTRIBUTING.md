@@ -225,13 +225,15 @@ NIGHTLY=true cabal test cardano-ledger-shelley-test
 
 ### Conformance Testing Against the Agda Formal Ledger Specification
 
-The Haskell package `cardano-ledger-conformance` contains the gluing code that
-enables running "imp tests" against the Haskell code extracted from the Agda
+The Haskell package `cardano-ledger-conformance` contains the glue code that
+enables running tests against the Haskell code extracted from the Agda
 specification (specified as an `SRP` in the top-level `cabal.project` of
 `cardano-ledger`).
 
 - To run the complete test suite, execute:
   ```shell
+  nix develop
+  cabal update
   cabal test cardano-ledger-conformance
   ```
 At the moment, the conformance part of some of the tests is disabled. That is,
@@ -242,61 +244,73 @@ Conformance-disabled tests are specified in the Haskell source code (of
 `it`). The output of disabled tests contains the string "\[disabled in
 conformance\]" when run.
 
-Below are instructions for some common use cases.
+Below are instructions for some common use cases and workflow examples.
 
 #### How To:
 
 - Run a specific test:
-  1. Execute,
+  1. Enter the `nix develop` shell.
+  3. Execute
      ```shell
      cabal test cardano-ledger-conformance --test-options='--match "PATTERN"'
      ```
-     where `PATTERN` is the name of the test (or some part of it)
+     where `PATTERN` is the name of the test (or some part of it).
 
 - Re-enable and run a disabled test:
   1. Replace `disableInConformance` by `fspecify` in the test.
   2. Run
      ```shell
+     nix develop
      cabal test cardano-ledger-conformance
      ```
   Note that `fspecify` re-enables conformance and makes the test "focused".
   When there are focused tests, `cabal test` will _only_ run those.
 
-- Change the source of the Agda-extracted Haskell package used in conformance (`cardano-ledger-executable-spec`):
+- Change the source of the Agda-extracted Haskell package used in conformance to
+  a local folder:
   1. Enter the `nix develop` shell
   2. Comment out the `source-repository-package` section in `cabal.project` that
      points to `formal-ledger-specifications`
-  3. Add the path to the local build directory (containing the
-     `cardano-ledger-executable-spec.cabal` file, see below for examples) to
-     `packages` in `cabal.project`
+  3. Add the path to the Agda-extracted Haskell package
+     `cardano-ledger-executable-spec` to the `packages` section in
+     `cabal.project`
   4. Execute the tests.
 
-  To change the local build directory, redo step 3 _without leaving_ the `nix develop` shell.
+- Change the source of the Agda-extracted Haskell package used in conformance
+  to a remote repo: See [To update the referenced Agda ledger
+  spec](#to-update-the-referenced-Agda-ledger-spec). Note that these instructions
+  are valid for any `*-artifacts` branch.
 
-  Some examples:
-  - As an absolute path:
+#### Worked Out Examples:
 
-      Compiling the `formal-ledger-specifications` to Haskell via:
-      ```shell
-      nix-build -A hs-src
-      ```
-      returns a path to the nix store, e.g., `/nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1`, that can be used as:
-      ```
-      /nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/hs
-      ```
-      in the packages section of the `cabal.project` file.
+  - (Preferred Workflow) Extracting the Haskell code locally (with Agda caching)
+    and adding it as an absolute path:
 
-  - As a relative path:
+      In a local copy of the [`formal-ledger-specifications`
+      repo](https://github.com/IntersectMBO/formal-ledger-specifications)
+      (`FLS_REPO`):
 
-      Cloning the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `*-artifacts` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
-      ```shell
-      git clone -b master-artifacts git@github.com:IntersectMBO/formal-ledger-specifications.git spec
-      ```
-      and using:
-      ```
-      ../spec/hs
-      ```
-      in the `cabal.project` file.
+      - Extract the Haskell package using:
+        ```shell
+        nix develop --command fls-shake hs
+        ```
+        This generates the `cardano-ledger-executable-spec` Haskell package in `REPO/dist/hs`
+
+      In a local copy of `cardano-ledger` (with the `cabal.project` file _unmodified_):
+
+      1. Enter the `nix develop` shell
+      2. Modify the file `cabal.project` by:
+         - Commenting out the `source-repository-package` that points to `formal-ledger-specifications`.
+         - Adding the path `FLS_REPO/dist/hs` to the `packages` section.
+
+  - Extracting the Haskell code locally (without Agda caching) and adding it as
+    an absolute path: Same steps as the bullet point above except:
+      - Instead of `nix develop --command fls-shake hs` run `nix-build -A
+        hs-src`, which returns a path to the nix store, e.g.
+        `/nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1`.
+      - In (2) replace `FLS_REPO/dist/hs` by
+        `/nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/hs` (Note the
+        added suffix `hs`).
 
 ## nix build Infrastructure
 
