@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
-import Cardano.Ledger.Block (bheader)
+import Cardano.Ledger.Block (blockHeader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -89,7 +89,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
     map (poolRetirementProp currentEpoch maxEpoch) (sourceSignalTargets poolTr)
   where
     (chainSt', poolTr) = poolTraceFromBlock chainSt block
-    bhb = bhbody $ bheader block
+    bhb = bhbody $ blockHeader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
     maxEpoch = (view ppEMaxL . view curPParamsEpochStateL . nesEs . chainNes) chainSt'
 

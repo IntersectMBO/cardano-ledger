@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   mkCertIxPartial,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
@@ -312,7 +312,7 @@ txEx2 =
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
     [MkShelleyTx txEx2]
     (SlotNo 90)
@@ -371,7 +371,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx2
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
+    (bhHash $ blockHeader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
@@ -453,7 +453,7 @@ txEx4 =
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
+    (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
     [MkShelleyTx txEx4]
     (SlotNo 190)
@@ -499,7 +499,7 @@ poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right (C.solidifyProposals 
 epoch2Nonce :: Nonce
 epoch2Nonce =
   chainCandidateNonce expectedStEx4
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx2)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx2)
 
 --
 -- Block 5, Slot 220, Epoch 2
@@ -508,7 +508,7 @@ epoch2Nonce =
 blockEx5 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx4)
+    (bhHash $ blockHeader blockEx4)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 220)
     []
     (SlotNo 220)
@@ -575,7 +575,7 @@ poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 blockEx6 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx5)
+    (bhHash $ blockHeader blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -622,12 +622,12 @@ poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right (C.solidifyProposals 
 epoch3Nonce :: Nonce
 epoch3Nonce =
   chainCandidateNonce expectedStEx6
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx4)
 
 blockEx7 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx6)
+    (bhHash $ blockHeader blockEx6)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 310)
     []
     (SlotNo 310)
@@ -663,7 +663,7 @@ poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 blockEx8 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx7)
+    (bhHash $ blockHeader blockEx7)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 390)
     []
     (SlotNo 390)
@@ -759,12 +759,12 @@ poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right (C.solidifyProposals 
 epoch4Nonce :: Nonce
 epoch4Nonce =
   chainCandidateNonce expectedStEx8
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx6)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx6)
 
 blockEx9 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx8)
+    (bhHash $ blockHeader blockEx8)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 410)
     []
     (SlotNo 410)
@@ -842,7 +842,7 @@ txEx10 =
 blockEx10 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx10 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx9)
+    (bhHash $ blockHeader blockEx9)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 420)
     [MkShelleyTx txEx10]
     (SlotNo 420)
@@ -911,7 +911,7 @@ txEx11 =
 blockEx11 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx11 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx10)
+    (bhHash $ blockHeader blockEx10)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 490)
     [MkShelleyTx txEx11]
     (SlotNo 490)
@@ -980,12 +980,12 @@ poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right (C.solidifyProposa
 epoch5Nonce :: Nonce
 epoch5Nonce =
   chainCandidateNonce expectedStEx11
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx8)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx8)
 
 blockEx12 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx12 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx11)
+    (bhHash $ blockHeader blockEx11)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 510)
     []
     (SlotNo 510)

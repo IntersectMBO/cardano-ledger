@@ -179,11 +179,11 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , Block {blockHeader = blockHeaderView, blockBody}
-              )
-          ) -> do
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block {blockHeader = blockHeaderView, blockBody}
+               )
+           ) -> do
         let txs = blockBody ^. txSeqBlockBodyL
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
             actualBodyHash = hashBlockBody blockBody

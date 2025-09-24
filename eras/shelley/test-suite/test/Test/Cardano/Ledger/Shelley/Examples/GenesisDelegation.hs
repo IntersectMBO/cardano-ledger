@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
@@ -188,7 +188,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF @ShelleyEra
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 50)
     []
     (SlotNo 50)

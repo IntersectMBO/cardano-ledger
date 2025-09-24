@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromNumber,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
@@ -224,7 +224,7 @@ txEx2 =
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 20)
     [MkShelleyTx txEx2]
     (SlotNo 20)
@@ -296,7 +296,7 @@ txEx3 =
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
+    (bhHash $ blockHeader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 80)
     [MkShelleyTx txEx3]
     (SlotNo 80)
@@ -338,7 +338,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx3 ⭒ mkNonceFromNumber 123
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
+    (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -20,7 +21,7 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
-import Cardano.Ledger.Block (Block (..), bheader)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
@@ -136,7 +137,7 @@ relevantCasesAreCoveredForTrace ::
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block (BHeader MockCrypto) era -> [Tx era]
-      blockTxs (Block _ blockBody) = toList $ blockBody ^. txSeqBlockBodyL
+      blockTxs Block {blockBody} = toList $ blockBody ^. txSeqBlockBodyL
       bs = traceSignals OldestFirst tr
       txs = concatMap blockTxs bs
       certsByTx_ = certsByTx @era txs
@@ -421,7 +422,7 @@ epochsInTrace bs'
         EpochSize slotsPerEpoch =
           epochInfoSize (epochInfoPure testGlobals) $
             error "Impossible: Fixed epoch size does not care about current epoch number"
-        blockSlot = bheaderSlotNo . bhbody . bheader
+        blockSlot = bheaderSlotNo . bhbody . blockHeader
         atEpoch (SlotNo s) = s `div` slotsPerEpoch
        in
         fromIntegral $ toEpoch - fromEpoch + 1

@@ -14,10 +14,7 @@ module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
-import Cardano.Ledger.Block (
-  Block (..),
-  bbody,
- )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.API (LedgerState)
@@ -175,7 +172,7 @@ checkPreservation ::
   SourceSignalTarget (CHAIN era) ->
   Int ->
   Property
-checkPreservation SourceSignalTarget {source, target, signal} count =
+checkPreservation SourceSignalTarget {source, target, signal = block} count =
   counterexample
     ( mconcat
         ( [ "\ncount = " ++ show count ++ "\n"
@@ -278,7 +275,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = toList $ bbody signal ^. txSeqBlockBodyL
+    txs' = toList $ blockBody block ^. txSeqBlockBodyL
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =

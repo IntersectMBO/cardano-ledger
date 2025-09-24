@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Mir (
 ) where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness)
@@ -233,7 +233,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 blockEx2 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx2 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx1 pot))
+    (bhHash $ blockHeader (blockEx1 pot))
     (coreNodeKeysBySchedule @ShelleyEra ppEx 50)
     []
     (SlotNo 50)
@@ -275,7 +275,7 @@ epoch1Nonce pot = chainCandidateNonce (expectedStEx2 pot)
 blockEx3 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx3 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx2 pot))
+    (bhHash $ blockHeader (blockEx2 pot))
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
