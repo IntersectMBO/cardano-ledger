@@ -1,9 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | This module is used for building and inspecting transaction outputs.
 --
@@ -35,6 +37,9 @@ module Cardano.Ledger.Api.Tx.Out (
   EraTxOut (TxOut),
   mkBasicTxOut,
   upgradeTxOut,
+
+  -- * Any Era
+  AnyEraTxOut (..),
 
   -- ** Value
   valueTxOutL,
@@ -71,7 +76,8 @@ module Cardano.Ledger.Api.Tx.Out (
 ) where
 
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
-import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Era
+import Cardano.Ledger.Api.Scripts (AnyEraScript)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), DataHash, Datum (..))
 import Cardano.Ledger.Api.Tx.Address
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
@@ -82,11 +88,34 @@ import Cardano.Ledger.Core (
   PParams,
   bootAddrTxOutF,
   coinTxOutL,
-  eraProtVerLow,
   isAdaOnlyTxOutF,
  )
 import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Lens.Micro
+
+class (EraTxOut era, AnyEraScript era) => AnyEraTxOut era where
+  datumTxOutG :: SimpleGetter (TxOut era) (Maybe (Datum era))
+  default datumTxOutG ::
+    AlonzoEraTxOut era =>
+    SimpleGetter (TxOut era) (Maybe (Datum era))
+  datumTxOutG = datumTxOutF . to Just
+
+instance AnyEraTxOut ShelleyEra where
+  datumTxOutG = to (const Nothing)
+
+instance AnyEraTxOut AllegraEra where
+  datumTxOutG = to (const Nothing)
+
+instance AnyEraTxOut MaryEra where
+  datumTxOutG = to (const Nothing)
+
+instance AnyEraTxOut AlonzoEra
+
+instance AnyEraTxOut BabbageEra
+
+instance AnyEraTxOut ConwayEra
+
+instance AnyEraTxOut DijkstraEra
 
 setMinCoinSizedTxOutInternal ::
   forall era.

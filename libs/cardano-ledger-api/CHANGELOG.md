@@ -2,7 +2,7 @@
 
 ## 1.13.0.0
 
-*
+* Add `AnyEraTxOut` and `AnyEraTxAuxData`
 
 ### `testlib`
 
