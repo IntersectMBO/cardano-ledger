@@ -1,10 +1,11 @@
 module Cardano.Ledger.Api.Tx.In (
   -- * Transaction input
   TxIn (..),
+  mkTxInPartial,
+  mkCollateralTxIn,
 
   -- ** Transaction ID
   TxId (..),
-  mkTxInPartial,
 
   -- ** Transaction index
   TxIx,
@@ -14,6 +15,7 @@ module Cardano.Ledger.Api.Tx.In (
   mkTxIxPartial,
 ) where
 
+import Cardano.Ledger.Babbage.Collateral (mkCollateralTxIn)
 import Cardano.Ledger.BaseTypes (
   TxIx,
   mkTxIx,

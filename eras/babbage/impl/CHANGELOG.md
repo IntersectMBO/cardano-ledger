@@ -2,12 +2,11 @@
 
 ## 1.12.1.0
 
+* Add `mkCollateralTxIn`
+
 ### `testlib`
 
 * Add `BabbageEraImp`
-
-### `testlib`
-
 * Removed `babbageEraSpecificSpec`
 
 ## 1.12.0.0
