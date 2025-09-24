@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.17.0.1
+
+*
+
 ## 1.17.0.0
 
 * Changed `MaxTxSizeUTxO` and `sizeShelleyTxF` to use `Word32`
