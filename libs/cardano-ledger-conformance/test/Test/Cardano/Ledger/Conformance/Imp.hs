@@ -67,9 +67,12 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
     specTRC@(SpecTRC specEnv specState specSignal) <-
       impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
     -- get agda response
-    agdaResponse <- fmap (second specNormalize) . evaluateDeep $ runAgdaRule @rule @era specTRC
+    agdaResponse' <-
+      fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC
     -- translate imp response
     let
+      agdaResponse = fmap fst agdaResponse'
+      agdaDebug = either (const "") snd agdaResponse'
       impRuleResult' = bimap (T.pack . show) fst impRuleResult
       impResponse = first (T.pack . show) . translateOutput @rule @era ctx trc =<< impRuleResult'
 
@@ -87,6 +90,8 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
     logToExpr specState
     logString "specSignal"
     logToExpr specSignal
+    logString "specDebug"
+    logToExpr agdaDebug
     logString "Extra info:"
     logDoc $
       extraInfo @rule @era

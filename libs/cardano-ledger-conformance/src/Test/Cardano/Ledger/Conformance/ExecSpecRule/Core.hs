@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -133,6 +134,13 @@ class
     HasCallStack =>
     SpecTRC rule era ->
     Either Text (SpecState rule era)
+  runAgdaRule = fmap fst . runAgdaRuleWithDebug
+
+  runAgdaRuleWithDebug ::
+    HasCallStack =>
+    SpecTRC rule era ->
+    Either Text (SpecState rule era, Text)
+  runAgdaRuleWithDebug = fmap (,"") . runAgdaRule
 
   translateInputs ::
     HasCallStack =>
