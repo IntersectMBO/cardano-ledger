@@ -5,6 +5,7 @@
 * Add `AnyEraScript`
 * Add `AnyEraSpendingPurpose`, `AnyEraMintingPurpose`, `AnyEraCertifyingPurpose`, `AnyEraRewardingPurpose`, `AnyEraVotingPurpose`, `AnyEraProposingPurpose`, `AnyEraGuardingPurpose` patterns
 * Re-export `DijkstraEraScript`, `toGuardingPurpose` and `GuardingPurpose` pattern
+* Add `AnyEraTxCert`
 * Add `AnyEraTxWits`
 * Add `AnyEraTxOut` and `AnyEraTxAuxData`
 
