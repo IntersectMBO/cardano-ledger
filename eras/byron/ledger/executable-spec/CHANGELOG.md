@@ -1,5 +1,9 @@
 # Version history for `byron-spec-ledger`
 
+## 1.1.0.2
+
+*
+
 ## 1.1.0.1
 
 *
