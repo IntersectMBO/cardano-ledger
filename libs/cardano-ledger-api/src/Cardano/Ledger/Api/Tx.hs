@@ -43,6 +43,7 @@ module Cardano.Ledger.Api.Tx (
 
   -- * Any era
   AnyEraTx (isValidTxG),
+  producedTxOuts,
 
   -- * Shelley onwards
   EraTx (Tx),
@@ -88,8 +89,12 @@ import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
+import Cardano.Ledger.Babbage.Collateral (mkCollateralTxIn)
 import Cardano.Ledger.Core (EraTx (..), binaryUpgradeTx, txIdTx)
+import Cardano.Ledger.State (UTxO (..), txouts)
 import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx, setMinFeeTxUtxo)
+import Control.Monad (join)
+import qualified Data.Map as Map
 import Lens.Micro
 
 class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => AnyEraTx era where
@@ -113,3 +118,16 @@ instance AnyEraTx BabbageEra
 instance AnyEraTx ConwayEra
 
 instance AnyEraTx DijkstraEra
+
+-- | Construct all of the unspent outputs that will be produced by this transaction
+producedTxOuts :: AnyEraTx era => Tx era -> UTxO era
+producedTxOuts tx =
+  case tx ^. isValidTxG of
+    Just (IsValid False) ->
+      UTxO $
+        case join (txBody ^. collateralReturnTxBodyG) of
+          Nothing -> mempty
+          Just txOut -> Map.singleton (mkCollateralTxIn txBody) txOut
+    _ -> txouts txBody
+  where
+    txBody = tx ^. bodyTxL
