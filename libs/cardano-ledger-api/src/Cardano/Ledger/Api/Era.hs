@@ -29,6 +29,7 @@ module Cardano.Ledger.Api.Era (
 
   -- ** Shelley
   ShelleyEra,
+  ttlToValidityInterval,
 
   -- ** Allegra
   AllegraEra,
@@ -262,9 +263,6 @@ instance EraApi AllegraEra where
         , Allegra.atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
         , Allegra.atbAuxDataHash = txBody ^. auxDataHashTxBodyL
         }
-    where
-      ttlToValidityInterval :: SlotNo -> ValidityInterval
-      ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
 
   upgradeTxAuxData (ShelleyTxAuxData md) = AllegraTxAuxData md mempty
 
@@ -275,6 +273,9 @@ instance EraApi AllegraEra where
       (bootWits stw)
 
   upgradeNativeScript = upgradeMultiSig
+
+ttlToValidityInterval :: SlotNo -> ValidityInterval
+ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
 
 instance EraApi MaryEra where
   upgradeTx (MkAllegraTx (ShelleyTx txb txwits txAux)) =

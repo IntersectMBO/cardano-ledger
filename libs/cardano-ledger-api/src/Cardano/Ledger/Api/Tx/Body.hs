@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.Tx.Body (
@@ -23,6 +25,9 @@ module Cardano.Ledger.Api.Tx.Body (
   allInputsTxBodyF,
   evalBalanceTxBody,
   txIdTxBody,
+
+  -- * Any Era
+  AnyEraTxBody (..),
 
   -- * Shelley Era
   ShelleyEraTxBody,
@@ -48,6 +53,7 @@ module Cardano.Ledger.Api.Tx.Body (
   collateralInputsTxBodyL,
   reqSignerHashesTxBodyL,
   scriptIntegrityHashTxBodyL,
+  ScriptIntegrityHash,
   networkIdTxBodyL,
   redeemerPointer,
   redeemerPointerInverse,
@@ -65,10 +71,15 @@ module Cardano.Ledger.Api.Tx.Body (
   ConwayEraTxBody,
   votingProceduresTxBodyL,
   VotingProcedure (..),
+  VotingProcedures (..),
   proposalProceduresTxBodyL,
   ProposalProcedure (..),
   currentTreasuryValueTxBodyL,
   treasuryDonationTxBodyL,
+
+  -- * Dijstra Era
+  DijkstraEraTxBody,
+  guardsTxBodyL,
 
   -- * Upgrade
   binaryUpgradeTxBody,
@@ -77,17 +88,20 @@ module Cardano.Ledger.Api.Tx.Body (
 
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
-import Cardano.Ledger.Api.Era (EraApi (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
+import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts
+import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
-import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network, SlotNo, StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.Binary.Decoding (Sized)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   VotingProcedure (..),
+  VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (
@@ -98,14 +112,195 @@ import Cardano.Ledger.Core (
   binaryUpgradeTxBody,
   txIdTxBody,
  )
-import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), coerceKeyRole)
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
+import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.UTxO (getProducedValue)
 import Cardano.Ledger.State (EraUTxO (getConsumedValue), UTxO)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<->))
-import Lens.Micro (Lens', lens)
+import Data.OSet.Strict (OSet)
+import qualified Data.OSet.Strict as OSet (fromSet)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import qualified Data.Set as Set (map)
+import Lens.Micro (Lens', SimpleGetter, lens, to)
+
+class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era where
+  updateTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (Update era)))
+  updateTxBodyG = to (const Nothing)
+
+  vldtTxBodyG :: SimpleGetter (TxBody era) ValidityInterval
+  default vldtTxBodyG ::
+    AllegraEraTxBody era => SimpleGetter (TxBody era) ValidityInterval
+  vldtTxBodyG = vldtTxBodyL
+
+  mintTxBodyG :: SimpleGetter (TxBody era) (Maybe MultiAsset)
+  default mintTxBodyG ::
+    MaryEraTxBody era => SimpleGetter (TxBody era) (Maybe MultiAsset)
+  mintTxBodyG = mintTxBodyL . to Just
+
+  collateralInputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  default collateralInputsTxBodyG ::
+    AlonzoEraTxBody era => SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  collateralInputsTxBodyG = collateralInputsTxBodyL . to Just
+
+  scriptIntegrityHashTxBodyG ::
+    SimpleGetter (TxBody era) (Maybe (Maybe ScriptIntegrityHash))
+  default scriptIntegrityHashTxBodyG ::
+    AlonzoEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe ScriptIntegrityHash))
+  scriptIntegrityHashTxBodyG = scriptIntegrityHashTxBodyL . to (Just . strictMaybeToMaybe)
+
+  networkIdTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Network))
+  default networkIdTxBodyG ::
+    AlonzoEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe Network))
+  networkIdTxBodyG = networkIdTxBodyL . to (Just . strictMaybeToMaybe)
+
+  sizedOutputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (StrictSeq (Sized (TxOut era))))
+  default sizedOutputsTxBodyG ::
+    BabbageEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (StrictSeq (Sized (TxOut era))))
+  sizedOutputsTxBodyG = sizedOutputsTxBodyL . to Just
+
+  referenceInputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  default referenceInputsTxBodyG ::
+    BabbageEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  referenceInputsTxBodyG = referenceInputsTxBodyL . to Just
+
+  totalCollateralTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  default totalCollateralTxBodyG ::
+    BabbageEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  totalCollateralTxBodyG = totalCollateralTxBodyL . to (Just . strictMaybeToMaybe)
+
+  collateralReturnTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (TxOut era)))
+  default collateralReturnTxBodyG ::
+    BabbageEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe (TxOut era)))
+  collateralReturnTxBodyG = collateralReturnTxBodyL . to (Just . strictMaybeToMaybe)
+
+  sizedCollateralReturnTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (Sized (TxOut era))))
+  default sizedCollateralReturnTxBodyG ::
+    BabbageEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe (Sized (TxOut era))))
+  sizedCollateralReturnTxBodyG = sizedCollateralReturnTxBodyL . to (Just . strictMaybeToMaybe)
+
+  currentTreasuryValueTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  default currentTreasuryValueTxBodyG ::
+    ConwayEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  currentTreasuryValueTxBodyG = currentTreasuryValueTxBodyL . to (Just . strictMaybeToMaybe)
+
+  votingProceduresTxBodyG :: SimpleGetter (TxBody era) (Maybe (VotingProcedures era))
+  default votingProceduresTxBodyG ::
+    ConwayEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (VotingProcedures era))
+  votingProceduresTxBodyG = votingProceduresTxBodyL . to Just
+
+  proposalProceduresTxBodyG :: SimpleGetter (TxBody era) (Maybe (OSet (ProposalProcedure era)))
+  default proposalProceduresTxBodyG ::
+    ConwayEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (OSet (ProposalProcedure era)))
+  proposalProceduresTxBodyG = proposalProceduresTxBodyL . to Just
+
+  treasuryDonationTxBodyG :: SimpleGetter (TxBody era) (Maybe Coin)
+  default treasuryDonationTxBodyG :: ConwayEraTxBody era => SimpleGetter (TxBody era) (Maybe Coin)
+  treasuryDonationTxBodyG = treasuryDonationTxBodyL . to Just
+
+  guardsTxBodyG :: SimpleGetter (TxBody era) (Maybe (OSet (Credential Guard)))
+  default guardsTxBodyG ::
+    DijkstraEraTxBody era =>
+    SimpleGetter (TxBody era) (Maybe (OSet (Credential Guard)))
+  guardsTxBodyG = guardsTxBodyL . to Just
+
+instance AnyEraTxBody ShelleyEra where
+  updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
+  vldtTxBodyG = ttlTxBodyL . to ttlToValidityInterval
+  mintTxBodyG = to (const Nothing)
+  collateralInputsTxBodyG = to (const Nothing)
+  scriptIntegrityHashTxBodyG = to (const Nothing)
+  networkIdTxBodyG = to (const Nothing)
+  sizedOutputsTxBodyG = to (const Nothing)
+  referenceInputsTxBodyG = to (const Nothing)
+  totalCollateralTxBodyG = to (const Nothing)
+  collateralReturnTxBodyG = to (const Nothing)
+  sizedCollateralReturnTxBodyG = to (const Nothing)
+  currentTreasuryValueTxBodyG = to (const Nothing)
+  votingProceduresTxBodyG = to (const Nothing)
+  proposalProceduresTxBodyG = to (const Nothing)
+  treasuryDonationTxBodyG = to (const Nothing)
+  guardsTxBodyG = to (const Nothing)
+
+instance AnyEraTxBody AllegraEra where
+  updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
+  mintTxBodyG = to (const Nothing)
+  collateralInputsTxBodyG = to (const Nothing)
+  scriptIntegrityHashTxBodyG = to (const Nothing)
+  networkIdTxBodyG = to (const Nothing)
+  sizedOutputsTxBodyG = to (const Nothing)
+  referenceInputsTxBodyG = to (const Nothing)
+  totalCollateralTxBodyG = to (const Nothing)
+  collateralReturnTxBodyG = to (const Nothing)
+  sizedCollateralReturnTxBodyG = to (const Nothing)
+  currentTreasuryValueTxBodyG = to (const Nothing)
+  votingProceduresTxBodyG = to (const Nothing)
+  proposalProceduresTxBodyG = to (const Nothing)
+  treasuryDonationTxBodyG = to (const Nothing)
+  guardsTxBodyG = to (const Nothing)
+
+instance AnyEraTxBody MaryEra where
+  updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
+  collateralInputsTxBodyG = to (const Nothing)
+  scriptIntegrityHashTxBodyG = to (const Nothing)
+  networkIdTxBodyG = to (const Nothing)
+  sizedOutputsTxBodyG = to (const Nothing)
+  referenceInputsTxBodyG = to (const Nothing)
+  totalCollateralTxBodyG = to (const Nothing)
+  collateralReturnTxBodyG = to (const Nothing)
+  sizedCollateralReturnTxBodyG = to (const Nothing)
+  currentTreasuryValueTxBodyG = to (const Nothing)
+  votingProceduresTxBodyG = to (const Nothing)
+  proposalProceduresTxBodyG = to (const Nothing)
+  treasuryDonationTxBodyG = to (const Nothing)
+  guardsTxBodyG = to (const Nothing)
+
+instance AnyEraTxBody AlonzoEra where
+  updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
+  sizedOutputsTxBodyG = to (const Nothing)
+  referenceInputsTxBodyG = to (const Nothing)
+  totalCollateralTxBodyG = to (const Nothing)
+  collateralReturnTxBodyG = to (const Nothing)
+  sizedCollateralReturnTxBodyG = to (const Nothing)
+  currentTreasuryValueTxBodyG = to (const Nothing)
+  votingProceduresTxBodyG = to (const Nothing)
+  proposalProceduresTxBodyG = to (const Nothing)
+  treasuryDonationTxBodyG = to (const Nothing)
+  guardsTxBodyG =
+    -- TODO: switch reqSignerHashesTxBodyL to `Guard` from `Witness`, thus getting rid of
+    -- coerceKeyRole: https://github.com/IntersectMBO/cardano-ledger/issues/5315
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+
+instance AnyEraTxBody BabbageEra where
+  updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
+  currentTreasuryValueTxBodyG = to (const Nothing)
+  votingProceduresTxBodyG = to (const Nothing)
+  proposalProceduresTxBodyG = to (const Nothing)
+  treasuryDonationTxBodyG = to (const Nothing)
+  guardsTxBodyG =
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+
+instance AnyEraTxBody ConwayEra where
+  guardsTxBodyG =
+    reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map (KeyHashObj . coerceKeyRole))
+
+instance AnyEraTxBody DijkstraEra
 
 -- | Evaluate the difference between the value currently being consumed by a transaction
 -- and the total value being produced. This value will be zero for a valid transaction.

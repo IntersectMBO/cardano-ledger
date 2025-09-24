@@ -323,8 +323,6 @@ instance AnyEraTxCert BabbageEra where
 instance AnyEraTxCert ConwayEra where
   anyEraToRegTxCert = getRegTxCert
   anyEraToUnRegTxCert = getUnRegTxCert
-  anyEraToGenesisDelegTxCert = const Nothing
-  anyEraToMirTxCert = const Nothing
 
 instance AnyEraTxCert DijkstraEra
 
