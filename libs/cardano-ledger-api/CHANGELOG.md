@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `AnyEraTxBody`
 * Add `AnyEraTxCert`
 * Add `AnyEraScripts`
 * Add `AnyEraTxWits`
