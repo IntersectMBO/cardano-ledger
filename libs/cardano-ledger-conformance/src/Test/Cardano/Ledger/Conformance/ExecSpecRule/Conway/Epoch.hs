@@ -15,4 +15,4 @@ import Test.Cardano.Ledger.Conway.ImpTest ()
 instance ExecSpecRule "EPOCH" ConwayEra where
   type ExecContext "EPOCH" ConwayEra = [GovActionState ConwayEra]
 
-  runAgdaRule (SpecTRC env st sig) = fmap fst . unComputationResult_ $ Agda.epochStep env st sig
+  runAgdaRuleWithDebug (SpecTRC env st sig) = unComputationResult_ $ Agda.epochStep env st sig

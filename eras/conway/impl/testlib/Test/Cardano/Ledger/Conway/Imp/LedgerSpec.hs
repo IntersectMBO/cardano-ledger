@@ -102,7 +102,9 @@ spec = do
             .~ Withdrawals
               [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
 
-  it "Withdraw from a key delegated to an unregistered DRep" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
@@ -123,7 +125,9 @@ spec = do
     ifBootstrap (submitTx_ tx >> (getBalance cred `shouldReturn` mempty)) $ do
       submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
-  it "Withdraw and unregister staking credential in the same transaction" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Withdraw and unregister staking credential in the same transaction" $ do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     (_, cred, _) <- setupSingleDRep 1_000_000
     ra <- getRewardAccountFor cred
@@ -171,7 +175,9 @@ spec = do
             .~ Withdrawals
               [(ra, balance)]
 
-  it "Withdraw from a key delegated to a DRep that expired after delegation" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Withdraw from a key delegated to a DRep that expired after delegation" $ do
     modifyPParams $ \pp ->
       pp
         & ppGovActionLifetimeL .~ EpochInterval 4

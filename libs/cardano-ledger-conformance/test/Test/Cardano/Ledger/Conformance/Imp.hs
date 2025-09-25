@@ -67,9 +67,12 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
     specTRC@(SpecTRC specEnv specState specSignal) <-
       impAnn "Translating inputs" . expectRightDeepExpr $ translateInputs ctx trc
     -- get agda response
-    agdaResponse <- fmap (second specNormalize) . evaluateDeep $ runAgdaRule @rule @era specTRC
+    agdaResponse' <-
+      fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC
     -- translate imp response
     let
+      agdaResponse = fmap fst agdaResponse'
+      agdaDebug = either (const "") snd agdaResponse'
       impRuleResult' = bimap (T.pack . show) fst impRuleResult
       impResponse = first (T.pack . show) . translateOutput @rule @era ctx trc =<< impRuleResult'
 
@@ -87,6 +90,8 @@ conformanceHook globals ctx trc@(TRC (env, state, signal)) impRuleResult =
     logToExpr specState
     logString "specSignal"
     logToExpr specSignal
+    logString "specDebug"
+    logToExpr agdaDebug
     logString "Extra info:"
     logDoc $
       extraInfo @rule @era
@@ -175,12 +180,10 @@ spec =
             describe "CERTS" Certs.spec
             describe "DELEG" Deleg.spec
             describe "ENACT" Enact.spec
-            xdescribe "EPOCH" Epoch.spec
+            describe "EPOCH" Epoch.spec
             describe "GOV" Gov.spec
             describe "GOVCERT" GovCert.spec
-            -- LEDGER tests pending on the dRep delegations cleanup in the spec:
-            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
-            xdescribe "LEDGER" Ledger.spec
-            xdescribe "RATIFY" Ratify.spec
-            xdescribe "UTXO" Utxo.spec
+            describe "LEDGER" Ledger.spec
+            describe "RATIFY" Ratify.spec
+            describe "UTXO" Utxo.spec
             xdescribe "UTXOS" Utxos.spec
