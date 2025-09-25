@@ -509,9 +509,9 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
-  genRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
+  genRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
 
-  genUnRegTxCert :: HasCallStack => Credential 'Staking -> ImpTestM era (TxCert era)
+  genUnRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
 
 impSatisfySignature ::
   KeyHash 'Witness ->

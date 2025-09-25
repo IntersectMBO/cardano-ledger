@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.12.0.1
+## 1.12.1.0
 
 *
+
+### `testlib`
+
+* Removed `babbageEraSpecificSpec`
 
 ## 1.12.0.0
 

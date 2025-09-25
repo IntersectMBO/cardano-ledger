@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   exampleDijkstraGenesis,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
-  dijkstraGenRegTxCert,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -177,8 +176,8 @@ dijkstraGenUnRegTxCert ::
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 dijkstraGenUnRegTxCert stakingCredential = do
-  accounts <- getsNES (nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
-  case lookupAccountState stakingCredential accounts of
-    Nothing -> error "TODO"
-    Just accountState ->
-      pure $ UnRegDepositTxCert stakingCredential (fromCompact (accountState ^. depositAccountStateL))
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  deposit <- case lookupAccountState stakingCredential accounts of
+    Nothing -> getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+    Just accountState -> pure (fromCompact (accountState ^. depositAccountStateL))
+  pure $ UnRegDepositTxCert stakingCredential deposit

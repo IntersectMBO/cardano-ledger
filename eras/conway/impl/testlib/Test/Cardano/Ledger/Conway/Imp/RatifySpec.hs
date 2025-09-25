@@ -904,9 +904,9 @@ votingSpec =
               & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
               & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
-          kh <- freshKeyHash
-          _ <- registerStakeCredential (KeyHashObj kh)
-          _ <- delegateToDRep (KeyHashObj kh) (Coin 300) DRepAlwaysNoConfidence
+          cred <- KeyHashObj <$> freshKeyHash
+          _ <- registerStakeCredential cred
+          _ <- delegateToDRep cred (Coin 300) DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
           logAcceptedRatio noConfidence
