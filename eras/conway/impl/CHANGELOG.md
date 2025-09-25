@@ -9,6 +9,10 @@
 
 ### `testlib`
 
+* Removed `regDelegToDRep`
+* Removed `registerRewardAccountWithDeposit`
+* Removed `registerPoolWithDeposit`
+* Removed `registerStakeCredentialWithDeposit`
 * Remove `conwayAccountsToUMap` corresponding to the removal of `UMap` from core.
 
 ## 1.20.0.0
@@ -109,10 +113,6 @@
 
 ### `testlib`
 
-* Removed `regDelegToDRep`
-* Removed `registerRewardAccountWithDeposit`
-* Removed `registerPoolWithDeposit`
-* Removed `registerStakeCredentialWithDeposit`
 * Added `EraSpecificSpec ConwayEra` instance
 * Added `registerRewardAccountWithDeposit`
 * Added `regDelegToDRep`

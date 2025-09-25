@@ -205,6 +205,7 @@ spec = do
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
     ra <- registerStakeCredential cred
+    void $ delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
