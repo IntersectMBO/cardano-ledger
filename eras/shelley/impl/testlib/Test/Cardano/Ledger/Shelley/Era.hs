@@ -33,6 +33,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
+import Test.Cardano.Ledger.Shelley.Binary.Twiddle ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 class

@@ -11,6 +11,7 @@ import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypes
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
+import Test.Cardano.Ledger.Mary.Binary.Twiddle ()
 import Test.Cardano.Ledger.Mary.Era ()
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)

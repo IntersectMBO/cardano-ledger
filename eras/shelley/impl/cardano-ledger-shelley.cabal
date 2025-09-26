@@ -141,6 +141,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Binary.Cddl
     Test.Cardano.Ledger.Shelley.Binary.Golden
     Test.Cardano.Ledger.Shelley.Binary.RoundTrip
+    Test.Cardano.Ledger.Shelley.Binary.Twiddle
     Test.Cardano.Ledger.Shelley.CDDL
     Test.Cardano.Ledger.Shelley.Constants
     Test.Cardano.Ledger.Shelley.Era

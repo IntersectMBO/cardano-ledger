@@ -109,6 +109,7 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Dijkstra.Arbitrary
     Test.Cardano.Ledger.Dijkstra.Binary.Annotator
+    Test.Cardano.Ledger.Dijkstra.Binary.Twiddle
     Test.Cardano.Ledger.Dijkstra.Binary.Cddl
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
     Test.Cardano.Ledger.Dijkstra.CDDL

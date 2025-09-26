@@ -89,6 +89,7 @@ library testlib
     Test.Cardano.Ledger.Allegra.Arbitrary
     Test.Cardano.Ledger.Allegra.Binary.Annotator
     Test.Cardano.Ledger.Allegra.Binary.Cddl
+    Test.Cardano.Ledger.Allegra.Binary.Twiddle
     Test.Cardano.Ledger.Allegra.CDDL
     Test.Cardano.Ledger.Allegra.Era
     Test.Cardano.Ledger.Allegra.Examples

@@ -41,9 +41,14 @@ import Cardano.Ledger.State
 import Control.State.Transition.Extended (STS (..))
 import Data.Typeable
 import GHC.TypeLits (Symbol)
+import Test.Cardano.Ledger.Binary.ImpTest (
+  roundTripArbitrary,
+  tripPlainFull,
+ )
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Era (EraTest)
 
 -- | QuickCheck property spec that uses `roundTripEraExpectation`
 roundTripEraSpec ::
@@ -185,47 +190,28 @@ roundTripShareEraTypeExpectation = roundTripShareEraExpectation @era @(t era)
 -- | CBOR RoundTrip spec for all the core types and type families that are parametrized on era.
 roundTripCoreEraTypesSpec ::
   forall era.
-  ( EraTx era
-  , EraCertState era
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxCert era)
-  , Arbitrary (TxWits era)
-  , Arbitrary (TxAuxData era)
-  , Arbitrary (Value era)
-  , Arbitrary (CompactForm (Value era))
-  , Arbitrary (Script era)
-  , Arbitrary (PParams era)
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (CertState era)
-  , Arbitrary (Accounts era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
-  , HasCallStack
+  ( HasCallStack
+  , EraTest era
   ) =>
   Spec
 roundTripCoreEraTypesSpec = do
-  describe "Core Type Families" $ do
-    roundTripEraSpec @era @(Value era)
-    roundTripEraSpec @era @(CompactForm (Value era))
-    roundTripEraSpec @era @(TxOut era)
-    roundTripEraSpec @era @(TxCert era)
-    roundTripEraSpec @era @(PParams era)
-    roundTripEraSpec @era @(PParamsUpdate era)
+  describe "Core Type Families" . forM_ allVersions $ \version -> describe (show version) $ do
+    roundTripArbitrary $ tripPlainFull @(Value era) (eraProtVerLow @era)
+    roundTripArbitrary $ tripPlainFull @(CompactForm (Value era)) (eraProtVerLow @era)
+    roundTripArbitrary $ tripPlainFull @(TxOut era) (eraProtVerLow @era)
+    roundTripArbitrary $ tripPlainFull @(TxCert era) (eraProtVerLow @era)
+    roundTripArbitrary $ tripPlainFull @(PParams era) (eraProtVerLow @era)
+    roundTripArbitrary $ tripPlainFull @(PParamsUpdate era) (eraProtVerLow @era)
     roundTripAnnEraSpec @era @(Script era)
-    roundTripEraSpec @era @(Script era)
+    roundTripArbitrary $ tripPlainFull @(Script era) version
     roundTripAnnEraSpec @era @(TxAuxData era)
-    roundTripEraSpec @era @(TxAuxData era)
+    roundTripArbitrary $ tripPlainFull @(TxAuxData era) version
     roundTripAnnEraSpec @era @(TxWits era)
-    roundTripEraSpec @era @(TxWits era)
+    roundTripArbitrary $ tripPlainFull @(TxWits era) version
     roundTripAnnEraSpec @era @(TxBody era)
-    roundTripEraSpec @era @(TxBody era)
+    roundTripArbitrary $ tripPlainFull @(TxBody era) version
     roundTripAnnEraSpec @era @(Tx era)
-    roundTripEraSpec @era @(Tx era)
+    roundTripArbitrary $ tripPlainFull @(Tx era) version
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)

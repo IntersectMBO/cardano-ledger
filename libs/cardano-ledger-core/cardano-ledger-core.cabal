@@ -178,6 +178,7 @@ library testlib
     Test.Cardano.Ledger.Core.Binary.Annotator
     Test.Cardano.Ledger.Core.Binary.CDDL
     Test.Cardano.Ledger.Core.Binary.RoundTrip
+    Test.Cardano.Ledger.Core.Binary.Twiddle
     Test.Cardano.Ledger.Core.JSON
     Test.Cardano.Ledger.Core.KeyPair
     Test.Cardano.Ledger.Core.Rational

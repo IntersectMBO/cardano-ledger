@@ -129,6 +129,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Binary.Cddl
     Test.Cardano.Ledger.Conway.Binary.Regression
     Test.Cardano.Ledger.Conway.Binary.RoundTrip
+    Test.Cardano.Ledger.Conway.Binary.Twiddle
     Test.Cardano.Ledger.Conway.BinarySpec
     Test.Cardano.Ledger.Conway.CDDL
     Test.Cardano.Ledger.Conway.CommitteeRatifySpec

@@ -18,6 +18,7 @@ import Cardano.Ledger.Plutus (Language (..))
 import Data.TreeDiff
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
+import Test.Cardano.Ledger.Alonzo.Binary.Twiddle ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Mary.Era
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)

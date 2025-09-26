@@ -20,6 +20,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
 import Data.Typeable
+import Test.Cardano.Ledger.Binary.Twiddle (Twiddle)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff ()
@@ -78,6 +79,18 @@ class
   , ToExpr (InstantStake era)
   , ToExpr (Accounts era)
   , ToExpr (AccountState era)
+  , -- Twiddle
+    Twiddle (Value era)
+  , Twiddle (CompactForm (Value era))
+  , Twiddle (TxOut era)
+  , Twiddle (TxCert era)
+  , Twiddle (PParams era)
+  , Twiddle (PParamsUpdate era)
+  , Twiddle (Script era)
+  , Twiddle (TxAuxData era)
+  , Twiddle (TxWits era)
+  , Twiddle (TxBody era)
+  , Twiddle (Tx era)
   , -- Un-annotated DecCBOR instances
     DecCBOR (Script era)
   , DecCBOR (TxAuxData era)

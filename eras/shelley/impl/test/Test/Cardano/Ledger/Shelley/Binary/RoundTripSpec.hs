@@ -9,6 +9,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
+import Test.Cardano.Ledger.Core.Binary.Twiddle ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()

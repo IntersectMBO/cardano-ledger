@@ -12,6 +12,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Plutus (emptyCostModels)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
+import Test.Cardano.Ledger.Allegra.Binary.Twiddle ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Era
 

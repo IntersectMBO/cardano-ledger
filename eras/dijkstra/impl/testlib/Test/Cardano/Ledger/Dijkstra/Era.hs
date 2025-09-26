@@ -13,6 +13,7 @@ import Data.Coerce
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.Binary.Twiddle ()
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 

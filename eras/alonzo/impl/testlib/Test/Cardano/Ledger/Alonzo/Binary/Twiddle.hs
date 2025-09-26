@@ -4,63 +4,37 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Binary.Twiddle () where
+module Test.Cardano.Ledger.Alonzo.Binary.Twiddle (
+  module Test.Cardano.Ledger.Mary.Binary.Twiddle,
+) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), TxBody (..))
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits)
 import Cardano.Ledger.Mary.Value (MultiAsset)
-import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
+import Cardano.Ledger.Plutus.Data (BinaryData)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
-import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val)
 import Codec.CBOR.Term (Term (..))
 import Data.Maybe (catMaybes)
-import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Twiddle
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Mary.Binary.Twiddle
 
 instance (Era era, Val (Value era)) => Twiddle (AlonzoTxOut era) where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle SlotNo where
-  twiddle v = twiddle v . toTerm v
-
-instance Era era => Twiddle (ShelleyTxCert era) where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle Withdrawals where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle TxAuxDataHash where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle (Update AlonzoEra) where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle MultiAsset where
-  twiddle v = twiddle v . encodingToTerm v . encCBOR
+  twiddle = twiddleTerm
 
 instance Twiddle ScriptIntegrityHash where
-  twiddle v = twiddle v . toTerm v
-
-instance Typeable t => Twiddle (KeyHash t) where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle Network where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle TxIn where
-  twiddle v = twiddle v . toTerm v
-
-instance Twiddle Coin where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle (TxBody AlonzoEra) where
   twiddle v txBody = do
@@ -102,11 +76,26 @@ instance Twiddle (TxBody AlonzoEra) where
     fields' <- shuffle fields
     pure $ mp fields'
 
-instance Twiddle (AlonzoScript AlonzoEra) where
-  twiddle v = twiddle v . toTerm v
+instance AlonzoEraScript era => Twiddle (AlonzoScript era) where
+  twiddle = twiddleTerm
 
 instance Twiddle (Data AlonzoEra) where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle (BinaryData AlonzoEra) where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
+
+instance Twiddle (PParams AlonzoEra) where
+  twiddle = twiddleTerm
+
+instance Twiddle (PParamsUpdate AlonzoEra) where
+  twiddle = twiddleTerm
+
+instance Era era => Twiddle (AlonzoTxAuxData era) where
+  twiddle = twiddleTerm
+
+instance Era era => Twiddle (AlonzoTxWits era) where
+  twiddle = twiddleTerm
+
+instance Twiddle (Tx AlonzoEra) where
+  twiddle = twiddleTerm

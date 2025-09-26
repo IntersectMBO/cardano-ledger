@@ -4,7 +4,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Babbage.Binary.Twiddle () where
+module Test.Cardano.Ledger.Babbage.Binary.Twiddle (
+  module Test.Cardano.Ledger.Alonzo.Binary.Twiddle,
+) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
@@ -14,17 +16,16 @@ import Cardano.Ledger.Binary (Sized, Term (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Data.Maybe (catMaybes)
-import Test.Cardano.Ledger.Alonzo.Binary.Twiddle ()
-import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
+import Test.Cardano.Ledger.Alonzo.Binary.Twiddle
 import Test.Cardano.Ledger.Common
 
 instance EraPParams era => Twiddle (Update era) where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle a => Twiddle (Sized a)
 
 instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
-  twiddle v = twiddle v . toTerm v
+  twiddle = twiddleTerm
 
 instance Twiddle (TxBody BabbageEra) where
   twiddle v txBody = do
@@ -71,3 +72,12 @@ instance Twiddle (TxBody BabbageEra) where
               ]
     fields' <- shuffle fields
     pure $ mp fields'
+
+instance Twiddle (PParams BabbageEra) where
+  twiddle = twiddleTerm
+
+instance Twiddle (PParamsUpdate BabbageEra) where
+  twiddle = twiddleTerm
+
+instance Twiddle (Tx BabbageEra) where
+  twiddle = twiddleTerm
