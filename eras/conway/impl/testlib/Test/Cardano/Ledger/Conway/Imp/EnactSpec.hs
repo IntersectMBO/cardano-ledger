@@ -20,11 +20,10 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
+import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
 import Control.Monad.Writer (listen)
-import Control.State.Transition.Extended (STS (..))
 import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -41,20 +40,13 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
-import Type.Reflection (Typeable)
 
 spec ::
   forall era.
   ( ConwayEraImp era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
@@ -68,14 +60,7 @@ spec = do
   pparamPredictionSpec
 
 treasuryWithdrawalsSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
@@ -210,9 +195,8 @@ hardForkInitiationSpec ::
   forall era.
   ( ConwayEraImp era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationSpec =
@@ -248,8 +232,7 @@ hardForkInitiationSpec =
       & listen
       >>= expectHardForkEvents . snd
         <*> pure
-          [ SomeSTSEvent @era @"TICK" . injectEvent $
-              HardForkEvent (ConwayHardForkEvent nextProtVer)
+          [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
 
     getProtVer `shouldReturn` nextProtVer
@@ -258,9 +241,8 @@ hardForkInitiationNoDRepsSpec ::
   forall era.
   ( ConwayEraImp era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationNoDRepsSpec =
@@ -286,8 +268,7 @@ hardForkInitiationNoDRepsSpec =
       & listen
       >>= expectHardForkEvents . snd
         <*> pure
-          [ SomeSTSEvent @era @"TICK" . injectEvent $
-              HardForkEvent (ConwayHardForkEvent nextProtVer)
+          [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
     getProtVer `shouldReturn` nextProtVer
 
@@ -357,9 +338,7 @@ noConfidenceSpec =
     assertNoCommittee
 
 constitutionSpec ::
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   it "Constitution" $ do
@@ -428,12 +407,7 @@ constitutionSpec =
         enactState <- getEnactState
         rsEnactState pulserRatifyState `shouldBe` enactState
 
-actionPrioritySpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+actionPrioritySpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 actionPrioritySpec =
   describe "Competing proposals" $ do
     it "higher action priority wins" $ do
@@ -542,13 +516,11 @@ actionPrioritySpec =
 expectHardForkEvents ::
   forall era.
   ( ConwayEraImp era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   ) =>
-  [SomeSTSEvent era] ->
-  [SomeSTSEvent era] ->
-  ImpTestM era ()
+  [SomeSTSEvent era] -> [SomeSTSEvent era] -> ImpTestM era ()
 expectHardForkEvents actual expected =
   filter isHardForkEvent actual `shouldBeExpr` expected
   where
@@ -559,11 +531,7 @@ expectHardForkEvents actual expected =
           True
       | otherwise = False
 
-committeeSpec ::
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+committeeSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 committeeSpec =
   describe "Committee enactment" $ do
     it "Enact UpdateCommitee with lengthy lifetime" $ do

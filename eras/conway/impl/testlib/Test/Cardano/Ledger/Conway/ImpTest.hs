@@ -141,10 +141,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  Inject,
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -164,10 +165,17 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
+  ConwayBbodyPredFailure,
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
+  ConwayEpochEvent,
+  ConwayGovCertPredFailure,
+  ConwayGovPredFailure,
+  ConwayHardForkEvent,
   ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure,
+  ConwayUtxowPredFailure,
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -181,6 +189,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
@@ -199,7 +208,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..), (<->))
@@ -219,6 +230,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Tree
+import Data.Typeable (Typeable)
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
@@ -334,16 +346,32 @@ instance AlonzoEraImp ConwayEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
 
+instance BabbageEraImp ConwayEra
+
 class
-  ( AlonzoEraImp era
+  ( BabbageEraImp era
   , ConwayEraTest era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
-  , NativeScript era ~ Timelock era
-  , GovState era ~ ConwayGovState era
+  , NFData (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , InjectRuleEvent "TICK" ConwayHardForkEvent era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , Inject (ConwayContextError era) (ContextError era)
   ) =>
   ConwayEraImp era
 
@@ -398,8 +426,8 @@ unRegisterDRep drep = do
 genUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -416,8 +444,8 @@ genUnRegTxCert stakingCredential = do
 genRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -1646,7 +1674,7 @@ mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
   nes <- getsNES id
   let
     curEpochNo = nes ^. nesELL
-    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    rootCommittee = nes ^. newEpochStateGovStateL . proposalsGovStateL . pRootsL . grCommitteeL
     parent = fromMaybe (prRoot rootCommittee) mParent
     newCommitteMembers =
       Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]

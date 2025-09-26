@@ -44,9 +44,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do

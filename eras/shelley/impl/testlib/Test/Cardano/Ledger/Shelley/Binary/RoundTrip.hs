@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
@@ -21,39 +20,12 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
+import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 
 roundTripShelleyCommonSpec ::
   forall era.
-  ( EraTx era
-  , EraGov era
-  , EraStake era
-  , Eq (StashedAVVMAddresses era)
-  , Show (StashedAVVMAddresses era)
-  , EncCBOR (StashedAVVMAddresses era)
-  , DecCBOR (StashedAVVMAddresses era)
-  , Arbitrary (StashedAVVMAddresses era)
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxCert era)
-  , Arbitrary (TxWits era)
-  , Arbitrary (TxAuxData era)
-  , Arbitrary (Value era)
-  , Arbitrary (CompactForm (Value era))
-  , Arbitrary (Script era)
-  , Arbitrary (GovState era)
-  , Arbitrary (PParams era)
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (InstantStake era)
-  , Arbitrary (Accounts era)
+  ( ShelleyEraTest era
   , RuleListEra era
-  , EraCertState era
-  , Arbitrary (CertState era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
   ) =>
   Spec
 roundTripShelleyCommonSpec = do

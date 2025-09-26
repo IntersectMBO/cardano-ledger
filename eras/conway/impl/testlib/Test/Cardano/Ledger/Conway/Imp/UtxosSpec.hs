@@ -51,14 +51,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   govPolicySpec
@@ -83,12 +76,7 @@ spec = do
 
 datumAndReferenceInputsSpec ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , ConwayEraImp era
-  , Inject (ConwayContextError era) (ContextError era)
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 datumAndReferenceInputsSpec = do
   it "can use reference scripts" $ do
@@ -205,11 +193,7 @@ datumAndReferenceInputsSpec = do
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , Inject (ConwayContextError era) (ContextError era)
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayFeaturesPlutusV1V2FailureSpec = do
   describe "Conway features fail in Plutusdescribe v1 and v2" $ do
@@ -452,10 +436,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 
 govPolicySpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 govPolicySpec = do
   describe "Gov policy scripts" $ do
@@ -534,13 +515,7 @@ govPolicySpec = do
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
-costModelsSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+costModelsSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap
@@ -679,9 +654,8 @@ setupRefTx lang = do
 
 testPlutusV1V2Failure ::
   forall era a.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , HasCallStack
+  ( HasCallStack
+  , ConwayEraImp era
   ) =>
   ScriptHash ->
   a ->

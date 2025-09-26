@@ -48,9 +48,7 @@ import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Register stake credential" $ do
@@ -720,12 +718,7 @@ spec = do
       impAnn (show cred <> " expected to not have their vote delegated") $
         expectNothingExpr (lookupDRepDelegation cred accounts)
 
-conwayEraSpecificSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
   describe "Register stake credential" $ do
     it "Without any deposit" $ do

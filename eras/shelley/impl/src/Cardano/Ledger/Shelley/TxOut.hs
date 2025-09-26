@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -49,6 +50,7 @@ import Control.DeepSeq (NFData (rnf))
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Maybe (fromMaybe)
 import Data.MemPack
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -57,6 +59,7 @@ data ShelleyTxOut era = TxOutCompact
   { txOutCompactAddr :: {-# UNPACK #-} !CompactAddr
   , txOutCompactValue :: !(CompactForm (Value era))
   }
+  deriving (Generic)
 
 -- | This instance uses a zero Tag for forward compatibility in binary representation with TxOut
 -- instances for future eras

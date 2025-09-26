@@ -20,6 +20,7 @@ import Data.Coerce
 import Lens.Micro
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
