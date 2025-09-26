@@ -8,12 +8,6 @@
 
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowPredFailure,
- )
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
@@ -29,24 +23,10 @@ import Test.Cardano.Ledger.Alonzo.ImpTest
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
+import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , EraSpecificSpec era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
-  , Inject (BabbageContextError era) (ContextError era)
-  ) =>
-  Spec
+spec :: forall era. (BabbageEraImp era, EraSpecificSpec era) => Spec
 spec = do
   AlonzoImp.spec @era
   withEachEraVersion @era $

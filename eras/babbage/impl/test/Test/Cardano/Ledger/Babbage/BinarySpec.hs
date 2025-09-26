@@ -9,7 +9,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Babbage
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
+import Test.Cardano.Ledger.Babbage.Era ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary as Binary (

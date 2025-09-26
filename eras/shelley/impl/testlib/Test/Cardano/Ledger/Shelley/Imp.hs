@@ -7,13 +7,8 @@
 
 module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
+import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
@@ -27,9 +22,6 @@ spec ::
   forall era.
   ( ShelleyEraImp era
   , EraSpecificSpec era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   ) =>
   Spec
 spec = do

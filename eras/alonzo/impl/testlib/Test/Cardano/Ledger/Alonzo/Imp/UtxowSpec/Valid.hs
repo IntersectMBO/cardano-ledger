@@ -15,9 +15,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
  )
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxosPredFailure,
- )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (Globals (networkId), StrictMaybe (..), inject, natVersion)
@@ -47,12 +44,7 @@ import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Valid transactions" $ do
   it "Non-script output with datum" $ do
     -- Attach a datum (hash) to a non-script output and then spend it.
@@ -134,11 +126,7 @@ spec = describe "Valid transactions" $ do
 
 alonzoEraSpecificSpec ::
   forall era.
-  ( AlonzoEraImp era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
+  (AlonzoEraImp era, ShelleyEraTxCert era) =>
   SpecWith (ImpInit (LedgerSpec era))
 alonzoEraSpecificSpec = do
   forM_ (eraLanguages @era) $ \lang ->

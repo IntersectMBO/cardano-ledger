@@ -135,9 +135,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  Inject,
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -156,10 +158,17 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
+  ConwayBbodyPredFailure,
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
+  ConwayEpochEvent,
+  ConwayGovCertPredFailure,
+  ConwayGovPredFailure,
+  ConwayHardForkEvent,
   ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure,
+  ConwayUtxowPredFailure,
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -173,7 +182,8 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
+import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -191,7 +201,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..), (<->))
@@ -211,6 +223,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Tree
+import Data.Typeable (Typeable)
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
 import Prettyprinter (align, hsep, viaShow, vsep)
@@ -327,8 +340,10 @@ instance AlonzoEraImp ConwayEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
 
+instance BabbageEraImp ConwayEra
+
 class
-  ( AlonzoEraImp era
+  ( BabbageEraImp era
   , ConwayEraTest era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
@@ -390,8 +405,8 @@ unRegisterDRep drep = do
 conwayGenUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -408,8 +423,8 @@ conwayGenUnRegTxCert stakingCredential = do
 conwayGenRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -1621,7 +1636,7 @@ mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
   nes <- getsNES id
   let
     curEpochNo = nes ^. nesELL
-    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    rootCommittee = nes ^. newEpochStateGovStateL . proposalsGovStateL . pRootsL . grCommitteeL
     parent = fromMaybe (prRoot rootCommittee) mParent
     newCommitteMembers =
       Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]

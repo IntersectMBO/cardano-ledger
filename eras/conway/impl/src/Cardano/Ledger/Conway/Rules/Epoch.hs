@@ -428,3 +428,6 @@ updateCommitteeState committee (CommitteeState creds) =
   CommitteeState $ Map.intersection creds members
   where
     members = foldMap' committeeMembers committee
+
+instance InjectRuleEvent "EPOCH" ConwayHardForkEvent ConwayEra where
+  injectEvent = HardForkEvent

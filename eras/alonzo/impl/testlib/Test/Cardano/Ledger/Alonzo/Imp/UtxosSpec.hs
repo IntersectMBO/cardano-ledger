@@ -58,12 +58,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   it
     "transaction validity interval has closed upper bound when protocol version < 9 and open otherwise"
