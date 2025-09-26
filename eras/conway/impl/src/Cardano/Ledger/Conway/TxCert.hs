@@ -19,6 +19,12 @@
 {-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
+
 module Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
   ConwayTxCertUpgradeError (..),
@@ -41,6 +47,17 @@ module Cardano.Ledger.Conway.TxCert (
   conwayDRepRefundsTxCerts,
   conwayTotalDepositsTxCerts,
   conwayTotalRefundsTxCerts,
+#if __GLASGOW_HASKELL__ >= 914
+  data RegDepositTxCert,
+  data UnRegDepositTxCert,
+  data DelegTxCert,
+  data RegDepositDelegTxCert,
+  data AuthCommitteeHotKeyTxCert,
+  data ResignCommitteeColdTxCert,
+  data RegDRepTxCert,
+  data UnRegDRepTxCert,
+  data UpdateDRepTxCert,
+#else
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -50,6 +67,7 @@ module Cardano.Ledger.Conway.TxCert (
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
   pattern UpdateDRepTxCert,
+#endif
 ) where
 
 import Cardano.Ledger.Babbage.Core

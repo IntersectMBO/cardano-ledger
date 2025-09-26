@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,6 +10,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 module Test.Cardano.Ledger.Binary.Twiddle (
   Twiddler (..),

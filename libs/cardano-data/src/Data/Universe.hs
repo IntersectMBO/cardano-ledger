@@ -16,6 +16,12 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
+
 -- | The idea is to create a world of Haskell types, called a Universe. Then to
 --   define a 'class' whose methods are only applicable to that set of types. We define
 --   a closed set by defining an indexed type constructor Rep. If (Singleton Rep), then it must
@@ -44,7 +50,11 @@ module Data.Universe (
 
 import Data.Kind (Type)
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+#if __GLASGOW_HASKELL__ < 914
 import Type.Reflection (TypeRep, pattern App, pattern Con)
+#else
+import Type.Reflection (TypeRep, data App, data Con)
+#endif
 
 -- ==================================================
 

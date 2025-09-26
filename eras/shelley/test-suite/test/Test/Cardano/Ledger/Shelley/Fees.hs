@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -33,17 +34,28 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
+#if __GLASGOW_HASKELL__ >= 914
+  data DelegStakeTxCert,
+  data RegTxCert,
+  data UnRegTxCert,
+#else
   pattern DelegStakeTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
+#endif
  )
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,

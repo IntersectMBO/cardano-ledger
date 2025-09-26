@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -15,6 +16,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
+
+#if __GLASGOW_HASKELL__ >= 914
+-- The `ghc-9.14` alpha release has what looks like a bug;
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/26381
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+#endif
 
 -- | How to compute the reward update compuation. Also, how to spread the
 --     compuation over many blocks, once the chain reaches a stability point.
