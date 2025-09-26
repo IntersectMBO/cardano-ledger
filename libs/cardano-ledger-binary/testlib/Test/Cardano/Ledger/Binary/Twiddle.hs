@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -36,7 +37,9 @@ import Cardano.Ledger.Binary (
   decodeFull,
   encodeTerm,
   getDecoderVersion,
+  natVersion,
   serialize,
+  setTag,
  )
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
@@ -58,7 +61,7 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, shuffle, (===))
+import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, (===))
 
 data Twiddler a = Twiddler
   { twiddlerVersion :: !Version
@@ -156,13 +159,25 @@ instance Twiddle a => Twiddle (Maybe a) where
 instance Twiddle a => Twiddle [a] where
   twiddle = liftTwiddle twiddle
 
+twiddleMapList :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen [(Term, Term)]
+twiddleMapList f g m = traverse (bimapM f g) $ Map.toList m
+
+twiddleMapIndef :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen Term
+twiddleMapIndef f g m = TMapI <$> twiddleMapList f g m
+
+twiddleMapDef :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen Term
+twiddleMapDef f g m = TMap <$> twiddleMapList f g m
+
 instance (Twiddle k, Twiddle v) => Twiddle (Map k v) where
-  twiddle v m = do
-    -- Elements of a map do not have to be in a specific order so we shuffle them
-    m' <- shuffle $ Map.toList m
-    m'' <- traverse (bimapM (twiddle v) (twiddle v)) m'
-    f <- elements [TMap, TMapI]
-    pure $ f m''
+  -- TODO do we allow shuffled maps?
+  -- TODO do we allow duplicates?
+  twiddle v m
+    | v >= natVersion @2 =
+        oneof
+          [ twiddleMapDef (twiddle v) (twiddle v) m
+          , twiddleMapIndef (twiddle v) (twiddle v) m
+          ]
+    | otherwise = twiddleMapDef (twiddle v) (twiddle v) m
 
 instance Twiddle ByteString where
   twiddle _ bs = do
@@ -248,26 +263,44 @@ instance Twiddle Term where
 class Twiddle1 f where
   liftTwiddle :: (Version -> a -> Gen Term) -> Version -> f a -> Gen Term
 
+twiddleListIndef :: (a -> Gen Term) -> [a] -> Gen Term
+twiddleListIndef f l = TListI <$> traverse f l
+
+twiddleListDef :: (a -> Gen Term) -> [a] -> Gen Term
+twiddleListDef f l = TList <$> traverse f l
+
 instance Twiddle1 [] where
-  liftTwiddle f v l = do
-    lt <- elements [TList, TListI]
-    l' <- traverse (f v) l
-    pure $ lt l'
+  liftTwiddle f v l
+    | v >= natVersion @2 = oneof [twiddleListIndef (f v) l, twiddleListDef (f v) l]
+    | otherwise = twiddleListIndef (f v) l
 
 liftTwiddleViaList :: Foldable t => (Version -> a -> Gen Term) -> Version -> t a -> Gen Term
 liftTwiddleViaList f v x = liftTwiddle f v $ toList x
 
 instance Twiddle1 Maybe where
-  liftTwiddle = liftTwiddleViaList
+  liftTwiddle f v x
+    | v >= natVersion @2 = liftTwiddleViaList f v x
+    | otherwise = twiddleListDef (f v) $ toList x
 
 instance Twiddle1 StrictMaybe where
   liftTwiddle = liftTwiddleViaList
 
 instance Twiddle1 Ratio where
-  liftTwiddle f v x = liftTwiddle f v [numerator x, denominator x]
+  -- TODO handle version >= 9
+  liftTwiddle f v x
+    | v >= natVersion @2 = liftTwiddle f v ratioList
+    | otherwise = twiddleListDef (f v) ratioList
+    where
+      ratioList = [numerator x, denominator x]
+
+termSetTag :: Term -> Term
+termSetTag = TTagged (fromIntegral @Word @Word64 setTag)
 
 instance Twiddle1 Set where
-  liftTwiddle = liftTwiddleViaList
+  -- TODO add duplicates when version >= 9
+  liftTwiddle f v l
+    | v >= natVersion @2 = termSetTag <$> liftTwiddleViaList f v l
+    | otherwise = termSetTag <$> twiddleListDef (f v) (toList l)
 
 instance Twiddle1 Seq where
   liftTwiddle = liftTwiddleViaList
