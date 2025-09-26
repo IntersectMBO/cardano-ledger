@@ -89,6 +89,7 @@ library testlib
     Test.Cardano.Ledger.Binary.Arbitrary
     Test.Cardano.Ledger.Binary.Cddl
     Test.Cardano.Ledger.Binary.Cuddle
+    Test.Cardano.Ledger.Binary.ImpTest
     Test.Cardano.Ledger.Binary.Plain.Golden
     Test.Cardano.Ledger.Binary.Plain.RoundTrip
     Test.Cardano.Ledger.Binary.Random
@@ -137,6 +138,7 @@ library testlib
     prettyprinter-ansi-terminal,
     primitive,
     quickcheck-instances >=0.3.32,
+    quickcheck-transformer,
     random >=1.2,
     tasty-hunit,
     text,
@@ -194,6 +196,7 @@ test-suite tests
     testlib,
     text,
     time,
+    tree-diff,
     vector,
     vector-map,
 

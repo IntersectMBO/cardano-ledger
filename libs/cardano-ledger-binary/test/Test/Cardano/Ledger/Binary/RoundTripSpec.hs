@@ -67,6 +67,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tagged (Tagged (Tagged))
 import Data.Time.Clock (UTCTime)
+import Data.TreeDiff (ToExpr)
 import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
@@ -75,7 +76,14 @@ import qualified Data.Vector.Unboxed as VU
 import Data.Word
 import Numeric.Natural
 import Test.Cardano.Ledger.Binary.Arbitrary ()
+import Test.Cardano.Ledger.Binary.ImpTest (
+  RoundTripEnv,
+  roundTripArbitrary,
+  tripPlainBasic,
+  tripPlainFull,
+ )
 import Test.Cardano.Ledger.Binary.RoundTrip
+import Test.Cardano.Ledger.Binary.Twiddle (Twiddle)
 import Test.Hspec
 import Test.QuickCheck
 
@@ -99,51 +107,55 @@ instance EncCBOR SubBytes where
   encCBOR (SubBytes x (Annotated y ybs) z) =
     encCBOR x <> (if x then encCBOR y else encodePreEncoded (BSL.toStrict ybs)) <> encCBOR z
 
+tripBinaryFull :: (Twiddle a, EncCBOR a, DecCBOR a, ToExpr a) => RoundTripEnv a
+tripBinaryFull = tripPlainFull $ natVersion @0
+
+tripBinaryBasic :: (EncCBOR a, DecCBOR a) => RoundTripEnv a
+tripBinaryBasic = tripPlainBasic $ natVersion @0
+
 spec :: Spec
 spec = do
   describe "RoundTrip" $ do
-    roundTripSpec @() cborTrip
-    roundTripSpec @Bool cborTrip
-    roundTripSpec @Integer cborTrip
-    roundTripSpec @Natural cborTrip
-    roundTripSpec @Word cborTrip
-    roundTripSpec @Word8 cborTrip
-    roundTripSpec @Word16 cborTrip
-    roundTripSpec @Word32 cborTrip
-    roundTripSpec @Word64 cborTrip
-    roundTripSpec @Int cborTrip
-    roundTripSpec @Int8 cborTrip
-    roundTripSpec @Int16 cborTrip
-    roundTripSpec @Int32 cborTrip
-    roundTripSpec @Int64 cborTrip
-    roundTripSpec @Float cborTrip
-    roundTripSpec @Double cborTrip
-    roundTripSpec @Rational cborTrip
-    roundTripSpec @Nano cborTrip
-    roundTripSpec @Pico cborTrip
-    roundTripSpec @UTCTime cborTrip
-    roundTripSpec @IPv4 cborTrip
-    roundTripSpec @IPv6 cborTrip
-    roundTripSpec @(Maybe Integer) cborTrip
-    roundTripSpec @(StrictMaybe Integer) cborTrip
-    roundTripSpec @[Integer] cborTrip
-    roundTripSpec @(V.Vector Integer) cborTrip
-    roundTripSpec @(VS.Vector Int16) cborTrip
-    roundTripSpec @(VP.Vector Int) cborTrip
-    roundTripSpec @(VU.Vector (Bool, Word)) cborTrip
-    roundTripSpec @(Set.Set Int) cborTrip
-    roundTripSpec @(Map.Map Integer Int) cborTrip
-    roundTripSpec @(Seq.Seq Int) cborTrip
-    roundTripSpec @(SSeq.StrictSeq Int) cborTrip
-    roundTripSpec @(VMap.VMap VMap.VB VMap.VS Integer Int) cborTrip
-    roundTripSpec @Prim.ByteArray cborTrip
-    roundTripSpec @ByteArray cborTrip
-    roundTripSpec @SlicedByteArray cborTrip
-    roundTripSpec @SubBytes cborTrip
-    roundTripSpec @(Maybe Integer) $
-      mkTrip (encodeNullMaybe encCBOR) (decodeNullMaybe decCBOR)
-    roundTripSpec @(StrictMaybe Integer) $
-      mkTrip (encodeNullStrictMaybe encCBOR) (decodeNullStrictMaybe decCBOR)
+    roundTripArbitrary @() tripBinaryFull
+    roundTripArbitrary @Bool tripBinaryFull
+    roundTripArbitrary @Integer tripBinaryFull
+    roundTripArbitrary @Natural tripBinaryFull
+    roundTripArbitrary @Word tripBinaryFull
+    roundTripArbitrary @Word8 tripBinaryFull
+    roundTripArbitrary @Word16 tripBinaryFull
+    roundTripArbitrary @Word32 tripBinaryFull
+    roundTripArbitrary @Word64 tripBinaryFull
+    roundTripArbitrary @Int tripBinaryFull
+    roundTripArbitrary @Int8 tripBinaryFull
+    roundTripArbitrary @Int16 tripBinaryFull
+    roundTripArbitrary @Int32 tripBinaryFull
+    roundTripArbitrary @Int64 tripBinaryFull
+    roundTripArbitrary @Float tripBinaryFull
+    roundTripArbitrary @Double tripBinaryFull
+    roundTripArbitrary @Rational tripBinaryFull
+    roundTripArbitrary @Nano tripBinaryBasic
+    roundTripArbitrary @Pico tripBinaryBasic
+    roundTripArbitrary @UTCTime tripBinaryBasic
+    roundTripArbitrary @IPv4 tripBinaryBasic
+    roundTripArbitrary @IPv6 tripBinaryBasic
+    roundTripArbitrary @(Maybe Integer) tripBinaryFull
+    roundTripArbitrary @(StrictMaybe Integer) tripBinaryBasic
+    roundTripArbitrary @[Integer] tripBinaryFull
+    roundTripArbitrary @(V.Vector Integer) tripBinaryBasic
+    roundTripArbitrary @(VS.Vector Int16) tripBinaryBasic
+    roundTripArbitrary @(VP.Vector Int) tripBinaryBasic
+    roundTripArbitrary @(VU.Vector (Bool, Word)) tripBinaryBasic
+    roundTripArbitrary @(Set.Set Int) tripBinaryFull
+    roundTripArbitrary @(Map.Map Integer Int) tripBinaryFull
+    roundTripArbitrary @(Seq.Seq Int) tripBinaryFull
+    roundTripArbitrary @(SSeq.StrictSeq Int) tripBinaryFull
+    roundTripArbitrary @(VMap.VMap VMap.VB VMap.VS Integer Int) tripBinaryBasic
+    roundTripArbitrary @Prim.ByteArray tripBinaryBasic
+    roundTripArbitrary @ByteArray tripBinaryBasic
+    roundTripArbitrary @SlicedByteArray tripBinaryBasic
+    roundTripArbitrary @SubBytes tripBinaryBasic
+    roundTripArbitrary @(Maybe Integer) tripBinaryBasic
+    roundTripArbitrary @(StrictMaybe Integer) tripBinaryBasic
     describe "Slotting" $
       describe "Mock" $ do
         roundTripSpec @BlockNo cborTrip

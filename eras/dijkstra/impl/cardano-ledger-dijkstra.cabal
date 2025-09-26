@@ -109,6 +109,7 @@ library testlib
   exposed-modules:
     Test.Cardano.Ledger.Dijkstra.Arbitrary
     Test.Cardano.Ledger.Dijkstra.Binary.Annotator
+    Test.Cardano.Ledger.Dijkstra.Binary.Twiddle
     Test.Cardano.Ledger.Dijkstra.Binary.Cddl
     Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
     Test.Cardano.Ledger.Dijkstra.CDDL
@@ -133,7 +134,7 @@ library testlib
     base,
     bytestring,
     cardano-data,
-    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-alonzo:{testlib},
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},

@@ -12,12 +12,10 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Core (AlonzoEraScript (..), AsIx)
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
@@ -40,14 +38,7 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra, roundTripEraSpec)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
-  , Arbitrary (PlutusPurpose AsIx era)
   , RuleListEra era
-  , StashedAVVMAddresses era ~ ()
-  , SafeToHash (TxWits era)
   ) =>
   Spec
 spec = do

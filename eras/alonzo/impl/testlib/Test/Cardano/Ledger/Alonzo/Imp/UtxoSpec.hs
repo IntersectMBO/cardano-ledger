@@ -26,12 +26,7 @@ import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   it "Wrong network ID" $ do
     submitFailingTx

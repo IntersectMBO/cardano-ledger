@@ -31,7 +31,7 @@ spec = do
     roundTripAlonzoCommonSpec @AlonzoEra
     -- AlonzoGenesis only makes sense in Alonzo era
     roundTripEraSpec @AlonzoEra @AlonzoGenesis
-    -- TOOD:  https://github.com/IntersectMBO/cardano-ledger/issues/3025
+    -- TODO:  https://github.com/IntersectMBO/cardano-ledger/issues/3025
     xdescribe "Twiddled" $ do
       prop "Script" $ roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
       prop "Data" $ roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))

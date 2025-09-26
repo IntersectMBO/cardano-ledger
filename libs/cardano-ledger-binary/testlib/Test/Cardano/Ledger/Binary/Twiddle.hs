@@ -1,24 +1,31 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Binary.Twiddle (
   Twiddler (..),
   Twiddle (..),
+  Twiddle1 (..),
+  -- Utils
   encodingToTerm,
   toTwiddler,
   toTerm,
-  twiddleInvariantProp,
   emptyOrNothing,
   twiddleStrictMaybe,
+  twiddleTerm,
+  -- Testing
+  twiddleInvariantProp,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -30,16 +37,19 @@ import Cardano.Ledger.Binary (
   decodeFull,
   encodeTerm,
   getDecoderVersion,
+  natVersion,
   serialize,
+  setTag,
  )
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Foldable (toList)
-import Data.Int (Int64)
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Ratio (Ratio, denominator, numerator)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -47,15 +57,38 @@ import Data.Text (Text)
 import qualified Data.Text.Lazy as T
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics
+import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, shuffle, (===))
+import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, oneof, (===))
 
 data Twiddler a = Twiddler
   { twiddlerVersion :: !Version
   , twiddlerType :: !a
   , twiddlerTerm :: Term
   }
+
+instance (Twiddle a, Arbitrary a, EncCBOR a) => Arbitrary (Twiddler a) where
+  arbitrary = do
+    x <- arbitrary
+    v <- arbitrary
+    enc' <- twiddle v x
+    pure $ Twiddler v x enc'
+
+instance Typeable a => EncCBOR (Twiddler a) where
+  encCBOR (Twiddler _ _ x) = encodeTerm x
+
+instance (EncCBOR a, DecCBOR a) => DecCBOR (Twiddler a) where
+  decCBOR = do
+    v <- getDecoderVersion
+    (\x -> Twiddler v x $ toTerm v x) <$> decCBOR
+
+instance Show a => Show (Twiddler a) where
+  show (Twiddler v x _) = "Twiddler " <> show v <> ": " <> show x
+
+instance Eq a => Eq (Twiddler a) where
+  Twiddler v1 x1 _ == Twiddler v2 x2 _ = v1 == v2 && x1 == x2
 
 gTwiddleTList :: forall a p. (Generic a, TwiddleL (Rep a p)) => Version -> a -> Gen Term
 gTwiddleTList v a = TList <$> twiddleL v (from @a @p a)
@@ -81,19 +114,70 @@ class Twiddle a where
   default twiddle :: forall p. (Generic a, TwiddleL (Rep a p)) => Version -> a -> Gen Term
   twiddle = gTwiddleTList @a @p
 
+instance Twiddle Void where
+  twiddle _ = absurd
+
+instance Twiddle () where
+  twiddle = twiddleTerm
+
+instance Twiddle Natural where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Word where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Word8 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Word16 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Word32 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Word64 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Int8 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Int16 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Int32 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle Int64 where
+  twiddle _ = twiddleIntegral
+
+instance Twiddle a => Twiddle (Ratio a) where
+  twiddle = liftTwiddle twiddle
+
+instance Twiddle a => Twiddle (Maybe a) where
+  twiddle = liftTwiddle twiddle
+
 instance Twiddle a => Twiddle [a] where
-  twiddle v l = do
-    f <- elements [TList, TListI]
-    l' <- traverse (twiddle v) l
-    pure $ f l'
+  twiddle = liftTwiddle twiddle
+
+twiddleMapList :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen [(Term, Term)]
+twiddleMapList f g m = traverse (bimapM f g) $ Map.toList m
+
+twiddleMapIndef :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen Term
+twiddleMapIndef f g m = TMapI <$> twiddleMapList f g m
+
+twiddleMapDef :: (k -> Gen Term) -> (v -> Gen Term) -> Map k v -> Gen Term
+twiddleMapDef f g m = TMap <$> twiddleMapList f g m
 
 instance (Twiddle k, Twiddle v) => Twiddle (Map k v) where
-  twiddle v m = do
-    -- Elements of a map do not have to be in a specific order so we shuffle them
-    m' <- shuffle $ Map.toList m
-    m'' <- traverse (bimapM (twiddle v) (twiddle v)) m'
-    f <- elements [TMap, TMapI]
-    pure $ f m''
+  -- TODO do we allow shuffled maps?
+  -- TODO do we allow duplicates?
+  twiddle v m
+    | v >= natVersion @2 =
+        oneof
+          [ twiddleMapDef (twiddle v) (twiddle v) m
+          , twiddleMapIndef (twiddle v) (twiddle v) m
+          ]
+    | otherwise = twiddleMapDef (twiddle v) (twiddle v) m
 
 instance Twiddle ByteString where
   twiddle _ bs = do
@@ -111,35 +195,14 @@ instance Twiddle Int where
   -- This is not possible with the CBOR AST provided by cborg
   twiddle _ = pure . TInt
 
-instance (Twiddle a, Arbitrary a, EncCBOR a) => Arbitrary (Twiddler a) where
-  arbitrary = do
-    x <- arbitrary
-    v <- arbitrary
-    enc' <- twiddle v x
-    pure $ Twiddler v x enc'
-
 instance Twiddle a => Twiddle (Set a) where
-  twiddle v = twiddle v . toList
+  twiddle = liftTwiddle twiddle
 
 instance Twiddle a => Twiddle (Seq a) where
-  twiddle v = twiddle v . toList
+  twiddle = liftTwiddle twiddle
 
 instance Twiddle a => Twiddle (StrictSeq a) where
-  twiddle v = twiddle v . toList
-
-instance Typeable a => EncCBOR (Twiddler a) where
-  encCBOR (Twiddler _ _ x) = encodeTerm x
-
-instance (EncCBOR a, DecCBOR a) => DecCBOR (Twiddler a) where
-  decCBOR = do
-    v <- getDecoderVersion
-    (\x -> Twiddler v x $ toTerm v x) <$> decCBOR
-
-instance Show a => Show (Twiddler a) where
-  show (Twiddler v x _) = "Twiddler " <> show v <> ": " <> show x
-
-instance Eq a => Eq (Twiddler a) where
-  Twiddler v1 x1 _ == Twiddler v2 x2 _ = v1 == v2 && x1 == x2
+  twiddle = liftTwiddle twiddle
 
 class TwiddleL a where
   twiddleL :: Version -> a -> Gen [Term]
@@ -169,9 +232,6 @@ instance TwiddleL (f p) => TwiddleL (M1 i c f p) where
 instance Twiddle Integer where
   twiddle _ = pure . TInteger
 
-instance Twiddle Void where
-  twiddle _ = absurd
-
 instance Twiddle Bool where
   twiddle _ = pure . TBool
 
@@ -180,9 +240,6 @@ instance Twiddle Float where
 
 instance Twiddle Double where
   twiddle _ = pure . TDouble
-
-instance Twiddle Int64 where
-  twiddle _ = pure . TInt . fromIntegral
 
 instance Twiddle Term where
   twiddle v (TInt n) = twiddle v n
@@ -203,6 +260,56 @@ instance Twiddle Term where
   twiddle v (TFloat x) = twiddle v x
   twiddle v (TDouble x) = twiddle v x
 
+class Twiddle1 f where
+  liftTwiddle :: (Version -> a -> Gen Term) -> Version -> f a -> Gen Term
+
+twiddleListIndef :: (a -> Gen Term) -> [a] -> Gen Term
+twiddleListIndef f l = TListI <$> traverse f l
+
+twiddleListDef :: (a -> Gen Term) -> [a] -> Gen Term
+twiddleListDef f l = TList <$> traverse f l
+
+instance Twiddle1 [] where
+  liftTwiddle f v l
+    | v >= natVersion @2 = oneof [twiddleListIndef (f v) l, twiddleListDef (f v) l]
+    | otherwise = twiddleListIndef (f v) l
+
+liftTwiddleViaList :: Foldable t => (Version -> a -> Gen Term) -> Version -> t a -> Gen Term
+liftTwiddleViaList f v x = liftTwiddle f v $ toList x
+
+instance Twiddle1 Maybe where
+  liftTwiddle f v x
+    | v >= natVersion @2 = liftTwiddleViaList f v x
+    | otherwise = twiddleListDef (f v) $ toList x
+
+instance Twiddle1 StrictMaybe where
+  liftTwiddle = liftTwiddleViaList
+
+instance Twiddle1 Ratio where
+  -- TODO handle version >= 9
+  liftTwiddle f v x
+    | v >= natVersion @2 = liftTwiddle f v ratioList
+    | otherwise = twiddleListDef (f v) ratioList
+    where
+      ratioList = [numerator x, denominator x]
+
+termSetTag :: Term -> Term
+termSetTag = TTagged (fromIntegral @Word @Word64 setTag)
+
+instance Twiddle1 Set where
+  -- TODO add duplicates when version >= 9
+  liftTwiddle f v l
+    | v >= natVersion @2 = termSetTag <$> liftTwiddleViaList f v l
+    | otherwise = termSetTag <$> twiddleListDef (f v) (toList l)
+
+instance Twiddle1 Seq where
+  liftTwiddle = liftTwiddleViaList
+
+instance Twiddle1 StrictSeq where
+  liftTwiddle = liftTwiddleViaList
+
+-- * Utility functions
+
 encodingToTerm :: Version -> Encoding -> Term
 encodingToTerm version enc =
   case decodeFull version (serialize version enc) of
@@ -215,14 +322,6 @@ toTerm version = encodingToTerm version . encCBOR
 -- | Wraps an arbitrary value into a `Twiddler`
 toTwiddler :: Twiddle a => Version -> a -> Gen (Twiddler a)
 toTwiddler v x = Twiddler v x <$> twiddle v x
-
--- | Function for testing the invariant of a `Twiddle` instance. For a correct
--- implementation, this property should always hold.
-twiddleInvariantProp :: forall a. Twiddle a => Version -> a -> Gen Property
-twiddleInvariantProp version x = do
-  t <- twiddle version x
-  let t' = encodingToTerm version $ encCBOR t
-  pure $ t === t'
 
 -- | Optional containers have two "empty" representations. One of
 -- them is to return an empty container and the other is to omit the field.
@@ -254,3 +353,21 @@ emptyOrNothing v x =
 twiddleStrictMaybe :: Twiddle a => Version -> StrictMaybe a -> Gen (Maybe Term)
 twiddleStrictMaybe _ SNothing = pure Nothing
 twiddleStrictMaybe v (SJust x) = Just <$> twiddle v x
+
+-- | Twiddle a value by first encoding it as a `Term` and then twiddling that
+twiddleTerm :: EncCBOR a => Version -> a -> Gen Term
+twiddleTerm v = twiddle v . toTerm v
+
+-- TODO also try with TInt if value is small enough
+twiddleIntegral :: Integral a => a -> Gen Term
+twiddleIntegral = pure . TInteger . fromIntegral
+
+-- * Testing
+
+-- | Function for testing the invariant of a `Twiddle` instance. For a correct
+-- implementation, this property should always hold.
+twiddleInvariantProp :: forall a. Twiddle a => Version -> a -> Gen Property
+twiddleInvariantProp version x = do
+  t <- twiddle version x
+  let t' = encodingToTerm version $ encCBOR t
+  pure $ t === t'

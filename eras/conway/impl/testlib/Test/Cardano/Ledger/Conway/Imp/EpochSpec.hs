@@ -42,9 +42,8 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
@@ -118,8 +117,8 @@ proposalsSpec =
         curConstitution' `shouldBe` curConstitution
 
       govState <- getsNES newEpochStateGovStateL
-      let expectedProposals = govState ^. cgsProposalsL
-          expectedPulser = govState ^. cgsDRepPulsingStateL
+      let expectedProposals = govState ^. proposalsGovStateL
+          expectedPulser = govState ^. drepPulsingStateGovStateL
       expectedEnactState <- getEnactState
 
       impAnn "EnactState reflects the submitted governance action" $ do
@@ -134,7 +133,7 @@ proposalsSpec =
       passNEpochs 2
       impAnn "Proposal gets removed after expiry" $ do
         govStateFinal <- getsNES newEpochStateGovStateL
-        let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
+        let ratifyState = extractDRepPulsingState (govStateFinal ^. drepPulsingStateGovStateL)
         rsExpired ratifyState `shouldBe` Set.singleton govActionId
   where
     submitParameterChangeTree = submitGovActionTree $ mkMinFeeUpdateGovAction >=> submitGovAction
@@ -489,7 +488,6 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
 eventsSpec ::
   forall era.
   ( ConwayEraImp era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>

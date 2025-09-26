@@ -445,14 +445,14 @@ epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepP
 epochStateDRepPulsingStateL = epochStateGovStateL . drepPulsingStateGovStateL
 
 setCompleteDRepPulsingState ::
-  GovState era ~ ConwayGovState era =>
+  ConwayEraGov era =>
   PulsingSnapshot era ->
   RatifyState era ->
   EpochState era ->
   EpochState era
 setCompleteDRepPulsingState snapshot ratifyState epochState =
   epochState
-    & epochStateGovStateL . cgsDRepPulsingStateL
+    & epochStateGovStateL . drepPulsingStateGovStateL
       .~ DRComplete snapshot ratifyState
 
 -- | Refresh the pulser in the EpochState using all the new data that is needed to compute

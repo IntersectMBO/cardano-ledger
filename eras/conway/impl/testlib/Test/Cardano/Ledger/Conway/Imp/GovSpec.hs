@@ -43,9 +43,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   constitutionSpec
@@ -83,9 +81,7 @@ unknownCostModelsSpec =
 
 predicateFailuresSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 predicateFailuresSpec =
   describe "Predicate failures" $ do
@@ -159,9 +155,7 @@ predicateFailuresSpec =
 
 hardForkSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkSpec =
   describe "HardFork" $ do
@@ -176,9 +170,7 @@ hardForkSpec =
 
 pparamUpdateSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 pparamUpdateSpec =
   describe "PParamUpdate" $ do
@@ -241,9 +233,7 @@ pparamUpdateSpec =
 
 proposalsSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec = do
   describe "Proposals" $ do
@@ -732,7 +722,7 @@ proposalsSpec = do
           checkProps l = do
             props <-
               getsNES $
-                nesEsL . epochStateGovStateL @era . cgsProposalsL . pPropsL
+                nesEsL . epochStateGovStateL @era . proposalsGovStateL . pPropsL
             fmap (pProcAnchor . gasProposalProcedure . snd) (OMap.assocList props)
               `shouldBe` fmap pProcAnchor l
         checkProps [prop0, prop1]
@@ -747,9 +737,7 @@ proposalsSpec = do
 
 votingSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
@@ -887,7 +875,7 @@ votingSpec =
             . esLStateL
             . lsUTxOStateL
             . utxosGovStateL
-            . cgsConstitutionL
+            . constitutionGovStateL
             . constitutionAnchorL
       expectNoCurrentProposals
       conAnchor `shouldNotBe` anchor
@@ -903,9 +891,7 @@ votingSpec =
 
 constitutionSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   describe "Constitution proposals" $ do
@@ -986,9 +972,7 @@ constitutionSpec =
 
 policySpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 policySpec =
   describe "Policy" $ do
@@ -1034,9 +1018,7 @@ policySpec =
 
 networkIdSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 networkIdSpec =
   describe "Network ID" $ do
@@ -1070,9 +1052,7 @@ networkIdSpec =
 
 withdrawalsSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 withdrawalsSpec =
   describe "Withdrawals" $ do
@@ -1166,9 +1146,7 @@ firstHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   ImpTestM era ()
 firstHardForkCantFollow = do
   protver0 <- getProtVer
@@ -1201,9 +1179,7 @@ secondHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   ImpTestM era ()
 secondHardForkCantFollow = do
   protver0 <- getProtVer
@@ -1223,9 +1199,7 @@ secondHardForkCantFollow = do
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
   (ccCred :| _) <- registerInitialCommittee
@@ -1264,9 +1238,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 
 bootstrapPhaseSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
   describe "Proposing and voting" $ do

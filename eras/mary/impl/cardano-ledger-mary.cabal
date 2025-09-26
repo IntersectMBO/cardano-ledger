@@ -100,6 +100,7 @@ library testlib
     Test.Cardano.Ledger.Mary.Arbitrary
     Test.Cardano.Ledger.Mary.Binary.Annotator
     Test.Cardano.Ledger.Mary.Binary.Cddl
+    Test.Cardano.Ledger.Mary.Binary.Twiddle
     Test.Cardano.Ledger.Mary.CDDL
     Test.Cardano.Ledger.Mary.Era
     Test.Cardano.Ledger.Mary.Examples
