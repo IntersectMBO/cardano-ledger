@@ -223,7 +223,7 @@ test-suite tests
     Test.Cardano.Ledger.Alonzo.BinarySpec
     Test.Cardano.Ledger.Alonzo.GoldenSpec
     Test.Cardano.Ledger.Alonzo.GoldenTranslation
-    Test.Cardano.Ledger.Alonzo.TxInfoSpec
+    Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -249,8 +249,8 @@ test-suite tests
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
-    cardano-slotting,
     cardano-strict-containers,
     containers,
+    microlens,
+    microlens-mtl,
     testlib,
-    time,

@@ -11,8 +11,8 @@ import qualified Test.Cardano.Ledger.Alonzo.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Alonzo.GoldenSpec as Golden
 import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
+import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
-import qualified Test.Cardano.Ledger.Alonzo.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -26,7 +26,6 @@ main =
       CddlSpec.spec
       roundTripJsonEraSpec @AlonzoEra
       roundTripJsonShelleyEraSpec @AlonzoEra
-      TxInfo.spec
       GoldenTranslation.tests
       Golden.spec
       describe "Imp" $ do
@@ -35,3 +34,4 @@ main =
         CostModelsSpec.spec @AlonzoEra
       describe "TxWits" $ do
         TxWitsSpec.spec @AlonzoEra
+      TxInfoImp.spec
