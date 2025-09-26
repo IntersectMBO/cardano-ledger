@@ -1,14 +1,17 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.ImpTest (
+  BabbageEraImp,
   babbageFixupTx,
   impBabbageExpectTxSuccess,
   module Test.Cardano.Ledger.Alonzo.ImpTest,
@@ -19,10 +22,13 @@ module Test.Cardano.Ledger.Babbage.ImpTest (
   submitTxWithRefInputs,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure, BabbageUtxoPredFailure)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
+import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (
   UTxO (..),
@@ -42,7 +48,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
-import Test.Cardano.Ledger.Babbage.Era ()
+import Test.Cardano.Ledger.Babbage.Era (BabbageEraTest)
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 
@@ -159,3 +165,14 @@ submitTxWithRefInputs ::
   NonEmpty TxIn ->
   ImpTestM era (Tx era)
 submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
+
+class
+  ( AlonzoEraImp era
+  , BabbageEraTest era
+  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , Inject (BabbageContextError era) (ContextError era)
+  ) =>
+  BabbageEraImp era
+
+instance BabbageEraImp BabbageEra

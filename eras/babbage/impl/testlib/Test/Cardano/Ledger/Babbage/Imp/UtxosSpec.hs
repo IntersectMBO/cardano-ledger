@@ -26,7 +26,6 @@ import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..), TxIx (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
-  InjectRuleFailure,
   eraProtVerHigh,
   eraProtVerLow,
   fromNativeScript,
@@ -49,7 +48,6 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

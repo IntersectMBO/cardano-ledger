@@ -13,9 +13,9 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Cardano.Ledger.State (PoolMetadata (..), PoolParams, ppCostL, ppMetadataL, ppVrfL, spsVrf)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -24,12 +24,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
     it "register a pool with a reward account having the wrong network id" $ do
@@ -56,12 +51,7 @@ spec = describe "POOL" $ do
         submitFailingTx tx [injectFailure $ StakePoolNotRegisteredOnKeyPOOL khNew]
 
 shelleyEraSpecificSpec ::
-  forall era.
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+  forall era. (ShelleyEraImp era, ShelleyEraTxCert era) => SpecWith (ImpInit (LedgerSpec era))
 shelleyEraSpecificSpec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
     it "register a pool with too low cost" $ do

@@ -49,14 +49,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid transactions" $ do
   it "Phase 1 script failure" $ do
     -- Script will be invalid because slot 100 will be in the future
@@ -234,11 +227,7 @@ spec = describe "Invalid transactions" $ do
 
 alonzoEraSpecificSpec ::
   forall era.
-  ( AlonzoEraImp era
-  , ShelleyEraTxCert era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  ) =>
+  (AlonzoEraImp era, ShelleyEraTxCert era) =>
   SpecWith (ImpInit (LedgerSpec era))
 alonzoEraSpecificSpec = describe "Invalid transactions" $ do
   forM_ (eraLanguages @era) $ \lang ->

@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -45,14 +44,7 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, inputsOverlapsWithRefInputs)
 
-spec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , Inject (ConwayContextError era) (ContextError era)
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Certificates" $ do
     it "Reg/UnReg collect and refund correct amounts" $ do

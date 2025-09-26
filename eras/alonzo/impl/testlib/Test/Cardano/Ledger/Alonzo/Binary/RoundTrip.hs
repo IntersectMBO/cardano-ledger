@@ -18,15 +18,11 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AsIx (..),
  )
-import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
-import Cardano.Ledger.Binary
-import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers, genNonEmptyTxDats)
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
+import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
@@ -40,33 +36,7 @@ import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
 roundTripAlonzoCommonSpec ::
   forall era.
-  ( EraTx era
-  , EraGov era
-  , EraStake era
-  , EraCertState era
-  , AlonzoEraScript era
-  , StashedAVVMAddresses era ~ ()
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxCert era)
-  , Arbitrary (TxWits era)
-  , Arbitrary (TxAuxData era)
-  , Arbitrary (Value era)
-  , Arbitrary (CompactForm (Value era))
-  , Arbitrary (Script era)
-  , Arbitrary (GovState era)
-  , Arbitrary (PlutusPurpose AsIx era)
-  , Arbitrary (PParams era)
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (CertState era)
-  , Arbitrary (InstantStake era)
-  , Arbitrary (Accounts era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  ( AlonzoEraTest era
   , RuleListEra era
   ) =>
   Spec

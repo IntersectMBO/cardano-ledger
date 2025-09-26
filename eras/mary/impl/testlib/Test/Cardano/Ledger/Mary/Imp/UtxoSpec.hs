@@ -40,7 +40,6 @@ mintBasicToken = do
 spec ::
   ( HasCallStack
   , MaryEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do

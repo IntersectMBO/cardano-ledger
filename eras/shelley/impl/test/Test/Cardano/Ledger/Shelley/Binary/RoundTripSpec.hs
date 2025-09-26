@@ -11,6 +11,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 spec :: Spec
 spec =
