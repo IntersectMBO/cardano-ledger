@@ -93,7 +93,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
-  pattern RequireSignature,
+  pattern RequireSignature, MultiSig,
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
@@ -246,12 +246,12 @@ deriving instance Show (Timelock era)
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
-upgradeMultiSig :: NativeScript ShelleyEra -> NativeScript AllegraEra
+upgradeMultiSig :: Era era => MultiSig era -> Timelock era'
 upgradeMultiSig = \case
   RequireSignature keyHash -> RequireSignature keyHash
-  RequireAllOf sigs -> RequireAllOf $ upgradeScript <$> sigs
-  RequireAnyOf sigs -> RequireAnyOf $ upgradeScript <$> sigs
-  RequireMOf n sigs -> RequireMOf n $ upgradeScript <$> sigs
+  RequireAllOf sigs -> RequireAllOf $ upgradeMultiSig <$> sigs
+  RequireAnyOf sigs -> RequireAnyOf $ upgradeMultiSig <$> sigs
+  RequireMOf n sigs -> RequireMOf n $ upgradeMultiSig <$> sigs
   _ -> error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
@@ -405,7 +405,7 @@ ltePosInfty SNothing _ = False -- ∞ > j
 ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  (AllegraEraScript era) =>
   Set.Set (KeyHash 'Witness) ->
   ValidityInterval ->
   NativeScript era ->

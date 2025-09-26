@@ -29,8 +29,11 @@ module Cardano.Ledger.Shelley.Scripts (
   evalMultiSig,
   validateMultiSig,
   nativeMultiSigTag,
-  eqMultiSigRaw,
   MultiSigRaw (..),
+  mkRequireSignatureMultiSig,
+  mkRequireAllOfMultiSig,
+  mkRequireAnyOfMultiSig,
+  mkRequireMOfMultiSig,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -93,6 +96,18 @@ data MultiSigRaw era
   deriving (Eq, Show, Generic)
   deriving anyclass (NoThunks)
 
+mkRequireSignatureMultiSig :: KeyHash 'Witness -> MultiSig era
+mkRequireSignatureMultiSig kh = MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigSignature 0 !> To kh)
+
+mkRequireAllOfMultiSig :: Era era => StrictSeq (MultiSig era) -> MultiSig era
+mkRequireAllOfMultiSig ms = MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAllOf 1 !> To ms)
+
+mkRequireAnyOfMultiSig :: Era era => StrictSeq (MultiSig era) -> MultiSig era
+mkRequireAnyOfMultiSig ms = MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAnyOf 2 !> To ms)
+
+mkRequireMOfMultiSig :: Era era => Int -> StrictSeq (MultiSig era) -> MultiSig era
+mkRequireMOfMultiSig n ms = MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigMOf 3 !> To n !> To ms)
+
 class EraScript era => ShelleyEraScript era where
   mkRequireSignature :: KeyHash 'Witness -> NativeScript era
   getRequireSignature :: NativeScript era -> Maybe (KeyHash 'Witness)
@@ -141,23 +156,19 @@ instance EraScript ShelleyEra where
   scriptPrefixTag _script = nativeMultiSigTag
 
 instance ShelleyEraScript ShelleyEra where
-  mkRequireSignature kh =
-    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigSignature 0 !> To kh)
+  mkRequireSignature = mkRequireSignatureMultiSig
   getRequireSignature (MkMultiSig (Memo (MultiSigSignature kh) _)) = Just kh
   getRequireSignature _ = Nothing
 
-  mkRequireAllOf ms =
-    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAllOf 1 !> To ms)
+  mkRequireAllOf = mkRequireAllOfMultiSig
   getRequireAllOf (MkMultiSig (Memo (MultiSigAllOf ms) _)) = Just ms
   getRequireAllOf _ = Nothing
 
-  mkRequireAnyOf ms =
-    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAnyOf 2 !> To ms)
+  mkRequireAnyOf = mkRequireAnyOfMultiSig
   getRequireAnyOf (MkMultiSig (Memo (MultiSigAnyOf ms) _)) = Just ms
   getRequireAnyOf _ = Nothing
 
-  mkRequireMOf n ms =
-    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigMOf 3 !> To n !> To ms)
+  mkRequireMOf = mkRequireMOfMultiSig
   getRequireMOf (MkMultiSig (Memo (MultiSigMOf n ms) _)) = Just (n, ms)
   getRequireMOf _ = Nothing
 

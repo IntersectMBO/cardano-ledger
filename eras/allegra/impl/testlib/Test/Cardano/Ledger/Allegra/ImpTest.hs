@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Test.Cardano.Ledger.Allegra.Era ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Imp.Common

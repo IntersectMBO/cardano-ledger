@@ -141,7 +141,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -342,7 +341,6 @@ class
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
-  , NativeScript era ~ Timelock era
   , GovState era ~ ConwayGovState era
   ) =>
   ConwayEraImp era
