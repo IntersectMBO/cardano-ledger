@@ -25,10 +25,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Withdrawals" $ do

@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Conway.Imp.BbodySpec (
   spec,
 ) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Mismatch (..), ProtVer (..), natVersion)
@@ -27,7 +26,6 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
-  Event,
   ShelleyBbodyState (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -43,20 +41,12 @@ import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellformedNoDatum)
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , ToExpr (Event (EraRule "BBODY" era))
-  , ConwayEraPParams era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2

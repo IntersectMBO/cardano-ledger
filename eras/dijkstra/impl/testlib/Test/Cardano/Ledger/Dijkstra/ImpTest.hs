@@ -65,6 +65,8 @@ instance AlonzoEraImp DijkstraEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
 
+instance BabbageEraImp DijkstraEra
+
 instance ConwayEraImp DijkstraEra
 
 class

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -23,9 +22,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "VRF Keyhashes get populated at v11 HardFork" $ do

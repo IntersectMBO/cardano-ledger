@@ -9,7 +9,6 @@
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Invalid (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -36,21 +35,12 @@ import qualified Data.Map.Strict as Map
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , Inject (BabbageContextError era) (ContextError era)
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid" $ do
   it "Inline datum with Plutus V1" $ do
     let scriptHash = withSLanguage PlutusV1 $ hashPlutusScript . alwaysSucceedsWithDatum

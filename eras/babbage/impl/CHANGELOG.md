@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.12.0.1
+## 1.12.1.0
 
-*
+* Add `BabbageEraImp`
 
 ## 1.12.0.0
 

@@ -9,26 +9,12 @@
 module Test.Cardano.Ledger.Allegra.Imp (spec) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
 import qualified Test.Cardano.Ledger.Allegra.Imp.UtxowSpec as UtxowSpec
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , EraSpecificSpec era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
-  Spec
+spec :: forall era. (ShelleyEraImp era, EraSpecificSpec era) => Spec
 spec = do
   ShelleyImp.spec @era
   describe "AllegraImpSpec" . withEachEraVersion @era $

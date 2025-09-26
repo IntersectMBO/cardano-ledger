@@ -26,7 +26,7 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), ApplyTxError (..), applyTx, mkMempoolEnv)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..), applyTx, mkMempoolEnv)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
@@ -46,12 +46,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , ApplyTx era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "TxRefScriptsSizeTooBig" $ do

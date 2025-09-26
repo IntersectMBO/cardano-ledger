@@ -39,6 +39,7 @@ import Cardano.Ledger.Conway.Governance (
   pulseDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
+import Cardano.Ledger.Conway.Rules.HardFork (ConwayHardForkEvent (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState
@@ -231,3 +232,9 @@ instance
   where
   wrapFailed = \case {}
   wrapEvent = EpochEvent
+
+instance InjectRuleEvent "NEWEPOCH" ConwayEpochEvent ConwayEra where
+  injectEvent = EpochEvent
+
+instance InjectRuleEvent "NEWEPOCH" ConwayHardForkEvent ConwayEra where
+  injectEvent = EpochEvent . injectEvent
