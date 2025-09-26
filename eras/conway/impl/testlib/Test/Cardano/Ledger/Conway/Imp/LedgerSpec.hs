@@ -81,7 +81,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -108,7 +108,7 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -155,7 +155,7 @@ spec = do
         & ppDRepActivityL .~ EpochInterval 1
     kh <- freshKeyHash
     let cred = KeyHashObj kh
-    ra <- registerStakeCredentialWithDeposit cred
+    ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -204,8 +204,8 @@ spec = do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     let cred = ScriptHashObj scriptHash
-    void $ regDelegToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
-    ra <- getRewardAccountFor cred
+    ra <- registerStakeCredential cred
+    void $ delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
@@ -280,7 +280,7 @@ spec = do
         mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
       ccHot <- registerCommitteeHotKey ccCold
       govActionId <- do
-        rewardAccount <- registerRewardAccountWithDeposit
+        rewardAccount <- registerRewardAccount
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
       let

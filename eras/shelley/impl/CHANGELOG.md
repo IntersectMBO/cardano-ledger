@@ -1,8 +1,16 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.17.0.1
+## 1.17.1.0
 
 *
+
+### `testlib`
+
+* Removed `shelleyEraSpecificSpec`
+* Added `shelleyGenUnRegTxCert`
+* Added `genUnRegTxCert` to `ShelleyEraImp`
+* Added `shelleyGenRegTxCert`
+* Added `genRegTxCert` to `ShelleyEraImp`
 
 ## 1.17.0.0
 

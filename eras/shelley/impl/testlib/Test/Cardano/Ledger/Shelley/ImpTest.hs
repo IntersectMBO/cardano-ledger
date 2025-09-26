@@ -123,6 +123,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withEachEraVersion,
   impSatisfyMNativeScripts,
   impSatisfySignature,
+  shelleyGenRegTxCert,
+  shelleyGenUnRegTxCert,
 
   -- * Logging
   Doc,
@@ -507,6 +509,10 @@ class
 
   expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
 
+  genRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
+
+  genUnRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
+
 impSatisfySignature ::
   KeyHash 'Witness ->
   Set.Set (KeyHash 'Witness) ->
@@ -800,6 +806,8 @@ instance
   fixupTx = shelleyFixupTx
   expectTxSuccess = impShelleyExpectTxSuccess
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1562,15 +1570,15 @@ registerStakeCredential ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era RewardAccount
 registerStakeCredential cred = do
+  regTxCert <- genRegTxCert cred
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert cred]
+        .~ SSeq.fromList [regTxCert]
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId cred
 
@@ -1592,12 +1600,9 @@ registerRewardAccount ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   ImpTestM era RewardAccount
-registerRewardAccount = do
-  khDelegator <- freshKeyHash
-  registerStakeCredential (KeyHashObj khDelegator)
+registerRewardAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
 
 lookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
 lookupReward = lookupBalance
@@ -1632,9 +1637,7 @@ freshPoolParams khPool rewardAccount = do
       }
 
 registerPool ::
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  ShelleyEraImp era =>
   KeyHash 'StakePool ->
   ImpTestM era ()
 registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool
@@ -1851,3 +1854,17 @@ simulateThenRestore sim = do
   result <- sim
   put snapshot
   pure result
+
+shelleyGenRegTxCert ::
+  forall era.
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+shelleyGenRegTxCert = pure . RegTxCert
+
+shelleyGenUnRegTxCert ::
+  forall era.
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+shelleyGenUnRegTxCert = pure . UnRegTxCert

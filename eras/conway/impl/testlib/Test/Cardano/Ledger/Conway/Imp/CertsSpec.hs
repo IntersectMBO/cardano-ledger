@@ -63,8 +63,8 @@ spec = do
                     ]
                 }
           )
-      (registeredRwdAccount, reward, _stakeKey2) <-
-        setupRewardAccount (Coin 1_000_000) DRepAlwaysNoConfidence
+      (registeredRwdAccount, reward, stakeKey2) <- setupRewardAccount
+      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
       let
         tx =
           mkBasicTx $
@@ -95,8 +95,10 @@ spec = do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       pv <- getsPParams @era ppProtocolVersionL
 
-      (rwdAccount1, reward1, _stakeKey1) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
-      (rwdAccount2, reward2, _stakeKey2) <- setupRewardAccount (Coin 1_000_000) DRepAlwaysAbstain
+      (rwdAccount1, reward1, stakeKey1) <- setupRewardAccount
+      (rwdAccount2, reward2, stakeKey2) <- setupRewardAccount
+      void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
+      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
       submitFailingTx
         ( mkBasicTx $
             mkBasicTxBody
@@ -127,11 +129,10 @@ spec = do
             $ Withdrawals [(rwdAccount1, zero)]
         ]
   where
-    setupRewardAccount stake dRep = do
+    setupRewardAccount = do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
-      void $ regDelegToDRep cred stake dRep
-      ra <- getRewardAccountFor cred
+      ra <- registerStakeCredential cred
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
