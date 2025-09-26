@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,8 +12,13 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   exampleDijkstraGenesis,
   DijkstraEraImp,
+  impDijkstraSatisfyNativeScript,
 ) where
 
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
@@ -29,14 +36,29 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (UpgradeDijkstraPParams (..))
+import Cardano.Ledger.Dijkstra.Scripts (
+  DijkstraNativeScript,
+  evalDijkstraNativeScript,
+  pattern RequireGuard,
+ )
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import Lens.Micro ((%~), (&))
+import qualified Data.Set as Set
+import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
+import Test.Cardano.Ledger.Imp.Common
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -49,7 +71,7 @@ instance ShelleyEraImp DijkstraEra where
         committeeMembersL
           %~ fmap (const $ addEpochInterval (impEraStartEpochNo @DijkstraEra) (EpochInterval 15))
 
-  impSatisfyNativeScript = impAllegraSatisfyNativeScript
+  impSatisfyNativeScript = impDijkstraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
 
@@ -102,3 +124,33 @@ exampleDijkstraGenesis =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           }
     }
+
+impDijkstraSatisfyNativeScript ::
+  ( DijkstraEraImp era
+  , NativeScript era ~ DijkstraNativeScript era
+  ) =>
+  Set.Set (KeyHash 'Witness) ->
+  TxBody era ->
+  NativeScript era ->
+  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
+impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do
+  let vi = txBody ^. vldtTxBodyL
+  let guards = txBody ^. guardsTxBodyL
+  case script of
+    RequireSignature keyHash -> impSatisfySignature keyHash providedVKeyHashes
+    RequireAllOf ss -> impSatisfyMNativeScripts providedVKeyHashes txBody (length ss) ss
+    RequireAnyOf ss -> do
+      m <- frequency [(9, pure 1), (1, choose (1, length ss))]
+      impSatisfyMNativeScripts providedVKeyHashes txBody m ss
+    RequireMOf m ss -> impSatisfyMNativeScripts providedVKeyHashes txBody m ss
+    lock@(RequireTimeStart _)
+      | evalDijkstraNativeScript mempty vi guards lock -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    lock@(RequireTimeExpire _)
+      | evalDijkstraNativeScript mempty vi guards lock -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    -- TODO: actual satisfy the native scripts by updating the transaction's guards
+    ns@(RequireGuard _)
+      | evalDijkstraNativeScript mempty vi guards ns -> pure $ Just mempty
+      | otherwise -> pure Nothing
+    _ -> error "Impossible: All NativeScripts should have been accounted for"

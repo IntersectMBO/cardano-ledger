@@ -297,6 +297,7 @@ native_script =
   // script_n_of_k
   // invalid_before
   // invalid_hereafter
+  // script_require_guard
   ]
 
 
@@ -315,6 +316,10 @@ int64 = -9223372036854775808 .. 9223372036854775807
 invalid_before = (4, slot_no)
 
 invalid_hereafter = (5, slot_no)
+
+script_require_guard = (6, credential)
+
+credential = [0, addr_keyhash// 1, script_hash]
 
 ; The real type of plutus_v1_script, plutus_v2_script and
 ; plutus_v3_script is bytes. However, because we enforce
@@ -345,8 +350,6 @@ certificates = nonempty_oset<certificate>
 nonempty_oset<a0> = #6.258([+ a0])/ [+ a0]
 
 stake_credential = credential
-
-credential = [0, addr_keyhash// 1, script_hash]
 
 pool_keyhash = hash28
 

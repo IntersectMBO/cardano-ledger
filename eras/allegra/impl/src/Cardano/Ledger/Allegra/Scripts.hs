@@ -53,6 +53,8 @@ module Cardano.Ledger.Allegra.Scripts (
   decodeVI,
   translateTimelock,
   upgradeMultiSig,
+  lteNegInfty,
+  ltePosInfty,
 ) where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)

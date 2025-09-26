@@ -22,6 +22,7 @@ import Cardano.Ledger.Shelley.Rules
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
@@ -58,6 +59,17 @@ spec ::
   , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   Spec
-spec = ConwayImp.spec @era
+spec = do
+  ConwayImp.spec @era
+  withEachEraVersion @era $ dijkstraEraGenericSpec @era
+
+dijkstraEraGenericSpec ::
+  forall era.
+  ( DijkstraEraImp era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+dijkstraEraGenericSpec = do
+  describe "UTXOW" Utxow.spec
 
 instance EraSpecificSpec DijkstraEra

@@ -40,6 +40,7 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra, roundTripEraSpec)
 spec ::
   forall era.
   ( ConwayEraImp era
+  , DecCBOR (NativeScript era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)

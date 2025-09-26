@@ -30,6 +30,7 @@ import Test.Cardano.Ledger.Conway.CDDL hiding (
   header,
   header_body,
   language,
+  native_script,
   parameter_change_action,
   proposal_procedure,
   proposal_procedures,
@@ -368,7 +369,7 @@ transaction_witness_set =
   "transaction_witness_set"
     =:= mp
       [ opt $ idx 0 ==> nonempty_set vkeywitness
-      , opt $ idx 1 ==> nonempty_set native_script
+      , opt $ idx 1 ==> nonempty_set dijkstra_native_script
       , opt $ idx 2 ==> nonempty_set bootstrap_witness
       , opt $ idx 3 ==> nonempty_set plutus_v1_script
       , opt $ idx 4 ==> nonempty_set plutus_data
@@ -421,6 +422,20 @@ cost_models =
 plutus_v4_script :: Rule
 plutus_v4_script = "plutus_v4_script" =:= distinct VBytes
 
+script_require_guard :: Named Group
+script_require_guard = "script_require_guard" =:~ grp [6, a credential]
+
+dijkstra_native_script :: Rule
+dijkstra_native_script =
+  "native_script"
+    =:= arr [a script_pubkey]
+    / arr [a script_all]
+    / arr [a script_any]
+    / arr [a script_n_of_k]
+    / arr [a invalid_before]
+    / arr [a invalid_hereafter]
+    / arr [a script_require_guard]
+
 alonzo_auxiliary_data :: Rule
 alonzo_auxiliary_data =
   "alonzo_auxiliary_data"
@@ -428,7 +443,7 @@ alonzo_auxiliary_data =
       259
       ( mp
           [ opt (idx 0 ==> metadata)
-          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 1 ==> arr [0 <+ a dijkstra_native_script])
           , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
           , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
           , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
@@ -446,7 +461,7 @@ auxiliary_data =
 dijkstra_script :: Rule
 dijkstra_script =
   "script"
-    =:= arr [0, a native_script]
+    =:= arr [0, a dijkstra_native_script]
     / arr [1, a plutus_v1_script]
     / arr [2, a plutus_v2_script]
     / arr [3, a plutus_v3_script]

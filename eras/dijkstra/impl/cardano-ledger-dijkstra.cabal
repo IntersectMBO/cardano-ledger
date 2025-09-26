@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-dijkstra
-version: 0.1.0.1
+version: 0.2.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -115,6 +115,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Era
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.TreeDiff
 
@@ -133,6 +134,7 @@ library testlib
     base,
     bytestring,
     cardano-data,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
     cardano-ledger-binary,
