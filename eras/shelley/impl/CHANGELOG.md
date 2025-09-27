@@ -9,6 +9,7 @@
     + `ShelleyIncompleteWithdrawals`
   - Add `testIncompleteAndMissingWithdrawals`
 * Added `Generic` instance to `ShelleyTxOut`
+* Add `AtMostEra "Conway" era` constraint to `ShelleyEraTxCert`, effectively disabling it for Dijkstra onwards
 
 ### `testlib`
 
