@@ -102,11 +102,10 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
   | otherwise =
       c
         <> rationalToCoinViaFloor
-          (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
+          (coinToRational (f <-> c) * (m + (1 - m) * s / sigma))
   where
     c = ppCost pool
-    m = ppMargin pool
-    m' = unboundRational m
+    m = unboundRational (ppMargin pool)
 
 -- | Calculate pool member reward
 memberRew ::
@@ -119,11 +118,10 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = mempty
   | otherwise =
       rationalToCoinViaFloor $
-        fromIntegral (f' - c) * (1 - m') * t / sigma
+        fromIntegral (f' - c) * (1 - m) * t / sigma
   where
     Coin c = ppCost pool
-    m = ppMargin pool
-    m' = unboundRational m
+    m = unboundRational (ppMargin pool)
 
 sumRewards ::
   ProtVer ->
