@@ -88,7 +88,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
   | unboundRational d_ < 0.8 = beta / sigma
   | otherwise = 1
   where
-    beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
+    beta = toInteger blocksN % toInteger (max 1 blocksTotal)
 
 -- | Calculate pool leader reward
 leaderRew ::
