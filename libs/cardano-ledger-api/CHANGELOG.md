@@ -2,7 +2,13 @@
 
 ## 1.13.0.0
 
-*
+* Add `producedTxOuts` and `mkCollateralTxIn`
+* Add `AnyEraTx`
+* Add `AnyEraTxBody`
+* Add `AnyEraTxCert`
+* Add `AnyEraScripts`
+* Add `AnyEraTxWits`
+* Add `AnyEraTxOut` and `AnyEraTxAuxData`
 
 ### `testlib`
 
