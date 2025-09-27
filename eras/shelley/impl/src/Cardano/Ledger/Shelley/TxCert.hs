@@ -150,7 +150,8 @@ instance EraTxCert ShelleyEra where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-class EraTxCert era => ShelleyEraTxCert era where
+-- | All of the SHelley related certificate functionality thta has been fully deprecated in Dijkstra.
+class (EraTxCert era, AtMostEra "Conway" era) => ShelleyEraTxCert era where
   mkRegTxCert :: StakeCredential -> TxCert era
   getRegTxCert :: TxCert era -> Maybe StakeCredential
 
