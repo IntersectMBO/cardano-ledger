@@ -64,8 +64,6 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   Url,
   invalidKey,
-  maybeToStrictMaybe,
-  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
@@ -76,11 +74,11 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   Size,
-  decodeNullMaybe,
+  decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeRecordSum,
   encodeListLen,
-  encodeNullMaybe,
+  encodeNullStrictMaybe,
   szCases,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -342,13 +340,13 @@ instance EncCBOR StakePoolRelay where
   encCBOR (SingleHostAddr p ipv4 ipv6) =
     encodeListLen 4
       <> encCBOR (0 :: Word8)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe p)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe ipv4)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe ipv6)
+      <> encodeNullStrictMaybe encCBOR p
+      <> encodeNullStrictMaybe encCBOR ipv4
+      <> encodeNullStrictMaybe encCBOR ipv6
   encCBOR (SingleHostName p n) =
     encodeListLen 3
       <> encCBOR (1 :: Word8)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe p)
+      <> encodeNullStrictMaybe encCBOR p
       <> encCBOR n
   encCBOR (MultiHostName n) =
     encodeListLen 2
@@ -360,12 +358,12 @@ instance DecCBOR StakePoolRelay where
     \case
       0 ->
         (\x y z -> (4, SingleHostAddr x y z))
-          <$> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
-          <*> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
-          <*> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+          <$> decodeNullStrictMaybe decCBOR
+          <*> decodeNullStrictMaybe decCBOR
+          <*> decodeNullStrictMaybe decCBOR
       1 ->
         (\x y -> (3, SingleHostName x y))
-          <$> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+          <$> decodeNullStrictMaybe decCBOR
           <*> decCBOR
       2 -> do
         x <- decCBOR
@@ -466,7 +464,7 @@ instance EncCBORGroup PoolParams where
       <> encCBOR (ppRewardAccount poolParams)
       <> encCBOR (ppOwners poolParams)
       <> encCBOR (ppRelays poolParams)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
+      <> encodeNullStrictMaybe encCBOR (ppMetadata poolParams)
 
   encodedGroupSizeExpr size' proxy =
     encodedSizeExpr size' (ppId <$> proxy)
@@ -503,7 +501,7 @@ instance DecCBORGroup PoolParams where
     ra <- decCBOR
     owners <- decCBOR
     relays <- decCBOR
-    md <- decodeNullMaybe decCBOR
+    md <- decodeNullStrictMaybe decCBOR
     pure $
       PoolParams
         { ppId = hk
@@ -514,5 +512,5 @@ instance DecCBORGroup PoolParams where
         , ppRewardAccount = ra
         , ppOwners = owners
         , ppRelays = relays
-        , ppMetadata = maybeToStrictMaybe md
+        , ppMetadata = md
         }
