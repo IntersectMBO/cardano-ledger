@@ -316,8 +316,8 @@ mkPoolRewardInfo
   stake
   delegs
   stakePerPool
-  totalStake
-  activeStake
+  (Coin totalStake)
+  (Coin activeStake)
   pool = case Map.lookup (ppId pool) (unBlocksMade blocks) of
     -- This pool made no blocks this epoch. For the purposes of stake pool
     -- ranking only, we return the relative stake of this pool so that we
@@ -326,13 +326,9 @@ mkPoolRewardInfo
     -- This pool made no blocks, so we can proceed to calculate the
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
-      let Coin pledge = ppPledge pool
-          -- warning: totalStake could be zero!
-          pledgeRelative = pledge % unCoin totalStake
-          sigmaA = pstakeTot %? unCoin activeStake
-          Coin maxP =
-            if pledge <= ostake
-              then maxPool' pp_a0 pp_nOpt r sigma pledgeRelative
+      let Coin maxP =
+            if pledge <= poolOwnerStake
+              then maxPool' pp_a0 pp_nOpt r sigma poolRelativePledge
               else mempty
           appPerf = mkApparentPerformance pp_d sigmaA blocksN blocksTotal
           poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
@@ -340,7 +336,7 @@ mkPoolRewardInfo
             leaderRew
               poolR
               pool
-              (StakeShare $ ostake %? unCoin totalStake)
+              (StakeShare poolOwnerRelativeStake)
               (StakeShare sigma)
           rewardInfo =
             PoolRewardInfo
@@ -355,10 +351,16 @@ mkPoolRewardInfo
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
       pp_nOpt = (pp ^. ppNOptL) `nonZeroOr` error "nOpt is zero"
-      Coin pstakeTot = Map.findWithDefault mempty (ppId pool) stakePerPool
+      Coin poolTotalStake = Map.findWithDefault mempty (ppId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
         guard (hk == ppId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin ostake = Set.foldl' accOwnerStake mempty (ppOwners pool)
-      sigma = pstakeTot %? unCoin totalStake
+      Coin poolOwnerStake = Set.foldl' accOwnerStake mempty (ppOwners pool)
+      Coin pledge = ppPledge pool
+      -- warning: In theory `totalStake` and `activeStake` could be zero, but that would imply no
+      -- active stake pools and no delegators, which would mean PoS would be dead!
+      poolRelativePledge = pledge % totalStake
+      poolOwnerRelativeStake = poolOwnerStake %? totalStake
+      sigma = poolTotalStake %? totalStake
+      sigmaA = poolTotalStake %? activeStake
