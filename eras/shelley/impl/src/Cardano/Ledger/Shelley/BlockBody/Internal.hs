@@ -288,10 +288,6 @@ incrBlocks ::
   KeyHash 'StakePool ->
   BlocksMade ->
   BlocksMade
-incrBlocks isOverlay hk b'@(BlocksMade b)
-  | isOverlay = b'
-  | otherwise = BlocksMade $ case hkVal of
-      Nothing -> Map.insert hk 1 b
-      Just n -> Map.insert hk (n + 1) b
-  where
-    hkVal = Map.lookup hk b
+incrBlocks isOverlay hk blocksMade@(BlocksMade blocksMadeMap)
+  | isOverlay = blocksMade
+  | otherwise = BlocksMade $ Map.insertWith (+) hk 1 blocksMadeMap
