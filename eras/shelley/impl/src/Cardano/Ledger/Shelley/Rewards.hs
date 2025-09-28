@@ -274,25 +274,18 @@ rewardOnePoolMember ::
   -- This could be Nothing if the credential is no longer registered,
   -- if it is an owner, or if the reward is zero.
   Maybe Coin
-rewardOnePoolMember
-  pp
-  totalStake
-  addrsRew
-  rewardInfo
-  hk
-  (Coin c) =
-    if prefilter && notPoolOwner (poolPs rewardInfo) hk && r /= Coin 0
-      then Just r
-      else Nothing
-    where
-      prefilter = hardforkBabbageForgoRewardPrefilter pp || hk `Set.member` addrsRew
-      pool = poolPs rewardInfo
-      sigma = poolRelativeStake rewardInfo
-      poolR = poolPot rewardInfo
-      -- warning: totalStake could be zero!
-      stakeShare =
-        StakeShare $ c % unCoin totalStake
-      r = memberRew poolR pool stakeShare sigma
+rewardOnePoolMember pv totalStake addrsRew rewardInfo hk (Coin c) =
+  if prefilter && notPoolOwner (poolPs rewardInfo) hk && r /= Coin 0
+    then Just r
+    else Nothing
+  where
+    prefilter = hardforkBabbageForgoRewardPrefilter pv || hk `Set.member` addrsRew
+    pool = poolPs rewardInfo
+    sigma = poolRelativeStake rewardInfo
+    poolR = poolPot rewardInfo
+    -- warning: totalStake could be zero!
+    stakeShare = StakeShare $ c % unCoin totalStake
+    r = memberRew poolR pool stakeShare sigma
 
 -- | Calculate single stake pool specific values for the reward computation.
 --
