@@ -355,8 +355,8 @@ mkPoolRewardInfo
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
         guard (hk == ppId pool)
-        fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
-      Coin poolOwnerStake = Set.foldl' accOwnerStake mempty (ppOwners pool)
+        VMap.lookup (KeyHashObj o) (unStake stake)
+      Coin poolOwnerStake = fromCompact $ Set.foldl' accOwnerStake mempty (ppOwners pool)
       Coin pledge = ppPledge pool
       -- warning: In theory `totalStake` and `activeStake` could be zero, but that would imply no
       -- active stake pools and no delegators, which would mean PoS would be dead!
