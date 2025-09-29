@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -49,7 +50,7 @@ import Cardano.Ledger.BaseTypes (
   quorum,
   (⭒),
  )
-import Cardano.Ledger.Block (Block (..), bheader)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (
   Coin (..),
   compactCoinOrError,
@@ -139,7 +140,7 @@ newLab ::
 newLab b cs =
   cs {chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)}
   where
-    bh = bheader b
+    bh = blockHeader b
     bn = bheaderBlockNo $ bhbody bh
     sn = bheaderSlotNo $ bhbody bh
 
@@ -567,7 +568,7 @@ newEpoch ::
   Block (BHeader MockCrypto) era ->
   ChainState era ->
   ChainState era
-newEpoch b cs = cs'
+newEpoch block@(Block {blockHeader}) cs = cs'
   where
     ChainState
       { chainNes = nes
@@ -576,18 +577,17 @@ newEpoch b cs = cs'
       , chainPrevEpochNonce = pNonce
       , chainLastAppliedBlock = lab
       } = cs
-    bh = bheader b
-    bn = bheaderBlockNo . bhbody $ bh
-    sn = bheaderSlotNo . bhbody $ bh
+    bn = bheaderBlockNo $ bhbody blockHeader
+    sn = bheaderSlotNo $ bhbody blockHeader
     pp = view curPParamsEpochStateL . nesEs $ nes
-    e = epochFromSlotNo . bheaderSlotNo . bhbody . bheader $ b
+    e = epochFromSlotNo . bheaderSlotNo $ bhbody blockHeader
     nes' =
       nes
         { nesEL = e
         , nesBprev = nesBcur nes
         , nesBcur = BlocksMade Map.empty
         }
-    n = getBlockNonce b
+    n = getBlockNonce block
     cs' =
       cs
         { chainNes = nes'
@@ -595,7 +595,7 @@ newEpoch b cs = cs'
         , chainEvolvingNonce = evNonce ⭒ n
         , chainCandidateNonce = evNonce ⭒ n
         , chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab
-        , chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
+        , chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash blockHeader)
         }
 
 -- | = Set Current Proposals

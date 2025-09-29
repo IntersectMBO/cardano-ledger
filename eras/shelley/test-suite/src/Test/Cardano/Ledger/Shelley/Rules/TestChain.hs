@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,7 +26,6 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Block (
   Block (..),
-  bheader,
   neededTxInsForBlock,
  )
 import Cardano.Ledger.Core
@@ -252,14 +252,13 @@ ledgerTraceBase ::
   ChainState era ->
   Block (BHeader MockCrypto) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
-ledgerTraceBase chainSt block =
+ledgerTraceBase chainSt Block {blockHeader = BHeader bhb _, blockBody} =
   ( tickedChainSt
   , LedgerEnv slot Nothing minBound pp_ (esChainAccountState nes)
   , esLState nes
   , txs
   )
   where
-    (Block (BHeader bhb _) blockBody) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
@@ -287,8 +286,7 @@ chainSstWithTick ledgerTr =
   map applyTick (sourceSignalTargets ledgerTr)
   where
     applyTick sst@SourceSignalTarget {source = chainSt, signal = block} =
-      let bh = bheader block
-          slot = (bheaderSlotNo . bhbody) bh
+      let slot = bheaderSlotNo (bhbody (blockHeader block))
        in sst {target = tickChainState @era slot chainSt}
 
 ---------------------------

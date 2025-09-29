@@ -17,7 +17,7 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
@@ -192,7 +192,7 @@ word64SlotToKesPeriodWord slot =
 blockEx2 :: Word64 -> Block (BHeader MockCrypto) ShelleyEra
 blockEx2 slot =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx slot)
     [MkShelleyTx txEx2]
     (SlotNo slot)
@@ -257,7 +257,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx2B
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2B)
+    (bhHash $ blockHeader blockEx2B)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)

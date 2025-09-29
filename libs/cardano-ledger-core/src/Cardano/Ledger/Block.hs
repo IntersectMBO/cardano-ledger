@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block (
-  Block (Block),
+  Block (..),
   bheader,
   bbody,
   neededTxInsForBlock,
@@ -40,8 +41,10 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data Block h era
-  = Block !h !(BlockBody era)
+data Block h era = Block
+  { blockHeader :: !h
+  , blockBody :: !(BlockBody era)
+  }
   deriving (Generic)
 
 deriving stock instance
@@ -98,9 +101,11 @@ bheader ::
   Block h era ->
   h
 bheader (Block bh _) = bh
+{-# DEPRECATED bheader "In favor of `blockHeader`" #-}
 
 bbody :: Block h era -> BlockBody era
 bbody (Block _ txs) = txs
+{-# DEPRECATED bbody "In favor of `blockBody`" #-}
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -116,9 +121,9 @@ neededTxInsForBlock ::
   EraBlockBody era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block _ blockBody) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ blockBody ^. txSeqBlockBodyL
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txIdTxBody txBodies
-    isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
+    isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds

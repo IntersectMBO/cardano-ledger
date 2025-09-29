@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -594,7 +595,7 @@ coldKeys = KeyPair vk sk
 
 makeNaiveBlock ::
   forall era. EraBlockBody era => [Tx era] -> Block BHeaderView era
-makeNaiveBlock txs = Block bhView blockBody
+makeNaiveBlock txs = Block {blockHeader = bhView, blockBody}
   where
     bhView =
       BHeaderView
