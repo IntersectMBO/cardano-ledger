@@ -150,7 +150,6 @@ library testlib
     cardano-data:{cardano-data, testlib},
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
-    cardano-ledger-alonzo ^>=1.15.0.0,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
