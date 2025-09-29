@@ -462,6 +462,7 @@ instance Arbitrary StakePoolState where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary PoolMetadata where
   arbitrary = PoolMetadata <$> arbitrary <*> arbitrary

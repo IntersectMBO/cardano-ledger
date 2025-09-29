@@ -260,7 +260,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psStakePools =
                 Map.insert
                   (ppId pool)
-                  (mkStakePoolState poolDeposit pool)
+                  (mkStakePoolState poolDeposit mempty pool)
                   (psStakePools ps)
             }
         Just sps ->
@@ -268,7 +268,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psFutureStakePools =
                 Map.insert
                   (ppId pool)
-                  (mkStakePoolState (spsDeposit sps) pool)
+                  (mkStakePoolState (spsDeposit sps) mempty pool)
                   (psFutureStakePools ps)
             }
     dps' = dps & certPStateL .~ ps'
@@ -301,7 +301,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
         { psStakePools =
             Map.insert
               (ppId pool)
-              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
               (psStakePools ps)
         , psFutureStakePools = Map.delete (ppId pool) (psStakePools ps)
         }

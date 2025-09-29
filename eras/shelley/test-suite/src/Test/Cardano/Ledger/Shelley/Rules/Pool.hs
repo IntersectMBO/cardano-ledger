@@ -134,7 +134,7 @@ poolRegistrationProp
               , counterexample
                   "New PoolParams are registered in future Params map"
                   ( Map.lookup hk (psFutureStakePools targetSt)
-                      === Just (mkStakePoolState (sps ^. spsDepositL) poolParams)
+                      === Just (mkStakePoolState (sps ^. spsDepositL) (sps ^. spsDelegatorsL) poolParams)
                   )
               , counterexample
                   "PoolParams are removed in 'retiring'"
