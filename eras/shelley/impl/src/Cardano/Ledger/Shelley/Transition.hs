@@ -395,11 +395,11 @@ registerInitialStakePools ::
 registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-      .~ ListMap.toMap (mkStakePoolState deposit <$> sgsPools)
+      .~ ListMap.toMap (mkStakePoolState deposit mempty <$> sgsPools)
   where
     deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
 
--- | Register all staking credentials and apply delegations. Make sure StakePools that are bing
+-- | Register all staking credentials and apply delegations. Make sure StakePools that are being
 -- delegated to are already registered, which can be done with `registerInitialStakePools`.
 shelleyRegisterInitialAccounts ::
   forall era.

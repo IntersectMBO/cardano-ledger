@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Add `spsDelegs` field to `StakePool`
+* Add `spsDelegsL`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

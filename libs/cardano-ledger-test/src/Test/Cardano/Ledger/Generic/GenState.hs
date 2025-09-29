@@ -670,7 +670,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
     pstate =
       PState
         Map.empty
-        (mkStakePoolState poolDeposit <$> pools)
+        (mkStakePoolState poolDeposit mempty <$> pools)
         Map.empty
         Map.empty
     -- In a wellformed LedgerState the deposited equals the obligation
@@ -1007,7 +1007,8 @@ initStableFields = do
     modifyGenStateStablePools (Set.insert kh)
     modifyGenStateInitialPoolParams (Map.insert kh poolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelStakePools (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+    modifyModelStakePools
+      (Map.insert kh $ mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty poolParams)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
@@ -1081,7 +1082,7 @@ genRetirementHash = do
 
       -- add the Pool to the Model
       modifyModelStakePools
-        (Map.insert poolid $ mkStakePoolState (pp ^. ppPoolDepositCompactL) poolparams)
+        (Map.insert poolid $ mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty poolparams)
       modifyModelPoolDistr (Map.insert poolid stake)
       pure poolid
 
@@ -1099,7 +1100,8 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       modifyGenStateInitialPoolParams (Map.insert kh pp)
       modifyGenStateInitialPoolDistr (Map.insert kh ips)
       -- update the model
-      modifyModelStakePools (Map.insert kh $ mkStakePoolState (pparams ^. ppPoolDepositCompactL) pp)
+      modifyModelStakePools
+        (Map.insert kh $ mkStakePoolState (pparams ^. ppPoolDepositCompactL) mempty pp)
       return (kh, pp)
     pickExisting = do
       psStakePools <- gets (mStakePools . gsModel)

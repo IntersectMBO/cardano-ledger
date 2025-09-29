@@ -36,6 +36,7 @@ module Cardano.Ledger.State.StakePool (
   spsOwnersL,
   spsRelaysL,
   spsMetadataL,
+  spsDelegsL,
   spsDepositL,
 
   -- * Conversions
@@ -89,6 +90,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
@@ -132,6 +134,8 @@ data StakePoolState = StakePoolState
   -- ^ Optional metadata (URL and hash)
   , spsDeposit :: !(CompactForm Coin)
   -- ^ Deposit for each pool
+  , spsDelegs :: !(Set (Credential 'Staking))
+  -- ^ Credentials that have delegated to the pool
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, FromJSON, ToJSON)
 
@@ -162,6 +166,9 @@ spsMetadataL = lens spsMetadata $ \sps md -> sps {spsMetadata = md}
 spsDepositL :: Lens' StakePoolState (CompactForm Coin)
 spsDepositL = lens spsDeposit $ \sps d -> sps {spsDeposit = d}
 
+spsDelegsL :: Lens' StakePoolState (Set (Credential 'Staking))
+spsDelegsL = lens spsDelegs $ \sps delegs -> sps {spsDelegs = delegs}
+
 instance EncCBOR StakePoolState where
   encCBOR sps =
     encode $
@@ -175,11 +182,13 @@ instance EncCBOR StakePoolState where
         !> To (spsRelays sps)
         !> To (spsMetadata sps)
         !> To (spsDeposit sps)
+        !> To (spsDelegs sps)
 
 instance DecCBOR StakePoolState where
   decCBOR =
     decode $
       RecD StakePoolState
+        <! From
         <! From
         <! From
         <! From
@@ -205,13 +214,14 @@ instance Default StakePoolState where
       , spsRelays = def
       , spsMetadata = def
       , spsDeposit = mempty
+      , spsDelegs = def
       }
 
 -- | Convert 'PoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
-mkStakePoolState :: CompactForm Coin -> PoolParams -> StakePoolState
-mkStakePoolState deposit pp =
+mkStakePoolState :: CompactForm Coin -> Set (Credential 'Staking) -> PoolParams -> StakePoolState
+mkStakePoolState deposit delegs pp =
   StakePoolState
     { spsVrf = ppVrf pp
     , spsPledge = ppPledge pp
@@ -222,6 +232,7 @@ mkStakePoolState deposit pp =
     , spsRelays = ppRelays pp
     , spsMetadata = ppMetadata pp
     , spsDeposit = deposit
+    , spsDelegs = delegs
     }
 
 -- | Convert 'StakePoolState' back to 'PoolParams' by providing the pool ID.
