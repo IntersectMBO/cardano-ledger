@@ -643,7 +643,9 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        it "Rewards contribute to active voting stake" $ whenPostBootstrap $ do
+        -- https://github.com/IntersectMBO/cardano-ledger/5014
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "Rewards contribute to active voting stake" $ whenPostBootstrap $ do
           -- Setup DRep delegation #1
           (drep1, staking1, _) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
@@ -712,7 +714,9 @@ votingSpec =
           passEpoch
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         describe "Proposal deposits contribute to active voting stake" $ do
-          it "Directly" $ whenPostBootstrap $ do
+          -- https://github.com/IntersectMBO/cardano-ledger/5014
+          -- TODO: Re-enable after issue is resolved, by removing this override
+          disableInConformanceIt "Directly" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
             modifyPParams $ ppGovActionDepositL .~ Coin 1_000_000
             -- Setup DRep delegation without stake #1
