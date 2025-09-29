@@ -9,15 +9,6 @@
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, InjectRuleFailure)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxoSpec as Utxo

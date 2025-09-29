@@ -176,9 +176,6 @@ instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure ConwayEra where
 instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure ConwayEra where
   injectFailure = allegraToConwayUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
-  injectFailure = UtxosFailure
-
 instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure ConwayEra where
   injectFailure =
     alonzoToConwayUtxoPredFailure
@@ -398,3 +395,6 @@ allegraToConwayUtxoPredFailure = \case
   Allegra.UpdateFailure x -> absurdEraRule @"PPUP" @era x
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+
+instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
+  injectFailure = UtxosFailure

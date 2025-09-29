@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -135,11 +136,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
-  Inject,
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -168,6 +167,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayHardForkEvent,
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure,
+  ConwayUtxosPredFailure,
   ConwayUtxowPredFailure,
   EnactSignal,
   committeeAccepted,
@@ -182,8 +182,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Credential (Credential (..), credToText)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -350,7 +349,22 @@ class
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
   , GovState era ~ ConwayGovState era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleEvent "TICK" ConwayHardForkEvent era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
   ) =>
   ConwayEraImp era
 

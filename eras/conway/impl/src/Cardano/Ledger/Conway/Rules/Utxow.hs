@@ -162,9 +162,6 @@ instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure ConwayEra where
 instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure ConwayEra where
-  injectFailure = UtxoFailure . injectFailure
-
 instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
@@ -345,3 +342,6 @@ shelleyToConwayUtxowPredFailure = \case
   Shelley.ConflictingMetadataHash mm -> ConflictingMetadataHash mm
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs
+
+instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure ConwayEra where
+  injectFailure = UtxoFailure . injectFailure

@@ -9,12 +9,14 @@ module Test.Cardano.Ledger.Conway.Era (
   mkConwayTestAccountState,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Lens.Micro
@@ -31,6 +33,7 @@ class
   , ConwayEraGov era
   , ConwayEraAccounts era
   , EraPlutusTxInfo PlutusV3 era
+  , Inject (ConwayContextError era) (ContextError era)
   ) =>
   ConwayEraTest era
 

@@ -32,9 +32,7 @@ spec = do
 
 dijkstraEraGenericSpec ::
   forall era.
-  ( DijkstraEraImp era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  ) =>
+  DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 dijkstraEraGenericSpec = do
   describe "UTXOW" Utxow.spec

@@ -13,10 +13,9 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.State (PoolMetadata (..), PoolParams, ppCostL, ppMetadataL, ppVrfL, spsVrf)
+import Cardano.Ledger.State (PoolMetadata (..), ppCostL, ppMetadataL, ppVrfL, spsVrf)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro

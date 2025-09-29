@@ -15,13 +15,13 @@ module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential

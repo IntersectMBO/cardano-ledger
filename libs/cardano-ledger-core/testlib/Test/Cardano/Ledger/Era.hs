@@ -80,6 +80,7 @@ class
   , ToExpr (AccountState era)
   , -- Un-annotated DecCBOR instances
     DecCBOR (Script era)
+  , DecCBOR (NativeScript era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
