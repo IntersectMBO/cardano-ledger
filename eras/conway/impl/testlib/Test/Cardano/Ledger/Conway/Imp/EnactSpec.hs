@@ -80,7 +80,7 @@ treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
     it "Modify EnactState as expected" $ whenPostBootstrap $ do
-      rewardAcount1 <- registerRewardAccountWithDeposit
+      rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
       let govAction = gasAction gas
@@ -97,7 +97,7 @@ treasuryWithdrawalsSpec =
       enactState' <- runImpRule @"ENACT" () enactState signal
       ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
 
-      rewardAcount2 <- registerRewardAccountWithDeposit
+      rewardAcount2 <- registerRewardAccount
       let withdrawals' =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
@@ -194,7 +194,7 @@ treasuryWithdrawalsSpec =
     sumRewardAccounts withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
-      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccountWithDeposit
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
     checkNoWithdrawal initialTreasury withdrawals = do
       getsNES treasuryL `shouldReturn` initialTreasury
       sumRewardAccounts withdrawals `shouldReturn` zero

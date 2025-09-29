@@ -458,7 +458,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
         submitTreasuryWithdrawal amount = do
-          rewardAccount <- registerRewardAccountWithDeposit
+          rewardAccount <- registerRewardAccount
           submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
@@ -814,7 +814,7 @@ votingSpec =
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
 
           kh <- freshKeyHash
-          _ <- registerStakeCredentialWithDeposit (KeyHashObj kh)
+          _ <- registerStakeCredential (KeyHashObj kh)
           _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
           passEpoch
           -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
@@ -877,7 +877,7 @@ votingSpec =
 
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          rewardAccount <- registerRewardAccountWithDeposit
+          rewardAccount <- registerRewardAccount
           govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
 
           submitYesVote_ (CommitteeVoter comMember) govId
@@ -905,7 +905,8 @@ votingSpec =
               & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
           cred <- KeyHashObj <$> freshKeyHash
-          void $ regDelegToDRep cred (Coin 300) DRepAlwaysNoConfidence
+          _ <- registerStakeCredential cred
+          _ <- delegateToDRep cred (Coin 300) DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
           logAcceptedRatio noConfidence

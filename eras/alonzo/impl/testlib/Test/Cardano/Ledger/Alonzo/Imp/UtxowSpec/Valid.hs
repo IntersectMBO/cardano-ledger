@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoEraSpecificSpec) where
 
+import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
  )
@@ -19,9 +20,9 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject, natVersion)
+import Cardano.Ledger.BaseTypes (Globals (networkId), StrictMaybe (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -35,8 +36,10 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Text as T
 import GHC.Exts (fromList)
-import Lens.Micro ((%~), (&), (.~))
+import Lens.Micro (to, (%~), (&), (.~))
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -87,6 +90,21 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
+        it "Validating CERT script" $ do
+          txIn <- produceScript alwaysSucceedsWithDatumHash
+          txCert <- genRegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
+          submitTx_ $
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & certsTxBodyL .~ [txCert]
+
+        it "Validating WITHDRAWAL script" $ do
+          account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
+          submitTx_ $
+            mkBasicTx $
+              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
+
         it "Validating MINT script" $ do
           submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
 
@@ -132,15 +150,6 @@ alonzoEraSpecificSpec = do
           alwaysFailsWithDatumHash = hashPlutusScript $ alwaysFailsWithDatum slang :: ScriptHash
           alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash
 
-        it "Validating CERT script" $ do
-          txIn <- produceScript alwaysSucceedsWithDatumHash
-          let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitTx_ $
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & certsTxBodyL .~ [txCert]
-
         it "Not validating CERT script" $ do
           txIn <- produceScript alwaysFailsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
@@ -150,14 +159,8 @@ alonzoEraSpecificSpec = do
                 & inputsTxBodyL .~ [txIn]
                 & certsTxBodyL .~ [txCert]
 
-        it "Validating WITHDRAWAL script" $ do
-          account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitTx_ $
-            mkBasicTx $
-              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
-
         it "Not validating WITHDRAWAL script" $ do
-          account <- registerStakeCredential $ ScriptHashObj alwaysFailsNoDatumHash
+          account <- registerStakeCredentialNoDeposit $ ScriptHashObj alwaysFailsNoDatumHash
           submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
@@ -183,7 +186,7 @@ alonzoEraSpecificSpec = do
             rewardScriptHashes = [alwaysSucceedsNoDatumHash, timelockScriptHash2]
           txIns <- traverse produceScript inputScriptHashes
           multiAsset <- MultiAsset . fromList <$> traverse scriptAsset assetScriptHashes
-          rewardAccounts <- traverse (registerStakeCredential . ScriptHashObj) rewardScriptHashes
+          rewardAccounts <- traverse (registerStakeCredentialNoDeposit . ScriptHashObj) rewardScriptHashes
           outputAddr <- freshKeyHash @'Payment
           let
             txOut =
@@ -215,3 +218,15 @@ alonzoEraSpecificSpec = do
             else
               -- Conway fixed the bug that was causing DELEG to fail
               submitTx_ tx
+  where
+    -- NOTE: certain tests somehow require certificates without deposits
+    -- otherwise, they will yield a Plutus failure
+    -- TODO: figure out what's the problem, this might be of interest:
+    -- https://github.com/IntersectMBO/cardano-ledger/issues/4571
+    registerStakeCredentialNoDeposit cred = do
+      submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.fromList [RegTxCert cred]
+      nId <- use (impGlobalsL . to networkId)
+      pure $ RewardAccount nId cred
