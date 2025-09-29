@@ -1,3 +1,4 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -35,11 +36,11 @@ class
   , EraAccounts era
   , EraGenesis era
   , -- Arbitrary Core
-    Arbitrary (Tx era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxAuxData era)
+    forall t. Arbitrary (Tx t era)
+  , forall t. Arbitrary (TxBody t era)
   , Arbitrary (TxWits era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
@@ -53,11 +54,11 @@ class
   , Arbitrary (Accounts era)
   , Arbitrary (AccountState era)
   , -- ToExpr Core
-    ToExpr (Tx era)
-  , ToExpr (TxOut era)
-  , ToExpr (TxBody era)
-  , ToExpr (TxAuxData era)
+    forall t. ToExpr (Tx t era)
+  , forall t. ToExpr (TxBody t era)
   , ToExpr (TxWits era)
+  , ToExpr (TxOut era)
+  , ToExpr (TxAuxData era)
   , ToExpr (Script era)
   , ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
