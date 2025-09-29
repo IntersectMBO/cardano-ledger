@@ -1036,9 +1036,7 @@ votingSpec =
             passNEpochs 2
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         describe "Proposal deposits contribute to active voting stake" $ do
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-          -- TODO: Re-enable after issue is resolved, by removing this override
-          disableInConformanceIt "Directly" $ whenPostBootstrap $ do
+          it "Directly" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
             modifyPParams $ \pp ->
               pp
@@ -1088,9 +1086,7 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-          -- TODO: Re-enable after issue is resolved, by removing this override
-          disableInConformanceIt "After switching delegations" $ whenPostBootstrap $ do
+          it "After switching delegations" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
             modifyPParams $ \pp ->
               pp
