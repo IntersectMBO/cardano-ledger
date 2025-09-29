@@ -10,6 +10,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,6 +25,9 @@
 -- It is intended for qualified import:
 -- > import qualified Cardano.Ledger.Core as Core
 module Cardano.Ledger.Core (
+  -- * Transaction types
+  TxType (..),
+
   -- * Era-changing types
   EraTx (..),
   txIdTx,
@@ -133,7 +137,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-data TxType = FullTx | SubTx
+type data TxType = FullTx | SubTx
 
 -- | A transaction.
 class
@@ -143,9 +147,9 @@ class
   , EraPParams era
   , forall t. NFData (Tx t era)
   , forall t. NoThunks (Tx t era)
-  , forall t. DecCBOR (Annotator (Tx t era))
-  , forall t. EncCBOR (Tx t era)
-  , forall t. ToCBOR (Tx t era)
+  , forall t. Typeable t => DecCBOR (Annotator (Tx t era))
+  , forall t. Typeable t => EncCBOR (Tx t era)
+  , forall t. Typeable t => ToCBOR (Tx t era)
   , forall t. Show (Tx t era)
   , forall t. Eq (Tx t era)
   ) =>
@@ -191,9 +195,9 @@ class
   , EraTxCert era
   , EraPParams era
   , forall t. HashAnnotated (TxBody t era) EraIndependentTxBody
-  , forall t. DecCBOR (Annotator (TxBody t era))
-  , forall t. EncCBOR (TxBody t era)
-  , forall t. ToCBOR (TxBody t era)
+  , forall t. Typeable t => DecCBOR (Annotator (TxBody t era))
+  , forall t. Typeable t => EncCBOR (TxBody t era)
+  , forall t. Typeable t => ToCBOR (TxBody t era)
   , forall t. NoThunks (TxBody t era)
   , forall t. NFData (TxBody t era)
   , forall t. Show (TxBody t era)
@@ -211,7 +215,7 @@ class
 
   outputsTxBodyL :: Lens' (TxBody t era) (StrictSeq (TxOut era))
 
-  feeTxBodyL :: Lens' (TxBody 'FullTx era) Coin
+  feeTxBodyL :: Lens' (TxBody FullTx era) Coin
 
   withdrawalsTxBodyL :: Lens' (TxBody t era) Withdrawals
 
@@ -597,12 +601,12 @@ class
 
   mkBasicBlockBody :: BlockBody era
 
-  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx 'FullTx era))
+  txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx FullTx era))
 
-  fromTxSeq :: BlockBody era -> StrictSeq (Tx 'FullTx era)
+  fromTxSeq :: BlockBody era -> StrictSeq (Tx FullTx era)
   fromTxSeq = (^. txSeqBlockBodyL)
 
-  toTxSeq :: StrictSeq (Tx 'FullTx era) -> BlockBody era
+  toTxSeq :: StrictSeq (Tx FullTx era) -> BlockBody era
   toTxSeq s = mkBasicBlockBody & txSeqBlockBodyL .~ s
 
   -- | Get the block body hash from the BlockBody. Note that this is not a regular
@@ -632,7 +636,7 @@ txIdTxBody :: EraTxBody era => TxBody t era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
 -- | txsize computes the length of the serialised bytes (actual size)
-wireSizeTxF :: forall era t. EraTx era => SimpleGetter (Tx t era) Word32
+wireSizeTxF :: forall era t. (EraTx era, Typeable t) => SimpleGetter (Tx t era) Word32
 wireSizeTxF =
   to $
     checkedFromIntegral

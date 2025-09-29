@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -188,8 +189,8 @@ roundTripCoreEraTypesSpec ::
   forall era.
   ( EraTx era
   , EraCertState era
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
+  , Arbitrary (Tx FullTx era)
+  , Arbitrary (TxBody FullTx era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxCert era)
   , Arbitrary (TxWits era)
@@ -204,8 +205,8 @@ roundTripCoreEraTypesSpec ::
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (TxBody FullTx era)
+  , DecCBOR (Tx FullTx era)
   , Typeable (CertState era)
   , HasCallStack
   ) =>
@@ -224,10 +225,10 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripEraSpec @era @(TxWits era)
-    roundTripAnnEraSpec @era @(TxBody era)
-    roundTripEraSpec @era @(TxBody era)
-    roundTripAnnEraSpec @era @(Tx era)
-    roundTripEraSpec @era @(Tx era)
+    roundTripAnnEraSpec @era @(TxBody FullTx era)
+    roundTripEraSpec @era @(TxBody FullTx era)
+    roundTripAnnEraSpec @era @(Tx FullTx era)
+    roundTripEraSpec @era @(Tx FullTx era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)
