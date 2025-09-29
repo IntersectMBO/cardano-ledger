@@ -260,7 +260,8 @@ poolDelegationTransition = do
           tellEvent $ RegisterPool ppId
           pure $
             ps
-              & psStakePoolsL %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) poolParams)
+              & psStakePoolsL
+                %~ Map.insert ppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty poolParams)
               & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do
@@ -293,9 +294,14 @@ poolDelegationTransition = do
           -- has been removed from the registered pools).  does it need to pay a
           -- new deposit (at the current deposit amount). But of course, if that
           -- has happened, we cannot be in this branch of the case statement.
+          let futureStakePoolState =
+                mkStakePoolState
+                  (stakePoolState ^. spsDepositL)
+                  (stakePoolState ^. spsDelegatorsL)
+                  poolParams
           pure $
             ps
-              & psFutureStakePoolsL %~ Map.insert ppId (mkStakePoolState (stakePoolState ^. spsDepositL) poolParams)
+              & psFutureStakePoolsL %~ Map.insert ppId futureStakePoolState
               & psRetiringL %~ Map.delete ppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
     RetirePool ppId e -> do
