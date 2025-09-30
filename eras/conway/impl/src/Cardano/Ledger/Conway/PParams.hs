@@ -108,7 +108,7 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   NonZero,
   PositiveInterval,
-  ProtVer (ProtVer),
+  ProtVer (..),
   ToKeyValuePairs (..),
   UnitInterval,
   integralToBounded,
@@ -119,6 +119,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   encodeListLen,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin), CompactForm (..), compactCoinOrError, partialCompactCoinL)
@@ -932,6 +933,8 @@ instance ConwayEraPParams ConwayEra where
       , hardforkConwayBootstrapPhase pv
           || isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
+      , pvMajor pv < natVersion @11
+          || isValid (/= 0) ppuNOptL
       ]
     where
       isValid ::

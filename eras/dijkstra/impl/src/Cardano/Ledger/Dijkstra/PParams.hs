@@ -541,6 +541,7 @@ instance ConwayEraPParams DijkstraEra where
       , isValid (/= zero) ppuDRepDepositL
       , isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
+      , isValid (/= 0) ppuNOptL
       ]
     where
       isValid ::
