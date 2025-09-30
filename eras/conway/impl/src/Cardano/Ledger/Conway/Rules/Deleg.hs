@@ -312,6 +312,7 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
       cState
         & certDStateL . accountsL
           %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) stakeCred
+        & certPStateL %~ adjustPState stakePool
     delegVote dRep cState =
       let cState' =
             processDRepUnDelegation stakeCred mCurDelegatee cState
@@ -326,6 +327,26 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
                   let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
                    in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
             _ -> cState'
+    adjustPState newPool =
+      (psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.insert stakeCred) newPool)
+        . unDelegStakePool stakeCred mCurDelegatee newPool
+
+unDelegStakePool ::
+  Credential 'Staking ->
+  Maybe Delegatee ->
+  KeyHash 'StakePool ->
+  PState era ->
+  PState era
+unDelegStakePool stakeCred mCurDelegatee newPool =
+  maybe
+    id
+    (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete stakeCred) oldPool)
+    (mCurDelegatee >>= stakePoolToUnDeleg)
+  where
+    stakePoolToUnDeleg = \case
+      DelegStake oldPool | oldPool /= newPool -> Just oldPool
+      DelegStakeVote oldPool _ | oldPool /= newPool -> Just oldPool
+      _ -> Nothing
 
 processDRepUnDelegation ::
   ConwayEraCertState era =>
