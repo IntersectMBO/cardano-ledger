@@ -121,7 +121,7 @@ library
     groups,
     iproute,
     measures,
-    mempack,
+    mempack >=0.2,
     microlens,
     mtl,
     non-integral >=1.0,

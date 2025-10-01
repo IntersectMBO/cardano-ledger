@@ -139,7 +139,7 @@ unpackMemoBytesM ::
   , Typeable t
   , Buffer b
   ) =>
-  Version -> Unpack b (MemoBytes t)
+  Version -> Unpack s b (MemoBytes t)
 unpackMemoBytesM v = unpackM >>= decodeMemoBytes v
 
 decodeMemoBytes ::
