@@ -95,7 +95,6 @@ import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -369,7 +368,10 @@ reapPool pool cs = cs {chainNes = nes'}
            in ( accounts & accountsMapL %~ Map.insert poolAccountCred accountState'
               , mempty
               )
-    ds' = ds {dsAccounts = removeStakePoolDelegations (Set.singleton poolId) accounts'}
+    delegsToClear =
+      foldMap spsDelegators $
+        Map.lookup poolId (dps ^. certPStateL . psStakePoolsL)
+    ds' = ds {dsAccounts = removeStakePoolDelegations delegsToClear accounts'}
     chainAccountState = esChainAccountState es
     chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> fromCompact unclaimed}
     utxoSt = lsUTxOState ls
