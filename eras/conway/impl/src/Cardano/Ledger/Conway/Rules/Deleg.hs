@@ -54,6 +54,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DRep
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)
 import Control.State.Transition (
@@ -255,8 +256,10 @@ conwayDelegTransition = do
       isJust mAccountState ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
       pure $
-        processDRepUnDelegation stakeCred mCurDelegatee $
-          certState & certDStateL . accountsL .~ newAccounts
+        certState
+          & certDStateL . accountsL .~ newAccounts
+          & certVStateL %~ unDelegDRep stakeCred mCurDelegatee
+          & certPStateL %~ unDelegStakePool stakeCred mCurDelegatee Nothing
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
@@ -315,9 +318,10 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
         & certPStateL %~ adjustPState stakePool
     delegVote dRep cState =
       let cState' =
-            processDRepUnDelegation stakeCred mCurDelegatee cState
+            cState
               & certDStateL . accountsL
                 %~ adjustAccountState (dRepDelegationAccountStateL ?~ dRep) stakeCred
+              & certVStateL %~ unDelegDRep stakeCred mCurDelegatee
           dReps
             | preserveIncorrectDelegation = cState ^. certVStateL . vsDRepsL
             | otherwise = cState' ^. certVStateL . vsDRepsL
@@ -329,41 +333,37 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
             _ -> cState'
     adjustPState newPool =
       (psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.insert stakeCred) newPool)
-        . unDelegStakePool stakeCred mCurDelegatee newPool
+        . unDelegStakePool stakeCred mCurDelegatee (Just newPool)
 
 unDelegStakePool ::
   Credential 'Staking ->
   Maybe Delegatee ->
-  KeyHash 'StakePool ->
+  Maybe (KeyHash 'StakePool) ->
   PState era ->
   PState era
-unDelegStakePool stakeCred mCurDelegatee newPool =
+unDelegStakePool stakeCred mCurDelegatee mNewPool =
   maybe
     id
     (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete stakeCred) oldPool)
     (mCurDelegatee >>= stakePoolToUnDeleg)
   where
     stakePoolToUnDeleg = \case
-      DelegStake oldPool | oldPool /= newPool -> Just oldPool
-      DelegStakeVote oldPool _ | oldPool /= newPool -> Just oldPool
+      DelegStake oldPool | Just oldPool /= mNewPool -> Just oldPool
+      DelegStakeVote oldPool _ | Just oldPool /= mNewPool -> Just oldPool
       _ -> Nothing
 
-processDRepUnDelegation ::
-  ConwayEraCertState era =>
+unDelegDRep ::
   Credential 'Staking ->
   Maybe Delegatee ->
-  CertState era ->
-  CertState era
-processDRepUnDelegation _ Nothing cState = cState
-processDRepUnDelegation stakeCred (Just delegatee) cState =
-  case delegatee of
-    DelegStake _ -> cState
-    DelegVote dRep -> cState & certVStateL .~ unDelegVote (cState ^. certVStateL) dRep
-    DelegStakeVote _sPool dRep -> cState & certVStateL .~ unDelegVote (cState ^. certVStateL) dRep
+  VState era ->
+  VState era
+unDelegDRep stakeCred mCurDelegatee =
+  maybe
+    id
+    (\dRepCred -> vsDRepsL %~ Map.adjust (drepDelegsL %~ Set.delete stakeCred) dRepCred)
+    (mCurDelegatee >>= drepToUndeleg)
   where
-    unDelegVote vState = \case
-      DRepCredential dRepCred ->
-        let removeDelegation dRepState =
-              dRepState {drepDelegs = Set.delete stakeCred (drepDelegs dRepState)}
-         in vState & vsDRepsL %~ Map.adjust removeDelegation dRepCred
-      _ -> vState
+    drepToUndeleg = \case
+      DelegVote (DRepCredential dRepCred) -> Just dRepCred
+      DelegStakeVote _ (DRepCredential dRepCred) -> Just dRepCred
+      _ -> Nothing
