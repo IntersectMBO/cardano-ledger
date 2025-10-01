@@ -198,7 +198,7 @@ class
   , forall t. Typeable t => DecCBOR (Annotator (TxBody t era))
   , forall t. Typeable t => EncCBOR (TxBody t era)
   , forall t. Typeable t => ToCBOR (TxBody t era)
-  , forall t. NoThunks (TxBody t era)
+  , forall t. Typeable t => NoThunks (TxBody t era)
   , forall t. NFData (TxBody t era)
   , forall t. Show (TxBody t era)
   , forall t. Eq (TxBody t era)
@@ -261,7 +261,7 @@ class
 
   -- | This function is not used in the ledger rules. It is only used by the downstream
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.
-  getGenesisKeyHashCountTxBody :: TxBody t era -> Int
+  getGenesisKeyHashCountTxBody :: TxBody FullTx era -> Int
   getGenesisKeyHashCountTxBody _ = 0
 
 -- | Abstract interface into specific fields of a `TxOut`
