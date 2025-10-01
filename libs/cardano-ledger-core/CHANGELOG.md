@@ -4,6 +4,7 @@
 
 * Add `spsDelegators` field to `StakePool`
 * Add `spsDelegatorsL`
+* Change parameter type of `removeStakePoolDelegations` from `Set (KeyHash 'StakePool)` to `Set (Credential 'Staking)`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

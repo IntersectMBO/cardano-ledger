@@ -208,11 +208,12 @@ poolReapTransition = do
       a {casTreasury = casTreasury a <+> fromCompact unclaimed}
       ( cs
           & certDStateL . accountsL
-            %~ removeStakePoolDelegations retired . addToBalanceAccounts refunds
+            %~ removeStakePoolDelegations (delegsToClear cs retired)
+              . addToBalanceAccounts refunds
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psVRFKeyHashesL
-            %~ ( removeVRFKeyHashOccurrences (retiredVRFKeyHashes)
+            %~ ( removeVRFKeyHashOccurrences retiredVRFKeyHashes
                    . (`Map.withoutKeys` danglingVRFKeyHashes)
                )
       )
@@ -225,6 +226,10 @@ poolReapTransition = do
     removeVRFKeyHashOccurrence =
       -- Removes the key from the map if the value drops to 0
       Map.update (mapNonZero (\n -> n - 1))
+
+    delegsToClear cState pools =
+      foldMap spsDelegators $
+        Map.restrictKeys (cState ^. certPStateL . psStakePoolsL) pools
 
 renderPoolReapViolation ::
   ( EraGov era
