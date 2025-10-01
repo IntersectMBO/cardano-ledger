@@ -12,6 +12,7 @@
 
 ### `testlib`
 
+* Remove `Test.Cardano.Ledger.Plutus.ExUnits`
 * Remove the `accountsToUMap` member function from the `EraTest` class.
   - Also remove the related `accountsFromUMap` function.
 * Remove the following from `Core.Arbitrary`:
