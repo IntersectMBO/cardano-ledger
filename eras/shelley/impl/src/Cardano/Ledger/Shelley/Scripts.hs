@@ -252,7 +252,7 @@ evalMultiSig vhks = go
 -- | Script validator for native multi-signature scheme.
 validateMultiSig ::
   (ShelleyEraScript era, EraTx era, NativeScript era ~ MultiSig era) =>
-  Tx era ->
+  Tx t era ->
   NativeScript era ->
   Bool
 validateMultiSig tx =
