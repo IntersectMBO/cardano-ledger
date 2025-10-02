@@ -7,6 +7,33 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 10.6
+
+* Introduction of a new `Dijkstra` era and `PlutusV4` placeholders that for the most part mimic Conway era bahavior for now:
+  - Add new protocol parameters: `refScriptCostMultiplier`, `refScriptCostStride`, `maxRefScriptSizePerTx` and `maxRefScriptSizePerBlock`
+  - Add `DijkstraGenesis` that initializes all of the above protocol parameters.
+* Implemented some parts of [CIP-112 - Guards](https://github.com/cardano-foundation/CIPs/pull/749), which could potentially be experimented with on local testnets.
+* Implemented most of the features for the upcoming intra-era hard fork into Protocol Version 11: [#5015](https://github.com/IntersectMBO/cardano-ledger/issues/5015):
+  - Revert predicate check `BabbageNonDisjointRefInputs` for `PlutusV1`/`V2`: [#5009](https://github.com/IntersectMBO/cardano-ledger/issues/5009)
+  - Made Constitutional Committee voting restriction into a proper ledger predicate failure, instead of a mempool sanitizer: [#5022](https://github.com/IntersectMBO/cardano-ledger/issues/5022)
+  - Disallow different pools to use the same VRF key: [#5159](https://github.com/IntersectMBO/cardano-ledger/issues/5159) and [#5252](https://github.com/IntersectMBO/cardano-ledger/issues/5252)
+  - Add a new predicate failure for non-matching withdrawals [#4640](https://github.com/IntersectMBO/cardano-ledger/issues/4640)
+  - Improve `PPViewHashesDontMatch` to include the data for the expected hash: [#4517](https://github.com/IntersectMBO/cardano-ledger/issues/4517)
+* Drastic simplifications to the codebase and performance improvements.
+* Fix JSON parser for `PlutusV3` cost model, where it expected wrong number of parameters.
+* Made `JSON` parser for `CostModel` in `AlonzoGenesis` and `ConwayGenesis` stable. Number of parameters will not change despite that they will change through governance on a running network.
+* Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping.
+* Add `queryDRepDelegations` and `queryPoolState` ledger state queries
+* Thanks to improved testing, we have discovered and fixed various issues in CDDL specification - some dating back as far as Byron era.
+
+## 10.5
+
+* No Ledger changes
+
+## 10.4
+
+* No Ledger changes
+
 ## 10.3
 
 * Removed crypto parametrization from ledger eras, which finally allowed us to avoid regression in `ghc-9` and stop using `ghc-8.10.7` for building `cardano-node` releases.
