@@ -75,15 +75,15 @@ instance Buildable (MerkleRoot a) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (MerkleRoot a)
 
-instance EncCBOR a => ToCBOR (MerkleRoot a) where
+instance (EncCBOR a, Typeable a) => ToCBOR (MerkleRoot a) where
   toCBOR = toByronCBOR
+  encodedSizeExpr size = encodedSizeExpr size . fmap getMerkleRoot
 
 instance DecCBOR a => FromCBOR (MerkleRoot a) where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR a => EncCBOR (MerkleRoot a) where
   encCBOR = encCBOR . getMerkleRoot
-  encodedSizeExpr size = encodedSizeExpr size . fmap getMerkleRoot
 
 instance DecCBOR a => DecCBOR (MerkleRoot a) where
   decCBOR = MerkleRoot <$> decCBOR
@@ -125,7 +125,7 @@ instance Foldable MerkleTree where
 instance Show a => Show (MerkleTree a) where
   show tree = "Merkle tree: " <> show (F.toList tree)
 
-instance EncCBOR a => ToCBOR (MerkleTree a) where
+instance (EncCBOR a, Typeable a) => ToCBOR (MerkleTree a) where
   toCBOR = toByronCBOR
 
 instance (DecCBOR a, EncCBOR a) => FromCBOR (MerkleTree a) where

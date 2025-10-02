@@ -78,6 +78,7 @@ instance
   ( Era era
   , EncCBORGroup (BlockBody era)
   , EncCBOR h
+  , Typeable h
   ) =>
   Plain.ToCBOR (Block h era)
   where

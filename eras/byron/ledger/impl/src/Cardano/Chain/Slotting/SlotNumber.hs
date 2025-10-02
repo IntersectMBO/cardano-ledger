@@ -46,13 +46,13 @@ instance Aeson.ToJSON SlotNumber
 
 instance ToCBOR SlotNumber where
   toCBOR = toByronCBOR
+  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance FromCBOR SlotNumber where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR SlotNumber where
   encCBOR = encCBOR . unSlotNumber
-  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance DecCBOR SlotNumber where
   decCBOR = SlotNumber <$> decCBOR

@@ -61,7 +61,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.BaseTypes.NonZero (nonZero, (%.))
 import Cardano.Ledger.Binary (
   Annotator,
-  Case (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
   EncCBOR (..),
@@ -71,13 +70,10 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
   encodeNull,
-  encodedVerKeyVRFSizeExpr,
   listLenInt,
   peekTokenType,
   runByteBuilder,
   serialize',
-  szCases,
-  withWordSize,
  )
 import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -113,8 +109,7 @@ import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
-import Data.Typeable
-import Data.Word (Word32, Word64)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -128,13 +123,6 @@ instance NoThunks PrevHash
 instance EncCBOR PrevHash where
   encCBOR GenesisHash = encodeNull
   encCBOR (BlockHash h) = encCBOR h
-  encodedSizeExpr size _ =
-    szCases
-      [ Case "GenesisHash" 1
-      , Case "BlockHash" (encodedSizeExpr size p)
-      ]
-    where
-      p = Proxy :: Proxy HashHeader
 
 instance DecCBOR PrevHash where
   decCBOR = do
@@ -196,25 +184,6 @@ instance Crypto c => EncCBOR (BHBody c) where
     where
       oc = bheaderOCert bhBody
       pv = bprotver bhBody
-
-  encodedSizeExpr size proxy =
-    fromInteger (withWordSize $ 9 + listLenBound oc + listLenBound pv)
-      + encodedSizeExpr size (bheaderBlockNo <$> proxy)
-      + encodedSizeExpr size (bheaderSlotNo <$> proxy)
-      + encodedSizeExpr size (bheaderPrev <$> proxy)
-      + encodedSizeExpr size (bheaderVk <$> proxy)
-      + encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
-      + encodedSizeExpr size (bheaderEta <$> proxy)
-      + encodedSizeExpr size (bheaderL <$> proxy)
-      + encodedSizeExpr size (toWord64 . bsize <$> proxy)
-      + encodedSizeExpr size (bhash <$> proxy)
-      + encodedSizeExpr size (bheaderOCert <$> proxy)
-      + encodedSizeExpr size (bprotver <$> proxy)
-    where
-      oc = bheaderOCert <$> proxy
-      pv = bprotver <$> proxy
-      toWord64 :: Word32 -> Word64
-      toWord64 = fromIntegral
 
 instance Crypto c => DecCBOR (BHBody c) where
   decCBOR = decodeRecordNamed "BHBody" bhBodySize $ do

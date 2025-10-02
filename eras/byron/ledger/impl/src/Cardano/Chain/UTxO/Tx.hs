@@ -86,6 +86,12 @@ instance B.Buildable Tx where
 
 instance ToCBOR Tx where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy =
+    1
+      + size (txInputs <$> pxy)
+      + size (txOutputs <$> pxy)
+      + size
+        (txAttributes <$> pxy)
 
 instance FromCBOR Tx where
   fromCBOR = fromByronCBOR
@@ -100,13 +106,6 @@ instance EncCBOR Tx where
       <> encCBOR (txOutputs tx)
       <> encCBOR
         (txAttributes tx)
-
-  encodedSizeExpr size pxy =
-    1
-      + size (txInputs <$> pxy)
-      + size (txOutputs <$> pxy)
-      + size
-        (txAttributes <$> pxy)
 
 instance DecCBOR Tx where
   decCBOR = do
@@ -154,6 +153,10 @@ instance ToJSON TxIn
 
 instance ToCBOR TxIn where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    2
+      + knownCborDataItemSizeExpr
+        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
 
 instance FromCBOR TxIn where
   fromCBOR = fromByronCBOR
@@ -164,11 +167,6 @@ instance EncCBOR TxIn where
       <> encCBOR (0 :: Word8)
       <> encodeKnownCborDataItem
         (txInHash, txInIndex)
-
-  encodedSizeExpr size _ =
-    2
-      + knownCborDataItemSizeExpr
-        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
 
 instance DecCBOR TxIn where
   decCBOR = do
@@ -207,11 +205,10 @@ instance EncCBOR TxOut where
   encCBOR txOut =
     encodeListLen 2 <> encCBOR (txOutAddress txOut) <> encCBOR (txOutValue txOut)
 
-  encodedSizeExpr size pxy =
-    1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
-
 instance ToCBOR TxOut where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy =
+    1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
 
 instance FromCBOR TxOut where
   fromCBOR = fromByronCBOR

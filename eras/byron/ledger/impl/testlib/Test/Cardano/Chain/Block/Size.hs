@@ -8,6 +8,7 @@ module Test.Cardano.Chain.Block.Size (
   tests,
 ) where
 
+import qualified Cardano.Binary as Plain
 import Cardano.Chain.Block
 import Cardano.Ledger.Binary hiding (label)
 import Cardano.Prelude
@@ -26,7 +27,7 @@ import Test.Options (TSGroup, TSProperty, eachOfTS)
 encodedSizeTest ::
   forall a.
   Show a =>
-  (a -> Encoding) ->
+  (a -> Plain.Encoding) ->
   (Proxy a -> Size) ->
   Gen a ->
   TSProperty
@@ -72,11 +73,11 @@ encodedSizeTest encode encodedSize gen = eachOfTS
 
 encodedSizeTestEncCBOR ::
   forall a.
-  (EncCBOR a, Show a) =>
+  (ToCBOR a, Show a) =>
   Gen a ->
   TSProperty
 encodedSizeTestEncCBOR =
-  encodedSizeTest encCBOR szGreedy
+  encodedSizeTest toCBOR szGreedy
 
 ts_prop_sizeProtocolMagicId :: TSProperty
 ts_prop_sizeProtocolMagicId =
@@ -119,7 +120,7 @@ ts_prop_sizeToSign =
 ts_prop_sizeBlockVersions :: TSProperty
 ts_prop_sizeBlockVersions =
   encodedSizeTest
-    (uncurry encCBORBlockVersions)
+    (toPlainEncoding byronProtVer . uncurry encCBORBlockVersions)
     (uncurryP encCBORBlockVersionsSize)
     ((,) <$> Update.genProtocolVersion <*> Update.genSoftwareVersion)
 
@@ -154,7 +155,7 @@ ts_prop_sizeBlockSignature =
 ts_prop_sizeHeader :: TSProperty
 ts_prop_sizeHeader =
   encodedSizeTest
-    (uncurry encCBORHeader)
+    (toPlainEncoding byronProtVer . uncurry encCBORHeader)
     (uncurryP encCBORHeaderSize)
     $ do
       protocolMagicId <- Crypto.genProtocolMagicId
@@ -172,7 +173,7 @@ ts_prop_sizeGenesisHash = encodedSizeTestEncCBOR Genesis.genGenesisHash
 ts_prop_sizeABoundaryHeader :: TSProperty
 ts_prop_sizeABoundaryHeader =
   encodedSizeTest
-    (uncurry encCBORABoundaryHeader)
+    (toPlainEncoding byronProtVer . uncurry encCBORABoundaryHeader)
     (uncurryP encCBORABoundaryHeaderSize)
     ( (,)
         <$> Crypto.genProtocolMagicId
@@ -186,7 +187,7 @@ ts_prop_sizeABoundaryHeader =
 ts_prop_sizeABlockOrBoundaryHdr :: TSProperty
 ts_prop_sizeABlockOrBoundaryHdr =
   encodedSizeTest
-    encCBORABlockOrBoundaryHdr
+    (toPlainEncoding byronProtVer . encCBORABlockOrBoundaryHdr)
     encCBORABlockOrBoundaryHdrSize
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
     >>= uncurry genABlockOrBoundaryHdr

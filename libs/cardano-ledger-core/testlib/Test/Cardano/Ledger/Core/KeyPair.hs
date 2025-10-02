@@ -107,7 +107,7 @@ instance Uniform (KeyPair kd) where
     mkKeyPairWithSeed
       <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN))) g
 
-instance Typeable r => EncCBOR (KeyPair r) where
+instance EncCBOR (KeyPair r) where
   encCBOR (KeyPair x y) = encode $ Coders.Rec KeyPair !> To x !> To y
 
 deriving instance Typeable r => Eq (KeyPair r)

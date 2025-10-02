@@ -24,13 +24,13 @@ newtype BlockCount = BlockCount
 
 instance ToCBOR BlockCount where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = size (unBlockCount <$> pxy)
 
 instance FromCBOR BlockCount where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR BlockCount where
   encCBOR = encCBOR . unBlockCount
-  encodedSizeExpr size pxy = size (unBlockCount <$> pxy)
 
 instance DecCBOR BlockCount where
   decCBOR = BlockCount <$> decCBOR

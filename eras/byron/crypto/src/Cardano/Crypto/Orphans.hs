@@ -64,25 +64,27 @@ instance ToJSON Ed25519.Signature where
 
 instance ToCBOR Ed25519.PublicKey where
   toCBOR = toByronCBOR
+  encodedSizeExpr _ _ = bsSize 32
 
 instance FromCBOR Ed25519.PublicKey where
   fromCBOR = fromByronCBOR
 
 instance ToCBOR Ed25519.SecretKey where
   toCBOR = toByronCBOR
+  encodedSizeExpr _ _ = bsSize 64
 
 instance FromCBOR Ed25519.SecretKey where
   fromCBOR = fromByronCBOR
 
 instance ToCBOR Ed25519.Signature where
   toCBOR = toByronCBOR
+  encodedSizeExpr _ _ = bsSize 64
 
 instance FromCBOR Ed25519.Signature where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR Ed25519.PublicKey where
   encCBOR = encodeBytes . toByteString
-  encodedSizeExpr _ _ = bsSize 32
 
 instance DecCBOR Ed25519.PublicKey where
   decCBOR = do
@@ -90,7 +92,6 @@ instance DecCBOR Ed25519.PublicKey where
     toCborError $ fromCryptoFailable "decCBOR Ed25519.PublicKey" res
 
 instance EncCBOR Ed25519.SecretKey where
-  encodedSizeExpr _ _ = bsSize 64
   encCBOR sk =
     encodeBytes
       $ BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
@@ -105,7 +106,6 @@ instance DecCBOR Ed25519.SecretKey where
     toCborError $ fromCryptoFailable "decCBOR Ed25519.SecretKey" res
 
 instance EncCBOR Ed25519.Signature where
-  encodedSizeExpr _ _ = bsSize 64
   encCBOR = encodeBytes . toByteString
 
 instance DecCBOR Ed25519.Signature where

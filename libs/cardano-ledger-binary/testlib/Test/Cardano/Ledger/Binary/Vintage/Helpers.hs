@@ -15,43 +15,23 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers (
   U24,
   extensionProperty,
   cborFlatTermValid,
-
-  -- * Static size estimates
-  SizeTestConfig (..),
-  cfg,
-  scfg,
-  sizeTest,
 ) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  Range (..),
-  Size,
-  SizeOverride (..),
   byronProtVer,
   decodeListLenOf,
   decodeNestedCborBytes,
   encodeListLen,
   encodeNestedCborBytes,
   serialize,
-  szSimplify,
-  szWithCtx,
   unsafeDeserialize,
  )
 import Cardano.Ledger.Binary.FlatTerm (toFlatTerm, validFlatTerm)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map as M
-import Data.Text.Lazy (unpack)
-import Data.Text.Lazy.Builder (toLazyText)
-import Data.Typeable (TypeRep)
 import Data.Word (Word8)
-import Formatting (Buildable, bprint, build)
-import Hedgehog (annotate, failure, forAllWith, success)
-import qualified Hedgehog as HH
-import qualified Hedgehog.Gen as HH.Gen
-import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Hspec ()
 import Test.Hspec.QuickCheck ()
@@ -164,99 +144,3 @@ extensionProperty = forAll @a (arbitrary :: Gen a) $ \input ->
       (u :: U) = unsafeDeserialize byronProtVer serialized -- Step 2
       (encoded :: a) = unsafeDeserialize byronProtVer (serialize byronProtVer u) -- Step 3
    in encoded === input
-
---------------------------------------------------------------------------------
--- Static size estimates
---------------------------------------------------------------------------------
-
-bshow :: Buildable a => a -> String
-bshow = unpack . toLazyText . bprint build
-
--- | Configuration for a single test case.
-data SizeTestConfig a = SizeTestConfig
-  { debug :: a -> String
-  -- ^ Pretty-print values
-  , gen :: HH.Gen a
-  -- ^ Generator
-  , precise :: Bool
-  -- ^ Must estimates be exact?
-  , addlCtx :: M.Map TypeRep SizeOverride
-  -- ^ Additional size overrides
-  , computedCtx :: a -> M.Map TypeRep SizeOverride
-  -- ^ Size overrides computed from a concrete instance.
-  }
-
--- | Default configuration, for @Buildable@ types.
-cfg :: Buildable a => SizeTestConfig a
-cfg =
-  SizeTestConfig
-    { debug = bshow
-    , gen = HH.Gen.discard
-    , precise = False
-    , addlCtx = M.empty
-    , computedCtx = const M.empty
-    }
-
--- | Default configuration, for @Show@able types.
-scfg :: Show a => SizeTestConfig a
-scfg =
-  SizeTestConfig
-    { debug = show
-    , gen = HH.Gen.discard
-    , precise = False
-    , addlCtx = M.empty
-    , computedCtx = const M.empty
-    }
-
--- | Create a test case from the given test configuration.
-sizeTest :: forall a. EncCBOR a => SizeTestConfig a -> HH.Property
-sizeTest SizeTestConfig {..} = HH.property $ do
-  x <- forAllWith debug gen
-
-  let ctx = M.union (computedCtx x) addlCtx
-
-      badBounds :: Natural -> Range Natural -> HH.PropertyT IO ()
-      badBounds sz bounds = do
-        annotate ("Computed bounds: " <> bshow bounds)
-        annotate ("Actual size:     " <> show sz)
-        annotate ("Value: " <> debug x)
-
-  case szVerify ctx x of
-    Exact -> success
-    WithinBounds _ _ | not precise -> success
-    WithinBounds sz bounds -> do
-      badBounds sz bounds
-      annotate "Bounds were not exact."
-      failure
-    BoundsAreSymbolic bounds -> do
-      annotate ("Bounds are symbolic: " <> bshow bounds)
-      failure
-    OutOfBounds sz bounds -> do
-      badBounds sz bounds
-      annotate "Size fell outside of bounds."
-      failure
-
--- | The possible results from @szVerify@, describing various ways
---   a size can or cannot be found within a certain range.
-data ComparisonResult
-  = -- | Size matched the bounds, and the bounds were exact.
-    Exact
-  | -- | Size matched the bounds, but the bounds are not exact.
-    WithinBounds Natural (Range Natural)
-  | -- | The bounds could not be reduced to a numerical range.
-    BoundsAreSymbolic Size
-  | -- | The size fell outside of the bounds.
-    OutOfBounds Natural (Range Natural)
-
--- | For a given value @x :: a@ with @EncCBOR a@, check that the encoded size
---   of @x@ falls within the statically-computed size range for @a@.
-szVerify :: EncCBOR a => M.Map TypeRep SizeOverride -> a -> ComparisonResult
-szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
-  Left bounds -> BoundsAreSymbolic bounds
-  Right range
-    | lo range <= sz && sz <= hi range ->
-        if lo range == hi range then Exact else WithinBounds sz range
-  Right range -> OutOfBounds sz range
-  where
-    sz :: Natural
-    sz = fromIntegral $ LBS.length $ serialize byronProtVer x

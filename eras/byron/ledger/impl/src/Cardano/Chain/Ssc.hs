@@ -103,6 +103,10 @@ data SscProof
 
 instance ToCBOR SscProof where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    1
+      + encodedSizeExpr size (Proxy :: Proxy Word8)
+      + 34
 
 instance FromCBOR SscProof where
   fromCBOR = fromByronCBOR
@@ -155,11 +159,6 @@ instance EncCBOR SscProof where
           , 0xad
           , 0x6c
           ]
-
-  encodedSizeExpr size _ =
-    1
-      + encodedSizeExpr size (Proxy :: Proxy Word8)
-      + 34
 
 instance DecCBOR SscProof where
   decCBOR = do

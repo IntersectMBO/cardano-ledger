@@ -213,7 +213,7 @@ cddlFailure diagCbor err =
 -- | Similar to `cddlRoundTripCborSpec`, but for Annotator.
 cddlRoundTripAnnCborSpec ::
   forall a.
-  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR (Annotator a)) =>
+  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR (Annotator a), Typeable a) =>
   -- | Serialization version
   Version ->
   -- | Cddl variable name

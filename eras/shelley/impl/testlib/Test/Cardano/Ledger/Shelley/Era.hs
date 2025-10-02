@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
 import Data.Default
 import qualified Data.Map.Strict as Map
+import Data.Typeable
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
@@ -51,6 +52,7 @@ class
   , DecCBOR (StashedAVVMAddresses era)
   , ToExpr (ScriptsNeeded era)
   , SafeToHash (TxWits era)
+  , Typeable (CertState era)
   ) =>
   ShelleyEraTest era
 
